@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useLocale } from "../hooks/useLocale";
+import ProfileSwitcher from "./ProfileSwitcher";
+import "./ProfileSwitcher.css";
 
 /**
  * Draggable title bar for the PopOut window mode. The app runs borderless (no
@@ -69,6 +71,7 @@ export default function PopOutTitleBar() {
       <span className="popout-titlebar__title" data-tauri-drag-region>
         {t("AppName")}
       </span>
+      <ProfileSwitcher />
       <div className="popout-titlebar__controls">
         <button
           type="button"

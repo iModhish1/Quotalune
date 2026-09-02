@@ -200,6 +200,7 @@ export interface SettingsSnapshot {
   showResetWhenExhausted: boolean;
   menuBarDisplayMode: MenuBarDisplayMode;
   hidePersonalInfo: boolean;
+  privacyMode?: boolean;
   updateChannel: UpdateChannel;
   autoDownloadUpdates: boolean;
   installUpdatesOnQuit: boolean;

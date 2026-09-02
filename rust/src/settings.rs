@@ -356,6 +356,11 @@ pub struct Settings {
     #[serde(default = "default_true")]
     pub top_arc_hide_fullscreen: bool,
 
+    /// Privacy Mode: hide account/profile names, emails, and costs across
+    /// surfaces. Persisted so it survives restarts; toggleable from the tray.
+    #[serde(default)]
+    pub privacy_mode: bool,
+
     /// Promote the tray icon out of the Windows hidden-icons overflow area.
     /// Only has effect on Windows 11 (build ≥ 22000); silently ignored elsewhere.
     /// Defaults on so upgrades keep the icon pinned to the taskbar notification area.
@@ -644,6 +649,7 @@ impl Default for Settings {
             top_arc_scale: default_surface_scale(),
             top_arc_click_through: false,
             top_arc_hide_fullscreen: true,
+            privacy_mode: false,
             promote_tray_icon: true,
             claude_daily_routines_usage_visible: true,
             claude_allow_reading_claude_code_credentials: false,

@@ -1,7 +1,7 @@
 # QUOTAARC_BUILD_REPORT
 
-Date: 2026-09-02 · Version 0.1.0 · Repository: `N:\QuotaArc\quotaarc` (independent repo cloned
-from nesszer/Win-CodexBar with full history; `upstream` remote retained)
+Date: 2026-09-02 · Version 0.1.0 · Repository: local clone (independent repo cloned from
+nesszer/Win-CodexBar with full history; `upstream` remote retained)
 
 ---
 

@@ -1,0 +1,120 @@
+/* Profile switcher — QuotaArc design-system styling. */
+
+.qa-profile-switcher {
+  position: relative;
+  font-family: var(--qa-font);
+}
+
+.qa-profile-switcher__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--qa-space-2);
+  padding: 4px var(--qa-space-3) 4px var(--qa-space-2);
+  background: var(--qa-material-raised);
+  border: 1px solid var(--qa-hairline);
+  border-radius: var(--qa-radius-pill);
+  color: var(--qa-ink-1);
+  cursor: pointer;
+  transition: border-color var(--qa-motion-fade) var(--qa-motion-ease-out);
+}
+
+.qa-profile-switcher__trigger:hover,
+.qa-profile-switcher[data-open="true"] .qa-profile-switcher__trigger {
+  border-color: var(--qa-hairline-strong);
+}
+
+.qa-profile-switcher__mark,
+.qa-profile-switcher__item-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--qa-radius-xs);
+  background: var(--qa-accent-soft);
+  color: var(--qa-accent);
+  font-size: var(--qa-text-micro);
+  font-weight: var(--qa-weight-semibold);
+}
+
+.qa-profile-switcher__name {
+  font-size: var(--qa-text-small);
+  font-weight: var(--qa-weight-medium);
+}
+
+.qa-profile-switcher__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--qa-space-2);
+  background: var(--qa-material-glass-strong);
+  border: 1px solid var(--qa-hairline);
+  border-radius: var(--qa-radius-md);
+  box-shadow: var(--qa-shadow-3);
+  backdrop-filter: blur(18px);
+}
+
+.qa-profile-switcher__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--qa-space-2);
+  padding: 5px var(--qa-space-2);
+  border: none;
+  border-radius: var(--qa-radius-sm);
+  background: transparent;
+  color: var(--qa-ink-1);
+  font-size: var(--qa-text-small);
+  cursor: pointer;
+  text-align: left;
+}
+
+.qa-profile-switcher__item:hover {
+  background: var(--qa-accent-soft);
+}
+
+.qa-profile-switcher__item[data-active="true"] {
+  background: var(--qa-accent-soft);
+  font-weight: var(--qa-weight-semibold);
+}
+
+.qa-profile-switcher__item--new {
+  color: var(--qa-ink-3);
+}
+
+.qa-profile-switcher__create {
+  display: flex;
+  flex-direction: column;
+  gap: var(--qa-space-1);
+  padding: var(--qa-space-1);
+}
+
+.qa-profile-switcher__create input {
+  background: var(--qa-material-raised);
+  border: 1px solid var(--qa-hairline);
+  border-radius: var(--qa-radius-sm);
+  color: var(--qa-ink-1);
+  font-size: var(--qa-text-small);
+  padding: 4px var(--qa-space-2);
+}
+
+.qa-profile-switcher__create button {
+  align-self: flex-end;
+  background: var(--qa-accent-soft);
+  border: none;
+  border-radius: var(--qa-radius-sm);
+  color: var(--qa-accent);
+  font-size: var(--qa-text-caption);
+  font-weight: var(--qa-weight-semibold);
+  padding: 3px var(--qa-space-3);
+  cursor: pointer;
+}
+
+.qa-profile-switcher__error {
+  font-size: var(--qa-text-micro);
+  color: var(--qa-status-critical);
+}

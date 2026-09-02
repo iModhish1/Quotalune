@@ -107,7 +107,26 @@ check_windows.ps1
 # Stray Windows binaries (artifacts of cargo build, not source)
 codexbar.exe
 codexbar-desktop-tauri.exe
+QuotaArc.exe
+QuotaArcDev.exe
 /*.exe
+dist-release/
+
+# Personal/local-only trees and machine secrets (never publish)
+.local/
+private/
+artifacts-local/
+backups/
+*.key
+*.pem
+*.pfx
+*.p12
+*.pfx.b64
+profiles.json
+profiles-backups/
+seed-usage*.json
+full-screen*.png
+docs/images/personal-*
 
 # Local git worktrees
 .worktrees/

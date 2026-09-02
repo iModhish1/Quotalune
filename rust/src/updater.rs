@@ -1,7 +1,7 @@
 //! Auto-update checker for QuotaArc
 //! Checks GitHub releases for new versions and handles background downloads
 
-use crate::settings::UpdateChannel;
+use crate::settings::{Settings, UpdateChannel};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -96,7 +96,7 @@ struct GitHubAsset {
     reason = "update check response fields are deserialized for parsing but not all are read"
 )]
 pub async fn check_for_updates() -> Option<UpdateInfo> {
-    check_for_updates_with_channel(UpdateChannel::Stable).await
+    check_for_updates_with_channel(Settings::load().update_channel).await
 }
 
 /// Check for updates from GitHub releases with a specific channel
@@ -104,6 +104,10 @@ pub async fn check_for_updates() -> Option<UpdateInfo> {
 /// When `channel` is `UpdateChannel::Beta`, includes pre-release versions.
 /// When `channel` is `UpdateChannel::Stable`, only considers stable releases.
 pub async fn check_for_updates_with_channel(channel: UpdateChannel) -> Option<UpdateInfo> {
+    if !channel.is_remote() {
+        // Local channel: never poll a remote repository.
+        return None;
+    }
     let client = update_client()?;
     let response = client.get(release_url(channel)).send().await.ok()?;
     let release = parse_release_response(response, channel).await?;
@@ -118,6 +122,7 @@ pub async fn check_for_updates_with_channel(channel: UpdateChannel) -> Option<Up
 
 fn release_url(channel: UpdateChannel) -> String {
     match channel {
+        UpdateChannel::Local => format!("https://api.github.com/repos/{}/releases/latest", GITHUB_REPO),
         UpdateChannel::Beta => format!("https://api.github.com/repos/{}/releases", GITHUB_REPO),
         UpdateChannel::Stable => {
             format!(
@@ -145,6 +150,7 @@ async fn parse_release_response(
     }
 
     match channel {
+        UpdateChannel::Local => None, // unreachable: Local never performs a request
         UpdateChannel::Beta => {
             let releases: Vec<GitHubRelease> = response.json().await.ok()?;
             releases.into_iter().find(|r| !r.draft)

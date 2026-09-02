@@ -215,15 +215,24 @@ impl ThemePreference {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum UpdateChannel {
+    /// Local builds never poll a remote repository. Default so personal /
+    /// development builds stay offline until an official channel publishes.
     #[default]
+    Local,
     Stable,
     Beta,
 }
 
 impl UpdateChannel {
+    /// True when this channel performs remote update checks.
+    pub fn is_remote(self) -> bool {
+        !matches!(self, UpdateChannel::Local)
+    }
+
     /// Get the display name for this channel
     pub fn display_name(&self) -> &'static str {
         match self {
+            UpdateChannel::Local => "Local",
             UpdateChannel::Stable => "Stable",
             UpdateChannel::Beta => "Beta",
         }
@@ -232,6 +241,7 @@ impl UpdateChannel {
     /// Get a description for this channel
     pub fn description(&self) -> &'static str {
         match self {
+            UpdateChannel::Local => "Local build — no update checks; upgrade manually",
             UpdateChannel::Stable => "Receive stable, tested releases",
             UpdateChannel::Beta => "Get early access to new features",
         }

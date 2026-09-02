@@ -183,6 +183,8 @@ pub(super) struct RawSettings {
     top_arc_click_through: bool,
     #[serde(default = "default_true")]
     top_arc_hide_fullscreen: bool,
+    #[serde(default)]
+    privacy_mode: bool,
     #[serde(default = "default_true")]
     promote_tray_icon: bool,
     #[serde(default = "default_true")]
@@ -306,6 +308,7 @@ impl Default for RawSettings {
             top_arc_scale: s.top_arc_scale,
             top_arc_click_through: s.top_arc_click_through,
             top_arc_hide_fullscreen: s.top_arc_hide_fullscreen,
+            privacy_mode: s.privacy_mode,
             promote_tray_icon: s.promote_tray_icon,
             claude_daily_routines_usage_visible: s.claude_daily_routines_usage_visible,
             claude_allow_reading_claude_code_credentials: s
@@ -618,6 +621,7 @@ impl From<RawSettings> for Settings {
             top_arc_scale: clamp_surface_scale(raw.top_arc_scale),
             top_arc_click_through: raw.top_arc_click_through,
             top_arc_hide_fullscreen: raw.top_arc_hide_fullscreen,
+            privacy_mode: raw.privacy_mode,
             promote_tray_icon: raw.promote_tray_icon,
             claude_daily_routines_usage_visible: raw.claude_daily_routines_usage_visible,
             claude_allow_reading_claude_code_credentials: raw

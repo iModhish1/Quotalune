@@ -4,6 +4,7 @@ use std::time::Duration;
 
 mod auto_refresh;
 mod coding_activity;
+mod command_profiles;
 mod commands;
 mod events;
 mod floatbar;
@@ -262,6 +263,18 @@ fn main() {
             surfaces::resize_top_arc_surface,
             surfaces::update_surface_settings,
             surfaces::get_surface_settings,
+            command_profiles::get_profile_store,
+            command_profiles::switch_profile,
+            command_profiles::create_profile,
+            command_profiles::rename_profile,
+            command_profiles::duplicate_profile,
+            command_profiles::delete_profile,
+            command_profiles::reorder_profiles,
+            command_profiles::update_profile,
+            command_profiles::add_account,
+            command_profiles::update_account,
+            command_profiles::remove_account,
+            command_profiles::set_privacy_mode,
         ])
         .setup(move |app| {
             if let Some(window) = app.get_webview_window("main") {

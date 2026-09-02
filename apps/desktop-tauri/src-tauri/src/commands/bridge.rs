@@ -696,6 +696,7 @@ pub struct SettingsSnapshot {
     show_reset_when_exhausted: bool,
     menu_bar_display_mode: String,
     hide_personal_info: bool,
+    privacy_mode: bool,
     update_channel: &'static str,
     auto_download_updates: bool,
     install_updates_on_quit: bool,
@@ -809,6 +810,7 @@ impl From<Settings> for SettingsSnapshot {
             show_reset_when_exhausted: settings.show_reset_when_exhausted,
             menu_bar_display_mode: settings.menu_bar_display_mode,
             hide_personal_info: settings.hide_personal_info,
+            privacy_mode: settings.privacy_mode,
             update_channel: update_channel_label(settings.update_channel),
             auto_download_updates: settings.auto_download_updates,
             install_updates_on_quit: settings.install_updates_on_quit,
@@ -892,6 +894,7 @@ fn tray_icon_mode_label(mode: TrayIconMode) -> &'static str {
 
 pub(super) fn update_channel_label(channel: UpdateChannel) -> &'static str {
     match channel {
+        UpdateChannel::Local => "local",
         UpdateChannel::Stable => "stable",
         UpdateChannel::Beta => "beta",
     }

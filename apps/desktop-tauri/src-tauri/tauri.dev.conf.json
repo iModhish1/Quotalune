@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "QuotaArc Dev",
+  "mainBinaryName": "QuotaArcDev",
+  "identifier": "app.quotaarc.desktop.dev",
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "QuotaArc Dev"
+      }
+    ]
+  }
+}

@@ -130,6 +130,16 @@ fn build_native_tray_menu(
 ) -> tauri::Result<Menu<tauri::Wry>> {
     let settings = Settings::load();
     let enabled = settings.enabled_providers.clone();
+    let store = codexbar::profiles::ProfileStore::load();
+    let profile_entries: Vec<crate::tray_menu::ProfileMenuEntry> = store
+        .profiles
+        .iter()
+        .map(|p| crate::tray_menu::ProfileMenuEntry {
+            id: p.id.clone(),
+            name: p.name.clone(),
+            active: p.id == store.active_profile_id,
+        })
+        .collect();
     let spec = build_tray_menu_with(
         providers,
         status_labels,
@@ -139,6 +149,8 @@ fn build_native_tray_menu(
             edge_arc: settings.edge_arc_enabled,
             top_arc: settings.top_arc_enabled,
         },
+        &profile_entries,
+        settings.privacy_mode,
         settings.ui_language,
     );
     let entries = spec
@@ -189,6 +201,8 @@ enum MenuAction {
     /// Toggle the floating bar window on/off.
     ToggleFloatBar,
     ToggleEdgeArc,
+    SwitchProfile(String),
+    TogglePrivacyMode,
     ToggleTopArc,
     Quit,
 }
@@ -207,6 +221,11 @@ fn resolve_menu_action(id: &str) -> Option<MenuAction> {
         "about" => Some(MenuAction::OpenSettings("about".into())),
         "toggle_float_bar" => Some(MenuAction::ToggleFloatBar),
         "toggle_edge_arc" => Some(MenuAction::ToggleEdgeArc),
+        "toggle_privacy_mode" => Some(MenuAction::TogglePrivacyMode),
+        _ if id.starts_with("switch_profile:") => {
+            let profile_id = id["switch_profile:".len()..].to_string();
+            Some(MenuAction::SwitchProfile(profile_id))
+        }
         "toggle_top_arc" => Some(MenuAction::ToggleTopArc),
         "pop_out" => Some(MenuAction::OpenFlyout),
         _ if id.starts_with("toggle_provider:") => {
@@ -265,7 +284,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     let _tray = TrayIconBuilder::with_id("codexbar-main")
         .icon(icon)
-        .tooltip("QuotaArc")
+        .tooltip(format!("QuotaArc{}", codexbar::paths::channel_suffix()))
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_tray_icon_event(|tray, event| {
@@ -417,6 +436,20 @@ fn handle_menu_event(app: &AppHandle, id: &str) {
             } else {
                 let _hide = crate::surfaces::hide_top_arc(app);
             }
+            rebuild_tray_menu(app);
+        }
+        Some(MenuAction::SwitchProfile(profile_id)) => {
+            let _ = crate::command_profiles::switch_profile(app.clone(), profile_id);
+        }
+        Some(MenuAction::TogglePrivacyMode) => {
+            let mut settings = Settings::load();
+            settings.privacy_mode = !settings.privacy_mode;
+            if settings.privacy_mode {
+                settings.hide_personal_info = true;
+            }
+            let _save = settings.save();
+            use tauri::Emitter;
+            let _ = app.emit("codexbar:settings-updated", ());
             rebuild_tray_menu(app);
         }
         Some(MenuAction::Quit) => {
@@ -724,7 +757,7 @@ fn build_tooltip(
     use codexbar::locale::{LocaleKey, get_text};
 
     if snapshots.is_empty() {
-        return "QuotaArc".to_string();
+        return format!("QuotaArc{}", codexbar::paths::channel_suffix());
     }
 
     let error_label = get_text(lang, LocaleKey::TrayStatusRowError);

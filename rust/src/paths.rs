@@ -5,24 +5,60 @@
 //! brand can never drift apart across stores, logs, and integrations. This is
 //! also what separates QuotaArc's on-disk state from a co-installed
 //! Win-CodexBar (`%AppData%\QuotaArc` vs `%AppData%\CodexBar`).
+//!
+//! Channels: the default build is the Personal/Stable channel. A build with
+//! the `dev-channel` cargo feature (shell crate: `--features dev-channel`)
+//! targets `QuotaArc-Dev` directories and a distinct registry/AUMID identity
+//! so a development build can never touch the owner's personal data. See
+//! docs/LOCAL_DEVELOPMENT.md.
 
 use std::path::PathBuf;
 
+/// True when this build targets the development channel.
+pub const fn is_dev_channel() -> bool {
+    cfg!(feature = "dev-channel")
+}
+
+/// Channel display suffix used in About/diagnostics (`""` for Personal).
+pub const fn channel_suffix() -> &'static str {
+    if is_dev_channel() {
+        " Dev"
+    } else {
+        ""
+    }
+}
+
 /// Product directory name under the user's config/data/cache roots.
-pub const APP_DIR_NAME: &str = "QuotaArc";
+pub const APP_DIR_NAME: &str = if cfg!(feature = "dev-channel") {
+    "QuotaArc-Dev"
+} else {
+    "QuotaArc"
+};
 
 /// Value name for the `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
 /// entry used by start-at-login.
-pub const REGISTRY_RUN_VALUE: &str = "QuotaArc";
+pub const REGISTRY_RUN_VALUE: &str = if cfg!(feature = "dev-channel") {
+    "QuotaArc Dev"
+} else {
+    "QuotaArc"
+};
 
 /// AppUserModelID registered for Windows toast notifications.
-pub const TOAST_AUMID: &str = "QuotaArc";
+pub const TOAST_AUMID: &str = if cfg!(feature = "dev-channel") {
+    "QuotaArc.Dev"
+} else {
+    "QuotaArc"
+};
 
 /// HTTP user agent for update downloads and release metadata checks.
 pub const USER_AGENT: &str = "QuotaArc";
 
 /// Installer artifact stem, e.g. `QuotaArc-0.1.0-x64-Setup.exe`.
-pub const INSTALLER_STEM: &str = "QuotaArc";
+pub const INSTALLER_STEM: &str = if cfg!(feature = "dev-channel") {
+    "QuotaArc-Dev"
+} else {
+    "QuotaArc"
+};
 
 /// QuotaArc config root: hosts the settings file, stores, and logs.
 pub fn config_dir() -> Option<PathBuf> {
@@ -51,11 +87,32 @@ mod tests {
 
     #[test]
     fn installer_file_name_formats_version() {
-        assert_eq!(installer_file_name("1.2.3"), "QuotaArc-1.2.3-x64-Setup.exe");
+        let stem = if cfg!(feature = "dev-channel") {
+            "QuotaArc-Dev"
+        } else {
+            "QuotaArc"
+        };
+        assert_eq!(
+            installer_file_name("1.2.3"),
+            format!("{stem}-1.2.3-x64-Setup.exe")
+        );
     }
 
     #[test]
-    fn app_dir_name_is_quotaarc() {
-        assert_eq!(APP_DIR_NAME, "QuotaArc");
+    fn app_dir_name_matches_channel() {
+        if cfg!(feature = "dev-channel") {
+            assert_eq!(APP_DIR_NAME, "QuotaArc-Dev");
+            assert_eq!(REGISTRY_RUN_VALUE, "QuotaArc Dev");
+            assert_eq!(TOAST_AUMID, "QuotaArc.Dev");
+        } else {
+            assert_eq!(APP_DIR_NAME, "QuotaArc");
+            assert_eq!(REGISTRY_RUN_VALUE, "QuotaArc");
+            assert_eq!(TOAST_AUMID, "QuotaArc");
+        }
+    }
+
+    #[test]
+    fn channels_are_disjoint_from_codoxbar() {
+        assert_ne!(APP_DIR_NAME, "CodexBar");
     }
 }

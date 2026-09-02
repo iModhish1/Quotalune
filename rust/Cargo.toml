@@ -14,6 +14,9 @@ path = "src/lib.rs"
 
 [features]
 default = []
+# Development channel build: targets QuotaArc-Dev data/registry identities so
+# a dev build can never touch the Personal (owner) data root.
+dev-channel = []
 
 [dependencies]
 # Async runtime

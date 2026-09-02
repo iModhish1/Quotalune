@@ -92,8 +92,16 @@ pub(crate) fn build_tray_menu(
         status_labels,
         enabled_providers,
         SurfaceToggles::default(),
+        &[],
+        false,
         Language::English,
     )
+}
+
+pub(crate) struct ProfileMenuEntry {
+    pub id: String,
+    pub name: String,
+    pub active: bool,
 }
 
 pub(crate) fn build_tray_menu_with(
@@ -101,6 +109,8 @@ pub(crate) fn build_tray_menu_with(
     status_labels: &[(String, String)],
     enabled_providers: &HashSet<String>,
     surfaces: SurfaceToggles,
+    profiles: &[ProfileMenuEntry],
+    privacy_mode: bool,
     lang: Language,
 ) -> Vec<TrayMenuEntry> {
     let mut menu: Vec<TrayMenuEntry> = Vec::new();
@@ -126,6 +136,16 @@ pub(crate) fn build_tray_menu_with(
         "show_panel",
         text(LocaleKey::TrayShowWindow),
     ));
+    if !profiles.is_empty() {
+        menu.push(TrayMenuEntry::submenu(
+            "profiles",
+            "Profiles",
+            profiles
+                .iter()
+                .map(|p| TrayMenuEntry::check_item(format!("switch_profile:{}", p.id), &p.name, p.active))
+                .collect(),
+        ));
+    }
     menu.push(TrayMenuEntry::check_item(
         "toggle_float_bar",
         text(LocaleKey::TrayShowFloatBar),
@@ -162,6 +182,11 @@ pub(crate) fn build_tray_menu_with(
         menu.push(TrayMenuEntry::separator());
     }
 
+    menu.push(TrayMenuEntry::check_item(
+        "toggle_privacy_mode",
+        "Privacy Mode",
+        privacy_mode,
+    ));
     menu.push(TrayMenuEntry::item(
         "settings",
         text(LocaleKey::TraySettings),
@@ -254,6 +279,8 @@ mod tests {
                 edge_arc: false,
                 top_arc: false,
             },
+            &[],
+            false,
             Language::English,
         );
         let toggle = menu_on
@@ -268,6 +295,8 @@ mod tests {
             &[],
             &both_enabled(),
             /* surfaces = */ SurfaceToggles::default(),
+            &[],
+            false,
             Language::English,
         );
         let toggle = menu_off
@@ -284,6 +313,8 @@ mod tests {
             &[],
             &both_enabled(),
             SurfaceToggles::default(),
+            &[],
+            false,
             Language::Japanese,
         );
         fn label_for<'a>(menu: &'a [TrayMenuEntry], id: &'a str) -> &'a str {
