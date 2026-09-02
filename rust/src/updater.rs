@@ -122,7 +122,10 @@ pub async fn check_for_updates_with_channel(channel: UpdateChannel) -> Option<Up
 
 fn release_url(channel: UpdateChannel) -> String {
     match channel {
-        UpdateChannel::Local => format!("https://api.github.com/repos/{}/releases/latest", GITHUB_REPO),
+        UpdateChannel::Local => format!(
+            "https://api.github.com/repos/{}/releases/latest",
+            GITHUB_REPO
+        ),
         UpdateChannel::Beta => format!("https://api.github.com/repos/{}/releases", GITHUB_REPO),
         UpdateChannel::Stable => {
             format!(

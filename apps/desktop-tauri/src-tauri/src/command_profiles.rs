@@ -5,7 +5,7 @@
 //! into settings, surfaces windows are reconciled, and the tray menu is
 //! rebuilt — then a single `profiles-changed` event notifies the frontend.
 
-use codexbar::profiles::{ProfileStore, QuotaArcProfile, ProviderAccount};
+use codexbar::profiles::{ProfileStore, ProviderAccount, QuotaArcProfile};
 use codexbar::settings::{Settings, ThemePreference};
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -64,7 +64,11 @@ pub fn switch_profile(app: AppHandle, profile_id: String) -> Result<(), String> 
 }
 
 #[tauri::command]
-pub fn create_profile(app: AppHandle, name: String, description: Option<String>) -> Result<QuotaArcProfile, String> {
+pub fn create_profile(
+    app: AppHandle,
+    name: String,
+    description: Option<String>,
+) -> Result<QuotaArcProfile, String> {
     let name = name.trim();
     if name.is_empty() {
         return Err("Profile name cannot be empty".to_string());
@@ -99,11 +103,7 @@ pub fn rename_profile(app: AppHandle, profile_id: String, name: String) -> Resul
     {
         return Err(format!("A profile named \"{name}\" already exists"));
     }
-    let Some(profile) = store
-        .profiles
-        .iter_mut()
-        .find(|p| p.id == profile_id)
-    else {
+    let Some(profile) = store.profiles.iter_mut().find(|p| p.id == profile_id) else {
         return Err("Profile not found".to_string());
     };
     profile.name = name.to_string();
@@ -114,7 +114,11 @@ pub fn rename_profile(app: AppHandle, profile_id: String, name: String) -> Resul
 }
 
 #[tauri::command]
-pub fn duplicate_profile(app: AppHandle, profile_id: String, new_name: String) -> Result<QuotaArcProfile, String> {
+pub fn duplicate_profile(
+    app: AppHandle,
+    profile_id: String,
+    new_name: String,
+) -> Result<QuotaArcProfile, String> {
     let new_name = new_name.trim();
     if new_name.is_empty() {
         return Err("Profile name cannot be empty".to_string());
@@ -239,11 +243,9 @@ pub fn add_account(
         return Err("Unknown provider".to_string());
     };
     let mut store = ProfileStore::load();
-    if store
-        .accounts
-        .iter()
-        .any(|a| a.provider_id() == Some(provider_id) && a.display_name.eq_ignore_ascii_case(display_name))
-    {
+    if store.accounts.iter().any(|a| {
+        a.provider_id() == Some(provider_id) && a.display_name.eq_ignore_ascii_case(display_name)
+    }) {
         return Err(format!(
             "A {provider} account named \"{display_name}\" already exists"
         ));
@@ -272,10 +274,7 @@ pub fn add_account(
 
     // A new account on the active profile makes its provider visible.
     let mut settings = Settings::load();
-    let was_active = store
-        .active_profile()
-        .account_ids
-        .contains(&account_id);
+    let was_active = store.active_profile().account_ids.contains(&account_id);
     if was_active {
         apply_active_profile_to_settings(&store, &mut settings);
         save_settings(&settings)?;
@@ -315,7 +314,11 @@ pub fn update_account(
         account.accent = accent.filter(|a| !a.trim().is_empty());
     }
     if let Some(tags) = tags {
-        account.tags = tags.into_iter().map(|t| t.trim().to_string()).filter(|t| !t.is_empty()).collect();
+        account.tags = tags
+            .into_iter()
+            .map(|t| t.trim().to_string())
+            .filter(|t| !t.is_empty())
+            .collect();
     }
     account.touch();
     store.normalize();
@@ -379,12 +382,12 @@ mod tests {
             .expect("claude account");
         // Disable Claude's only account; enabled providers must drop it.
         let mut s2 = Settings::default();
-        s2.enabled_providers = ["claude".to_string(), "codex".to_string()].into_iter().collect();
+        s2.enabled_providers = ["claude".to_string(), "codex".to_string()]
+            .into_iter()
+            .collect();
         let mut account = claude;
         account.enabled = false;
-        store
-            .accounts
-            .retain(|a| a.id != account.id);
+        store.accounts.retain(|a| a.id != account.id);
         store.accounts.push(account);
         apply_active_profile_to_settings(&store, &mut s2);
         assert!(!s2.enabled_providers.contains("claude"));

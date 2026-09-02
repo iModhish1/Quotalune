@@ -21,11 +21,7 @@ pub const fn is_dev_channel() -> bool {
 
 /// Channel display suffix used in About/diagnostics (`""` for Personal).
 pub const fn channel_suffix() -> &'static str {
-    if is_dev_channel() {
-        " Dev"
-    } else {
-        ""
-    }
+    if is_dev_channel() { " Dev" } else { "" }
 }
 
 /// Product directory name under the user's config/data/cache roots.

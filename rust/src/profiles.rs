@@ -128,22 +128,12 @@ pub enum ProfileMark {
 }
 
 /// Per-profile surface visibility.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ProfileSurfaces {
     pub edge_arc: bool,
     pub top_arc: bool,
     pub float_bar: bool,
-}
-
-impl Default for ProfileSurfaces {
-    fn default() -> Self {
-        Self {
-            edge_arc: false,
-            top_arc: false,
-            float_bar: false,
-        }
-    }
 }
 
 impl ProfileSurfaces {
@@ -404,7 +394,6 @@ pub fn migrate_from_legacy(settings: &Settings) -> ProfileStore {
 
     store.active_profile_id = profile.id.clone();
     store.profiles = vec![profile];
-    store.schema_version = PROFILES_SCHEMA_VERSION;
     store
 }
 
@@ -436,8 +425,15 @@ impl ProfileStore {
     }
 
     /// Create the store from legacy settings when no store file exists yet.
+    /// The migrated store is persisted immediately so the Default profile
+    /// exists on disk right after the first launch of 0.2.x.
     pub fn migrate_if_needed() -> Self {
-        migrate_from_legacy(&Settings::load())
+        let store = migrate_from_legacy(&Settings::load());
+        let needs_write = Self::path().map(|p| !p.exists()).unwrap_or(false);
+        if needs_write {
+            let _save = store.save();
+        }
+        store
     }
 
     pub fn save(&self) -> Result<(), String> {
@@ -456,10 +452,10 @@ impl ProfileStore {
         if self.profiles.is_empty() {
             *self = Self::default();
         }
-        if !self.profiles.iter().any(|p| p.id == self.active_profile_id) {
-            if let Some(first) = self.profiles.first() {
-                self.active_profile_id = first.id.clone();
-            }
+        if !self.profiles.iter().any(|p| p.id == self.active_profile_id)
+            && let Some(first) = self.profiles.first()
+        {
+            self.active_profile_id = first.id.clone();
         }
         let mut seen = std::collections::HashSet::new();
         self.profiles.retain(|p| seen.insert(p.id.clone()));
@@ -506,11 +502,14 @@ mod tests {
     use super::*;
 
     fn legacy_settings() -> Settings {
-        let mut s = Settings::default();
-        s.enabled_providers = ["claude".to_string(), "codex".to_string()].into_iter().collect();
-        s.edge_arc_enabled = true;
-        s.top_arc_enabled = false;
-        s
+        Settings {
+            enabled_providers: ["claude".to_string(), "codex".to_string()]
+                .into_iter()
+                .collect(),
+            edge_arc_enabled: true,
+            top_arc_enabled: false,
+            ..Settings::default()
+        }
     }
 
     #[test]
@@ -582,11 +581,7 @@ mod tests {
             .account_ids
             .push("ghost".to_string());
         store.normalize();
-        assert!(
-            !store.profiles[0]
-                .account_ids
-                .contains(&"ghost".to_string())
-        );
+        assert!(!store.profiles[0].account_ids.contains(&"ghost".to_string()));
     }
 
     #[test]
@@ -610,6 +605,9 @@ mod tests {
         let back: ProfileStore = serde_json::from_str(&json).unwrap();
         assert_eq!(back.profiles.len(), store.profiles.len());
         assert_eq!(back.profiles[1].name, "Night");
-        assert!(matches!(back.profiles[1].theme, Some(ThemePreference::Dark)));
+        assert!(matches!(
+            back.profiles[1].theme,
+            Some(ThemePreference::Dark)
+        ));
     }
 }

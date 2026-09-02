@@ -142,7 +142,9 @@ pub(crate) fn build_tray_menu_with(
             "Profiles",
             profiles
                 .iter()
-                .map(|p| TrayMenuEntry::check_item(format!("switch_profile:{}", p.id), &p.name, p.active))
+                .map(|p| {
+                    TrayMenuEntry::check_item(format!("switch_profile:{}", p.id), &p.name, p.active)
+                })
                 .collect(),
         ));
     }
