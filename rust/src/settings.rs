@@ -305,6 +305,58 @@ pub struct Settings {
     #[serde(default)]
     pub float_bar_show_cost: bool,
 
+    // ── QuotaArc Surface Engine ─────────────────────────────────────────
+    //
+    // QuotaArc's own surfaces (Edge Arc, Top Arc). All fields serde-default
+    // so existing settings.json files load unchanged and surfaces stay off
+    // until the user turns them on.
+
+    /// Enable the Edge Arc: a vertical capacity strip attached to a screen
+    /// edge (right or left).
+    #[serde(default)]
+    pub edge_arc_enabled: bool,
+
+    /// Edge Arc screen side: "right" (default) or "left".
+    #[serde(default = "default_edge_arc_side")]
+    pub edge_arc_side: String,
+
+    /// Edge Arc window opacity, 30..=100.
+    #[serde(default = "default_surface_opacity")]
+    pub edge_arc_opacity: u8,
+
+    /// Edge Arc visual scale, 75..=200 (percent).
+    #[serde(default = "default_surface_scale")]
+    pub edge_arc_scale: u8,
+
+    /// Edge Arc full click-through (overlay) mode.
+    #[serde(default)]
+    pub edge_arc_click_through: bool,
+
+    /// Hide the Edge Arc while a fullscreen app/game is in the foreground.
+    /// Defaults on so games are never obstructed.
+    #[serde(default = "default_true")]
+    pub edge_arc_hide_fullscreen: bool,
+
+    /// Enable the Top Arc: a top-center capacity pill with hover expansion.
+    #[serde(default)]
+    pub top_arc_enabled: bool,
+
+    /// Top Arc window opacity, 30..=100.
+    #[serde(default = "default_surface_opacity")]
+    pub top_arc_opacity: u8,
+
+    /// Top Arc visual scale, 75..=200 (percent).
+    #[serde(default = "default_surface_scale")]
+    pub top_arc_scale: u8,
+
+    /// Top Arc full click-through (overlay) mode.
+    #[serde(default)]
+    pub top_arc_click_through: bool,
+
+    /// Hide the Top Arc while a fullscreen app/game is in the foreground.
+    #[serde(default = "default_true")]
+    pub top_arc_hide_fullscreen: bool,
+
     /// Promote the tray icon out of the Windows hidden-icons overflow area.
     /// Only has effect on Windows 11 (build ≥ 22000); silently ignored elsewhere.
     /// Defaults on so upgrades keep the icon pinned to the taskbar notification area.
@@ -401,6 +453,38 @@ pub fn clamp_float_bar_opacity(value: u8) -> u8 {
 /// Clamp the floating-bar visual scale to the supported range.
 pub fn clamp_float_bar_scale(value: u8) -> u8 {
     value.clamp(75, 200)
+}
+
+// ── QuotaArc Surface Engine defaults/clamps ──────────────────────────────
+
+fn default_edge_arc_side() -> String {
+    "right".to_string()
+}
+
+fn default_surface_opacity() -> u8 {
+    95
+}
+
+fn default_surface_scale() -> u8 {
+    100
+}
+
+/// Clamp a surface opacity to 30..=100 (below 30% a surface is unusable).
+pub fn clamp_surface_opacity(value: u8) -> u8 {
+    value.clamp(30, 100)
+}
+
+/// Clamp a surface scale to 75..=200.
+pub fn clamp_surface_scale(value: u8) -> u8 {
+    value.clamp(75, 200)
+}
+
+/// Normalize an Edge Arc side. Unknown values fall back to "right".
+pub fn normalize_edge_arc_side(value: &str) -> String {
+    match value {
+        "left" => "left".to_string(),
+        _ => "right".to_string(),
+    }
 }
 
 /// Normalize a floating-bar orientation string. Unknown values fall back to
@@ -550,6 +634,17 @@ impl Default for Settings {
             float_bar_dark_text: false,
             float_bar_show_reset_inline: false,
             float_bar_show_cost: false,
+            edge_arc_enabled: false,
+            edge_arc_side: default_edge_arc_side(),
+            edge_arc_opacity: default_surface_opacity(),
+            edge_arc_scale: default_surface_scale(),
+            edge_arc_click_through: false,
+            edge_arc_hide_fullscreen: true,
+            top_arc_enabled: false,
+            top_arc_opacity: default_surface_opacity(),
+            top_arc_scale: default_surface_scale(),
+            top_arc_click_through: false,
+            top_arc_hide_fullscreen: true,
             promote_tray_icon: true,
             claude_daily_routines_usage_visible: true,
             claude_allow_reading_claude_code_credentials: false,

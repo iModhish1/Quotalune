@@ -134,7 +134,11 @@ fn build_native_tray_menu(
         providers,
         status_labels,
         &enabled,
-        settings.float_bar_enabled,
+        crate::tray_menu::SurfaceToggles {
+            float_bar: settings.float_bar_enabled,
+            edge_arc: settings.edge_arc_enabled,
+            top_arc: settings.top_arc_enabled,
+        },
         settings.ui_language,
     );
     let entries = spec
@@ -184,6 +188,8 @@ enum MenuAction {
     ToggleProvider(String),
     /// Toggle the floating bar window on/off.
     ToggleFloatBar,
+    ToggleEdgeArc,
+    ToggleTopArc,
     Quit,
 }
 
@@ -200,6 +206,8 @@ fn resolve_menu_action(id: &str) -> Option<MenuAction> {
         "settings" => Some(MenuAction::OpenSettings("general".into())),
         "about" => Some(MenuAction::OpenSettings("about".into())),
         "toggle_float_bar" => Some(MenuAction::ToggleFloatBar),
+        "toggle_edge_arc" => Some(MenuAction::ToggleEdgeArc),
+        "toggle_top_arc" => Some(MenuAction::ToggleTopArc),
         "pop_out" => Some(MenuAction::OpenFlyout),
         _ if id.starts_with("toggle_provider:") => {
             let provider_id = id["toggle_provider:".len()..].to_string();
@@ -387,6 +395,28 @@ fn handle_menu_event(app: &AppHandle, id: &str) {
         }
         Some(MenuAction::ToggleFloatBar) => {
             crate::floatbar::toggle(app);
+            rebuild_tray_menu(app);
+        }
+        Some(MenuAction::ToggleEdgeArc) => {
+            let mut settings = Settings::load();
+            settings.edge_arc_enabled = !settings.edge_arc_enabled;
+            let _save = settings.save();
+            if settings.edge_arc_enabled {
+                let _show = crate::surfaces::show_edge_arc(app);
+            } else {
+                let _hide = crate::surfaces::hide_edge_arc(app);
+            }
+            rebuild_tray_menu(app);
+        }
+        Some(MenuAction::ToggleTopArc) => {
+            let mut settings = Settings::load();
+            settings.top_arc_enabled = !settings.top_arc_enabled;
+            let _save = settings.save();
+            if settings.top_arc_enabled {
+                let _show = crate::surfaces::show_top_arc(app);
+            } else {
+                let _hide = crate::surfaces::hide_top_arc(app);
+            }
             rebuild_tray_menu(app);
         }
         Some(MenuAction::Quit) => {

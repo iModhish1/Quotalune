@@ -42,6 +42,7 @@ describe("TAB_META", () => {
       "menuBar",
       "menu",
       "usageSpend",
+      "surfaces",
       "advanced",
       "about",
     ];

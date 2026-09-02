@@ -14,6 +14,8 @@ mod shell;
 mod shortcut_bridge;
 mod state;
 mod surface;
+mod surface_kit;
+mod surfaces;
 mod surface_target;
 mod tray_bridge;
 mod tray_menu;
@@ -252,6 +254,14 @@ fn main() {
             floatbar::set_float_bar_click_through,
             floatbar::resize_float_bar,
             floatbar::set_float_bar_orientation,
+            surfaces::show_edge_arc_surface,
+            surfaces::hide_edge_arc_surface,
+            surfaces::show_top_arc_surface,
+            surfaces::hide_top_arc_surface,
+            surfaces::resize_edge_arc_surface,
+            surfaces::resize_top_arc_surface,
+            surfaces::update_surface_settings,
+            surfaces::get_surface_settings,
         ])
         .setup(move |app| {
             if let Some(window) = app.get_webview_window("main") {
@@ -261,6 +271,7 @@ fn main() {
             tray_bridge::setup(app)?;
             shortcut_bridge::register(app.handle());
             floatbar::install(app.handle());
+            surfaces::install(app.handle());
             auto_refresh::install(app.handle().clone());
             if settings.powertoys_status_pipe_enabled {
                 powertoys::install(app.handle().clone());
@@ -293,6 +304,9 @@ fn main() {
         })
         .on_window_event(move |window, event| {
             if floatbar::handle_window_event(window, event) {
+                return;
+            }
+            if surfaces::handle_window_event(window, event) {
                 return;
             }
             if shell::flyout_window::handle_window_event(window, event) {

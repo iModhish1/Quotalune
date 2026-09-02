@@ -1,0 +1,517 @@
+//! QuotaArc Surface Engine: Edge Arc and Top Arc auxiliary windows.
+//!
+//! Both surfaces are transparent, always-on-top, no-activate overlay windows
+//! built on [`crate::surface_kit`]. They are QuotaArc-owned code (not upstream
+//! floatbar) so the premium surface experience can evolve independently while
+//! floatbar keeps its upstream-compatible shape.
+//!
+//! Fullscreen behavior: while a content-fullscreen app (game/video) is in the
+//! foreground and the surface's `hide_fullscreen` setting is on, the watcher
+//! hides the surface and restores it afterwards. The watcher runs only while
+//! at least one surface is visible.
+
+use codexbar::settings::Settings;
+use tauri::{LogicalPosition, Manager, WebviewUrl};
+
+use crate::surface_kit::{
+    apply_always_on_top, apply_click_through, apply_no_activate, apply_opacity,
+    foreground_is_content_fullscreen, resize_surface, EDGE_ARC_LABEL, TOP_ARC_LABEL,
+};
+
+/// Default logical size of the Edge Arc before the webview requests its
+/// provider-driven size. Height grows with provider count via `resize`.
+pub const EDGE_ARC_DEFAULT_WIDTH: f64 = 76.0;
+pub const EDGE_ARC_DEFAULT_HEIGHT: f64 = 420.0;
+
+/// Default logical size of the Top Arc compact pill.
+pub const TOP_ARC_DEFAULT_WIDTH: f64 = 380.0;
+pub const TOP_ARC_DEFAULT_HEIGHT: f64 = 52.0;
+
+/// Edge margin for the Top Arc from the top of the work area, logical px.
+const TOP_ARC_MARGIN: f64 = 10.0;
+
+// ── Edge Arc ─────────────────────────────────────────────────────────────
+
+/// Position the Edge Arc window snapped to its monitor edge, vertically
+/// centered, on the given window's current monitor (or primary).
+fn position_edge_arc(window: &tauri::WebviewWindow, side: &str) {
+    let Ok(Some(monitor)) = window.current_monitor() else {
+        return;
+    };
+    let Ok(scale) = window.scale_factor() else {
+        return;
+    };
+    let Ok(size) = window.outer_size() else {
+        return;
+    };
+    let mon = monitor.position();
+    let mon_size = monitor.size();
+    let w = size.width as f64 / scale;
+    let h = size.height as f64 / scale;
+    let mon_x = mon.x as f64 / scale;
+    let mon_y = mon.y as f64 / scale;
+    let mon_w = mon_size.width as f64 / scale;
+    let mon_h = mon_size.height as f64 / scale;
+    let x = if side == "left" {
+        mon_x
+    } else {
+        mon_x + mon_w - w
+    };
+    let y = mon_y + ((mon_h - h) / 2.0).max(0.0);
+    let _ = window.set_position(LogicalPosition::new(x.round(), y.round()));
+}
+
+/// Show (or reapply attributes to) the Edge Arc window.
+pub fn show_edge_arc(app: &tauri::AppHandle) -> Result<(), String> {
+    let settings = Settings::load();
+    let side = codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
+    let scale = codexbar::settings::clamp_surface_scale(settings.edge_arc_scale) as f64 / 100.0;
+
+    if let Some(window) = app.get_webview_window(EDGE_ARC_LABEL) {
+        apply_edge_arc_attrs(&window, &settings);
+        let _ = window.show();
+        apply_always_on_top(&window);
+        position_edge_arc(&window, &side);
+        return Ok(());
+    }
+
+    let url = WebviewUrl::App("index.html?window=edge-arc".into());
+    let builder = crate::surface_kit::base_builder(
+        app,
+        EDGE_ARC_LABEL,
+        "QuotaArc Edge Arc",
+        url,
+    )
+    .inner_size(
+        EDGE_ARC_DEFAULT_WIDTH * scale,
+        EDGE_ARC_DEFAULT_HEIGHT * scale,
+    )
+    .visible(false);
+
+    let window = builder.build().map_err(|e| e.to_string())?;
+    apply_edge_arc_attrs(&window, &settings);
+    position_edge_arc(&window, &side);
+    window.show().map_err(|e| e.to_string())?;
+    apply_always_on_top(&window);
+    Ok(())
+}
+
+fn apply_edge_arc_attrs(window: &tauri::WebviewWindow, settings: &Settings) {
+    apply_opacity(window, settings.edge_arc_opacity);
+    apply_click_through(window, settings.edge_arc_click_through);
+    apply_no_activate(window);
+}
+
+/// Hide (destroy) the Edge Arc.
+pub fn hide_edge_arc(app: &tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window(EDGE_ARC_LABEL) {
+        window.close().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Resize the Edge Arc to a logical size requested by the webview, keeping
+/// the edge snap and interaction invariants.
+pub fn resize_edge_arc(window: &tauri::WebviewWindow, width: f64, height: f64) -> Result<(), String> {
+    let settings = Settings::load();
+    resize_surface(window, width, height, settings.edge_arc_click_through)?;
+    let side = codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
+    position_edge_arc(window, &side);
+    Ok(())
+}
+
+// ── Top Arc ──────────────────────────────────────────────────────────────
+
+fn position_top_arc(window: &tauri::WebviewWindow) {
+    let Ok(Some(monitor)) = window.current_monitor() else {
+        return;
+    };
+    let Ok(scale) = window.scale_factor() else {
+        return;
+    };
+    let Ok(size) = window.outer_size() else {
+        return;
+    };
+    let mon = monitor.position();
+    let mon_size = monitor.size();
+    let w = size.width as f64 / scale;
+    let mon_x = mon.x as f64 / scale;
+    let mon_y = mon.y as f64 / scale;
+    let mon_w = mon_size.width as f64 / scale;
+    let x = mon_x + ((mon_w - w) / 2.0).max(0.0);
+    let _ = window.set_position(LogicalPosition::new(x.round(), (mon_y + TOP_ARC_MARGIN).round()));
+}
+
+/// Show (or reapply attributes to) the Top Arc window.
+pub fn show_top_arc(app: &tauri::AppHandle) -> Result<(), String> {
+    let settings = Settings::load();
+    let scale = codexbar::settings::clamp_surface_scale(settings.top_arc_scale) as f64 / 100.0;
+
+    if let Some(window) = app.get_webview_window(TOP_ARC_LABEL) {
+        apply_top_arc_attrs(&window, &settings);
+        let _ = window.show();
+        apply_always_on_top(&window);
+        position_top_arc(&window);
+        return Ok(());
+    }
+
+    let url = WebviewUrl::App("index.html?window=top-arc".into());
+    let builder = crate::surface_kit::base_builder(app, TOP_ARC_LABEL, "QuotaArc Top Arc", url)
+        .inner_size(
+            TOP_ARC_DEFAULT_WIDTH * scale,
+            TOP_ARC_DEFAULT_HEIGHT * scale,
+        )
+        .visible(false);
+
+    let window = builder.build().map_err(|e| e.to_string())?;
+    apply_top_arc_attrs(&window, &settings);
+    position_top_arc(&window);
+    window.show().map_err(|e| e.to_string())?;
+    apply_always_on_top(&window);
+    Ok(())
+}
+
+fn apply_top_arc_attrs(window: &tauri::WebviewWindow, settings: &Settings) {
+    apply_opacity(window, settings.top_arc_opacity);
+    apply_click_through(window, settings.top_arc_click_through);
+    apply_no_activate(window);
+}
+
+/// Hide (destroy) the Top Arc.
+pub fn hide_top_arc(app: &tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window(TOP_ARC_LABEL) {
+        window.close().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Resize the Top Arc (webview-driven morphs between compact/expanded).
+pub fn resize_top_arc(window: &tauri::WebviewWindow, width: f64, height: f64) -> Result<(), String> {
+    let settings = Settings::load();
+    resize_surface(window, width, height, settings.top_arc_click_through)?;
+    position_top_arc(window);
+    Ok(())
+}
+
+// ── Lifecycle ────────────────────────────────────────────────────────────
+
+/// Restore enabled surfaces at startup and start the fullscreen watcher.
+pub fn install(app: &tauri::AppHandle) {
+    let settings = Settings::load();
+    if settings.edge_arc_enabled {
+        let _show = show_edge_arc(app);
+    }
+    if settings.top_arc_enabled {
+        let _show = show_top_arc(app);
+    }
+    spawn_fullscreen_watcher(app.clone());
+}
+
+/// Bring both surfaces in line with persisted settings (after a settings save).
+pub fn apply_state(app: &tauri::AppHandle, settings: &Settings) {
+    let edge_open = app.get_webview_window(EDGE_ARC_LABEL).is_some();
+    if settings.edge_arc_enabled && !edge_open {
+        let _show = show_edge_arc(app);
+    } else if !settings.edge_arc_enabled && edge_open {
+        let _hide = hide_edge_arc(app);
+    } else if let Some(w) = app.get_webview_window(EDGE_ARC_LABEL) {
+        apply_edge_arc_attrs(&w, settings);
+        let side = codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
+        position_edge_arc(&w, &side);
+        apply_always_on_top(&w);
+    }
+
+    let top_open = app.get_webview_window(TOP_ARC_LABEL).is_some();
+    if settings.top_arc_enabled && !top_open {
+        let _show = show_top_arc(app);
+    } else if !settings.top_arc_enabled && top_open {
+        let _hide = hide_top_arc(app);
+    } else if let Some(w) = app.get_webview_window(TOP_ARC_LABEL) {
+        apply_top_arc_attrs(&w, settings);
+        position_top_arc(&w);
+        apply_always_on_top(&w);
+    }
+}
+
+/// Handle window events for surface windows. Returns true when handled.
+pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) -> bool {
+    let label = window.label();
+    if label != EDGE_ARC_LABEL && label != TOP_ARC_LABEL {
+        return false;
+    }
+    match event {
+        tauri::WindowEvent::Moved(_) | tauri::WindowEvent::Resized(_) => {
+            if let Some(webview) = window.app_handle().get_webview_window(label) {
+                let settings = Settings::load();
+                if label == EDGE_ARC_LABEL {
+                    let side =
+                        codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
+                    position_edge_arc(&webview, &side);
+                    apply_edge_arc_attrs(&webview, &settings);
+                } else {
+                    position_top_arc(&webview);
+                    apply_top_arc_attrs(&webview, &settings);
+                }
+                apply_always_on_top(&webview);
+            }
+        }
+        tauri::WindowEvent::Focused(false) => {
+            if let Some(webview) = window.app_handle().get_webview_window(label) {
+                apply_always_on_top(&webview);
+            }
+        }
+        _ => {}
+    }
+    true
+}
+
+// ── Fullscreen watcher ───────────────────────────────────────────────────
+
+const FULLSCREEN_POLL_MS: u64 = 3_000;
+
+static HIDDEN_BY_FULLSCREEN: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// Periodically hide/show surfaces based on foreground fullscreen detection.
+/// Only runs while at least one surface window exists (visible or hidden-by-
+/// fullscreen); the task parks itself when none do.
+fn spawn_fullscreen_watcher(app: tauri::AppHandle) {
+    tauri::async_runtime::spawn(async move {
+        loop {
+            tokio::time::sleep(std::time::Duration::from_millis(FULLSCREEN_POLL_MS)).await;
+            let settings = Settings::load();
+            let edge = app.get_webview_window(EDGE_ARC_LABEL);
+            let top = app.get_webview_window(TOP_ARC_LABEL);
+            if edge.is_none() && top.is_none() {
+                // No surfaces alive; park cheaply.
+                HIDDEN_BY_FULLSCREEN.store(false, std::sync::atomic::Ordering::Relaxed);
+                continue;
+            }
+            let should_hide = foreground_is_content_fullscreen();
+            let mut changed = false;
+
+            if should_hide {
+                if settings.edge_arc_hide_fullscreen
+                    && let Some(w) = &edge
+                    && w.is_visible().unwrap_or(false)
+                {
+                    let _ = w.hide();
+                    changed = true;
+                }
+                if settings.top_arc_hide_fullscreen
+                    && let Some(w) = &top
+                    && w.is_visible().unwrap_or(false)
+                {
+                    let _ = w.hide();
+                    changed = true;
+                }
+                if changed {
+                    HIDDEN_BY_FULLSCREEN.store(true, std::sync::atomic::Ordering::Relaxed);
+                }
+            } else if HIDDEN_BY_FULLSCREEN.swap(false, std::sync::atomic::Ordering::Relaxed) {
+                if settings.edge_arc_enabled
+                    && let Some(w) = &edge
+                {
+                    let _ = w.show();
+                    apply_always_on_top(w);
+                }
+                if settings.top_arc_enabled
+                    && let Some(w) = &top
+                {
+                    let _ = w.show();
+                    apply_always_on_top(w);
+                }
+            }
+        }
+    });
+}
+
+// ── Tauri commands ───────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn show_edge_arc_surface(app: tauri::AppHandle) -> Result<(), String> {
+    show_edge_arc(&app)
+}
+
+#[tauri::command]
+pub fn hide_edge_arc_surface(app: tauri::AppHandle) -> Result<(), String> {
+    hide_edge_arc(&app)
+}
+
+#[tauri::command]
+pub fn show_top_arc_surface(app: tauri::AppHandle) -> Result<(), String> {
+    show_top_arc(&app)
+}
+
+#[tauri::command]
+pub fn hide_top_arc_surface(app: tauri::AppHandle) -> Result<(), String> {
+    hide_top_arc(&app)
+}
+
+#[tauri::command]
+pub fn resize_edge_arc_surface(
+    window: tauri::WebviewWindow,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
+    resize_edge_arc(&window, width, height)
+}
+
+#[tauri::command]
+pub fn resize_top_arc_surface(
+    window: tauri::WebviewWindow,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
+    resize_top_arc(&window, width, height)
+}
+
+/// Apply a QuotaArc surface settings patch (typed, from the Surfaces settings
+/// section) and reconcile window state.
+#[tauri::command]
+pub fn update_surface_settings(
+    app: tauri::AppHandle,
+    patch: SurfaceSettingsPatch,
+) -> Result<(), String> {
+    let mut settings = Settings::load();
+    patch.apply(&mut settings);
+    settings.save().map_err(|e| e.to_string())?;
+    apply_state(&app, &settings);
+    // Surfaces read settings on their next config event too.
+    use tauri::Emitter;
+    let _ = app.emit("quotaarc:surfaces-changed", ());
+    Ok(())
+}
+
+/// Current QuotaArc surface settings (read side of [`SurfaceSettingsPatch`]).
+#[derive(serde::Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SurfaceSettingsDto {
+    pub edge_arc_enabled: bool,
+    pub edge_arc_side: String,
+    pub edge_arc_opacity: u8,
+    pub edge_arc_scale: u8,
+    pub edge_arc_click_through: bool,
+    pub edge_arc_hide_fullscreen: bool,
+    pub top_arc_enabled: bool,
+    pub top_arc_opacity: u8,
+    pub top_arc_scale: u8,
+    pub top_arc_click_through: bool,
+    pub top_arc_hide_fullscreen: bool,
+}
+
+#[tauri::command]
+pub fn get_surface_settings() -> SurfaceSettingsDto {
+    let s = Settings::load();
+    SurfaceSettingsDto {
+        edge_arc_enabled: s.edge_arc_enabled,
+        edge_arc_side: s.edge_arc_side,
+        edge_arc_opacity: s.edge_arc_opacity,
+        edge_arc_scale: s.edge_arc_scale,
+        edge_arc_click_through: s.edge_arc_click_through,
+        edge_arc_hide_fullscreen: s.edge_arc_hide_fullscreen,
+        top_arc_enabled: s.top_arc_enabled,
+        top_arc_opacity: s.top_arc_opacity,
+        top_arc_scale: s.top_arc_scale,
+        top_arc_click_through: s.top_arc_click_through,
+        top_arc_hide_fullscreen: s.top_arc_hide_fullscreen,
+    }
+}
+
+/// Typed patch for QuotaArc surface settings. `None` = leave unchanged.
+#[derive(serde::Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SurfaceSettingsPatch {
+    pub edge_arc_enabled: Option<bool>,
+    pub edge_arc_side: Option<String>,
+    pub edge_arc_opacity: Option<u8>,
+    pub edge_arc_scale: Option<u8>,
+    pub edge_arc_click_through: Option<bool>,
+    pub edge_arc_hide_fullscreen: Option<bool>,
+    pub top_arc_enabled: Option<bool>,
+    pub top_arc_opacity: Option<u8>,
+    pub top_arc_scale: Option<u8>,
+    pub top_arc_click_through: Option<bool>,
+    pub top_arc_hide_fullscreen: Option<bool>,
+}
+
+impl SurfaceSettingsPatch {
+    fn apply(&self, s: &mut Settings) {
+        if let Some(v) = self.edge_arc_enabled {
+            s.edge_arc_enabled = v;
+        }
+        if let Some(v) = &self.edge_arc_side {
+            s.edge_arc_side = codexbar::settings::normalize_edge_arc_side(v);
+        }
+        if let Some(v) = self.edge_arc_opacity {
+            s.edge_arc_opacity = codexbar::settings::clamp_surface_opacity(v);
+        }
+        if let Some(v) = self.edge_arc_scale {
+            s.edge_arc_scale = codexbar::settings::clamp_surface_scale(v);
+        }
+        if let Some(v) = self.edge_arc_click_through {
+            s.edge_arc_click_through = v;
+        }
+        if let Some(v) = self.edge_arc_hide_fullscreen {
+            s.edge_arc_hide_fullscreen = v;
+        }
+        if let Some(v) = self.top_arc_enabled {
+            s.top_arc_enabled = v;
+        }
+        if let Some(v) = self.top_arc_opacity {
+            s.top_arc_opacity = codexbar::settings::clamp_surface_opacity(v);
+        }
+        if let Some(v) = self.top_arc_scale {
+            s.top_arc_scale = codexbar::settings::clamp_surface_scale(v);
+        }
+        if let Some(v) = self.top_arc_click_through {
+            s.top_arc_click_through = v;
+        }
+        if let Some(v) = self.top_arc_hide_fullscreen {
+            s.top_arc_hide_fullscreen = v;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn surface_patch_clamps_and_normalizes() {
+        let mut s = Settings::default();
+        let patch = SurfaceSettingsPatch {
+            edge_arc_enabled: Some(true),
+            edge_arc_side: Some("diagonal".into()),
+            edge_arc_opacity: Some(250),
+            edge_arc_scale: Some(20),
+            top_arc_opacity: Some(10),
+            top_arc_scale: Some(250),
+            ..Default::default()
+        };
+        patch.apply(&mut s);
+        assert!(s.edge_arc_enabled);
+        assert_eq!(s.edge_arc_side, "right");
+        assert_eq!(s.edge_arc_opacity, 100);
+        assert_eq!(s.edge_arc_scale, 75);
+        assert_eq!(s.top_arc_opacity, 30);
+        assert_eq!(s.top_arc_scale, 200);
+    }
+
+    #[test]
+    fn edge_arc_left_side_is_preserved() {
+        let mut s = Settings::default();
+        SurfaceSettingsPatch {
+            edge_arc_side: Some("left".into()),
+            ..Default::default()
+        }
+        .apply(&mut s);
+        assert_eq!(s.edge_arc_side, "left");
+    }
+
+    #[test]
+    fn default_sizes_are_sane() {
+        assert!(EDGE_ARC_DEFAULT_WIDTH < 120.0);
+        assert!(TOP_ARC_DEFAULT_HEIGHT < 80.0);
+    }
+}

@@ -7,6 +7,7 @@ export type SettingsTabId =
   | "menuBar"
   | "menu"
   | "usageSpend"
+  | "surfaces"
   | "advanced"
   | "about";
 

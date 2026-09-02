@@ -450,6 +450,9 @@ locale_keys! {
 
     // Tray - Single icon mode
     TrayOpenQuotaArc,
+    TrayShowEdgeArc,
+    TabSurfaces,
+    TrayShowTopArc,
     TrayPopOutDashboard,
     TrayShowWindow,
     TrayShowFloatBar,

@@ -1,0 +1,85 @@
+/* Edge Arc surface — QuotaArc design-system styling. */
+
+.edge-arc {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--qa-space-1);
+  padding: var(--qa-space-3) var(--qa-space-2);
+  box-sizing: border-box;
+  background: var(--qa-material-glass-strong);
+  border: 1px solid var(--qa-hairline);
+  border-radius: var(--qa-radius-xl);
+  box-shadow: var(--qa-shadow-2);
+  color: var(--qa-ink-1);
+  font-family: var(--qa-font);
+  overflow: hidden;
+  user-select: none;
+  transition:
+    background var(--qa-motion-fade) var(--qa-motion-ease-out),
+    box-shadow var(--qa-motion-fade) var(--qa-motion-ease-out);
+}
+
+.edge-arc[data-hover="true"] {
+  background: var(--qa-material-glass-strong);
+  box-shadow: var(--qa-shadow-3);
+}
+
+.edge-arc__row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+}
+
+.edge-arc__row-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin-left: var(--qa-space-2);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.edge-arc__provider {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 120px;
+}
+
+.edge-arc__provider-name {
+  font-size: var(--qa-text-caption);
+  font-weight: var(--qa-weight-medium);
+  color: var(--qa-ink-2);
+  letter-spacing: var(--qa-tracking-tight);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.edge-arc__percent {
+  font-size: var(--qa-text-small);
+  font-weight: var(--qa-weight-semibold);
+  color: var(--qa-ink-1);
+}
+
+.edge-arc__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--qa-space-2);
+  padding: var(--qa-space-2);
+}
+
+.edge-arc__empty-hint {
+  font-size: var(--qa-text-micro);
+  color: var(--qa-ink-3);
+  text-align: center;
+  max-width: 52px;
+  word-break: normal;
+  overflow-wrap: break-word;
+}

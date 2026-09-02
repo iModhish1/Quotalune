@@ -161,6 +161,28 @@ pub(super) struct RawSettings {
     float_bar_show_reset_inline: bool,
     #[serde(default)]
     float_bar_show_cost: bool,
+    #[serde(default)]
+    edge_arc_enabled: bool,
+    #[serde(default = "default_edge_arc_side")]
+    edge_arc_side: String,
+    #[serde(default = "default_surface_opacity")]
+    edge_arc_opacity: u8,
+    #[serde(default = "default_surface_scale")]
+    edge_arc_scale: u8,
+    #[serde(default)]
+    edge_arc_click_through: bool,
+    #[serde(default = "default_true")]
+    edge_arc_hide_fullscreen: bool,
+    #[serde(default)]
+    top_arc_enabled: bool,
+    #[serde(default = "default_surface_opacity")]
+    top_arc_opacity: u8,
+    #[serde(default = "default_surface_scale")]
+    top_arc_scale: u8,
+    #[serde(default)]
+    top_arc_click_through: bool,
+    #[serde(default = "default_true")]
+    top_arc_hide_fullscreen: bool,
     #[serde(default = "default_true")]
     promote_tray_icon: bool,
     #[serde(default = "default_true")]
@@ -273,6 +295,17 @@ impl Default for RawSettings {
             float_bar_dark_text: s.float_bar_dark_text,
             float_bar_show_reset_inline: s.float_bar_show_reset_inline,
             float_bar_show_cost: s.float_bar_show_cost,
+            edge_arc_enabled: s.edge_arc_enabled,
+            edge_arc_side: s.edge_arc_side,
+            edge_arc_opacity: s.edge_arc_opacity,
+            edge_arc_scale: s.edge_arc_scale,
+            edge_arc_click_through: s.edge_arc_click_through,
+            edge_arc_hide_fullscreen: s.edge_arc_hide_fullscreen,
+            top_arc_enabled: s.top_arc_enabled,
+            top_arc_opacity: s.top_arc_opacity,
+            top_arc_scale: s.top_arc_scale,
+            top_arc_click_through: s.top_arc_click_through,
+            top_arc_hide_fullscreen: s.top_arc_hide_fullscreen,
             promote_tray_icon: s.promote_tray_icon,
             claude_daily_routines_usage_visible: s.claude_daily_routines_usage_visible,
             claude_allow_reading_claude_code_credentials: s
@@ -574,6 +607,17 @@ impl From<RawSettings> for Settings {
             float_bar_dark_text: raw.float_bar_dark_text,
             float_bar_show_reset_inline: raw.float_bar_show_reset_inline,
             float_bar_show_cost: raw.float_bar_show_cost,
+            edge_arc_enabled: raw.edge_arc_enabled,
+            edge_arc_side: normalize_edge_arc_side(&raw.edge_arc_side),
+            edge_arc_opacity: clamp_surface_opacity(raw.edge_arc_opacity),
+            edge_arc_scale: clamp_surface_scale(raw.edge_arc_scale),
+            edge_arc_click_through: raw.edge_arc_click_through,
+            edge_arc_hide_fullscreen: raw.edge_arc_hide_fullscreen,
+            top_arc_enabled: raw.top_arc_enabled,
+            top_arc_opacity: clamp_surface_opacity(raw.top_arc_opacity),
+            top_arc_scale: clamp_surface_scale(raw.top_arc_scale),
+            top_arc_click_through: raw.top_arc_click_through,
+            top_arc_hide_fullscreen: raw.top_arc_hide_fullscreen,
             promote_tray_icon: raw.promote_tray_icon,
             claude_daily_routines_usage_visible: raw.claude_daily_routines_usage_visible,
             claude_allow_reading_claude_code_credentials: raw

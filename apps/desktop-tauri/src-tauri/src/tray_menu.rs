@@ -74,7 +74,14 @@ impl TrayMenuEntry {
     }
 }
 
-#[cfg(test)]
+/// Surface visibility toggles reflected as check items in the tray menu.
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct SurfaceToggles {
+    pub float_bar: bool,
+    pub edge_arc: bool,
+    pub top_arc: bool,
+}
+
 pub(crate) fn build_tray_menu(
     providers: &[ProviderCatalogEntry],
     status_labels: &[(String, String)],
@@ -84,7 +91,7 @@ pub(crate) fn build_tray_menu(
         providers,
         status_labels,
         enabled_providers,
-        false,
+        SurfaceToggles::default(),
         Language::English,
     )
 }
@@ -93,7 +100,7 @@ pub(crate) fn build_tray_menu_with(
     providers: &[ProviderCatalogEntry],
     status_labels: &[(String, String)],
     enabled_providers: &HashSet<String>,
-    float_bar_enabled: bool,
+    surfaces: SurfaceToggles,
     lang: Language,
 ) -> Vec<TrayMenuEntry> {
     let mut menu: Vec<TrayMenuEntry> = Vec::new();
@@ -122,7 +129,17 @@ pub(crate) fn build_tray_menu_with(
     menu.push(TrayMenuEntry::check_item(
         "toggle_float_bar",
         text(LocaleKey::TrayShowFloatBar),
-        float_bar_enabled,
+        surfaces.float_bar,
+    ));
+    menu.push(TrayMenuEntry::check_item(
+        "toggle_edge_arc",
+        text(LocaleKey::TrayShowEdgeArc),
+        surfaces.edge_arc,
+    ));
+    menu.push(TrayMenuEntry::check_item(
+        "toggle_top_arc",
+        text(LocaleKey::TrayShowTopArc),
+        surfaces.top_arc,
     ));
     menu.push(TrayMenuEntry::separator());
 
@@ -231,7 +248,7 @@ mod tests {
             &sample_provider_catalog(),
             &[],
             &both_enabled(),
-            /* float_bar_enabled = */ true,
+            /* surfaces = */ SurfaceToggles { float_bar: true, edge_arc: false, top_arc: false },
             Language::English,
         );
         let toggle = menu_on
@@ -245,7 +262,7 @@ mod tests {
             &sample_provider_catalog(),
             &[],
             &both_enabled(),
-            /* float_bar_enabled = */ false,
+            /* surfaces = */ SurfaceToggles::default(),
             Language::English,
         );
         let toggle = menu_off
@@ -261,7 +278,7 @@ mod tests {
             &sample_provider_catalog(),
             &[],
             &both_enabled(),
-            false,
+            SurfaceToggles::default(),
             Language::Japanese,
         );
         fn label_for<'a>(menu: &'a [TrayMenuEntry], id: &'a str) -> &'a str {

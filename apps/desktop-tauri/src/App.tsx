@@ -17,10 +17,22 @@ import { LocaleProvider } from "./i18n/LocaleProvider";
 import type { BootstrapState, ThemePreference } from "./types/bridge";
 import type { SurfaceSnapshot } from "./hooks/useSurfaceSnapshot";
 import { useDeepSeekPricingStatus } from "./hooks/useDeepSeekPricingStatus";
+import { DesignSystemProvider } from "./design-system";
+
+/**
+ * Applies the QuotaArc design-system theme/motion context to a surface
+ * window. Surfaces render dark-canonical glass; motion follows the system
+ * preference unless the user narrows it in settings later.
+ */
+function DesignSystemBridge({ children }: { children: React.ReactNode }) {
+  return <DesignSystemProvider theme="dark" motionSetting="auto">{children}</DesignSystemProvider>;
+}
 
 const Settings = lazy(() => import("./surfaces/Settings"));
 const PopOutPanel = lazy(() => import("./surfaces/PopOutPanel"));
 const FloatBar = lazy(() => import("./floatbar/FloatBar"));
+const EdgeArc = lazy(() => import("./surfaces/edge-arc/EdgeArc"));
+const TopArc = lazy(() => import("./surfaces/top-arc/TopArc"));
 
 function SurfaceFallback() {
   return null;
@@ -34,6 +46,16 @@ function isSettingsWindow(): boolean {
 /** True when running inside the detached FloatBar window. */
 function isFloatBarWindow(): boolean {
   return getCurrentWebviewWindow().label === FLOATBAR_WINDOW_LABEL;
+}
+
+/** True when running inside the detached Edge Arc surface window. */
+function isEdgeArcWindow(): boolean {
+  return getCurrentWebviewWindow().label === "edge-arc";
+}
+
+/** True when running inside the detached Top Arc surface window. */
+function isTopArcWindow(): boolean {
+  return getCurrentWebviewWindow().label === "top-arc";
 }
 
 /** True when running inside the detached flyout ("Pop Out Dashboard") window. */
@@ -178,6 +200,26 @@ function AppInner() {
     return (
       <Suspense fallback={<SurfaceFallback />}>
         <FloatBar state={state} />
+      </Suspense>
+    );
+  }
+
+  // QuotaArc Surface Engine windows — self-contained provider-data surfaces.
+  if (isEdgeArcWindow()) {
+    return (
+      <Suspense fallback={<SurfaceFallback />}>
+        <DesignSystemBridge>
+          <EdgeArc />
+        </DesignSystemBridge>
+      </Suspense>
+    );
+  }
+  if (isTopArcWindow()) {
+    return (
+      <Suspense fallback={<SurfaceFallback />}>
+        <DesignSystemBridge>
+          <TopArc />
+        </DesignSystemBridge>
       </Suspense>
     );
   }
