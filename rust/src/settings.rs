@@ -310,7 +310,6 @@ pub struct Settings {
     // QuotaArc's own surfaces (Edge Arc, Top Arc). All fields serde-default
     // so existing settings.json files load unchanged and surfaces stay off
     // until the user turns them on.
-
     /// Enable the Edge Arc: a vertical capacity strip attached to a screen
     /// edge (right or left).
     #[serde(default)]
@@ -844,7 +843,9 @@ impl Settings {
 
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
         if let Ok(run_key) = hkcu.open_subkey(r"Software\Microsoft\Windows\CurrentVersion\Run") {
-            run_key.get_value::<String, _>(crate::paths::REGISTRY_RUN_VALUE).is_ok()
+            run_key
+                .get_value::<String, _>(crate::paths::REGISTRY_RUN_VALUE)
+                .is_ok()
         } else {
             false
         }

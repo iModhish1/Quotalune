@@ -14,8 +14,8 @@ use codexbar::settings::Settings;
 use tauri::{LogicalPosition, Manager, WebviewUrl};
 
 use crate::surface_kit::{
-    apply_always_on_top, apply_click_through, apply_no_activate, apply_opacity,
-    foreground_is_content_fullscreen, resize_surface, EDGE_ARC_LABEL, TOP_ARC_LABEL,
+    EDGE_ARC_LABEL, TOP_ARC_LABEL, apply_always_on_top, apply_click_through, apply_no_activate,
+    apply_opacity, foreground_is_content_fullscreen, resize_surface,
 };
 
 /// Default logical size of the Edge Arc before the webview requests its
@@ -76,17 +76,12 @@ pub fn show_edge_arc(app: &tauri::AppHandle) -> Result<(), String> {
     }
 
     let url = WebviewUrl::App("index.html?window=edge-arc".into());
-    let builder = crate::surface_kit::base_builder(
-        app,
-        EDGE_ARC_LABEL,
-        "QuotaArc Edge Arc",
-        url,
-    )
-    .inner_size(
-        EDGE_ARC_DEFAULT_WIDTH * scale,
-        EDGE_ARC_DEFAULT_HEIGHT * scale,
-    )
-    .visible(false);
+    let builder = crate::surface_kit::base_builder(app, EDGE_ARC_LABEL, "QuotaArc Edge Arc", url)
+        .inner_size(
+            EDGE_ARC_DEFAULT_WIDTH * scale,
+            EDGE_ARC_DEFAULT_HEIGHT * scale,
+        )
+        .visible(false);
 
     let window = builder.build().map_err(|e| e.to_string())?;
     apply_edge_arc_attrs(&window, &settings);
@@ -112,7 +107,11 @@ pub fn hide_edge_arc(app: &tauri::AppHandle) -> Result<(), String> {
 
 /// Resize the Edge Arc to a logical size requested by the webview, keeping
 /// the edge snap and interaction invariants.
-pub fn resize_edge_arc(window: &tauri::WebviewWindow, width: f64, height: f64) -> Result<(), String> {
+pub fn resize_edge_arc(
+    window: &tauri::WebviewWindow,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
     let settings = Settings::load();
     resize_surface(window, width, height, settings.edge_arc_click_through)?;
     let side = codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
@@ -139,7 +138,10 @@ fn position_top_arc(window: &tauri::WebviewWindow) {
     let mon_y = mon.y as f64 / scale;
     let mon_w = mon_size.width as f64 / scale;
     let x = mon_x + ((mon_w - w) / 2.0).max(0.0);
-    let _ = window.set_position(LogicalPosition::new(x.round(), (mon_y + TOP_ARC_MARGIN).round()));
+    let _ = window.set_position(LogicalPosition::new(
+        x.round(),
+        (mon_y + TOP_ARC_MARGIN).round(),
+    ));
 }
 
 /// Show (or reapply attributes to) the Top Arc window.
@@ -186,7 +188,11 @@ pub fn hide_top_arc(app: &tauri::AppHandle) -> Result<(), String> {
 }
 
 /// Resize the Top Arc (webview-driven morphs between compact/expanded).
-pub fn resize_top_arc(window: &tauri::WebviewWindow, width: f64, height: f64) -> Result<(), String> {
+pub fn resize_top_arc(
+    window: &tauri::WebviewWindow,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
     let settings = Settings::load();
     resize_surface(window, width, height, settings.top_arc_click_through)?;
     position_top_arc(window);
@@ -244,8 +250,7 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) -
             if let Some(webview) = window.app_handle().get_webview_window(label) {
                 let settings = Settings::load();
                 if label == EDGE_ARC_LABEL {
-                    let side =
-                        codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
+                    let side = codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
                     position_edge_arc(&webview, &side);
                     apply_edge_arc_attrs(&webview, &settings);
                 } else {

@@ -54,7 +54,16 @@ pub fn apply_always_on_top(window: &WebviewWindow) {
             const SWP_NOSIZE: u32 = 0x0001;
             const SWP_NOMOVE: u32 = 0x0002;
             const SWP_NOACTIVATE: u32 = 0x0010;
-            if SetWindowPos(h.hwnd.get(), HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE) == 0 {
+            if SetWindowPos(
+                h.hwnd.get(),
+                HWND_TOPMOST,
+                0,
+                0,
+                0,
+                0,
+                SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE,
+            ) == 0
+            {
                 tracing::warn!(error = %std::io::Error::last_os_error(), "failed to assert surface topmost z-order");
             }
         }

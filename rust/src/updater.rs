@@ -784,9 +784,10 @@ mod tests {
         let temp = tempfile::tempdir().expect("temp dir");
         let (major, minor, patch) = parse_version_triplet(CURRENT_VERSION);
         let portable = temp.path().join("codexbar.exe");
-        let older = temp
-            .path()
-            .join(format!("QuotaArc-{}.{}.{}-x64-Setup.exe", major, minor, patch));
+        let older = temp.path().join(format!(
+            "QuotaArc-{}.{}.{}-x64-Setup.exe",
+            major, minor, patch
+        ));
         let newer = temp.path().join(format!(
             "QuotaArc-{}.{}.{}-x64-Setup.exe",
             major,
@@ -807,9 +808,10 @@ mod tests {
     fn ignores_cached_installers_for_current_or_older_versions() {
         let temp = tempfile::tempdir().expect("temp dir");
         let (major, minor, patch) = parse_version_triplet(CURRENT_VERSION);
-        let current = temp
-            .path()
-            .join(format!("QuotaArc-{}.{}.{}-x64-Setup.exe", major, minor, patch));
+        let current = temp.path().join(format!(
+            "QuotaArc-{}.{}.{}-x64-Setup.exe",
+            major, minor, patch
+        ));
         let older = temp.path().join(format!(
             "QuotaArc-{}.{}.{}-x64-Setup.exe",
             major,

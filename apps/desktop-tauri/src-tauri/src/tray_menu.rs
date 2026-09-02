@@ -248,7 +248,12 @@ mod tests {
             &sample_provider_catalog(),
             &[],
             &both_enabled(),
-            /* surfaces = */ SurfaceToggles { float_bar: true, edge_arc: false, top_arc: false },
+            /* surfaces = */
+            SurfaceToggles {
+                float_bar: true,
+                edge_arc: false,
+                top_arc: false,
+            },
             Language::English,
         );
         let toggle = menu_on
