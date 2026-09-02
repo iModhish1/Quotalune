@@ -1,0 +1,183 @@
+/*
+ * QuotaArc Design System — tokens.
+ *
+ * Single source of truth for the QuotaArc visual language. New surfaces must
+ * consume these custom properties; hardcoded color/spacing/motion values in
+ * surface code are review-blocking.
+ *
+ * Layers:
+ *   --qa-*     primitive tokens (never consumed directly by components)
+ *   --qa-ref-* semantic references (components consume these)
+ *
+ * Dark is canonical; light is the system-adapted counterpart. Both are
+ * quiescent, high-information, precision-instrument surfaces.
+ */
+
+:root,
+[data-qa-theme="dark"] {
+  color-scheme: dark;
+
+  /* ── Primitives: palette ─────────────────────────────────────────── */
+  --qa-grey-0: #f6f8fb;
+  --qa-grey-1: #c9d2e0;
+  --qa-grey-2: #97a3b6;
+  --qa-grey-3: #67748a;
+  --qa-grey-4: #3d4759;
+  --qa-grey-5: #2a3342;
+  --qa-grey-6: #1d2532;
+  --qa-grey-7: #141b26;
+  --qa-grey-8: #0e141d;
+  --qa-grey-9: #090e15;
+
+  --qa-accent: #2dd4bf; /* aurora teal — remaining capacity */
+  --qa-accent-2: #6366f1; /* deep indigo — depth/gradient partner */
+  --qa-accent-soft: rgba(45, 212, 191, 0.16);
+
+  /* Status ramp: quiet, colorblind-safe when paired with shape/position. */
+  --qa-status-healthy: #34d399;
+  --qa-status-moderate: #fbbf24;
+  --qa-status-high: #fb923c;
+  --qa-status-critical: #f87171;
+  --qa-status-unknown: #97a3b6;
+  --qa-status-offline: #67748a;
+  --qa-status-refreshing: #60a5fa;
+
+  /* ── Primitives: alpha inks (on-glass text/icon tiers) ───────────── */
+  --qa-ink-1: rgba(246, 248, 251, 0.96);
+  --qa-ink-2: rgba(246, 248, 251, 0.72);
+  --qa-ink-3: rgba(246, 248, 251, 0.48);
+  --qa-ink-4: rgba(246, 248, 251, 0.30);
+
+  /* ── Elevation: surface materials ────────────────────────────────── */
+  /* Tier A material: native backdrop (Mica/Acrylic) applied by the shell;
+     these backgrounds layer on top of whatever the window material is. */
+  --qa-material-glass: rgba(14, 20, 29, 0.72);
+  --qa-material-glass-strong: rgba(11, 16, 24, 0.86);
+  --qa-material-solid: #0e141d;
+  --qa-material-raised: #1d2532;
+  --qa-hairline: rgba(255, 255, 255, 0.08);
+  --qa-hairline-strong: rgba(255, 255, 255, 0.14);
+
+  /* Shadows: soft, directional, never black. */
+  --qa-shadow-1: 0 1px 2px rgba(2, 6, 12, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --qa-shadow-2: 0 8px 28px rgba(2, 6, 12, 0.44), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --qa-shadow-3: 0 18px 56px rgba(2, 6, 12, 0.56), 0 0 0 1px rgba(255, 255, 255, 0.06);
+
+  /* ── Typography ──────────────────────────────────────────────────── */
+  --qa-font:
+    "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI",
+    system-ui, -apple-system, "SF Pro Text", sans-serif;
+  --qa-font-mono:
+    "Cascadia Code", "Cascadia Mono", Consolas, "SF Mono", ui-monospace, monospace;
+
+  /* Type scale (px): compact instrument sizing, 4px leading grid. */
+  --qa-text-micro: 10px;
+  --qa-text-caption: 11px;
+  --qa-text-small: 12px;
+  --qa-text-body: 13px;
+  --qa-text-title: 15px;
+  --qa-text-headline: 19px;
+  --qa-text-display: 26px;
+
+  --qa-weight-regular: 400;
+  --qa-weight-medium: 500;
+  --qa-weight-semibold: 600;
+
+  --qa-tracking-tight: -0.015em;
+  --qa-tracking-num: 0.01em; /* tabular numerals context */
+
+  /* ── Geometry ────────────────────────────────────────────────────── */
+  --qa-space-1: 4px;
+  --qa-space-2: 8px;
+  --qa-space-3: 12px;
+  --qa-space-4: 16px;
+  --qa-space-5: 20px;
+  --qa-space-6: 24px;
+  --qa-space-8: 32px;
+
+  --qa-radius-xs: 6px;
+  --qa-radius-sm: 8px;
+  --qa-radius-md: 12px;
+  --qa-radius-lg: 16px;
+  --qa-radius-xl: 22px;
+  --qa-radius-pill: 999px;
+
+  /* Arc gauge geometry defaults (logical px). */
+  --qa-arc-stroke: 6;
+  --qa-arc-gap-deg: 90;
+
+  /* ── Motion ──────────────────────────────────────────────────────── */
+  /* Springs are the default; durations only for opacity/linear loops. */
+  --qa-motion-spring-snappy: 340ms;
+  --qa-motion-spring-soft: 480ms;
+  --qa-motion-fade: 160ms;
+  --qa-motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --qa-motion-ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ── Focus / a11y ────────────────────────────────────────────────── */
+  --qa-focus-ring: 0 0 0 2px rgba(45, 212, 191, 0.85);
+  --qa-focus-ring-offset: 0 0 0 4px rgba(9, 14, 21, 0.9);
+}
+
+[data-qa-theme="light"] {
+  color-scheme: light;
+
+  --qa-grey-0: #0c121b;
+  --qa-grey-1: #273241;
+  --qa-grey-2: #4a5a70;
+  --qa-grey-3: #6d7d93;
+  --qa-grey-4: #97a5b8;
+  --qa-grey-5: #b9c4d3;
+  --qa-grey-6: #d4dce6;
+  --qa-grey-7: #e7ecf2;
+  --qa-grey-8: #f3f6f9;
+  --qa-grey-9: #f9fbfd;
+
+  --qa-accent: #14a894;
+  --qa-accent-2: #4f52d9;
+  --qa-accent-soft: rgba(20, 168, 148, 0.14);
+
+  --qa-status-healthy: #0e9f6e;
+  --qa-status-moderate: #d99e0b;
+  --qa-status-high: #e07429;
+  --qa-status-critical: #e04f4f;
+  --qa-status-unknown: #6d7d93;
+  --qa-status-offline: #97a5b8;
+  --qa-status-refreshing: #3b82f6;
+
+  --qa-ink-1: rgba(12, 18, 27, 0.96);
+  --qa-ink-2: rgba(12, 18, 27, 0.74);
+  --qa-ink-3: rgba(12, 18, 27, 0.52);
+  --qa-ink-4: rgba(12, 18, 27, 0.34);
+
+  --qa-material-glass: rgba(247, 250, 253, 0.78);
+  --qa-material-glass-strong: rgba(243, 246, 250, 0.9);
+  --qa-material-solid: #f3f6f9;
+  --qa-material-raised: #ffffff;
+  --qa-hairline: rgba(12, 18, 27, 0.08);
+  --qa-hairline-strong: rgba(12, 18, 27, 0.16);
+
+  --qa-shadow-1: 0 1px 2px rgba(30, 41, 59, 0.10), 0 0 0 1px rgba(12, 18, 27, 0.05);
+  --qa-shadow-2: 0 8px 28px rgba(30, 41, 59, 0.16), 0 0 0 1px rgba(12, 18, 27, 0.05);
+  --qa-shadow-3: 0 18px 56px rgba(30, 41, 59, 0.22), 0 0 0 1px rgba(12, 18, 27, 0.06);
+
+  --qa-focus-ring: 0 0 0 2px rgba(20, 168, 148, 0.9);
+  --qa-focus-ring-offset: 0 0 0 4px rgba(249, 251, 253, 0.95);
+}
+
+/* Reduced motion: system preference or in-app Motion=Off flips this flag;
+   motion primitives read it via the media query and the data attribute. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --qa-motion-force-reduce: 1;
+  }
+}
+
+[data-qa-motion="reduced"],
+[data-qa-motion="off"] {
+  /* Motion primitives also check the attribute directly; this block covers
+     any CSS-transition usage in markup. */
+  --qa-motion-spring-snappy: 0ms;
+  --qa-motion-spring-soft: 0ms;
+  --qa-motion-fade: 0ms;
+}
