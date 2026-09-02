@@ -56,8 +56,8 @@ For repeat release builds on a Windows server, prefer the cached release script:
 ```
 
 It builds from a clean managed checkout but keeps Cargo output, the pnpm store,
-and signed installer bootstrapper downloads in `C:\code\Win-CodexBar-release\cache`.
-Release assets land in `C:\code\Win-CodexBar-release\assets`. Keep the
+and signed installer bootstrapper downloads in `C:\code\QuotaArc-release\cache`.
+Release assets land in `C:\code\QuotaArc-release\assets`. Keep the
 `.sha256` sidecars; they are the copy/paste source for Winget's
 `InstallerSha256`.
 
@@ -98,7 +98,7 @@ smoke install validation still need a real Windows machine.
 ## Project Structure
 
 ```
-Win-CodexBar/
+QuotaArc/
 ├── apps/desktop-tauri/          # Tauri desktop shell
 │   ├── src/                     # React frontend (TypeScript)
 │   └── src-tauri/               # Tauri/Rust backend
@@ -131,7 +131,7 @@ Win-CodexBar/
 | [release/ci-cd.md](./release/ci-cd.md) | Hosted PR check + local release |
 | [../AGENTS.md](../AGENTS.md) | Agent/contributor guidelines |
 
-Upstream macOS docs (`steipete/CodexBar`) are a **read-only** concept source. Do not copy Swift/Keychain/Sparkle instructions here without a Windows rewrite.
+Upstream macOS docs (`steipete/QuotaArc`) are a **read-only** concept source. Do not copy Swift/Keychain/Sparkle instructions here without a Windows rewrite.
 
 
 ## Running Tests

@@ -9,10 +9,10 @@ On Windows, config lives under the roaming app data directory:
 
 | Store | Typical path |
 |-------|----------------|
-| Settings | `%AppData%\Roaming\CodexBar\settings.json` |
-| Manual cookies | `%AppData%\Roaming\CodexBar\manual_cookies.json` |
-| API keys | `%AppData%\Roaming\CodexBar\api_keys.json` |
-| Token accounts | `%AppData%\Roaming\CodexBar\token-accounts.json` |
+| Settings | `%AppData%\Roaming\QuotaArc\settings.json` |
+| Manual cookies | `%AppData%\Roaming\QuotaArc\manual_cookies.json` |
+| API keys | `%AppData%\Roaming\QuotaArc\api_keys.json` |
+| Token accounts | `%AppData%\Roaming\QuotaArc\token-accounts.json` |
 
 Resolve at runtime:
 
@@ -20,7 +20,7 @@ Resolve at runtime:
 codexbar config path
 ```
 
-Implementation: `dirs::config_dir()/CodexBar/...` via `Settings::settings_path()` and related helpers in `rust/src/settings/`. Reads/writes go through `secure_file` (can use Windows DPAPI protection for sensitive material).
+Implementation: `dirs::config_dir()/QuotaArc/...` via `Settings::settings_path()` and related helpers in `rust/src/settings/`. Reads/writes go through `secure_file` (can use Windows DPAPI protection for sensitive material).
 
 Desktop UI and CLI share these stores. Prefer the Settings window for day-to-day toggles; use `codexbar config` for scripts/CI.
 
@@ -84,7 +84,7 @@ Upstream documents a rich `hooks` block in JSON config. This port exposes `codex
 
 ## Start at login (Windows)
 
-Desktop start-at-login uses `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` value `CodexBar` pointing at the desktop executable (managed via settings). CLI also has `codexbar autostart` for boot integration helpers.
+Desktop start-at-login uses `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` value `QuotaArc` pointing at the desktop executable (managed via settings). CLI also has `codexbar autostart` for boot integration helpers.
 
 ## Security
 

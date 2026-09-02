@@ -1,15 +1,15 @@
 # Privacy policy
 
-This is the privacy policy for **Win-CodexBar**, a Windows tray/desktop app that
+This is the privacy policy for **QuotaArc**, a Windows tray/desktop app that
 displays AI provider usage quotas on your own machine. It applies to the
 installer and portable builds published on
-[GitHub Releases](https://github.com/nesszer/Win-CodexBar/releases).
+[GitHub Releases](https://github.com/nesszer/QuotaArc/releases).
 
 Last updated: 2026-08-06.
 
 ## Summary
 
-- Win-CodexBar sends **nothing** to project-controlled servers. There are none.
+- QuotaArc sends **nothing** to project-controlled servers. There are none.
 - **No analytics, no telemetry, no crash reporting, no advertising SDKs.**
 - Everything the app reads or stores stays on your device unless you
   explicitly configure a provider, in which case the app talks only to that
@@ -30,7 +30,7 @@ The app stores configuration and caches locally, under your Windows user
 profile. Resolve the live locations with `codexbar config path` or see
 [CONFIGURATION.md](CONFIGURATION.md).
 
-### Settings and secrets — `%APPDATA%\CodexBar\`
+### Settings and secrets — `%APPDATA%\QuotaArc\`
 
 | Store | Typical file | Contents |
 |-------|--------------|----------|
@@ -45,7 +45,7 @@ through the app's secure-file layer, which applies user-scoped **Windows DPAPI**
 protection where available; some credential types additionally use Windows
 Credential Manager through keyring helpers. Secrets are never written to logs.
 
-### Usage caches — `%LOCALAPPDATA%\CodexBar\`
+### Usage caches — `%LOCALAPPDATA%\QuotaArc\`
 
 | Store | Contents |
 |-------|----------|
@@ -58,7 +58,7 @@ Startup diagnostics go to `%TEMP%\codexbar_launch_<pid>.log` on launch failure
 and contain no credentials.
 
 All of the above can be deleted at any time: uninstall the app (or quit the
-portable build) and remove `%APPDATA%\CodexBar\` and `%LOCALAPPDATA%\CodexBar\`.
+portable build) and remove `%APPDATA%\QuotaArc\` and `%LOCALAPPDATA%\QuotaArc\`.
 Deleting these folders removes every trace the app wrote, including secrets.
 
 ### Browser cookies
@@ -85,7 +85,7 @@ The app makes outbound connections only for the following purposes:
    "Check for Updates…" from the About tab — or if you explicitly enable
    automatic update downloads in Settings (off by default) — the app sends a
    plain GET request to the GitHub Releases API
-   (`https://api.github.com/repos/.../Win-CodexBar/releases`) to learn the
+   (`https://api.github.com/repos/.../QuotaArc/releases`) to learn the
    latest version. With your approval it then downloads the installer asset
    from `github.com`. The downloaded installer is applied only after its
    SHA-256 digest is re-verified against the digest GitHub computed for the
@@ -99,7 +99,7 @@ you enable a provider or trigger an update check.
 ## Third-party data processors
 
 **None.** No analytics vendor, crash-reporting service, or other third party
-receives data from Win-CodexBar. The only external parties that ever see a
+receives data from QuotaArc. The only external parties that ever see a
 request are (a) the AI providers you deliberately configure and (b) GitHub as
 the release host you contact for updates.
 
@@ -109,8 +109,8 @@ the release host you contact for updates.
   is nothing to retain or delete remotely.
 - **Local:** settings and secrets persist until you change or delete them in
   the app; caches persist until refreshed or removed. You can erase everything
-  at any time by deleting the `%APPDATA%\CodexBar\` and
-  `%LOCALAPPDATA%\CodexBar\` folders described above.
+  at any time by deleting the `%APPDATA%\QuotaArc\` and
+  `%LOCALAPPDATA%\QuotaArc\` folders described above.
 
 ## Diagnostics
 
@@ -127,4 +127,4 @@ material changes will also be noted in release notes.
 ## Contact
 
 Questions or data concerns: open an issue at
-<https://github.com/nesszer/Win-CodexBar/issues>.
+<https://github.com/nesszer/QuotaArc/issues>.

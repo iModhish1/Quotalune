@@ -1,7 +1,7 @@
 # Architecture overview (Windows)
 
-Windows rewrite of upstream CodexBar architecture concepts for **Win-CodexBar**.
-Upstream `docs/architecture.md` describes Swift modules (`CodexBarCore`, menu bar app, WidgetKit, Sparkle). Those do **not** apply here.
+Windows rewrite of upstream QuotaArc architecture concepts for **QuotaArc**.
+Upstream `docs/architecture.md` describes Swift modules (`QuotaArcCore`, menu bar app, WidgetKit, Sparkle). Those do **not** apply here.
 
 ## Modules
 
@@ -25,7 +25,7 @@ Cargo workspace (root `Cargo.toml`): members `rust`, `apps/desktop-tauri/src-tau
    `instantiate_provider` (`rust/src/core/provider_factory.rs`) → `Provider::fetch_usage` → shell `commands/providers.rs` (semaphore + timeout) → `AppState.provider_cache` → events → React `useProviders`.
 
 2. **Settings**  
-   `%AppData%\Roaming\CodexBar\settings.json` (and sibling stores) via `Settings::load` / `save` + `secure_file` (DPAPI-capable). UI patches go through `updateSettings` → save → settings / float-bar events.
+   `%AppData%\Roaming\QuotaArc\settings.json` (and sibling stores) via `Settings::load` / `save` + `secure_file` (DPAPI-capable). UI patches go through `updateSettings` → save → settings / float-bar events.
 
 3. **Tray**  
    `tray_bridge` + `tray_menu`. Icon RGBA from shared `codexbar::tray::{render_bar_icon_rgba, render_percent_icon_rgba}`.

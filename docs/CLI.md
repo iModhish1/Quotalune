@@ -1,4 +1,4 @@
-# CodexBar CLI (Windows)
+# QuotaArc CLI (Windows)
 
 Windows rewrite of upstream `docs/cli.md` for the **`codexbar`** binary built from `rust/`.
 Upstream install paths (`/Applications`, Homebrew, Sparkle-bundled Helpers) do **not** apply.
@@ -19,7 +19,7 @@ Release installers may place CLI next to the desktop app; for development, run t
 
 CLI and desktop app share the same Windows config directory (see [CONFIGURATION.md](./CONFIGURATION.md)):
 
-- Settings: `%AppData%\Roaming\CodexBar\settings.json`
+- Settings: `%AppData%\Roaming\QuotaArc\settings.json`
 - Manual cookies / API keys / token accounts: sibling files under that folder
 
 ```powershell
@@ -112,7 +112,7 @@ Browser cookie import for the app is documented in [COOKIES.md](./COOKIES.md). P
 
 ## Upstream differences (do not copy blindly)
 
-- No Commander/Swift CLI product name `CodexBarCLI`
+- No Commander/Swift CLI product name `QuotaArcCLI`
 - No macOS Keychain cookie cache flags as primary docs
 - No Homebrew Linux tarball install story as the default Windows path
 - Cards / claude-swap–specific CLI behavior from upstream docs may be absent or different — trust `codexbar <cmd> --help` on this binary

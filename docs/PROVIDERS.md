@@ -1,7 +1,7 @@
 # Providers (Windows)
 
 Windows rewrite of the *role* of upstream `docs/providers.md`: how providers are registered and fetched in **this** repo.
-Do **not** treat upstream’s full strategy table as authoritative for Win-CodexBar without checking code — IDs and auto-order drift.
+Do **not** treat upstream’s full strategy table as authoritative for QuotaArc without checking code — IDs and auto-order drift.
 
 ## Single factory
 

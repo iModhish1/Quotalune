@@ -1,41 +1,142 @@
 name: Release
 
+# QuotaArc release pipeline: builds on a Windows runner, tests, packages the
+# NSIS per-user installer (primary), MSI (enterprise) and portable zip,
+# generates SHA256SUMS, and publishes a draft GitHub Release. When code
+# signing secrets are configured the artifacts are signed; otherwise they
+# are clearly marked unsigned (docs/CODE_SIGNING.md).
+
 on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
-  trigger-circleci:
-    name: Trigger CircleCI release pipeline
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
+  build:
+    name: Build + package (${{ matrix.cfg }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cfg:
+          - channel: stable
+          - channel: unsigned-nightly
     steps:
-      - name: Trigger CircleCI pipeline
-        env:
-          CIRCLECI_API_TOKEN: ${{ secrets.CIRCLECI_API_TOKEN }}
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable (MSVC)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/desktop-tauri/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: apps/desktop-tauri
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        shell: pwsh
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          CIRCLECI_ORG_ID="abf39f4e-76e2-4992-a38e-faa68f1f232c"
-          CIRCLECI_PROJECT_ID="625e45a1-5a14-45f5-b4f8-516cd065ff53"
-          CIRCLECI_PIPELINE_DEFINITION_ID="1818f88e-272d-43d0-b1a4-92a28f2e14ad"
-          CIRCLECI_PROJECT_SLUG="circleci/NEXu54nDSfmgyJzxZ94jPH/D9XGye15Fdwi1TbFiykFTY"
-          echo "Triggering CircleCI pipeline for tag $TAG..."
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-            "https://circleci.com/api/v2/project/circleci/$CIRCLECI_ORG_ID/$CIRCLECI_PROJECT_ID/pipeline/run" \
-            -H "Circle-Token: $CIRCLECI_API_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "{\"definition_id\":\"$CIRCLECI_PIPELINE_DEFINITION_ID\",\"config\":{\"tag\":\"$TAG\"},\"checkout\":{\"tag\":\"$TAG\"}}")
-          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-          BODY=$(echo "$RESPONSE" | head -n -1)
-          echo "HTTP Status: $HTTP_CODE"
-          echo "Response: $BODY"
-          if [ "$HTTP_CODE" != "201" ]; then
-            echo "Failed to trigger CircleCI pipeline"
-            exit 1
-          fi
-          PIPELINE_ID=$(echo "$BODY" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
-          echo "CircleCI pipeline triggered: https://app.circleci.com/pipelines/$CIRCLECI_PROJECT_SLUG/$PIPELINE_ID"
-          echo "::notice::CircleCI pipeline triggered for $TAG"
+          cargo test --manifest-path rust/Cargo.toml
+          Push-Location apps/desktop-tauri
+          pnpm test
+          Pop-Location
+
+      - name: Build release bundles (NSIS + MSI)
+        working-directory: apps/desktop-tauri
+        shell: pwsh
+        env:
+          # Windows Authenticode signing (optional). When these secrets are
+          # absent the build stays unsigned and is labeled as such.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          pnpm exec tauri build --bundles nsis,msi 2>&1 | Tee-Object -Variable buildLog
+          if ($LASTEXITCODE -ne 0) { Get-Content $buildLog -ErrorAction SilentlyContinue; exit 1 }
+
+      - name: Stage artifacts
+        shell: pwsh
+        run: |
+          $stage = "release-stage"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          $ver = (Get-Content apps/desktop-tauri/src-tauri/tauri.conf.json | ConvertFrom-Json).version
+          $tag = if ($env:GITHUB_REF_NAME -like 'v*') { $env:GITHUB_REF_NAME } else { "v$ver" }
+          $bundle = "target/release/bundle"
+          Copy-Item "$bundle/nsis/*.exe" $stage
+          Copy-Item "$bundle/msi/*.msi" $stage -ErrorAction SilentlyContinue
+          # Portable zip: the self-contained exe + icon; WebView2 is bootstrapped.
+          $exe = Get-ChildItem "target/release/QuotaArc.exe" -ErrorAction SilentlyContinue
+          if (-not $exe) { $exe = Get-ChildItem "target/release/*.exe" | Where-Object Name -notmatch '-Setup|\.msi' | Select-Object -First 1 }
+          Compress-Archive -Path $exe.FullName -DestinationPath "$stage/QuotaArc-$ver-x64-Portable.zip"
+          Get-ChildItem $stage | ForEach-Object { $_.Name }
+
+      - name: Sign artifacts (Authenticode)
+        id: sign
+        shell: pwsh
+        env:
+          WINDOWS_PFX_BASE64: ${{ secrets.WINDOWS_PFX_BASE64 }}
+          WINDOWS_PFX_PASSWORD: ${{ secrets.WINDOWS_PFX_PASSWORD }}
+        run: |
+          if (-not $env:WINDOWS_PFX_BASE64) {
+            Write-Host "::warning::No code signing certificate configured — artifacts are UNSIGNED."
+            "signed=false" | Out-File -Append $env:GITHUB_OUTPUT
+            exit 0
+          }
+          $pfx = [IO.Path]::GetTempFileName() + ".pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_PFX_BASE64))
+          $signtool = (Get-ChildItem "C:/Program Files (x86)/Windows Kits/10/bin" -Recurse -Filter signtool.exe | Where-Object FullName -match 'x64' | Select-Object -First 1).FullName
+          foreach ($f in (Get-ChildItem release-stage -Include *.exe,*.msi -Recurse)) {
+            & $signtool sign /fd SHA256 /f $pfx /p $env:WINDOWS_PFX_PASSWORD /tr http://timestamp.digicert.com /td SHA256 $f.FullName
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+          }
+          Remove-Item $pfx
+          "signed=true" | Out-File -Append $env:GITHUB_OUTPUT
+
+      - name: Generate SHA256SUMS
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem release-stage | Where-Object { $_.Extension -in '.exe', '.msi', '.zip' }
+          ($files | ForEach-Object {
+            $h = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$h  $($_.Name)"
+          }) | Set-Content release-stage/SHA256SUMS.txt
+          Get-Content release-stage/SHA256SUMS.txt
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: quotaarc-${{ matrix.cfg.channel }}
+          path: release-stage/*
+          if-no-files-found: error
+
+      - name: Publish draft release (stable tag builds only)
+        if: matrix.cfg.channel == 'stable' && startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: release-stage/*

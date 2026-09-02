@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve Win-CodexBar. This repo is the Windows/Tauri port, so prefer the active Tauri and Rust codepaths over historical upstream macOS material.
+Thanks for helping improve QuotaArc. QuotaArc builds on the Win-CodexBar provider engine, so prefer the active Tauri and Rust codepaths, and keep provider-module changes upstream-portable (see docs/UPSTREAM_SYNC.md).
 
 ## Active project layout
 
