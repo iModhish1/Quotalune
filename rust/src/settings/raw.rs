@@ -183,6 +183,14 @@ pub(super) struct RawSettings {
     top_arc_click_through: bool,
     #[serde(default = "default_true")]
     top_arc_hide_fullscreen: bool,
+    #[serde(default = "default_surface_opacity")]
+    taskbar_arc_opacity: u8,
+    #[serde(default)]
+    taskbar_arc_enabled: bool,
+    #[serde(default)]
+    taskbar_arc_click_through: bool,
+    #[serde(default = "default_true")]
+    taskbar_arc_hide_fullscreen: bool,
     #[serde(default)]
     privacy_mode: bool,
     #[serde(default = "default_true")]
@@ -309,6 +317,10 @@ impl Default for RawSettings {
             top_arc_click_through: s.top_arc_click_through,
             top_arc_hide_fullscreen: s.top_arc_hide_fullscreen,
             privacy_mode: s.privacy_mode,
+            taskbar_arc_enabled: s.taskbar_arc_enabled,
+            taskbar_arc_opacity: s.taskbar_arc_opacity,
+            taskbar_arc_click_through: s.taskbar_arc_click_through,
+            taskbar_arc_hide_fullscreen: s.taskbar_arc_hide_fullscreen,
             promote_tray_icon: s.promote_tray_icon,
             claude_daily_routines_usage_visible: s.claude_daily_routines_usage_visible,
             claude_allow_reading_claude_code_credentials: s
@@ -622,6 +634,10 @@ impl From<RawSettings> for Settings {
             top_arc_click_through: raw.top_arc_click_through,
             top_arc_hide_fullscreen: raw.top_arc_hide_fullscreen,
             privacy_mode: raw.privacy_mode,
+            taskbar_arc_enabled: raw.taskbar_arc_enabled,
+            taskbar_arc_opacity: clamp_surface_opacity(raw.taskbar_arc_opacity),
+            taskbar_arc_click_through: raw.taskbar_arc_click_through,
+            taskbar_arc_hide_fullscreen: raw.taskbar_arc_hide_fullscreen,
             promote_tray_icon: raw.promote_tray_icon,
             claude_daily_routines_usage_visible: raw.claude_daily_routines_usage_visible,
             claude_allow_reading_claude_code_credentials: raw

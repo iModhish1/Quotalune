@@ -15,6 +15,10 @@ export interface SurfaceSettingsPatch {
   topArcScale?: number;
   topArcClickThrough?: boolean;
   topArcHideFullscreen?: boolean;
+  taskbarArcEnabled?: boolean;
+  taskbarArcOpacity?: number;
+  taskbarArcClickThrough?: boolean;
+  taskbarArcHideFullscreen?: boolean;
 }
 
 export function showEdgeArc(): Promise<void> {
@@ -41,6 +45,18 @@ export function resizeTopArc(width: number, height: number): Promise<void> {
   return invoke("resize_top_arc_surface", { width, height });
 }
 
+export function showTaskbarArc(): Promise<void> {
+  return invoke("show_taskbar_arc_surface");
+}
+
+export function hideTaskbarArc(): Promise<void> {
+  return invoke("hide_taskbar_arc_surface");
+}
+
+export function resizeTaskbarArc(width: number, height: number): Promise<void> {
+  return invoke("resize_taskbar_arc_surface", { width, height });
+}
+
 export function updateSurfaceSettings(patch: SurfaceSettingsPatch): Promise<void> {
   return invoke("update_surface_settings", { patch });
 }
@@ -57,6 +73,10 @@ export interface SurfaceSettings {
   topArcScale: number;
   topArcClickThrough: boolean;
   topArcHideFullscreen: boolean;
+  taskbarArcEnabled: boolean;
+  taskbarArcOpacity: number;
+  taskbarArcClickThrough: boolean;
+  taskbarArcHideFullscreen: boolean;
 }
 
 export function getSurfaceSettings(): Promise<SurfaceSettings> {

@@ -14,8 +14,9 @@ use codexbar::settings::Settings;
 use tauri::{LogicalPosition, Manager, WebviewUrl};
 
 use crate::surface_kit::{
-    EDGE_ARC_LABEL, TOP_ARC_LABEL, apply_always_on_top, apply_click_through, apply_no_activate,
-    apply_opacity, foreground_is_content_fullscreen, resize_surface,
+    EDGE_ARC_LABEL, TASKBAR_ARC_LABEL, TOP_ARC_LABEL, apply_always_on_top, apply_click_through,
+    apply_no_activate, apply_opacity, foreground_is_content_fullscreen, monitor_work_area_logical,
+    resize_surface,
 };
 
 /// Default logical size of the Edge Arc before the webview requests its
@@ -26,6 +27,10 @@ pub const EDGE_ARC_DEFAULT_HEIGHT: f64 = 420.0;
 /// Default logical size of the Top Arc compact pill.
 pub const TOP_ARC_DEFAULT_WIDTH: f64 = 380.0;
 pub const TOP_ARC_DEFAULT_HEIGHT: f64 = 52.0;
+
+/// Default logical size of the Taskbar Arc strip.
+pub const TASKBAR_ARC_DEFAULT_WIDTH: f64 = 320.0;
+pub const TASKBAR_ARC_DEFAULT_HEIGHT: f64 = 40.0;
 
 /// Edge margin for the Top Arc from the top of the work area, logical px.
 const TOP_ARC_MARGIN: f64 = 10.0;
@@ -201,6 +206,81 @@ pub fn resize_top_arc(
 
 // ── Lifecycle ────────────────────────────────────────────────────────────
 
+// ── Taskbar Arc ──────────────────────────────────────────────────────────
+
+/// Position the Taskbar Arc centered on the work-area bottom edge of its
+/// monitor (sits just above the Windows taskbar, following auto-hide).
+fn position_taskbar_arc(window: &tauri::WebviewWindow) {
+    let Some((wx, wy, ww, wh)) = monitor_work_area_logical(window) else {
+        return;
+    };
+    let Ok(size) = window.outer_size() else {
+        return;
+    };
+    let scale = window.scale_factor().unwrap_or(1.0).max(0.01);
+    let w = size.width as f64 / scale;
+    let h = size.height as f64 / scale;
+    let x = wx + ((ww - w) / 2.0).max(0.0);
+    let y = wy + (wh - h - 6.0).max(0.0);
+    let _ = window.set_position(tauri::LogicalPosition::new(x.round(), y.round()));
+}
+
+/// Show (or reapply attributes to) the Taskbar Arc window.
+pub fn show_taskbar_arc(app: &tauri::AppHandle) -> Result<(), String> {
+    let settings = Settings::load();
+    let scale = codexbar::settings::clamp_surface_scale(settings.top_arc_scale) as f64 / 100.0;
+
+    if let Some(window) = app.get_webview_window(TASKBAR_ARC_LABEL) {
+        apply_taskbar_arc_attrs(&window, &settings);
+        let _ = window.show();
+        apply_always_on_top(&window);
+        position_taskbar_arc(&window);
+        return Ok(());
+    }
+
+    let url = WebviewUrl::App("index.html?window=taskbar-arc".into());
+    let builder =
+        crate::surface_kit::base_builder(app, TASKBAR_ARC_LABEL, "QuotaArc Taskbar Arc", url)
+            .inner_size(
+                TASKBAR_ARC_DEFAULT_WIDTH * scale,
+                TASKBAR_ARC_DEFAULT_HEIGHT * scale,
+            )
+            .visible(false);
+
+    let window = builder.build().map_err(|e| e.to_string())?;
+    apply_taskbar_arc_attrs(&window, &settings);
+    position_taskbar_arc(&window);
+    window.show().map_err(|e| e.to_string())?;
+    apply_always_on_top(&window);
+    Ok(())
+}
+
+fn apply_taskbar_arc_attrs(window: &tauri::WebviewWindow, settings: &Settings) {
+    apply_opacity(window, settings.taskbar_arc_opacity);
+    apply_click_through(window, settings.taskbar_arc_click_through);
+    apply_no_activate(window);
+}
+
+/// Hide (destroy) the Taskbar Arc.
+pub fn hide_taskbar_arc(app: &tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window(TASKBAR_ARC_LABEL) {
+        window.close().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Resize the Taskbar Arc (webview-driven) keeping the bottom-center snap.
+pub fn resize_taskbar_arc(
+    window: &tauri::WebviewWindow,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
+    let settings = Settings::load();
+    resize_surface(window, width, height, settings.taskbar_arc_click_through)?;
+    position_taskbar_arc(window);
+    Ok(())
+}
+
 /// Restore enabled surfaces at startup and start the fullscreen watcher.
 pub fn install(app: &tauri::AppHandle) {
     let settings = Settings::load();
@@ -209,6 +289,9 @@ pub fn install(app: &tauri::AppHandle) {
     }
     if settings.top_arc_enabled {
         let _show = show_top_arc(app);
+    }
+    if settings.taskbar_arc_enabled {
+        let _show = show_taskbar_arc(app);
     }
     spawn_fullscreen_watcher(app.clone());
 }
@@ -237,12 +320,23 @@ pub fn apply_state(app: &tauri::AppHandle, settings: &Settings) {
         position_top_arc(&w);
         apply_always_on_top(&w);
     }
+
+    let taskbar_open = app.get_webview_window(TASKBAR_ARC_LABEL).is_some();
+    if settings.taskbar_arc_enabled && !taskbar_open {
+        let _show = show_taskbar_arc(app);
+    } else if !settings.taskbar_arc_enabled && taskbar_open {
+        let _hide = hide_taskbar_arc(app);
+    } else if let Some(w) = app.get_webview_window(TASKBAR_ARC_LABEL) {
+        apply_taskbar_arc_attrs(&w, settings);
+        position_taskbar_arc(&w);
+        apply_always_on_top(&w);
+    }
 }
 
 /// Handle window events for surface windows. Returns true when handled.
 pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) -> bool {
     let label = window.label();
-    if label != EDGE_ARC_LABEL && label != TOP_ARC_LABEL {
+    if label != EDGE_ARC_LABEL && label != TOP_ARC_LABEL && label != TASKBAR_ARC_LABEL {
         return false;
     }
     match event {
@@ -253,9 +347,12 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) -
                     let side = codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
                     position_edge_arc(&webview, &side);
                     apply_edge_arc_attrs(&webview, &settings);
-                } else {
+                } else if label == TOP_ARC_LABEL {
                     position_top_arc(&webview);
                     apply_top_arc_attrs(&webview, &settings);
+                } else {
+                    position_taskbar_arc(&webview);
+                    apply_taskbar_arc_attrs(&webview, &settings);
                 }
                 apply_always_on_top(&webview);
             }
@@ -287,7 +384,8 @@ fn spawn_fullscreen_watcher(app: tauri::AppHandle) {
             let settings = Settings::load();
             let edge = app.get_webview_window(EDGE_ARC_LABEL);
             let top = app.get_webview_window(TOP_ARC_LABEL);
-            if edge.is_none() && top.is_none() {
+            let taskbar = app.get_webview_window(TASKBAR_ARC_LABEL);
+            if edge.is_none() && top.is_none() && taskbar.is_none() {
                 // No surfaces alive; park cheaply.
                 HIDDEN_BY_FULLSCREEN.store(false, std::sync::atomic::Ordering::Relaxed);
                 continue;
@@ -310,6 +408,13 @@ fn spawn_fullscreen_watcher(app: tauri::AppHandle) {
                     let _ = w.hide();
                     changed = true;
                 }
+                if settings.taskbar_arc_hide_fullscreen
+                    && let Some(w) = &taskbar
+                    && w.is_visible().unwrap_or(false)
+                {
+                    let _ = w.hide();
+                    changed = true;
+                }
                 if changed {
                     HIDDEN_BY_FULLSCREEN.store(true, std::sync::atomic::Ordering::Relaxed);
                 }
@@ -322,6 +427,12 @@ fn spawn_fullscreen_watcher(app: tauri::AppHandle) {
                 }
                 if settings.top_arc_enabled
                     && let Some(w) = &top
+                {
+                    let _ = w.show();
+                    apply_always_on_top(w);
+                }
+                if settings.taskbar_arc_enabled
+                    && let Some(w) = &taskbar
                 {
                     let _ = w.show();
                     apply_always_on_top(w);
@@ -360,6 +471,25 @@ pub fn resize_edge_arc_surface(
     height: f64,
 ) -> Result<(), String> {
     resize_edge_arc(&window, width, height)
+}
+
+#[tauri::command]
+pub fn show_taskbar_arc_surface(app: tauri::AppHandle) -> Result<(), String> {
+    show_taskbar_arc(&app)
+}
+
+#[tauri::command]
+pub fn hide_taskbar_arc_surface(app: tauri::AppHandle) -> Result<(), String> {
+    hide_taskbar_arc(&app)
+}
+
+#[tauri::command]
+pub fn resize_taskbar_arc_surface(
+    window: tauri::WebviewWindow,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
+    resize_taskbar_arc(&window, width, height)
 }
 
 #[tauri::command]
@@ -403,6 +533,10 @@ pub struct SurfaceSettingsDto {
     pub top_arc_scale: u8,
     pub top_arc_click_through: bool,
     pub top_arc_hide_fullscreen: bool,
+    pub taskbar_arc_enabled: bool,
+    pub taskbar_arc_opacity: u8,
+    pub taskbar_arc_click_through: bool,
+    pub taskbar_arc_hide_fullscreen: bool,
 }
 
 #[tauri::command]
@@ -420,6 +554,10 @@ pub fn get_surface_settings() -> SurfaceSettingsDto {
         top_arc_scale: s.top_arc_scale,
         top_arc_click_through: s.top_arc_click_through,
         top_arc_hide_fullscreen: s.top_arc_hide_fullscreen,
+        taskbar_arc_enabled: s.taskbar_arc_enabled,
+        taskbar_arc_opacity: s.taskbar_arc_opacity,
+        taskbar_arc_click_through: s.taskbar_arc_click_through,
+        taskbar_arc_hide_fullscreen: s.taskbar_arc_hide_fullscreen,
     }
 }
 
@@ -438,6 +576,10 @@ pub struct SurfaceSettingsPatch {
     pub top_arc_scale: Option<u8>,
     pub top_arc_click_through: Option<bool>,
     pub top_arc_hide_fullscreen: Option<bool>,
+    pub taskbar_arc_enabled: Option<bool>,
+    pub taskbar_arc_opacity: Option<u8>,
+    pub taskbar_arc_click_through: Option<bool>,
+    pub taskbar_arc_hide_fullscreen: Option<bool>,
 }
 
 impl SurfaceSettingsPatch {
@@ -474,6 +616,18 @@ impl SurfaceSettingsPatch {
         }
         if let Some(v) = self.top_arc_hide_fullscreen {
             s.top_arc_hide_fullscreen = v;
+        }
+        if let Some(v) = self.taskbar_arc_enabled {
+            s.taskbar_arc_enabled = v;
+        }
+        if let Some(v) = self.taskbar_arc_opacity {
+            s.taskbar_arc_opacity = codexbar::settings::clamp_surface_opacity(v);
+        }
+        if let Some(v) = self.taskbar_arc_click_through {
+            s.taskbar_arc_click_through = v;
+        }
+        if let Some(v) = self.taskbar_arc_hide_fullscreen {
+            s.taskbar_arc_hide_fullscreen = v;
         }
     }
 }
@@ -516,7 +670,7 @@ mod tests {
 
     #[test]
     fn default_sizes_are_sane() {
-        assert!(EDGE_ARC_DEFAULT_WIDTH < 120.0);
-        assert!(TOP_ARC_DEFAULT_HEIGHT < 80.0);
+        const { assert!(TASKBAR_ARC_DEFAULT_WIDTH > TOP_ARC_DEFAULT_WIDTH / 2.0) };
+        const { assert!(TASKBAR_ARC_DEFAULT_HEIGHT < TOP_ARC_DEFAULT_HEIGHT) };
     }
 }

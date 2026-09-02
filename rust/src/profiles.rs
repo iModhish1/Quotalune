@@ -133,6 +133,7 @@ pub enum ProfileMark {
 pub struct ProfileSurfaces {
     pub edge_arc: bool,
     pub top_arc: bool,
+    pub taskbar_arc: bool,
     pub float_bar: bool,
 }
 
@@ -141,6 +142,7 @@ impl ProfileSurfaces {
         Self {
             edge_arc: settings.edge_arc_enabled,
             top_arc: settings.top_arc_enabled,
+            taskbar_arc: settings.taskbar_arc_enabled,
             float_bar: settings.float_bar_enabled,
         }
     }

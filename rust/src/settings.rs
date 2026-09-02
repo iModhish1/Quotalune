@@ -356,6 +356,23 @@ pub struct Settings {
     #[serde(default = "default_true")]
     pub top_arc_hide_fullscreen: bool,
 
+    /// Enable the Taskbar Arc: a taskbar-adjacent capacity strip sitting on
+    /// the monitor's work-area bottom edge.
+    #[serde(default)]
+    pub taskbar_arc_enabled: bool,
+
+    /// Taskbar Arc window opacity, 30..=100.
+    #[serde(default = "default_surface_opacity")]
+    pub taskbar_arc_opacity: u8,
+
+    /// Taskbar Arc full click-through (overlay) mode.
+    #[serde(default)]
+    pub taskbar_arc_click_through: bool,
+
+    /// Hide the Taskbar Arc while a fullscreen app/game is in the foreground.
+    #[serde(default = "default_true")]
+    pub taskbar_arc_hide_fullscreen: bool,
+
     /// Privacy Mode: hide account/profile names, emails, and costs across
     /// surfaces. Persisted so it survives restarts; toggleable from the tray.
     #[serde(default)]
@@ -649,6 +666,10 @@ impl Default for Settings {
             top_arc_scale: default_surface_scale(),
             top_arc_click_through: false,
             top_arc_hide_fullscreen: true,
+            taskbar_arc_enabled: false,
+            taskbar_arc_opacity: default_surface_opacity(),
+            taskbar_arc_click_through: false,
+            taskbar_arc_hide_fullscreen: true,
             privacy_mode: false,
             promote_tray_icon: true,
             claude_daily_routines_usage_visible: true,

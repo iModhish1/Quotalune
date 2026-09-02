@@ -9,6 +9,7 @@ mod commands;
 mod events;
 mod floatbar;
 mod geometry_store;
+mod history_recorder;
 mod powertoys;
 mod proof_harness;
 mod shell;
@@ -261,6 +262,9 @@ fn main() {
             surfaces::hide_top_arc_surface,
             surfaces::resize_edge_arc_surface,
             surfaces::resize_top_arc_surface,
+            surfaces::show_taskbar_arc_surface,
+            surfaces::hide_taskbar_arc_surface,
+            surfaces::resize_taskbar_arc_surface,
             surfaces::update_surface_settings,
             surfaces::get_surface_settings,
             command_profiles::get_profile_store,
@@ -285,6 +289,7 @@ fn main() {
             shortcut_bridge::register(app.handle());
             floatbar::install(app.handle());
             surfaces::install(app.handle());
+            crate::history_recorder::prune_on_startup();
             auto_refresh::install(app.handle().clone());
             if settings.powertoys_status_pipe_enabled {
                 powertoys::install(app.handle().clone());

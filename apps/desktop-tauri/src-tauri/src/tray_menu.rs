@@ -80,8 +80,13 @@ pub(crate) struct SurfaceToggles {
     pub float_bar: bool,
     pub edge_arc: bool,
     pub top_arc: bool,
+    pub taskbar_arc: bool,
 }
 
+#[allow(
+    dead_code,
+    reason = "kept as the test-default entry point for menu construction"
+)]
 pub(crate) fn build_tray_menu(
     providers: &[ProviderCatalogEntry],
     status_labels: &[(String, String)],
@@ -162,6 +167,11 @@ pub(crate) fn build_tray_menu_with(
         "toggle_top_arc",
         text(LocaleKey::TrayShowTopArc),
         surfaces.top_arc,
+    ));
+    menu.push(TrayMenuEntry::check_item(
+        "toggle_taskbar_arc",
+        "Show Taskbar Arc",
+        surfaces.taskbar_arc,
     ));
     menu.push(TrayMenuEntry::separator());
 
@@ -280,6 +290,7 @@ mod tests {
                 float_bar: true,
                 edge_arc: false,
                 top_arc: false,
+                taskbar_arc: false,
             },
             &[],
             false,

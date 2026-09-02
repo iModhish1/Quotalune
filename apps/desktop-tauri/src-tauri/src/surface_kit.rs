@@ -10,6 +10,7 @@ use tauri::WebviewWindow;
 
 pub const EDGE_ARC_LABEL: &str = "edge-arc";
 pub const TOP_ARC_LABEL: &str = "top-arc";
+pub const TASKBAR_ARC_LABEL: &str = "taskbar-arc";
 
 /// Build the common auxiliary-surface window: borderless, transparent,
 /// non-resizable, skip-taskbar, always-on-top, theme-pinned dark (WebView2
@@ -31,8 +32,9 @@ pub(crate) fn base_builder<'a>(
         .theme(Some(tauri::Theme::Dark));
     #[cfg(windows)]
     {
-        let builder = builder.transparent(true);
-        return builder.background_color(tauri::utils::config::Color(0, 0, 0, 0));
+        builder
+            .transparent(true)
+            .background_color(tauri::utils::config::Color(0, 0, 0, 0))
     }
     #[cfg(not(windows))]
     builder
@@ -239,6 +241,48 @@ pub fn foreground_is_content_fullscreen() -> bool {
     false
 }
 
+/// Monitor work area (excludes the taskbar) for a window's monitor, in
+/// logical units: `(x, y, width, height)`. Falls back to the full monitor
+/// bounds where the work area cannot be read.
+pub fn monitor_work_area_logical(window: &WebviewWindow) -> Option<(f64, f64, f64, f64)> {
+    #[cfg(windows)]
+    {
+        use raw_window_handle::HasWindowHandle;
+        let handle = window.window_handle().ok()?;
+        let raw_window_handle::RawWindowHandle::Win32(h) = handle.as_raw() else {
+            return None;
+        };
+        let scale = window.scale_factor().unwrap_or(1.0).max(0.01);
+        unsafe {
+            let hwnd = h.hwnd.get();
+            let monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+            let mut mi: MONITORINFO = std::mem::zeroed();
+            mi.cbSize = std::mem::size_of::<MONITORINFO>() as u32;
+            if GetMonitorInfoW(monitor, &mut mi) == 0 {
+                return None;
+            }
+            let x = f64::from(mi.rcWork.left) / scale;
+            let y = f64::from(mi.rcWork.top) / scale;
+            let w = f64::from(mi.rcWork.right - mi.rcWork.left) / scale;
+            let h = f64::from(mi.rcWork.bottom - mi.rcWork.top) / scale;
+            Some((x, y, w, h))
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        let monitor = window.current_monitor().ok()??;
+        let scale = window.scale_factor().unwrap_or(1.0).max(0.01);
+        let pos = monitor.position();
+        let size = monitor.size();
+        Some((
+            f64::from(pos.x) / scale,
+            f64::from(pos.y) / scale,
+            f64::from(size.width) / scale,
+            f64::from(size.height) / scale,
+        ))
+    }
+}
+
 #[cfg(windows)]
 const GWL_EXSTYLE: i32 = -20;
 #[cfg(windows)]
@@ -246,6 +290,7 @@ const GWL_STYLE: i32 = -16;
 
 #[cfg(windows)]
 #[repr(C)]
+#[allow(clippy::upper_case_acronyms)]
 struct RECT {
     left: i32,
     top: i32,
@@ -255,7 +300,7 @@ struct RECT {
 
 #[cfg(windows)]
 #[repr(C)]
-#[allow(non_snake_case)]
+#[allow(non_snake_case, clippy::upper_case_acronyms)]
 struct MONITORINFO {
     cbSize: u32,
     rcMonitor: RECT,
@@ -264,7 +309,7 @@ struct MONITORINFO {
 }
 
 #[cfg(windows)]
-const MONITOR_DEFAULTTONEAREST: usize = 2;
+const MONITOR_DEFAULTTONEAREST: u32 = 2;
 
 #[cfg(windows)]
 unsafe fn set_extended_style(hwnd: isize, ex_style: isize) {
@@ -304,7 +349,7 @@ unsafe extern "system" {
     ) -> i32;
     fn GetForegroundWindow() -> isize;
     fn GetWindowRect(hwnd: isize, rect: *mut RECT) -> i32;
-    fn MonitorFromWindow(hwnd: isize, flags: usize) -> isize;
+    fn MonitorFromWindow(hwnd: isize, flags: u32) -> isize;
     fn GetMonitorInfoW(monitor: isize, info: *mut MONITORINFO) -> i32;
 }
 

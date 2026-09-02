@@ -33,6 +33,7 @@ const PopOutPanel = lazy(() => import("./surfaces/PopOutPanel"));
 const FloatBar = lazy(() => import("./floatbar/FloatBar"));
 const EdgeArc = lazy(() => import("./surfaces/edge-arc/EdgeArc"));
 const TopArc = lazy(() => import("./surfaces/top-arc/TopArc"));
+const TaskbarArc = lazy(() => import("./surfaces/taskbar-arc/TaskbarArc"));
 
 function SurfaceFallback() {
   return null;
@@ -56,6 +57,11 @@ function isEdgeArcWindow(): boolean {
 /** True when running inside the detached Top Arc surface window. */
 function isTopArcWindow(): boolean {
   return getCurrentWebviewWindow().label === "top-arc";
+}
+
+/** True when running inside the detached Taskbar Arc surface window. */
+function isTaskbarArcWindow(): boolean {
+  return getCurrentWebviewWindow().label === "taskbar-arc";
 }
 
 /** True when running inside the detached flyout ("Pop Out Dashboard") window. */
@@ -219,6 +225,15 @@ function AppInner() {
       <Suspense fallback={<SurfaceFallback />}>
         <DesignSystemBridge>
           <TopArc />
+        </DesignSystemBridge>
+      </Suspense>
+    );
+  }
+  if (isTaskbarArcWindow()) {
+    return (
+      <Suspense fallback={<SurfaceFallback />}>
+        <DesignSystemBridge>
+          <TaskbarArc />
         </DesignSystemBridge>
       </Suspense>
     );

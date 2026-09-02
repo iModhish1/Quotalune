@@ -1,0 +1,55 @@
+/* Taskbar Arc surface — QuotaArc design-system styling. */
+
+.taskbar-arc {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--qa-space-2);
+  padding: 4px var(--qa-space-3);
+  box-sizing: border-box;
+  background: var(--qa-material-glass-strong);
+  border: 1px solid var(--qa-hairline);
+  border-radius: var(--qa-radius-md);
+  box-shadow: var(--qa-shadow-2);
+  color: var(--qa-ink-1);
+  font-family: var(--qa-font);
+  overflow: hidden;
+  user-select: none;
+}
+
+.taskbar-arc__profile .qa-profile-switcher__trigger {
+  padding: 2px var(--qa-space-2);
+  background: transparent;
+  border-color: transparent;
+}
+
+.taskbar-arc__chips {
+  display: flex;
+  align-items: center;
+  gap: var(--qa-space-3);
+  flex: 1;
+  justify-content: center;
+}
+
+.taskbar-arc__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.taskbar-arc__value {
+  font-size: var(--qa-text-caption);
+  font-weight: var(--qa-weight-semibold);
+}
+
+.taskbar-arc__empty {
+  color: var(--qa-ink-4);
+  font-size: var(--qa-text-caption);
+}
+
+.taskbar-arc__expand-hint {
+  font-size: var(--qa-text-micro);
+  color: var(--qa-ink-3);
+  white-space: nowrap;
+}

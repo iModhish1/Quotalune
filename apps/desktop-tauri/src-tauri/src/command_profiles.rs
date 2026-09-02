@@ -7,7 +7,7 @@
 
 use codexbar::profiles::{ProfileStore, ProviderAccount, QuotaArcProfile};
 use codexbar::settings::{Settings, ThemePreference};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 
 fn emit_changed(app: &AppHandle) {
     let _ = app.emit("profiles-changed", ());
@@ -368,7 +368,6 @@ pub fn set_privacy_mode(app: AppHandle, enabled: bool) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use codexbar::core::ProviderId;
 
     #[test]
     fn apply_profile_maps_enabled_accounts_to_providers() {
@@ -381,10 +380,12 @@ mod tests {
             .cloned()
             .expect("claude account");
         // Disable Claude's only account; enabled providers must drop it.
-        let mut s2 = Settings::default();
-        s2.enabled_providers = ["claude".to_string(), "codex".to_string()]
-            .into_iter()
-            .collect();
+        let mut s2 = Settings {
+            enabled_providers: ["claude".to_string(), "codex".to_string()]
+                .into_iter()
+                .collect(),
+            ..Settings::default()
+        };
         let mut account = claude;
         account.enabled = false;
         store.accounts.retain(|a| a.id != account.id);

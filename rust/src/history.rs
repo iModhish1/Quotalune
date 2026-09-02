@@ -1,0 +1,438 @@
+//! Account-scoped local usage history.
+//!
+//! SQLite (WAL) store at `<config>/history.db`. Every sample is keyed by
+//! `account_id` (UUID from the profile store; a stable synthetic
+//! `provider:<cli>` key is used when a provider has no registered account
+//! yet) — never by display names, so history survives renames.
+//!
+//! Deduplication: a sample is skipped when the newest row for the same
+//! (account, window) already carries the same usage within the dedup window,
+//! so idle polling does not spam the database. Retention pruning deletes
+//! rows older than the configured number of days. Schema changes go through
+//! `PRAGMA user_version` migrations (tested).
+
+use std::path::PathBuf;
+use std::sync::Mutex;
+
+use rusqlite::Connection;
+
+/// Rows with identical usage for the same (account, window) inside this
+/// window are considered duplicates of the stored sample.
+pub const DEDUP_WINDOW_SECS: i64 = 45;
+
+/// Default retention in days (matches the bounded-retention policy).
+pub const DEFAULT_RETENTION_DAYS: u32 = 90;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UsageSample {
+    pub account_id: String,
+    pub provider: String,
+    pub window_id: Option<String>,
+    pub window_label: Option<String>,
+    pub used_percent: f64,
+    pub remaining_percent: f64,
+    pub cost_used: Option<f64>,
+    /// Epoch seconds.
+    pub resets_at: Option<i64>,
+    /// Epoch seconds.
+    pub captured_at: i64,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct HistoryQuery {
+    pub account_ids: Vec<String>,
+    pub providers: Vec<String>,
+    /// Epoch seconds (inclusive).
+    pub since: Option<i64>,
+    /// Epoch seconds (inclusive). `None` = now.
+    pub until: Option<i64>,
+}
+
+pub struct HistoryStore {
+    path: PathBuf,
+    conn: Mutex<Option<Connection>>,
+}
+
+fn now_epoch() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs().cast_signed())
+        .unwrap_or(0)
+}
+
+impl HistoryStore {
+    pub fn path() -> Option<PathBuf> {
+        crate::paths::config_dir().map(|p| p.join("history.db"))
+    }
+
+    pub fn open() -> Self {
+        let path = Self::path().unwrap_or_else(|| PathBuf::from("quotaarc-history.db"));
+        Self {
+            path,
+            conn: Mutex::new(None),
+        }
+    }
+
+    /// Open a store against an explicit path (tests).
+    pub fn open_at(path: PathBuf) -> Self {
+        Self {
+            path,
+            conn: Mutex::new(None),
+        }
+    }
+
+    fn with_conn<T>(
+        &self,
+        f: impl FnOnce(&Connection) -> Result<T, rusqlite::Error>,
+    ) -> Result<T, String> {
+        let mut guard = self
+            .conn
+            .lock()
+            .map_err(|_| "history store lock poisoned".to_string())?;
+        if guard.is_none() {
+            if let Some(parent) = self.path.parent() {
+                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+            }
+            let conn = Connection::open(&self.path).map_err(|e| e.to_string())?;
+            conn.busy_timeout(std::time::Duration::from_millis(500))
+                .map_err(|e| e.to_string())?;
+            conn.pragma_update(None, "journal_mode", "WAL")
+                .map_err(|e| e.to_string())?;
+            conn.pragma_update(None, "synchronous", "NORMAL")
+                .map_err(|e| e.to_string())?;
+            Self::migrate(&conn).map_err(|e| e.to_string())?;
+            *guard = Some(conn);
+        }
+        f(guard.as_ref().expect("connection initialized")).map_err(|e| e.to_string())
+    }
+
+    fn migrate(conn: &Connection) -> Result<(), rusqlite::Error> {
+        let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+        if version < 1 {
+            conn.execute_batch(
+                "BEGIN;
+                 CREATE TABLE IF NOT EXISTS usage_samples (
+                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                     account_id TEXT NOT NULL,
+                     provider TEXT NOT NULL,
+                     window_id TEXT,
+                     window_label TEXT,
+                     used_percent REAL NOT NULL,
+                     remaining_percent REAL NOT NULL,
+                     cost_used REAL,
+                     resets_at INTEGER,
+                     captured_at INTEGER NOT NULL
+                 );
+                 CREATE INDEX IF NOT EXISTS idx_usage_account_time
+                     ON usage_samples(account_id, captured_at);
+                 CREATE INDEX IF NOT EXISTS idx_usage_provider_time
+                     ON usage_samples(provider, captured_at);
+                 PRAGMA user_version = 1;
+                 COMMIT;",
+            )?;
+        }
+        Ok(())
+    }
+
+    /// Record samples with deduplication. Returns the number of rows stored.
+    pub fn record_samples(&self, samples: &[UsageSample]) -> Result<usize, String> {
+        if samples.is_empty() {
+            return Ok(0);
+        }
+        self.with_conn(|conn| {
+            let mut stored = 0usize;
+            for sample in samples {
+                let duplicate: bool = conn
+                    .query_row(
+                        "SELECT EXISTS(
+                             SELECT 1 FROM usage_samples
+                             WHERE account_id = ?1
+                               AND window_id IS ?2
+                               AND used_percent = ?3
+                               AND captured_at >= ?4
+                         )",
+                        rusqlite::params![
+                            sample.account_id,
+                            sample.window_id,
+                            sample.used_percent,
+                            now_epoch() - DEDUP_WINDOW_SECS,
+                        ],
+                        |r| r.get::<_, i64>(0),
+                    )
+                    .map(|v| v != 0)
+                    .unwrap_or(false);
+                if duplicate {
+                    continue;
+                }
+                conn.execute(
+                    "INSERT INTO usage_samples
+                         (account_id, provider, window_id, window_label,
+                          used_percent, remaining_percent, cost_used, resets_at, captured_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                    rusqlite::params![
+                        sample.account_id,
+                        sample.provider,
+                        sample.window_id,
+                        sample.window_label,
+                        sample.used_percent,
+                        sample.remaining_percent,
+                        sample.cost_used,
+                        sample.resets_at,
+                        sample.captured_at,
+                    ],
+                )?;
+                stored += 1;
+            }
+            Ok(stored)
+        })
+    }
+
+    /// Query samples, oldest first.
+    pub fn query(&self, filter: &HistoryQuery) -> Result<Vec<UsageSample>, String> {
+        self.with_conn(|conn| {
+            let mut sql = String::from(
+                "SELECT account_id, provider, window_id, window_label,
+                        used_percent, remaining_percent, cost_used, resets_at, captured_at
+                 FROM usage_samples WHERE 1=1",
+            );
+            let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
+            if !filter.account_ids.is_empty() {
+                let placeholders = filter
+                    .account_ids
+                    .iter()
+                    .map(|_| "?")
+                    .collect::<Vec<_>>()
+                    .join(",");
+                sql.push_str(&format!(" AND account_id IN ({placeholders})"));
+                for id in &filter.account_ids {
+                    params.push(Box::new(id.clone()));
+                }
+            }
+            if !filter.providers.is_empty() {
+                let placeholders = filter
+                    .providers
+                    .iter()
+                    .map(|_| "?")
+                    .collect::<Vec<_>>()
+                    .join(",");
+                sql.push_str(&format!(" AND provider IN ({placeholders})"));
+                for p in &filter.providers {
+                    params.push(Box::new(p.clone()));
+                }
+            }
+            if let Some(since) = filter.since {
+                sql.push_str(" AND captured_at >= ?");
+                params.push(Box::new(since));
+            }
+            let until = filter.until.unwrap_or_else(now_epoch);
+            sql.push_str(" AND captured_at <= ?");
+            params.push(Box::new(until));
+            sql.push_str(" ORDER BY captured_at ASC");
+
+            let mut stmt = conn.prepare(&sql)?;
+            let refs: Vec<&dyn rusqlite::types::ToSql> =
+                params.iter().map(|p| p.as_ref()).collect();
+            let rows = stmt.query_map(refs.as_slice(), |r| {
+                Ok(UsageSample {
+                    account_id: r.get(0)?,
+                    provider: r.get(1)?,
+                    window_id: r.get(2)?,
+                    window_label: r.get(3)?,
+                    used_percent: r.get(4)?,
+                    remaining_percent: r.get(5)?,
+                    cost_used: r.get(6)?,
+                    resets_at: r.get(7)?,
+                    captured_at: r.get(8)?,
+                })
+            })?;
+            let mut out = Vec::new();
+            for row in rows {
+                out.push(row?);
+            }
+            Ok(out)
+        })
+    }
+
+    /// Delete rows older than `keep_days`. Returns rows removed.
+    pub fn prune(&self, keep_days: u32) -> Result<usize, String> {
+        let cutoff = now_epoch() - i64::from(keep_days) * 86_400;
+        self.with_conn(|conn| {
+            conn.execute(
+                "DELETE FROM usage_samples WHERE captured_at < ?1",
+                rusqlite::params![cutoff],
+            )
+        })
+    }
+
+    pub fn clear_all(&self) -> Result<usize, String> {
+        self.with_conn(|conn| conn.execute("DELETE FROM usage_samples", []))
+    }
+
+    pub fn clear_accounts(&self, account_ids: &[String]) -> Result<usize, String> {
+        if account_ids.is_empty() {
+            return Ok(0);
+        }
+        self.with_conn(|conn| {
+            let placeholders = account_ids
+                .iter()
+                .map(|_| "?")
+                .collect::<Vec<_>>()
+                .join(",");
+            let sql = format!("DELETE FROM usage_samples WHERE account_id IN ({placeholders})");
+            conn.execute(&sql, rusqlite::params_from_iter(account_ids.iter()))
+        })
+    }
+
+    pub fn row_count(&self) -> Result<i64, String> {
+        self.with_conn(|conn| {
+            conn.query_row("SELECT COUNT(*) FROM usage_samples", [], |r| r.get(0))
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn store() -> HistoryStore {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("history.db");
+        // Leak the tempdir for the lifetime of the test process; fine here.
+        std::mem::forget(dir);
+        HistoryStore::open_at(path)
+    }
+
+    fn sample(account: &str, provider: &str, window: &str, used: f64, at: i64) -> UsageSample {
+        UsageSample {
+            account_id: account.to_string(),
+            provider: provider.to_string(),
+            window_id: Some(window.to_string()),
+            window_label: Some("Window".to_string()),
+            used_percent: used,
+            remaining_percent: 100.0 - used,
+            cost_used: None,
+            resets_at: None,
+            captured_at: at,
+        }
+    }
+
+    #[test]
+    fn schema_created_and_versioned() {
+        let store = store();
+        assert_eq!(store.row_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn records_and_queries_range() {
+        let store = store();
+        let now = now_epoch();
+        store
+            .record_samples(&[
+                sample("a1", "claude", "session", 10.0, now - 3600),
+                sample("a1", "claude", "session", 20.0, now - 60),
+                sample("a2", "codex", "weekly", 5.0, now - 30),
+            ])
+            .unwrap();
+        assert_eq!(store.row_count().unwrap(), 3);
+
+        let all = store.query(&HistoryQuery::default()).unwrap();
+        assert_eq!(all.len(), 3);
+        assert!(all[0].captured_at <= all[2].captured_at);
+
+        let recent = store
+            .query(&HistoryQuery {
+                since: Some(now - 120),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(recent.len(), 2);
+    }
+
+    #[test]
+    fn dedups_identical_recent_samples() {
+        let store = store();
+        let s = sample("a1", "claude", "session", 42.0, now_epoch());
+        assert_eq!(store.record_samples(std::slice::from_ref(&s)).unwrap(), 1);
+        // Same value within the dedup window: skipped.
+        assert_eq!(store.record_samples(&[s]).unwrap(), 0);
+        // Changed value: stored.
+        assert_eq!(
+            store
+                .record_samples(&[sample("a1", "claude", "session", 43.0, now_epoch())])
+                .unwrap(),
+            1
+        );
+        // Same value but a different window: stored.
+        assert_eq!(
+            store
+                .record_samples(&[sample("a1", "claude", "weekly", 42.0, now_epoch())])
+                .unwrap(),
+            1
+        );
+    }
+
+    #[test]
+    fn filters_by_account_and_provider() {
+        let store = store();
+        let now = now_epoch();
+        store
+            .record_samples(&[
+                sample("a1", "claude", "session", 10.0, now),
+                sample("a2", "codex", "weekly", 20.0, now),
+            ])
+            .unwrap();
+
+        let by_account = store
+            .query(&HistoryQuery {
+                account_ids: vec!["a2".into()],
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(by_account.len(), 1);
+        assert_eq!(by_account[0].provider, "codex");
+
+        let by_provider = store
+            .query(&HistoryQuery {
+                providers: vec!["claude".into()],
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(by_provider.len(), 1);
+        assert_eq!(by_provider[0].account_id, "a1");
+    }
+
+    #[test]
+    fn prunes_by_retention_and_clears_selectively() {
+        let store = store();
+        let now = now_epoch();
+        store
+            .record_samples(&[
+                sample("a1", "claude", "session", 10.0, now - 90 * 86_400 - 10),
+                sample("a1", "claude", "session", 20.0, now),
+                sample("a2", "codex", "weekly", 30.0, now),
+            ])
+            .unwrap();
+        assert_eq!(store.prune(DEFAULT_RETENTION_DAYS).unwrap(), 1);
+        assert_eq!(store.row_count().unwrap(), 2);
+
+        assert_eq!(store.clear_accounts(&["a2".to_string()]).unwrap(), 1);
+        assert_eq!(store.row_count().unwrap(), 1);
+        assert_eq!(store.clear_all().unwrap(), 1);
+        assert_eq!(store.row_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn history_store_uses_quotaarc_dir() {
+        let path = HistoryStore::path().expect("path");
+        let name = path.file_name().unwrap().to_string_lossy();
+        assert_eq!(name, "history.db");
+        assert!(
+            path.to_string_lossy()
+                .contains(if cfg!(feature = "dev-channel") {
+                    "QuotaArc-Dev"
+                } else {
+                    "QuotaArc"
+                })
+        );
+    }
+}

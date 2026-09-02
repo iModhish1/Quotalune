@@ -437,6 +437,8 @@ async fn refresh_provider(
 
     if let Some(snapshot) = published {
         events::emit_provider_updated(&app, &snapshot);
+        // Account-scoped history recording (best-effort, never fails refresh).
+        crate::history_recorder::record_snapshot(&snapshot);
     }
 }
 

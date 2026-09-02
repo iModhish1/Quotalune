@@ -148,6 +148,7 @@ fn build_native_tray_menu(
             float_bar: settings.float_bar_enabled,
             edge_arc: settings.edge_arc_enabled,
             top_arc: settings.top_arc_enabled,
+            taskbar_arc: settings.taskbar_arc_enabled,
         },
         &profile_entries,
         settings.privacy_mode,
@@ -203,6 +204,7 @@ enum MenuAction {
     ToggleEdgeArc,
     SwitchProfile(String),
     TogglePrivacyMode,
+    ToggleTaskbarArc,
     ToggleTopArc,
     Quit,
 }
@@ -227,6 +229,7 @@ fn resolve_menu_action(id: &str) -> Option<MenuAction> {
             Some(MenuAction::SwitchProfile(profile_id))
         }
         "toggle_top_arc" => Some(MenuAction::ToggleTopArc),
+        "toggle_taskbar_arc" => Some(MenuAction::ToggleTaskbarArc),
         "pop_out" => Some(MenuAction::OpenFlyout),
         _ if id.starts_with("toggle_provider:") => {
             let provider_id = id["toggle_provider:".len()..].to_string();
@@ -440,6 +443,17 @@ fn handle_menu_event(app: &AppHandle, id: &str) {
         }
         Some(MenuAction::SwitchProfile(profile_id)) => {
             let _ = crate::command_profiles::switch_profile(app.clone(), profile_id);
+        }
+        Some(MenuAction::ToggleTaskbarArc) => {
+            let mut settings = Settings::load();
+            settings.taskbar_arc_enabled = !settings.taskbar_arc_enabled;
+            let _save = settings.save();
+            if settings.taskbar_arc_enabled {
+                let _show = crate::surfaces::show_taskbar_arc(app);
+            } else {
+                let _hide = crate::surfaces::hide_taskbar_arc(app);
+            }
+            rebuild_tray_menu(app);
         }
         Some(MenuAction::TogglePrivacyMode) => {
             let mut settings = Settings::load();
