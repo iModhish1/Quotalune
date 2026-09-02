@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>QuotaArc — Direction B: Liquid Glass</title>
+<style>
+  /* ============ LIQUID GLASS — soft translucent premium system ============ */
+  :root {
+    --glass: rgba(22, 28, 38, .55);
+    --glass-2: rgba(28, 35, 47, .45);
+    --glass-hi: rgba(255,255,255,.09);
+    --line: rgba(255,255,255,.12);
+    --ink-1: #f2f5fa;
+    --ink-2: rgba(242,245,250,.66);
+    --ink-3: rgba(242,245,250,.4);
+    --ok: #34d399; --warn: #fbbf24; --crit: #f87171;
+    --c-claude: #e28867; --c-codex: #34d399; --c-opencode: #93c5fd;
+    --f: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { width:1920px; height:1080px; overflow:hidden; font-family:var(--f); color:var(--ink-1);
+    background:
+      radial-gradient(1000px 700px at 70% 25%, #233a5c 0%, transparent 60%),
+      radial-gradient(900px 700px at 25% 75%, #3b2a55 0%, transparent 55%),
+      radial-gradient(700px 500px at 55% 60%, #173a45 0%, transparent 60%),
+      linear-gradient(150deg, #0e1420, #0a0e16);
+  }
+  .label { position:absolute; font-size:11px; letter-spacing:.14em; color:rgba(255,255,255,.35); text-transform:uppercase; }
+  .glass {
+    background: var(--glass);
+    backdrop-filter: blur(28px) saturate(1.4);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    box-shadow:
+      0 20px 60px rgba(0,0,0,.45),
+      inset 0 1px 0 rgba(255,255,255,.14),
+      inset 0 -1px 0 rgba(255,255,255,.03);
+    display:flex; align-items:center;
+  }
+  .arc { position:relative; display:grid; place-items:center; }
+  .arc svg { transform:rotate(-90deg); filter: drop-shadow(0 0 5px rgba(255,255,255,.18)); }
+  .arc .val { position:absolute; font-size:12.5px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .arc.lg .val { font-size:16px; }
+
+  /* TASKBAR ARC — floating pill */
+  #taskbar { position:absolute; left:50%; transform:translateX(-50%); bottom:56px;
+    padding:8px 14px; gap:14px; border-radius:999px; }
+  .chip { display:flex; align-items:center; gap:8px; }
+  .chip .pct { font-size:12.5px; font-weight:600; font-variant-numeric:tabular-nums; color:var(--ink-2); }
+  .pavatar { width:24px; height:24px; border-radius:999px;
+    background: linear-gradient(135deg, rgba(255,255,255,.25), rgba(255,255,255,.08));
+    border: 1px solid var(--line); display:grid; place-items:center;
+    font-size:11px; font-weight:600; color:var(--ink-1); }
+
+  #faketaskbar { position:absolute; left:0; right:0; bottom:0; height:48px;
+    background: rgba(10,12,18,.8); backdrop-filter: blur(20px);
+    border-top:1px solid rgba(255,255,255,.05);
+    display:flex; align-items:center; justify-content:center; gap:18px; }
+  #faketaskbar .tb { width:22px; height:22px; border-radius:6px; background:rgba(255,255,255,.10); }
+
+  /* TOP ARC — soft capsule with glow */
+  #toparc { position:absolute; left:50%; transform:translateX(-50%); top:16px;
+    padding:9px 18px; gap:14px; border-radius:999px; }
+  #toparc .reset { font-size:11.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+  .glow { position:absolute; width:220px; height:60px; border-radius:999px;
+    background: radial-gradient(closest-side, rgba(52,211,153,.25), transparent);
+    top:-14px; left:50%; transform:translateX(-50%); z-index:-1; filter: blur(14px); }
+
+  /* EDGE ARC — floating glass rail */
+  #edgearc { position:absolute; right:18px; top:50%; transform:translateY(-50%);
+    flex-direction:column; gap:4px; padding:14px 12px; border-radius:22px; }
+  .einstr { display:flex; align-items:center; gap:11px; padding:8px 10px; border-radius:14px;
+    background: var(--glass-2); border:1px solid rgba(255,255,255,.06); }
+  .einstr .who { display:flex; flex-direction:column; gap:2px; width:70px; }
+  .einstr .n { font-size:12px; font-weight:600; }
+  .einstr .r { font-size:10.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+
+  /* QUICK PANEL — layered glass card */
+  #quickpanel { position:absolute; right:390px; bottom:56px; width:330px;
+    flex-direction:column; align-items:stretch; border-radius:24px; overflow:hidden; }
+  .qh { padding:16px 18px 12px; display:flex; justify-content:space-between; align-items:center; }
+  .qh .t { font-size:11px; letter-spacing:.14em; color:var(--ink-3); text-transform:uppercase; }
+  .qh .p { font-size:11.5px; color:var(--ink-2); background:var(--glass-2);
+    border:1px solid var(--line); border-radius:999px; padding:4px 10px; }
+  .qrow { display:flex; align-items:center; gap:12px; padding:10px 18px; margin:0 6px;
+    border-radius:14px; }
+  .qrow:hover { background:rgba(255,255,255,.05); }
+  .qrow .grow { flex:1; display:flex; flex-direction:column; gap:2px; }
+  .qrow .n { font-size:13px; font-weight:600; }
+  .qrow .m { font-size:10.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+  .qrow .pct { font-size:13.5px; font-weight:650; font-variant-numeric:tabular-nums; width:40px; text-align:right; }
+  .qico { width:30px; height:30px; border-radius:10px; display:grid; place-items:center;
+    font-size:12px; font-weight:700; color:#0a0e16;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 4px 12px rgba(0,0,0,.3); }
+  .qf { display:flex; border-top:1px solid var(--line); margin-top:6px; }
+  .qf button { flex:1; background:none; border:none; color:var(--ink-2); font-family:var(--f);
+    font-size:12px; padding:12px 0; cursor:pointer; }
+  .qf button:hover { background:rgba(255,255,255,.05); color:var(--ink-1); }
+  .qf button + button { border-left:1px solid var(--line); }
+</style>
+</head>
+<body>
+  <span class="label" style="top:24px; left:32px;">Direction B — Liquid Glass</span>
+
+  <div class="label" style="bottom:130px; left:660px;">Taskbar Arc — idle</div>
+  <div class="glass" id="taskbar">
+    <div class="pavatar">D</div>
+    <div class="chip"><div class="arc" data-pct="73" data-color="var(--c-claude)" data-size="24" data-sw="3"></div><span class="pct">73</span></div>
+    <div class="chip"><div class="arc" data-pct="39" data-color="var(--c-codex)" data-size="24" data-sw="3"></div><span class="pct">39</span></div>
+    <div class="chip"><div class="arc" data-pct="52" data-color="var(--c-opencode)" data-size="24" data-sw="3"></div><span class="pct">52</span></div>
+  </div>
+
+  <div class="label" style="top:80px; left:880px;">Top Arc — idle</div>
+  <div class="glass" id="toparc">
+    <div class="glow"></div>
+    <div class="arc" data-pct="73" data-color="var(--c-claude)" data-size="28" data-sw="3.5"></div>
+    <div class="arc" data-pct="39" data-color="var(--c-codex)" data-size="28" data-sw="3.5"></div>
+    <div class="arc" data-pct="52" data-color="var(--c-opencode)" data-size="28" data-sw="3.5"></div>
+    <div class="reset">4d 4h</div>
+  </div>
+
+  <div class="label" style="top:280px; right:240px;">Edge Arc — glass rail</div>
+  <div class="glass" id="edgearc" style="display:flex">
+    <div class="einstr">
+      <div class="arc lg" data-pct="73" data-color="var(--c-claude)" data-size="42" data-sw="4"></div>
+      <div class="who"><span class="n">Claude</span><span class="r">resets 51m</span></div>
+    </div>
+    <div class="einstr">
+      <div class="arc lg" data-pct="39" data-color="var(--c-codex)" data-size="42" data-sw="4"></div>
+      <div class="who"><span class="n">Codex</span><span class="r">resets 4d 4h</span></div>
+    </div>
+    <div class="einstr">
+      <div class="arc lg" data-pct="94" data-color="var(--crit)" data-size="42" data-sw="4"></div>
+      <div class="who"><span class="n" style="color:var(--crit)">OpenCode</span><span class="r">94 · critical</span></div>
+    </div>
+  </div>
+
+  <div class="label" style="bottom:430px; right:420px;">Quick Panel</div>
+  <div class="glass" id="quickpanel" style="display:flex">
+    <div class="qh"><span class="t">QuotaArc</span><span class="p">Default ▾</span></div>
+    <div class="qrow">
+      <div class="qico" style="background:linear-gradient(135deg,#e28867,#c96a48);">C</div>
+      <div class="grow"><span class="n">Claude</span><span class="m">resets in 51m · 1.2× pace</span></div>
+      <div class="arc" data-pct="73" data-color="var(--c-claude)" data-size="32" data-sw="3.5"></div>
+      <div class="pct">73%</div>
+    </div>
+    <div class="qrow">
+      <div class="qico" style="background:linear-gradient(135deg,#34d399,#1fa876);">X</div>
+      <div class="grow"><span class="n">Codex</span><span class="m">resets in 4d 4h · on track</span></div>
+      <div class="arc" data-pct="39" data-color="var(--c-codex)" data-size="32" data-sw="3.5"></div>
+      <div class="pct">39%</div>
+    </div>
+    <div class="qrow">
+      <div class="qico" style="background:linear-gradient(135deg,#93c5fd,#5f8fe8);">O</div>
+      <div class="grow"><span class="n">OpenCode</span><span class="m">resets in 2h 10m · 1.8× pace</span></div>
+      <div class="arc" data-pct="94" data-color="var(--crit)" data-size="32" data-sw="3.5"></div>
+      <div class="pct" style="color:var(--crit)">94%</div>
+    </div>
+    <div class="qf"><button>Refresh</button><button>History</button><button>Settings</button></div>
+  </div>
+
+  <div id="faketaskbar"><div class="tb"></div><div class="tb"></div><div class="tb"></div><div class="tb"></div></div>
+
+<script>
+  document.querySelectorAll('.arc').forEach(el => {
+    const pct = parseFloat(el.dataset.pct), size = +el.dataset.size, sw = +el.dataset.sw;
+    const r = (size - sw) / 2, c = 2 * Math.PI * r;
+    const gap = Math.PI / 3;
+    const sweep = c - gap * r;
+    const filled = sweep * pct / 100;
+    const off = (-(gap*r)/2).toFixed(2);
+    el.style.width = el.style.height = size + 'px';
+    el.innerHTML = `
+      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+        <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none"
+          stroke="rgba(255,255,255,.10)" stroke-width="${sw}" stroke-linecap="round"
+          stroke-dasharray="${sweep.toFixed(2)} ${c}" stroke-dashoffset="${off}"/>
+        <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none"
+          stroke="${el.dataset.color}" stroke-width="${sw}" stroke-linecap="round"
+          stroke-dasharray="${filled.toFixed(2)} ${c.toFixed(2)}" stroke-dashoffset="${off}"/>
+      </svg>
+      <span class="val">${el.classList.contains('lg') ? Math.round(pct)+'%' : Math.round(pct)}</span>`;
+  });
+</script>
+</body>
+</html>

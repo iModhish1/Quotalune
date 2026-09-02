@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>QuotaArc — Direction C: Edge Object</title>
+<style>
+  /* ============ EDGE OBJECT — surfaces emerge from the screen's edges ============ */
+  :root {
+    --deep: #07090d;
+    --obj: #0d1117;           /* edge object body */
+    --obj-2: #131924;
+    --line: rgba(255,255,255,.08);
+    --ink-1: #eef2f7;
+    --ink-2: rgba(238,242,247,.6);
+    --ink-3: rgba(238,242,247,.35);
+    --crit: #f87171; --warn: #fbbf24;
+    --c-claude: #d97757; --c-codex: #2dd4bf; --c-opencode: #818cf8;
+    --f: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { width:1920px; height:1080px; overflow:hidden; font-family:var(--f); color:var(--ink-1);
+    background:
+      radial-gradient(1100px 750px at 70% 30%, #16233a 0%, transparent 62%),
+      radial-gradient(900px 700px at 22% 78%, #241a33 0%, transparent 58%),
+      linear-gradient(155deg, #0a0d13, #05070b);
+  }
+  .label { position:absolute; font-size:11px; letter-spacing:.14em; color:rgba(255,255,255,.32); text-transform:uppercase; }
+  .arc { position:relative; display:grid; place-items:center; }
+  .arc svg { transform:rotate(-90deg); }
+  .arc .val { position:absolute; font-size:12px; font-weight:650; font-variant-numeric:tabular-nums; }
+  .arc.lg .val { font-size:15.5px; }
+
+  /* TASKBAR ARC — a slab rising from the taskbar edge (no gap). Rounded top corners only.
+     It IS part of the taskbar's silhouette. */
+  #taskbar { position:absolute; left:50%; transform:translateX(-50%); bottom:0;
+    height:48px; padding: 0 6px 6px; border-radius: 18px 18px 0 0;
+    background: linear-gradient(180deg, #161c26, #0c1016);
+    border: 1px solid var(--line); border-bottom: none;
+    box-shadow: 0 -10px 34px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
+    display:flex; align-items:flex-end; gap:2px; padding-bottom: 8px; }
+  .chip { display:flex; flex-direction:column; align-items:center; gap:4px;
+    padding: 7px 12px 2px; border-radius: 12px 12px 0 0; cursor: default; }
+  .chip:hover { background: rgba(255,255,255,.05); }
+  .chip .pct { font-size:11px; font-weight:650; font-variant-numeric:tabular-nums; color:var(--ink-2); }
+
+  #faketaskbar { position:absolute; left:0; right:0; bottom:0; height:48px;
+    background:#0a0c10; border-top:1px solid rgba(255,255,255,.04); z-index:-1;
+    display:flex; align-items:center; justify-content:center; gap:18px; }
+  #faketaskbar .tb { width:22px; height:22px; border-radius:6px; background:rgba(255,255,255,.09); }
+
+  /* TOP ARC — a notch descending from the top edge. No top border; shape grows downward. */
+  #toparc { position:absolute; left:50%; transform:translateX(-50%); top:0;
+    padding: 10px 18px 12px; border-radius: 0 0 22px 22px;
+    background: linear-gradient(180deg, #141a24, #0b0f15);
+    border: 1px solid var(--line); border-top: none;
+    box-shadow: 0 14px 40px rgba(0,0,0,.5), inset 0 -1px 0 rgba(255,255,255,.05);
+    gap: 14px; }
+  #toparc .reset { font-size:11px; color:var(--ink-3); font-variant-numeric:tabular-nums; padding-bottom: 2px; }
+
+  /* EDGE ARC — hemispherical pod grafted onto the right edge. Arcs sit in the round bulge;
+     flat side is flush with the physical screen edge. */
+  #edgearc { position:absolute; right:0; top:50%; transform:translateY(-50%);
+    width: 148px; padding: 16px 14px 16px 22px;
+    border-radius: 999px 0 0 999px;   /* half-capsule: round on the screen side, flush at the edge */
+    background: linear-gradient(90deg, #111722, #0b0f15);
+    border: 1px solid var(--line); border-right: none;
+    box-shadow: -18px 0 44px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.05);
+    flex-direction: column; gap: 10px; }
+  .einstr { display:flex; align-items:center; gap:10px; }
+  .einstr .arc { flex: none; }
+  .einstr .who { display:flex; flex-direction:column; gap:1px; }
+  .einstr .n { font-size:12px; font-weight:600; white-space: nowrap; }
+  .einstr .r { font-size:10px; color:var(--ink-3); font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+  /* QUICK PANEL — unfolds from the taskbar slab, same material */
+  #quickpanel { position:absolute; left:50%; transform:translateX(-50%); bottom:48px;
+    width: 340px; flex-direction:column; align-items:stretch;
+    border-radius: 24px 24px 0 0; border-bottom: none;
+    background: linear-gradient(180deg, #121824, #0b0f15);
+    box-shadow: 0 -22px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+    overflow:hidden; }
+  .qh { padding: 16px 18px 10px; display:flex; justify-content:space-between; align-items:center; }
+  .qh .t { font-size:11px; letter-spacing:.14em; color:var(--ink-3); text-transform:uppercase; }
+  .qh .p { font-size:11px; color:var(--ink-2); border:1px solid var(--line); border-radius:999px; padding:3px 9px; }
+  .qrow { display:flex; align-items:center; gap:12px; padding:9px 18px; }
+  .qrow:hover { background:rgba(255,255,255,.045); }
+  .qrow .grow { flex:1; display:flex; flex-direction:column; gap:2px; }
+  .qrow .n { font-size:12.5px; font-weight:600; }
+  .qrow .m { font-size:10.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+  .qrow .pct { font-size:13px; font-weight:650; font-variant-numeric:tabular-nums; width:38px; text-align:right; }
+  .qf { display:flex; border-top:1px solid var(--line); margin-top:4px; }
+  .qf button { flex:1; background:none; border:none; color:var(--ink-2); font-family:var(--f);
+    font-size:11.5px; padding:11px 0; cursor:pointer; }
+  .qf button:hover { background:rgba(255,255,255,.045); }
+  .qf button + button { border-left:1px solid var(--line); }
+</style>
+</head>
+<body>
+  <span class="label" style="top:24px; left:32px;">Direction C — Edge Object</span>
+
+  <!-- TASKBAR ARC: rises out of the taskbar itself -->
+  <div class="label" style="bottom:120px; left:640px;">Taskbar Arc — grows from taskbar</div>
+  <div id="taskbar">
+    <div class="chip"><div class="arc" data-pct="73" data-color="var(--c-claude)" data-size="24" data-sw="3"></div><span class="pct">73</span></div>
+    <div class="chip"><div class="arc" data-pct="39" data-color="var(--c-codex)" data-size="24" data-sw="3"></div><span class="pct">39</span></div>
+    <div class="chip"><div class="arc" data-pct="52" data-color="var(--c-opencode)" data-size="24" data-sw="3"></div><span class="pct">52</span></div>
+  </div>
+
+  <!-- TOP ARC: notch hanging from the top edge -->
+  <div class="label" style="top:110px; left:870px;">Top Arc — edge notch</div>
+  <div id="toparc" style="display:flex">
+    <div class="arc" data-pct="73" data-color="var(--c-claude)" data-size="27" data-sw="3"></div>
+    <div class="arc" data-pct="39" data-color="var(--c-codex)" data-size="27" data-sw="3"></div>
+    <div class="arc" data-pct="52" data-color="var(--c-opencode)" data-size="27" data-sw="3"></div>
+    <div class="reset">4d 4h</div>
+  </div>
+
+  <!-- EDGE ARC: half-capsule pod flush with the right edge -->
+  <div class="label" style="top:250px; right:200px;">Edge Arc — edge pod</div>
+  <div id="edgearc" style="display:flex">
+    <div class="einstr">
+      <div class="arc lg" data-pct="73" data-color="var(--c-claude)" data-size="42" data-sw="4"></div>
+      <div class="who"><span class="n">Claude</span><span class="r">resets 51m</span></div>
+    </div>
+    <div class="einstr">
+      <div class="arc lg" data-pct="39" data-color="var(--c-codex)" data-size="42" data-sw="4"></div>
+      <div class="who"><span class="n">Codex</span><span class="r">resets 4d 4h</span></div>
+    </div>
+    <div class="einstr">
+      <div class="arc lg" data-pct="94" data-color="var(--crit)" data-size="42" data-sw="4"></div>
+      <div class="who"><span class="n" style="color:var(--crit)">OpenCode</span><span class="r">critical</span></div>
+    </div>
+  </div>
+
+  <!-- QUICK PANEL: unfolds upward from the taskbar slab, visually continuous -->
+  <div class="label" style="bottom:420px; left:640px;">Quick Panel — unfolds from slab</div>
+  <div id="quickpanel" style="display:flex">
+    <div class="qh"><span class="t">QuotaArc</span><span class="p">Default ▾</span></div>
+    <div class="qrow">
+      <div class="arc lg" data-pct="73" data-color="var(--c-claude)" data-size="34" data-sw="3.5"></div>
+      <div class="grow"><span class="n">Claude</span><span class="m">resets in 51m · 1.2× pace</span></div>
+      <div class="pct">73%</div>
+    </div>
+    <div class="qrow">
+      <div class="arc lg" data-pct="39" data-color="var(--c-codex)" data-size="34" data-sw="3.5"></div>
+      <div class="grow"><span class="n">Codex</span><span class="m">resets in 4d 4h · on track</span></div>
+      <div class="pct">39%</div>
+    </div>
+    <div class="qrow">
+      <div class="arc lg" data-pct="94" data-color="var(--crit)" data-size="34" data-sw="3.5"></div>
+      <div class="grow"><span class="n" style="color:var(--crit)">OpenCode</span><span class="m">resets in 2h 10m · 1.8× pace</span></div>
+      <div class="pct" style="color:var(--crit)">94%</div>
+    </div>
+    <div class="qf"><button>Refresh</button><button>History</button><button>Settings</button></div>
+  </div>
+
+  <div id="faketaskbar"><div class="tb"></div><div class="tb"></div><div class="tb"></div><div class="tb"></div></div>
+
+<script>
+  document.querySelectorAll('.arc').forEach(el => {
+    const pct = parseFloat(el.dataset.pct), size = +el.dataset.size, sw = +el.dataset.sw;
+    const r = (size - sw) / 2, c = 2 * Math.PI * r;
+    const gap = Math.PI / 3;
+    const sweep = c - gap * r;
+    const filled = sweep * pct / 100;
+    const off = (-(gap*r)/2).toFixed(2);
+    el.style.width = el.style.height = size + 'px';
+    el.innerHTML = `
+      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+        <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none"
+          stroke="rgba(255,255,255,.08)" stroke-width="${sw}" stroke-linecap="round"
+          stroke-dasharray="${sweep.toFixed(2)} ${c}" stroke-dashoffset="${off}"/>
+        <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none"
+          stroke="${el.dataset.color}" stroke-width="${sw}" stroke-linecap="round"
+          stroke-dasharray="${filled.toFixed(2)} ${c.toFixed(2)}" stroke-dashoffset="${off}"/>
+      </svg>
+      <span class="val">${el.classList.contains('lg') ? Math.round(pct)+'%' : Math.round(pct)}</span>`;
+  });
+</script>
+</body>
+</html>

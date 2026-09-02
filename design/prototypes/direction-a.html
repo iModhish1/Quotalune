@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>QuotaArc — Direction A: Arc Instrument</title>
+<style>
+  /* ============ ARC INSTRUMENT — precision graphite system ============ */
+  :root {
+    --bg-deep: #05070b;
+    --surface: #0b0e13;          /* instrument housing */
+    --surface-2: #10141b;        /* elevated */
+    --surface-3: #161b24;        /* hover */
+    --track: rgba(255,255,255,.07);
+    --hairline: rgba(255,255,255,.06);
+    --edge: rgba(255,255,255,.10);
+    --ink-1: #e8ecf2;
+    --ink-2: rgba(232,236,242,.62);
+    --ink-3: rgba(232,236,242,.38);
+    --ok: #4ade80; --warn: #fbbf24; --high: #fb923c; --crit: #f87171;
+    --c-claude: #d97757; --c-codex: #10a37f; --c-opencode: #7aa2f7;
+    --f: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --fm: "Cascadia Mono", Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1920px; height: 1080px; overflow: hidden;
+    font-family: var(--f); color: var(--ink-1);
+    background:
+      radial-gradient(1200px 800px at 75% 20%, #101828 0%, transparent 60%),
+      radial-gradient(900px 700px at 20% 80%, #0d1520 0%, transparent 55%),
+      linear-gradient(160deg, #070a10, #04060a);
+    position: relative;
+  }
+  .label { position: absolute; font-size: 11px; letter-spacing: .14em; color: var(--ink-3); text-transform: uppercase; }
+
+  /* ---------- instrument housing ---------- */
+  .inst {
+    background: linear-gradient(180deg, var(--surface-2), var(--surface));
+    border: 1px solid var(--hairline);
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.04);
+    display: flex; align-items: center;
+  }
+
+  /* ---------- the arc ---------- */
+  .arc { position: relative; display: grid; place-items: center; }
+  .arc svg { transform: rotate(-90deg); }
+  .arc .val {
+    position: absolute; font-size: 12.5px; font-weight: 600;
+    font-variant-numeric: tabular-nums; letter-spacing: .01em; color: var(--ink-1);
+  }
+  .arc.lg .val { font-size: 17px; }
+
+  /* ---------- TASKBAR ARC (bottom center, floating 6px above taskbar) ---------- */
+  #taskbar { position: absolute; left: 50%; transform: translateX(-50%); bottom: 54px;
+    padding: 7px 10px; gap: 4px; }
+  .chip { display: flex; align-items: center; gap: 7px; padding: 5px 9px 5px 6px;
+    border-radius: 9px; transition: background .15s ease; }
+  .chip:hover { background: var(--surface-3); }
+  .chip .ico { width: 18px; height: 18px; border-radius: 5px; display: grid; place-items: center;
+    font-size: 10px; font-weight: 700; color: #0b0e13; }
+  .chip .sep { width: 1px; height: 16px; background: var(--track); margin: 0 3px; }
+  .profile-dot { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center;
+    background: var(--surface-3); border: 1px solid var(--hairline);
+    font-size: 10px; font-weight: 600; color: var(--ink-2); }
+
+  /* fake windows taskbar for context */
+  #faketaskbar { position: absolute; left: 0; right: 0; bottom: 0; height: 48px;
+    background: rgba(12,14,18,.85); border-top: 1px solid rgba(255,255,255,.04);
+    display: flex; align-items: center; justify-content: center; gap: 18px; }
+  #faketaskbar .tb { width: 22px; height: 22px; border-radius: 6px; background: rgba(255,255,255,.10); }
+
+  /* ---------- TOP ARC (top center) ---------- */
+  #toparc { position: absolute; left: 50%; transform: translateX(-50%); top: 14px;
+    padding: 8px 14px; gap: 12px; border-radius: 999px; }
+  #toparc .reset { font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+  /* ---------- EDGE ARC (right edge, instruments cluster) ---------- */
+  #edgearc { position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+    border-radius: 16px 0 0 16px; border-right: none;
+    flex-direction: column; gap: 2px; padding: 12px 10px 12px 12px; }
+  .einstr { display: flex; align-items: center; gap: 9px; padding: 6px 8px 6px 6px; border-radius: 10px; }
+  .einstr:hover { background: var(--surface-3); }
+  .einstr .who { display: flex; flex-direction: column; gap: 1px; width: 64px; }
+  .einstr .who .n { font-size: 11.5px; font-weight: 600; }
+  .einstr .who .r { font-size: 10px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+  /* ---------- QUICK PANEL ---------- */
+  #quickpanel { position: absolute; right: 380px; bottom: 54px; width: 320px;
+    flex-direction: column; align-items: stretch; padding: 0; overflow: hidden; }
+  #quickpanel .qh { padding: 14px 16px 10px; display: flex; align-items: center; justify-content: space-between; }
+  #quickpanel .qh .t { font-size: 11px; letter-spacing: .14em; color: var(--ink-3); text-transform: uppercase; }
+  #quickpanel .qh .p { font-size: 11px; color: var(--ink-2); padding: 3px 8px; border: 1px solid var(--hairline); border-radius: 999px; }
+  .qrow { display: flex; align-items: center; gap: 11px; padding: 9px 16px; }
+  .qrow:hover { background: var(--surface-3); }
+  .qrow .grow { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .qrow .n { font-size: 12.5px; font-weight: 600; }
+  .qrow .m { font-size: 10.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .qrow .pct { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; width: 38px; text-align: right; }
+  #quickpanel .qf { display: flex; border-top: 1px solid var(--hairline); margin-top: 4px; }
+  #quickpanel .qf button { flex: 1; background: none; border: none; color: var(--ink-2);
+    font-family: var(--f); font-size: 11.5px; padding: 10px 0; cursor: pointer; }
+  #quickpanel .qf button:hover { background: var(--surface-3); color: var(--ink-1); }
+  #quickpanel .qf button + button { border-left: 1px solid var(--hairline); }
+
+  .crit-ring { filter: drop-shadow(0 0 6px rgba(248,113,113,.35)); }
+</style>
+</head>
+<body>
+  <span class="label" style="top:24px; left:32px;">Direction A — Arc Instrument</span>
+
+  <!-- arc template is generated inline; each arc = track + colored progress -->
+  <!-- TASKBAR ARC -->
+  <div class="label" style="bottom: 120px; left: 660px;">Taskbar Arc — idle</div>
+  <div class="inst" id="taskbar">
+    <div class="profile-dot" title="Profile: Default">D</div>
+    <div class="sep" style="width:1px;height:16px;background:var(--track);margin:0 4px;"></div>
+    <div class="chip"><div class="ico" style="background:var(--c-claude)">C</div>
+      <div class="arc" data-pct="73" data-color="var(--c-claude)" data-size="22" data-sw="2.5"></div></div>
+    <div class="chip"><div class="ico" style="background:var(--c-codex)">X</div>
+      <div class="arc" data-pct="39" data-color="var(--c-codex)" data-size="22" data-sw="2.5"></div></div>
+    <div class="chip"><div class="ico" style="background:var(--c-opencode)">O</div>
+      <div class="arc" data-pct="52" data-color="var(--c-opencode)" data-size="22" data-sw="2.5"></div></div>
+  </div>
+
+  <!-- TOP ARC -->
+  <div class="label" style="top: 70px; left: 880px;">Top Arc — idle</div>
+  <div class="inst" id="toparc">
+    <div class="arc" data-pct="73" data-color="var(--c-claude)" data-size="26" data-sw="3"></div>
+    <div class="arc" data-pct="39" data-color="var(--c-codex)" data-size="26" data-sw="3"></div>
+    <div class="arc" data-pct="52" data-color="var(--c-opencode)" data-size="26" data-sw="3"></div>
+    <div class="reset">resets 4d 4h</div>
+  </div>
+
+  <!-- EDGE ARC -->
+  <div class="label" style="top: 300px; right: 210px;">Edge Arc — instruments</div>
+  <div class="inst" id="edgearc" style="display:flex">
+    <div class="einstr">
+      <div class="arc lg" data-pct="73" data-color="var(--c-claude)" data-size="40" data-sw="3.5"></div>
+      <div class="who"><span class="n">Claude</span><span class="r">resets 51m</span></div>
+    </div>
+    <div class="einstr">
+      <div class="arc lg" data-pct="39" data-color="var(--c-codex)" data-size="40" data-sw="3.5"></div>
+      <div class="who"><span class="n">Codex</span><span class="r">resets 4d 4h</span></div>
+    </div>
+    <div class="einstr">
+      <div class="arc lg crit-ring" data-pct="94" data-color="var(--crit)" data-size="40" data-sw="3.5"></div>
+      <div class="who"><span class="n" style="color:var(--crit)">Opencode</span><span class="r">critical</span></div>
+    </div>
+  </div>
+
+  <!-- QUICK PANEL -->
+  <div class="label" style="bottom: 420px; right: 400px;">Quick Panel</div>
+  <div class="inst" id="quickpanel" style="display:flex">
+    <div class="qh"><span class="t">QuotaArc</span><span class="p">Default ▾</span></div>
+    <div class="qrow">
+      <div class="ico" style="width:26px;height:26px;border-radius:7px;background:var(--c-claude);display:grid;place-items:center;font-size:11px;font-weight:700;color:#0b0e13;">C</div>
+      <div class="grow"><span class="n">Claude</span><span class="m">resets in 51m · 1.2× pace</span></div>
+      <div class="arc" data-pct="73" data-color="var(--c-claude)" data-size="30" data-sw="3"></div>
+      <div class="pct">73%</div>
+    </div>
+    <div class="qrow">
+      <div class="ico" style="width:26px;height:26px;border-radius:7px;background:var(--c-codex);display:grid;place-items:center;font-size:11px;font-weight:700;color:#0b0e13;">X</div>
+      <div class="grow"><span class="n">Codex</span><span class="m">resets in 4d 4h · on track</span></div>
+      <div class="arc" data-pct="39" data-color="var(--c-codex)" data-size="30" data-sw="3"></div>
+      <div class="pct">39%</div>
+    </div>
+    <div class="qrow">
+      <div class="ico" style="width:26px;height:26px;border-radius:7px;background:var(--c-opencode);display:grid;place-items:center;font-size:11px;font-weight:700;color:#0b0e13;">O</div>
+      <div class="grow"><span class="n">OpenCode</span><span class="m">resets in 2h 10m · 1.8× pace</span></div>
+      <div class="arc crit-ring" data-pct="94" data-color="var(--crit)" data-size="30" data-sw="3"></div>
+      <div class="pct" style="color:var(--crit)">94%</div>
+    </div>
+    <div class="qf"><button>Refresh</button><button>History</button><button>Settings</button></div>
+  </div>
+
+  <!-- fake taskbar -->
+  <div id="faketaskbar"><div class="tb"></div><div class="tb"></div><div class="tb"></div><div class="tb"></div></div>
+
+<script>
+  // Deterministic arc renderer: gap-bottom ring, clockwise fill, tabular value.
+  document.querySelectorAll('.arc').forEach(el => {
+    const pct = parseFloat(el.dataset.pct), size = +el.dataset.size, sw = +el.dataset.sw;
+    const r = (size - sw) / 2, c = 2 * Math.PI * r;
+    const gap = Math.PI / 3; // 60deg bottom gap
+    const sweep = c - gap * r; // arc length excluding gap (approx: gap as length)
+    const filled = sweep * pct / 100;
+    const color = el.dataset.color;
+    el.style.width = el.style.height = size + 'px';
+    el.innerHTML = `
+      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+        <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none"
+          stroke="rgba(255,255,255,.07)" stroke-width="${sw}" stroke-linecap="round"
+          stroke-dasharray="${(sweep).toFixed(2)} ${c}" stroke-dashoffset="${(-(gap*r)/2).toFixed(2)}"/>
+        <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none"
+          stroke="${color}" stroke-width="${sw}" stroke-linecap="round"
+          stroke-dasharray="${filled.toFixed(2)} ${c.toFixed(2)}" stroke-dashoffset="${(-(gap*r)/2).toFixed(2)}"/>
+      </svg>
+      <span class="val">${Math.round(pct)}</span>`;
+    if (el.classList.contains('lg')) el.querySelector('.val').textContent = Math.round(pct) + '%';
+  });
+</script>
+</body>
+</html>
