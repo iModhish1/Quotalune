@@ -259,7 +259,7 @@ pub fn show(
         WebviewUrl::App(format!("index.html?window=floatbar&orientation={orientation}").into());
 
     let builder = tauri::WebviewWindowBuilder::new(app, FLOATBAR_LABEL, url)
-        .title("CodexBar Float Bar")
+        .title(format!("QuotaArc Float Bar{}", codexbar::paths::channel_suffix()))
         .inner_size(w, h)
         .decorations(false)
         .shadow(false)

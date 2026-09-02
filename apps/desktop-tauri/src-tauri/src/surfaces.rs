@@ -284,14 +284,26 @@ pub fn resize_taskbar_arc(
 /// Restore enabled surfaces at startup and start the fullscreen watcher.
 pub fn install(app: &tauri::AppHandle) {
     let settings = Settings::load();
+    tracing::info!(
+        edge = settings.edge_arc_enabled,
+        top = settings.top_arc_enabled,
+        taskbar = settings.taskbar_arc_enabled,
+        "restoring QuotaArc surfaces at startup"
+    );
     if settings.edge_arc_enabled {
-        let _show = show_edge_arc(app);
+        if let Err(error) = show_edge_arc(app) {
+            tracing::warn!(%error, "failed to show Edge Arc at startup");
+        }
     }
     if settings.top_arc_enabled {
-        let _show = show_top_arc(app);
+        if let Err(error) = show_top_arc(app) {
+            tracing::warn!(%error, "failed to show Top Arc at startup");
+        }
     }
     if settings.taskbar_arc_enabled {
-        let _show = show_taskbar_arc(app);
+        if let Err(error) = show_taskbar_arc(app) {
+            tracing::warn!(%error, "failed to show Taskbar Arc at startup");
+        }
     }
     spawn_fullscreen_watcher(app.clone());
 }

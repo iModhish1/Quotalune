@@ -49,6 +49,21 @@ CODEXBAR_PROOF_MODE=popOut CODEXBAR_SEED_USAGE_JSON=<abs-path-to.json> ./target/
   timestamped backup of `%APPDATA%\QuotaArc` (excluding credential stores —
   secrets stay in Windows secure storage).
 
+## Editing settings.json by hand
+
+`settings.json` is a **DPAPI secure-file envelope**: once the app has saved it,
+the file looks like `{"format":"codexbar.secure-file","payload":"..."}`. Plain
+keys appended next to `payload` are **silently ignored** (the app decrypts the
+payload). To seed settings by hand:
+
+1. Quit QuotaArc completely.
+2. **Delete** `settings.json`.
+3. Write a clean plaintext JSON file (plaintext is accepted when the
+   `format` envelope is absent).
+
+Never edit the envelope in place. The same applies to `profiles.json` and all
+other app stores.
+
 ## Data-model migrations
 
 `profiles.json` carries `schemaVersion`. Migrations are pure functions tested

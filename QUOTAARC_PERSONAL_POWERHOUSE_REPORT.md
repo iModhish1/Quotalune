@@ -85,9 +85,11 @@ inspecting the decrypted store).
 
 ## J. Surfaces status
 
-Edge Arc, Top Arc, Tray, Dashboard, Float Bar all working; surfaces now follow the active
-profile's visibility switches. Taskbar Arc: **not implemented this wave** (next wave; the
-surface_kit + positioning groundwork is ready).
+Edge Arc, Top Arc, Tray, Dashboard, Float Bar all working; surfaces follow the active profile's
+visibility switches. **Taskbar Arc implemented and verified live**: work-area bottom-center
+positioning (auto-hide aware via real Win32 work area), profile switcher + per-provider chips
+inside, tray toggle, hide-during-fullscreen. The daily-driver default is quiet: tray +
+Taskbar Arc only.
 
 ## K. Personalization status
 
@@ -98,9 +100,11 @@ docs/PERSONALIZATION roadmap section below).
 
 ## L. History / intelligence status
 
-Pace, session-equivalent forecasts, reset ETA, cost projections remain inherited and
-account-capable in the engine; the account-scoped history database (retention/downsampling UI)
-is the largest open item, deliberately deferred to keep this wave's migration safe and tested.
+**Account-scoped history is live**: `history.db` (WAL SQLite, versioned migrations) records
+usage samples from every successful provider refresh, keyed by account UUID, with a 45 s dedup
+window and 90-day retention pruning — verified with 28 real samples from live Codex/Copilot
+refreshes on this machine. History UI (ranges/trajectory/export/clear) and the intelligence
+card area are the next wave.
 
 ## M. Windows hardening results
 
@@ -132,8 +136,10 @@ records READY / NOT READY / REQUIRES OWNER ACTION. Nothing was pushed, published
 1. Claude live validation blocked by an empty local Claude Code session (owner re-login needed).
 2. Per-account fetch pipelines for API-key providers not yet wired into the refresh loop
    (accounts gate visibility today; independent monitoring lands next wave).
-3. Taskbar Arc, command palette, setup wizard, background engine, auto profile rules: next wave.
-4. History DB UI deferred (see L).
+3. Command palette, setup wizard, background engine, auto profile rules: next wave.
+4. History UI (views/export/clear) deferred (see L); recording and storage are live.
+5. Hand-editing settings.json while it is DPAPI-enveloped silently does nothing — documented
+   with the correct procedure in docs/LOCAL_DEVELOPMENT.md (this bit us during validation).
 
 ## R. Recommended next personal enhancements
 
