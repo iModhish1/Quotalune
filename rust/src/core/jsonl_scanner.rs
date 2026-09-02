@@ -1207,7 +1207,7 @@ impl JsonlScanner {
 
     /// Default on-disk cache root: `%LOCALAPPDATA%\CodexBar` (via `dirs::cache_dir`).
     pub fn default_cache_root() -> Option<PathBuf> {
-        dirs::cache_dir().map(|d| d.join("CodexBar"))
+        crate::paths::cache_dir()
     }
 
     fn cache_path(provider: ProviderId, cache_root: Option<&Path>) -> PathBuf {

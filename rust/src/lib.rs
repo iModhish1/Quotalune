@@ -15,6 +15,7 @@ pub mod locale;
 pub mod logging;
 pub mod login;
 pub mod notifications;
+pub mod paths;
 pub mod providers;
 pub mod secure_file;
 pub mod settings;

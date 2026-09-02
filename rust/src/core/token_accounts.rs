@@ -627,7 +627,7 @@ impl TokenAccountStore {
     /// Get the default storage path
     pub fn default_path() -> PathBuf {
         dirs::config_dir()
-            .map(|dir| dir.join("CodexBar"))
+            .map(|dir| dir.join(crate::paths::APP_DIR_NAME))
             .unwrap_or_else(|| {
                 dirs::home_dir()
                     .unwrap_or_else(|| PathBuf::from("."))

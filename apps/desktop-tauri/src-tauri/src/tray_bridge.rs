@@ -257,7 +257,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     let _tray = TrayIconBuilder::with_id("codexbar-main")
         .icon(icon)
-        .tooltip("CodexBar Desktop")
+        .tooltip("QuotaArc")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_tray_icon_event(|tray, event| {
@@ -694,7 +694,7 @@ fn build_tooltip(
     use codexbar::locale::{LocaleKey, get_text};
 
     if snapshots.is_empty() {
-        return "CodexBar Desktop".to_string();
+        return "QuotaArc".to_string();
     }
 
     let error_label = get_text(lang, LocaleKey::TrayStatusRowError);

@@ -42,7 +42,7 @@ const NOTIFICATION_SOUND_THEME_OPTIONS: {
   labelKey: LocaleKey;
 }[] = [
   { value: "windows", labelKey: "NotificationSoundThemeWindows" },
-  { value: "codexBar", labelKey: "NotificationSoundThemeCodexBar" },
+  { value: "codexBar", labelKey: "NotificationSoundThemeQuotaArc" },
 ];
 
 type NotificationSoundPathKey = keyof NotificationSoundPaths;

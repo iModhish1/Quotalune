@@ -362,7 +362,7 @@ export function useTrayPanelLayout({
 
         await revealPanel();
       } catch (error) {
-        console.warn("CodexBar tray panel resize failed", error);
+        console.warn("QuotaArc tray panel resize failed", error);
         void revealPanel();
       } finally {
         if (!committedHeight) {

@@ -266,7 +266,7 @@ impl WidgetSnapshotStore {
     }
 
     fn snapshot_path() -> Option<PathBuf> {
-        dirs::data_local_dir().map(|d| d.join("CodexBar").join(Self::FILENAME))
+        crate::paths::data_local_dir().map(|d| d.join(Self::FILENAME))
     }
 }
 
@@ -309,7 +309,7 @@ impl WidgetSelectionStore {
     }
 
     fn selection_path() -> Option<PathBuf> {
-        dirs::data_local_dir().map(|d| d.join("CodexBar").join(Self::FILENAME))
+        crate::paths::data_local_dir().map(|d| d.join(Self::FILENAME))
     }
 }
 

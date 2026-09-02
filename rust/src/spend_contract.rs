@@ -162,7 +162,7 @@ struct CustomRates {
 
 impl CustomPricing {
     fn default_path() -> Option<PathBuf> {
-        dirs::config_dir().map(|path| path.join("CodexBar").join("custom-pricing.json"))
+        crate::paths::config_dir().map(|path| path.join("custom-pricing.json"))
     }
 
     fn load() -> Self {

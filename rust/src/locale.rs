@@ -217,7 +217,7 @@ locale_keys! {
     NotificationSoundTheme,
     NotificationSoundThemeHelper,
     NotificationSoundThemeWindows,
-    NotificationSoundThemeCodexBar,
+    NotificationSoundThemeQuotaArc,
     NotificationSoundChooseFile,
     NotificationSoundClearFile,
     NotificationSoundUsesTheme,
@@ -449,7 +449,7 @@ locale_keys! {
     StatusLabel,
 
     // Tray - Single icon mode
-    TrayOpenCodexBar,
+    TrayOpenQuotaArc,
     TrayPopOutDashboard,
     TrayShowWindow,
     TrayShowFloatBar,

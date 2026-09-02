@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "CodexBar Desktop",
-  "version": "0.55.0",
-  "identifier": "com.codexbar.desktop",
+  "productName": "QuotaArc",
+  "version": "0.1.0",
+  "identifier": "app.quotaarc.desktop",
   "build": {
     "beforeDevCommand": "pnpm run dev",
     "beforeBuildCommand": "pnpm run build",
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "CodexBar Desktop",
+        "title": "QuotaArc",
         "width": 496,
         "height": 800,
         "minWidth": 320,
@@ -45,5 +45,6 @@
         "type": "downloadBootstrapper"
       }
     }
-  }
+  },
+  "mainBinaryName": "QuotaArc"
 }

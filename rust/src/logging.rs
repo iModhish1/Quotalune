@@ -21,7 +21,7 @@ pub fn safe_error_message(err: impl std::fmt::Display) -> String {
 
 /// Canonical application config root that hosts the settings file and logs.
 pub fn config_root() -> Option<PathBuf> {
-    dirs::config_dir().map(|p| p.join("CodexBar"))
+    crate::paths::config_dir()
 }
 
 /// Settings directory that hosts the app settings file (also the log root).
@@ -34,8 +34,8 @@ pub const LOG_MAX_BYTES: u64 = 1024 * 1024;
 
 /// Log file name stems. The CLI and the desktop shell must differ so their
 /// cached handles never fight over the same file on Windows.
-pub const LOG_FILE_STEM_CLI: &str = "codexbar-cli";
-pub const LOG_FILE_STEM_DESKTOP: &str = "codexbar-desktop";
+pub const LOG_FILE_STEM_CLI: &str = "quotaarc-cli";
+pub const LOG_FILE_STEM_DESKTOP: &str = "quotaarc-desktop";
 
 static LOG_FILE_STEM: LazyLock<&'static str> = LazyLock::new(|| {
     // The Tauri shell sets CODEXBAR_PROCESS=desktop before logging::init;

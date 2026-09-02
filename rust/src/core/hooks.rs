@@ -236,7 +236,7 @@ impl HooksConfig {
     pub const MAX_PAYLOAD_BYTES: usize = 4096;
 
     pub fn path() -> Option<PathBuf> {
-        dirs::config_dir().map(|p| p.join("CodexBar").join("hooks.json"))
+        crate::paths::config_dir().map(|p| p.join("hooks.json"))
     }
 
     pub fn load() -> Self {

@@ -1,4 +1,4 @@
-#define MyAppName "CodexBar"
+#define MyAppName "QuotaArc"
 #ifndef AppVersion
   #define AppVersion "0.0.0-dev"
 #endif
@@ -9,7 +9,7 @@
   #define OutputDir "..\\target\\installer"
 #endif
 #ifndef OutputBaseFilename
-  #define OutputBaseFilename "CodexBar-" + AppVersion + "-Setup"
+  #define OutputBaseFilename "QuotaArc-" + AppVersion + "-x64-Setup"
 #endif
 #ifndef VCRedistPath
   #define VCRedistPath "..\\target\\installer-deps\\vc_redist.x64.exe"
@@ -19,15 +19,15 @@
 #endif
 
 [Setup]
-AppId=WinCodexBar
+AppId=QuotaArcDesktop
 AppName={#MyAppName}
 AppVersion={#AppVersion}
 AppVerName={#MyAppName} {#AppVersion}
-AppPublisher=CodexBar Contributors
-AppPublisherURL=https://github.com/Finesssee/Win-CodexBar
-AppSupportURL=https://github.com/Finesssee/Win-CodexBar/issues
-AppUpdatesURL=https://github.com/Finesssee/Win-CodexBar/releases
-DefaultDirName={localappdata}\Programs\CodexBar
+AppPublisher=QuotaArc Contributors
+AppPublisherURL=https://github.com/quotaarc/quotaarc
+AppSupportURL=https://github.com/quotaarc/quotaarc/issues
+AppUpdatesURL=https://github.com/quotaarc/quotaarc/releases
+DefaultDirName={localappdata}\Programs\QuotaArc
 DefaultGroupName=CodexBar
 DisableProgramGroupPage=yes
 DisableDirPage=auto

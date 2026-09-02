@@ -537,7 +537,7 @@ impl ModelsDevCache {
     const ARTIFACT_VERSION: u32 = 1;
 
     fn default_cache_root() -> Option<PathBuf> {
-        dirs::cache_dir().map(|path| path.join("CodexBar"))
+        crate::paths::cache_dir()
     }
 
     fn cache_path(cache_root: Option<&Path>) -> PathBuf {

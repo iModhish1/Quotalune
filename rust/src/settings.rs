@@ -685,10 +685,10 @@ impl Settings {
         if enabled {
             let exe_path = std::env::current_exe()?;
             let command = Self::start_at_login_command(&exe_path);
-            run_key.set_value("CodexBar", &command)?;
+            run_key.set_value(crate::paths::REGISTRY_RUN_VALUE, &command)?;
         } else {
             // Best-effort removal; a missing value means the desired state already.
-            let _removed_value = run_key.delete_value("CodexBar");
+            let _removed_value = run_key.delete_value(crate::paths::REGISTRY_RUN_VALUE);
         }
 
         Ok(())
@@ -707,15 +707,15 @@ impl Settings {
             return false;
         };
 
-        let Ok(existing) = run_key.get_value::<String, _>("CodexBar") else {
+        let Ok(existing) = run_key.get_value::<String, _>(crate::paths::REGISTRY_RUN_VALUE) else {
             return false;
         };
 
         match std::env::current_exe() {
             Ok(exe_path) if Self::start_at_login_command_needs_repair(&existing, &exe_path) => {
                 let command = Self::start_at_login_command(&exe_path);
-                if let Err(error) = run_key.set_value("CodexBar", &command) {
-                    tracing::warn!("Failed to repair CodexBar start-at-login command: {error}");
+                if let Err(error) = run_key.set_value(crate::paths::REGISTRY_RUN_VALUE, &command) {
+                    tracing::warn!("Failed to repair QuotaArc start-at-login command: {error}");
                 }
             }
             Err(error) => {
@@ -749,7 +749,7 @@ impl Settings {
 
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
         if let Ok(run_key) = hkcu.open_subkey(r"Software\Microsoft\Windows\CurrentVersion\Run") {
-            run_key.get_value::<String, _>("CodexBar").is_ok()
+            run_key.get_value::<String, _>(crate::paths::REGISTRY_RUN_VALUE).is_ok()
         } else {
             false
         }

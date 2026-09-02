@@ -45,7 +45,7 @@ impl WorkspaceUsageSidecar {
     /// Default: `%LOCALAPPDATA%\CodexBar\local-usage\codex-workspaces-v1.sqlite`.
     pub fn default_path() -> Option<PathBuf> {
         dirs::data_local_dir().map(|root| {
-            root.join("CodexBar")
+            root.join(crate::paths::APP_DIR_NAME)
                 .join("local-usage")
                 .join("codex-workspaces-v1.sqlite")
         })

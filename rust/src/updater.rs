@@ -1,4 +1,4 @@
-//! Auto-update checker for CodexBar
+//! Auto-update checker for QuotaArc
 //! Checks GitHub releases for new versions and handles background downloads
 
 use crate::settings::UpdateChannel;
@@ -7,7 +7,10 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::watch;
 
-const GITHUB_REPO: &str = "nesszer/Win-CodexBar";
+/// QuotaArc release repository. Update checks fail gracefully (reported
+/// as "no update available / check failed") until this repository publishes
+/// its first release.
+const GITHUB_REPO: &str = "quotaarc/quotaarc";
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// State of the update download process
@@ -127,7 +130,7 @@ fn release_url(channel: UpdateChannel) -> String {
 
 fn update_client() -> Option<reqwest::Client> {
     crate::core::apply_app_proxy(reqwest::Client::builder())
-        .user_agent("CodexBar")
+        .user_agent(crate::paths::USER_AGENT)
         .build()
         .ok()
 }
@@ -260,7 +263,7 @@ pub fn current_version() -> &'static str {
 
 /// Get the download directory for updates
 fn get_download_dir() -> Option<PathBuf> {
-    dirs::cache_dir().map(|p| p.join("CodexBar").join("updates"))
+    crate::paths::cache_dir().map(|p| p.join("updates"))
 }
 
 /// Download an update with progress reporting
@@ -306,7 +309,7 @@ fn download_filename(download_url: &str) -> String {
     download_url
         .split('/')
         .next_back()
-        .unwrap_or("CodexBar-Setup.exe")
+        .unwrap_or("QuotaArc-Setup.exe")
         .to_string()
 }
 
@@ -319,7 +322,7 @@ fn expected_update_sha256(update_info: &UpdateInfo) -> Result<&str, String> {
 
 fn update_http_client() -> Result<reqwest::Client, String> {
     crate::core::apply_app_proxy(reqwest::Client::builder())
-        .user_agent("CodexBar")
+        .user_agent(crate::paths::USER_AGENT)
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))
 }
@@ -584,9 +587,9 @@ fn windows_installer_launch_plan(
         });
     }
 
-    // CodexBar release setup executables are built by rust/installer/codexbar.iss
+    // QuotaArc release setup executables are built by the Tauri NSIS bundler
     // (Inno Setup). Silent installs skip the installer's postinstall [Run]
-    // entry, so the update helper relaunches CodexBar after setup exits.
+    // entry, so the update helper relaunches QuotaArc after setup exits.
     Ok(WindowsInstallerLaunchPlan {
         program: installer_path.to_path_buf(),
         args: vec![
@@ -720,7 +723,7 @@ mod tests {
     fn prefers_installer_asset_for_auto_update() {
         let release = GitHubRelease {
             tag_name: "v1.2.6".to_string(),
-            html_url: "https://github.com/nesszer/Win-CodexBar/releases/tag/v1.2.6".to_string(),
+            html_url: "https://github.com/quotaarc/quotaarc/releases/tag/v1.2.6".to_string(),
             body: None,
             assets: vec![
                 GitHubAsset {
@@ -729,8 +732,8 @@ mod tests {
                     digest: None,
                 },
                 GitHubAsset {
-                    name: "CodexBar-1.2.6-Setup.exe".to_string(),
-                    browser_download_url: "https://example.com/CodexBar-1.2.6-Setup.exe"
+                    name: "QuotaArc-1.2.6-x64-Setup.exe".to_string(),
+                    browser_download_url: "https://example.com/QuotaArc-1.2.6-x64-Setup.exe"
                         .to_string(),
                     digest: Some(
                         "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -746,7 +749,7 @@ mod tests {
 
         assert_eq!(
             update.download_url,
-            "https://example.com/CodexBar-1.2.6-Setup.exe"
+            "https://example.com/QuotaArc-1.2.6-x64-Setup.exe"
         );
         assert!(update.supports_auto_apply());
         assert!(update.supports_auto_download());
@@ -756,7 +759,7 @@ mod tests {
     fn falls_back_to_manual_release_when_only_portable_exe_exists() {
         let release = GitHubRelease {
             tag_name: "v1.2.6".to_string(),
-            html_url: "https://github.com/nesszer/Win-CodexBar/releases/tag/v1.2.6".to_string(),
+            html_url: "https://github.com/quotaarc/quotaarc/releases/tag/v1.2.6".to_string(),
             body: None,
             assets: vec![GitHubAsset {
                 name: "codexbar.exe".to_string(),
@@ -771,7 +774,7 @@ mod tests {
 
         assert_eq!(
             update.download_url,
-            "https://github.com/nesszer/Win-CodexBar/releases/tag/v1.2.6"
+            "https://github.com/quotaarc/quotaarc/releases/tag/v1.2.6"
         );
         assert!(!update.supports_auto_apply());
     }
@@ -783,9 +786,9 @@ mod tests {
         let portable = temp.path().join("codexbar.exe");
         let older = temp
             .path()
-            .join(format!("CodexBar-{}.{}.{}-Setup.exe", major, minor, patch));
+            .join(format!("QuotaArc-{}.{}.{}-x64-Setup.exe", major, minor, patch));
         let newer = temp.path().join(format!(
-            "CodexBar-{}.{}.{}-Setup.exe",
+            "QuotaArc-{}.{}.{}-x64-Setup.exe",
             major,
             minor,
             patch + 1
@@ -806,9 +809,9 @@ mod tests {
         let (major, minor, patch) = parse_version_triplet(CURRENT_VERSION);
         let current = temp
             .path()
-            .join(format!("CodexBar-{}.{}.{}-Setup.exe", major, minor, patch));
+            .join(format!("QuotaArc-{}.{}.{}-x64-Setup.exe", major, minor, patch));
         let older = temp.path().join(format!(
-            "CodexBar-{}.{}.{}-Setup.exe",
+            "QuotaArc-{}.{}.{}-x64-Setup.exe",
             major,
             minor,
             patch.saturating_sub(1)
@@ -825,7 +828,7 @@ mod tests {
         let (major, minor, patch) = parse_version_triplet(CURRENT_VERSION);
         assert_eq!(
             installer_version_from_name(&format!(
-                "CodexBar-{}.{}.{}-beta.1-Setup.exe",
+                "QuotaArc-{}.{}.{}-x64-beta.1-Setup.exe",
                 major,
                 minor,
                 patch + 1
@@ -837,7 +840,7 @@ mod tests {
     #[test]
     fn verify_installer_hash_accepts_matching_sha256() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let path = temp.path().join("CodexBar-1.2.3-Setup.exe");
+        let path = temp.path().join("QuotaArc-1.2.3-x64-Setup.exe");
         std::fs::write(&path, b"installer bytes").expect("write installer");
 
         let expected = sha256_file(&path).expect("hash");
@@ -847,7 +850,7 @@ mod tests {
     #[test]
     fn verify_installer_hash_rejects_mismatched_sha256() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let path = temp.path().join("CodexBar-1.2.3-Setup.exe");
+        let path = temp.path().join("QuotaArc-1.2.3-x64-Setup.exe");
         std::fs::write(&path, b"installer bytes").expect("write installer");
 
         let wrong = "0".repeat(64);
@@ -858,7 +861,7 @@ mod tests {
     #[cfg(target_os = "windows")]
     #[test]
     fn windows_setup_exe_uses_inno_silent_flags() {
-        let path = PathBuf::from(r"C:\Temp\CodexBar-1.2.3-Setup.exe");
+        let path = PathBuf::from(r"C:\Temp\QuotaArc-1.2.3-x64-Setup.exe");
 
         let plan = windows_installer_launch_plan(&path).expect("launch plan");
 
@@ -877,19 +880,19 @@ mod tests {
     #[cfg(target_os = "windows")]
     #[test]
     fn windows_apply_script_waits_for_current_process_before_installing() {
-        let path = PathBuf::from(r"C:\Temp\CodexBar-1.2.3-Setup.exe");
-        let relaunch_path = PathBuf::from(r"C:\Program Files\CodexBar\codexbar.exe");
+        let path = PathBuf::from(r"C:\Temp\QuotaArc-1.2.3-x64-Setup.exe");
+        let relaunch_path = PathBuf::from(r"C:\Program Files\QuotaArc\QuotaArc.exe");
         let plan = windows_installer_launch_plan(&path).expect("launch plan");
 
         let script = windows_installer_apply_script(&plan, 12345, &relaunch_path);
 
         assert!(script.contains("Wait-Process -Id 12345"));
-        assert!(script.contains(r"Start-Process -FilePath 'C:\Temp\CodexBar-1.2.3-Setup.exe'"));
+        assert!(script.contains(r"Start-Process -FilePath 'C:\Temp\QuotaArc-1.2.3-x64-Setup.exe'"));
         assert!(script.contains(
             "-ArgumentList @('/SILENT','/SUPPRESSMSGBOXES','/CLOSEAPPLICATIONS','/NORESTART')"
         ));
         assert!(script.contains("-PassThru -Wait"));
-        assert!(script.contains(r"Start-Process -FilePath 'C:\Program Files\CodexBar\codexbar.exe' -ArgumentList @('menubar')"));
+        assert!(script.contains(r"Start-Process -FilePath 'C:\Program Files\QuotaArc\QuotaArc.exe' -ArgumentList @('menubar')"));
     }
 
     #[cfg(target_os = "windows")]

@@ -150,7 +150,7 @@ fn claude_usage_probe_dir() -> Result<std::path::PathBuf, ProviderError> {
         .ok_or_else(|| {
             ProviderError::Other("Could not resolve a local data directory".to_string())
         })?;
-    let dir = base.join("CodexBar").join("claude-usage-probe");
+    let dir = base.join(crate::paths::APP_DIR_NAME).join("claude-usage-probe");
     std::fs::create_dir_all(&dir).map_err(|e| {
         ProviderError::Other(format!(
             "Failed to prepare Claude CLI probe directory: {}",

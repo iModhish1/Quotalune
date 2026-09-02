@@ -108,7 +108,7 @@ impl CookieHeaderCache {
     /// Get the cache file path for a provider
     fn cache_path(provider: ProviderId) -> Option<PathBuf> {
         dirs::data_local_dir().map(|d| {
-            d.join("CodexBar")
+            d.join(crate::paths::APP_DIR_NAME)
                 .join(format!("{}-cookie.json", provider.cli_name()))
         })
     }

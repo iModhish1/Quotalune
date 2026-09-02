@@ -274,7 +274,7 @@ impl OpenAIDashboardCacheStore {
     }
 
     fn cache_path() -> Option<PathBuf> {
-        dirs::data_local_dir().map(|d| d.join("CodexBar").join("openai-dashboard.json"))
+        crate::paths::data_local_dir().map(|d| d.join("openai-dashboard.json"))
     }
 }
 

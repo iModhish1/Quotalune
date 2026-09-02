@@ -468,7 +468,7 @@ async fn show_paths() -> anyhow::Result<()> {
 
     // Show config directory
     if let Some(config_dir) = dirs::config_dir() {
-        let codexbar_dir = config_dir.join("CodexBar");
+        let codexbar_dir = config_dir.join(crate::paths::APP_DIR_NAME);
         println!();
         println!("Config directory: {}", codexbar_dir.display());
     }

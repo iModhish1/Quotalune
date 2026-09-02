@@ -47,7 +47,7 @@ pub fn app_support_directory() -> PathBuf {
         .with(|cell| cell.borrow().clone())
         .unwrap_or_else(|| {
             dirs::config_dir()
-                .map(|dir| dir.join("CodexBar").join("codex-accounts"))
+                .map(|dir| dir.join(crate::paths::APP_DIR_NAME).join("codex-accounts"))
                 .unwrap_or_else(|| PathBuf::from(".").join("codex-accounts"))
         })
 }
