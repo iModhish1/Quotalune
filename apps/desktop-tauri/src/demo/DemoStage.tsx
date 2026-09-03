@@ -20,6 +20,11 @@ import { TaskbarRadialV5, TopRadialV5, EdgeRadialV5, HudRadialV5 } from "./V5Sur
 import CatalogSurface from "./CatalogSurface";
 import CatalogTaskbar from "./CatalogTaskbar";
 import GeometrySurface from "./GeometrySurface";
+import {
+  TASKBAR_COMPACT_HEIGHT,
+  TASKBAR_EXPANDED_HEIGHT,
+  TASKBAR_STAGE_WIDTH,
+} from "../components/taskbar/taskbarLayout";
 
 const params = new URLSearchParams(window.location.search);
 const surface = params.get("surface") ?? "taskbar";
@@ -70,8 +75,21 @@ export default function DemoStage() {
 
   const catalogSlug = params.get("catalog");
   if (catalogSlug && params.get("gen") === "v8") {
-    return stage(560, state === "expanded" ? 320 : 230,
-      { left: "50%", top: "50%", transform: "translate(-50%, -50%)" },
+    const taskbarHeight = state === "expanded" ? TASKBAR_EXPANDED_HEIGHT : TASKBAR_COMPACT_HEIGHT;
+    const taskbarScale = Math.min(
+      1,
+      Math.max(0.32, (window.innerWidth - 24) / TASKBAR_STAGE_WIDTH),
+      Math.max(0.32, (window.innerHeight - 72) / taskbarHeight),
+    );
+    return stage(
+      TASKBAR_STAGE_WIDTH,
+      taskbarHeight,
+      {
+        left: "50%",
+        bottom: 48,
+        transform: `translateX(-50%) scale(${taskbarScale})`,
+        transformOrigin: "bottom center",
+      },
       <CatalogTaskbar catalog={catalogSlug} state={state} />);
   }
   if (catalogSlug && params.get("gen") === "v75") {

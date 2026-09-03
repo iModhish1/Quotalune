@@ -1,25 +1,26 @@
 /**
  * Taskbar Arc — LIVE production surface (V8 composition).
  *
- * Consumes the same stage primitives as the capture harness
- * (CatalogTaskbar) with REAL state: persisted catalog theme, live provider
+ * Consumes the production TaskbarStage also used by the capture harness,
+ * with REAL state: persisted catalog theme, live provider
  * snapshots, real reset info, compact/expanded interaction, focus cycling
  * (wheel/keyboard), and honest unavailable states. No synthetic fallbacks.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import { listen } from "@tauri-apps/api/event";
-import CatalogTaskbarStage, { type StageProvider } from "../../demo/CatalogTaskbar";
+import TaskbarStage, { type StageProvider } from "../../components/taskbar/TaskbarStage";
+import {
+  TASKBAR_COMPACT_HEIGHT,
+  TASKBAR_EXPANDED_HEIGHT,
+  TASKBAR_STAGE_WIDTH,
+} from "../../components/taskbar/taskbarLayout";
 import { useProviders } from "../../hooks/useProviders";
 import { refreshProvidersIfStale, refreshProviders } from "../../lib/tauri";
 import { resizeTaskbarArc } from "../../lib/surfaceBridge";
 import { applyUsageSemantics, resolveUsageMode, type UsageDisplayConfig } from "../../design-system/themes";
 import type { ProviderUsageSnapshot } from "../../types/bridge";
 import { getSettingsSnapshot } from "../../lib/tauri";
-
-const W = 820;
-const H_EXPANDED = 500;
-const H_COMPACT = 400;
 
 interface TaskbarArcProps {
   demo?: { state: "idle" | "hover" | "expanded" };
@@ -129,8 +130,8 @@ export default function TaskbarArc({ demo }: TaskbarArcProps) {
   // Resize the native window with the stage.
   useEffect(() => {
     if (demo) return;
-    const h = expanded ? H_EXPANDED : H_COMPACT;
-    void resizeTaskbarArc(W, h).catch(() => {});
+    const h = expanded ? TASKBAR_EXPANDED_HEIGHT : TASKBAR_COMPACT_HEIGHT;
+    void resizeTaskbarArc(TASKBAR_STAGE_WIDTH, h).catch(() => {});
   }, [expanded, demo]);
 
   const cycle = useCallback(
@@ -182,10 +183,13 @@ export default function TaskbarArc({ demo }: TaskbarArcProps) {
 
   return (
     <div id="qa-taskbar-root" style={{ position: "fixed", inset: 0 }}>
-      <CatalogTaskbarStage
+      <TaskbarStage
         catalog={catalog}
         state={stageState}
         providers={stageProviders}
+        focusedIndex={focus}
+        onFocusProvider={setFocus}
+        onToggleExpanded={demo ? undefined : () => setExpanded((value) => !value)}
       />
       {/* collapse affordance (expanded) */}
       {expanded && !demo && (
