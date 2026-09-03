@@ -65,8 +65,8 @@ export function applyUsageSemantics(
   const used = 1 - remainingFraction;
   // Every emitted number passes normalization: used*100 can re-introduce
   // drift (1 - 0.79 = 0.21000000000000002), so normalize each output.
-  const value = normalizePercentage(used * 100);
-  const secondary = normalizePercentage(remainingFraction * 100);
+  const value = normalizePercentage(used * 100) ?? 0;
+  const secondary = normalizePercentage(remainingFraction * 100) ?? 0;
   // Product rule (V8.4): the arc ALWAYS displays the same fraction as the
   // primary value, so text, arc endpoint, and accessible name can never
   // disagree. Hybrid keeps the documented contract: primary = used,
