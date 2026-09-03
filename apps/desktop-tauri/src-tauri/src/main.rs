@@ -145,6 +145,21 @@ fn main() {
         initial_state.provider_cache.push(snapshot);
         initial_state.provider_cache_updated_at = Some(std::time::Instant::now());
     }
+    // Proof-only multi-provider bundle: pins several synthetic providers so
+    // usage modes, orbital layouts, and multi-node behavior are provable
+    // without credentials. Empty unless the env var is set.
+    let bundle = proof_harness::providers_bundle_from_env();
+    if !bundle.is_empty() {
+        tracing::info!(
+            "proof-harness: seeded {} provider(s) from {}",
+            bundle.len(),
+            proof_harness::SEED_PROVIDERS_ENV_VAR
+        );
+        for snapshot in bundle {
+            initial_state.provider_cache.push(snapshot);
+        }
+        initial_state.provider_cache_updated_at = Some(std::time::Instant::now());
+    }
 
     tauri::Builder::default()
         .manage(Mutex::new(initial_state))

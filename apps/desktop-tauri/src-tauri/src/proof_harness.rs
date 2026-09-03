@@ -293,6 +293,139 @@ pub fn seed_usage_snapshot_from_env() -> Option<ProviderUsageSnapshot> {
     }
 }
 
+/// Proof-only multi-provider bundle (`CODEXBAR_SEED_PROVIDERS_JSON`).
+///
+/// Development/proof mode input for several deterministic synthetic
+/// providers. Validation is strict: version must be 1, provider IDs must
+/// resolve, stable IDs must be unique, fractions must stay in 0..=100 and
+/// agree, and any failure warns and disables the whole bundle (never a
+/// partial seed, never a crash).
+pub const SEED_PROVIDERS_ENV_VAR: &str = "CODEXBAR_SEED_PROVIDERS_JSON";
+
+#[derive(serde::Deserialize)]
+struct ProvidersBundleFile {
+    version: u32,
+    providers: Vec<ProviderBundleEntry>,
+}
+
+#[derive(serde::Deserialize)]
+struct ProviderBundleEntry {
+    provider: String,
+    #[serde(default)]
+    account_id: Option<String>,
+    #[serde(default)]
+    display_name: Option<String>,
+    used_percent: f64,
+    #[serde(default)]
+    reset_description: Option<String>,
+    #[serde(default)]
+    status: Option<String>,
+}
+
+/// Parse + validate a multi-provider proof bundle. Pure.
+pub fn parse_providers_bundle(json: &str) -> Result<Vec<ProviderUsageSnapshot>, String> {
+    let bundle: ProvidersBundleFile =
+        serde_json::from_str(json).map_err(|e| format!("malformed bundle JSON: {e}"))?;
+    if bundle.version != 1 {
+        return Err(format!("unsupported bundle version {}", bundle.version));
+    }
+    if bundle.providers.is_empty() {
+        return Err("bundle contains no providers".to_string());
+    }
+    let mut seen = std::collections::HashSet::new();
+    let mut out = Vec::with_capacity(bundle.providers.len());
+    for entry in &bundle.providers {
+        let provider_id = codexbar::core::ProviderId::from_cli_name(entry.provider.trim())
+            .ok_or_else(|| format!("unknown provider '{}'", entry.provider))?;
+        let stable_id = entry.account_id.as_deref().unwrap_or(entry.provider.as_str());
+        if !seen.insert(stable_id.to_string()) {
+            return Err(format!("duplicate stable id '{}'", stable_id));
+        }
+        if !(0.0..=100.0).contains(&entry.used_percent) {
+            return Err(format!("used_percent {} out of range", entry.used_percent));
+        }
+        if !entry.used_percent.is_finite() {
+            return Err("used_percent not finite".to_string());
+        }
+        let status = match entry.status.as_deref() {
+            Some("attention") => "ready",
+            Some(other) if other == "ok" || other == "ready" => "ready",
+            _ => "ready",
+        };
+        let remaining = 100.0 - entry.used_percent;
+        let window = |used: f64, remaining: f64| crate::commands::RateWindowSnapshot {
+            used_percent: used,
+            remaining_percent: remaining,
+            window_minutes: None,
+            resets_at: None,
+            reset_description: entry.reset_description.clone(),
+            is_exhausted: remaining <= 0.0,
+            is_informational: false,
+            reserve_percent: None,
+            reserve_description: None,
+            reserve_eta_seconds: None,
+            reserve_will_last_to_reset: false,
+        };
+        let display = entry
+            .display_name
+            .clone()
+            .unwrap_or_else(|| entry.provider.clone());
+        let mut snapshot = ProviderUsageSnapshot {
+            provider_id: provider_id.cli_name().to_string(),
+            display_name: display.clone(),
+            primary: window(entry.used_percent, remaining),
+            primary_label: None,
+            secondary: None,
+            secondary_label: None,
+            model_specific: None,
+            tertiary: None,
+            extra_rate_windows: Vec::new(),
+            cost: None,
+            plan_name: Some("Proof".to_string()),
+            account_email: None,
+            source_label: "proof-bundle".to_string(),
+            updated_at: "2026-09-03T12:00:00Z".to_string(),
+            error: None,
+            error_state: codexbar::core::ProviderStateKind::Ready,
+            pace: None,
+            account_organization: None,
+            tray_status_label: None,
+            tertiary_label: None,
+            session_equivalent_forecast: None,
+            wayfinder_usage: None,
+            fetch_duration_ms: None,
+        };
+        let _ = status;
+        out.push(snapshot);
+    }
+    // Deterministic ordering: by provider id.
+    out.sort_by(|a, b| a.provider_id.cmp(&b.provider_id));
+    Ok(out)
+}
+
+/// Read + parse the bundle from `CODEXBAR_SEED_PROVIDERS_JSON`. Warn + None
+/// on any failure; never crashes, never partially seeds.
+pub fn providers_bundle_from_env() -> Vec<ProviderUsageSnapshot> {
+    let path = match std::env::var_os(SEED_PROVIDERS_ENV_VAR) {
+        Some(p) => std::path::PathBuf::from(p),
+        None => return Vec::new(),
+    };
+    let raw = match std::fs::read_to_string(&path) {
+        Ok(raw) => raw,
+        Err(err) => {
+            tracing::warn!("{SEED_PROVIDERS_ENV_VAR}: cannot read {}: {err}", path.display());
+            return Vec::new();
+        }
+    };
+    match parse_providers_bundle(&raw) {
+        Ok(snapshots) => snapshots,
+        Err(msg) => {
+            tracing::warn!("{SEED_PROVIDERS_ENV_VAR}: {msg} in {}", path.display());
+            Vec::new()
+        }
+    }
+}
+
 /// Parse a seed-usage JSON string directly into a canonical
 /// [`ProviderUsageSnapshot`].
 ///
@@ -593,5 +726,82 @@ mod tests {
         assert_eq!(cost.currency_code, "USD");
         assert_eq!(cost.period, "month");
         assert_eq!(cost.formatted_used, "$12.50");
+    }
+}
+
+
+#[cfg(test)]
+mod bundle_tests {
+    use super::*;
+
+    const VALID: &str = r#"{
+        "version": 1,
+        "providers": [
+            {"provider": "claude", "account_id": "proof-claude", "display_name": "Claude", "used_percent": 73.0, "reset_description": "4h 12m"},
+            {"provider": "openai", "account_id": "proof-openai", "used_percent": 21.0, "reset_description": "79% left"},
+            {"provider": "gemini", "account_id": "proof-gemini", "used_percent": 58.0, "status": "attention"}
+        ]
+    }"#;
+
+    #[test]
+    fn valid_three_provider_bundle_parses() {
+        let out = parse_providers_bundle(VALID).expect("parses");
+        let out = parse_providers_bundle(VALID).expect("parses");
+        assert_eq!(out.len(), 3);
+        assert_eq!(out[0].provider_id, "claude");
+        // "openai" resolves to the Codex provider (registered alias in the
+        // provider map — OpenAI IS Codex in this product's terms), hence
+        // alphabetical order [claude, codex, gemini].
+        assert_eq!(out[1].provider_id, "codex");
+        assert_eq!(out[2].provider_id, "gemini");
+        assert_eq!(out[0].display_name, "Claude");
+        assert_eq!(out[0].primary.used_percent, 73.0);
+        assert_eq!(out[0].primary.remaining_percent, 27.0);
+    }
+
+    #[test]
+    fn malformed_json_is_rejected() {
+        assert!(parse_providers_bundle("{not json").is_err());
+    }
+
+    #[test]
+    fn unknown_schema_version_is_rejected() {
+        assert!(parse_providers_bundle(r#"{"version": 2, "providers": []}"#).is_err());
+    }
+
+    #[test]
+    fn unknown_provider_is_rejected() {
+        let json = r#"{"version": 1, "providers": [{"provider": "not-a-provider", "used_percent": 10}]}"#;
+        assert!(parse_providers_bundle(json).is_err());
+    }
+
+    #[test]
+    fn duplicate_stable_id_is_rejected() {
+        let json = r#"{"version": 1, "providers": [
+            {"provider": "claude", "account_id": "same", "used_percent": 10},
+            {"provider": "codex", "account_id": "same", "used_percent": 20}
+        ]}"#;
+        assert!(parse_providers_bundle(json).is_err());
+    }
+
+    #[test]
+    fn negative_used_percent_is_rejected() {
+        let json = r#"{"version": 1, "providers": [{"provider": "claude", "used_percent": -5}]}"#;
+        assert!(parse_providers_bundle(json).is_err());
+    }
+
+    #[test]
+    fn empty_bundle_is_rejected() {
+        assert!(parse_providers_bundle(r#"{"version": 1, "providers": []}"#).is_err());
+    }
+
+    #[test]
+    fn no_secret_bearing_fields_accepted_into_output() {
+        let out = parse_providers_bundle(VALID).expect("parses");
+        let json = serde_json::to_string(&out).unwrap().to_lowercase();
+        assert!(!json.contains("token"));
+        assert!(!json.contains("cookie"));
+        assert!(!json.contains("secret"));
+        assert!(!json.contains("password"));
     }
 }
