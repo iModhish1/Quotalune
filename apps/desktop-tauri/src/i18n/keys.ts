@@ -747,6 +747,7 @@ export const ALL_LOCALE_KEYS = [
   "FloatBarStyleHelper",
   "FloatBarStyleFloating",
   "FloatBarStyleTaskbar",
+  "FloatBarStyleHud",
   "FloatBarOpacity",
   "FloatBarOpacityHelper",
   "FloatBarOpacityAriaLabel",

@@ -1,0 +1,205 @@
+.qa-floating-hud {
+  position: relative;
+  width: 460px;
+  height: 500px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--qa-hud-edge) 82%, transparent);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 50% 47%, color-mix(in srgb, var(--qa-hud-accent) 10%, transparent), transparent 45%),
+    linear-gradient(158deg, color-mix(in srgb, var(--qa-hud-bg-0) 96%, transparent), color-mix(in srgb, var(--qa-hud-bg-1) 98%, transparent));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 24px 72px rgba(0, 0, 0, 0.5);
+  color: rgba(244, 248, 255, 0.96);
+  isolation: isolate;
+  cursor: grab;
+}
+
+.qa-floating-hud[data-light="true"] {
+  color: rgba(18, 35, 58, 0.94);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 24px 64px rgba(49, 78, 117, 0.18);
+}
+
+.qa-floating-hud__material {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.45;
+  background-image:
+    linear-gradient(var(--qa-hud-hairline) 1px, transparent 1px),
+    linear-gradient(90deg, var(--qa-hud-hairline) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(circle at center, black, transparent 74%);
+}
+
+.qa-floating-hud__orbit {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.qa-floating-hud__node {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 86px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  filter: drop-shadow(0 7px 14px rgba(0, 0, 0, 0.4));
+  transition: transform var(--qa-hud-motion) cubic-bezier(0.22, 1, 0.36, 1), filter 160ms ease;
+}
+
+.qa-floating-hud__node:hover,
+.qa-floating-hud__node:focus-visible,
+.qa-floating-hud__node[data-focused="true"] {
+  z-index: 3;
+  transform: translate(-50%, -50%) scale(1.08);
+  filter: drop-shadow(0 0 15px color-mix(in srgb, var(--qa-hud-node) 42%, transparent));
+}
+
+.qa-floating-hud__node:focus-visible {
+  outline: 1px solid var(--qa-hud-node);
+  outline-offset: 5px;
+  border-radius: 14px;
+}
+
+.qa-floating-hud__node[data-status="offline"] {
+  opacity: 0.48;
+}
+
+.qa-floating-hud__node-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--qa-hud-core) 92%, transparent), color-mix(in srgb, var(--qa-hud-bg-1) 96%, transparent));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--qa-hud-node) 22%, transparent);
+}
+
+.qa-floating-hud__node-ring > svg {
+  position: absolute;
+  inset: 0;
+}
+
+.qa-floating-hud__node-icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+}
+
+.qa-floating-hud__node-name {
+  max-width: 84px;
+  overflow: hidden;
+  color: color-mix(in srgb, currentColor 72%, transparent);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qa-floating-hud__node-value {
+  color: var(--qa-hud-node);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.qa-floating-hud__focus {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 48.2%;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  width: 154px;
+  height: 176px;
+  border: 1px solid color-mix(in srgb, var(--qa-hud-focus) 38%, var(--qa-hud-edge));
+  border-radius: 24px;
+  background:
+    linear-gradient(155deg, rgba(255, 255, 255, 0.075), transparent 35%),
+    color-mix(in srgb, var(--qa-hud-core) 94%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 8px color-mix(in srgb, var(--qa-hud-core) 28%, transparent),
+    0 20px 40px rgba(0, 0, 0, 0.45),
+    0 0 28px color-mix(in srgb, var(--qa-hud-focus) 12%, transparent);
+  transform: translate(-50%, -50%);
+}
+
+.qa-floating-hud__focus-provider {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 126px;
+  color: color-mix(in srgb, currentColor 80%, transparent);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.qa-floating-hud__focus > strong {
+  margin-top: 9px;
+  color: var(--qa-hud-focus);
+  font-size: 42px;
+  font-weight: 350;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.06em;
+}
+
+.qa-floating-hud__focus-mode {
+  margin-top: 5px;
+  color: color-mix(in srgb, currentColor 54%, transparent);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.qa-floating-hud__focus-reset {
+  margin-top: 14px;
+  padding-top: 9px;
+  width: 116px;
+  border-top: 1px solid var(--qa-hud-hairline);
+  color: color-mix(in srgb, currentColor 58%, transparent);
+  font-size: 9px;
+  text-align: center;
+}
+
+.qa-floating-hud__footer {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  color: color-mix(in srgb, currentColor 42%, transparent);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qa-floating-hud__node {
+    transition: none;
+  }
+}

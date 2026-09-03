@@ -75,7 +75,9 @@ export default function FloatBarSettingsSection({ settings, saving, set }: Props
         >
           <Select
             value={settings.floatBarOrientation}
-            disabled={saving || !settings.floatBarEnabled}
+            disabled={
+              saving || !settings.floatBarEnabled || settings.floatBarStyle === "hud"
+            }
             options={[
               { value: "horizontal", label: t("FloatBarOrientationHorizontal") },
               { value: "vertical", label: t("FloatBarOrientationVertical") },
@@ -93,6 +95,7 @@ export default function FloatBarSettingsSection({ settings, saving, set }: Props
             options={[
               { value: "floating", label: t("FloatBarStyleFloating") },
               { value: "taskbar", label: t("FloatBarStyleTaskbar") },
+              { value: "hud", label: t("FloatBarStyleHud") },
             ]}
             onChange={(v) => set({ floatBarStyle: v as FloatBarStyle })}
           />

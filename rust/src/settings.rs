@@ -578,6 +578,7 @@ pub fn normalize_float_bar_orientation(value: &str) -> String {
 pub fn normalize_float_bar_style(value: &str) -> String {
     match value {
         "taskbar" => "taskbar".to_string(),
+        "hud" => "hud".to_string(),
         _ => "floating".to_string(),
     }
 }

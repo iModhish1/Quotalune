@@ -19,6 +19,10 @@ import {
 } from "../lib/tauri";
 import { ProviderIcon } from "../components/providers/ProviderIcon";
 import { getProviderIcon } from "../components/providers/providerIcons";
+import {
+  toStageProviders,
+  usageConfigFromSnapshot,
+} from "../components/orbit/stageProviders";
 import { describeProviderState } from "../lib/providerState";
 import type {
   BootstrapState,
@@ -27,6 +31,7 @@ import type {
   SettingsSnapshot,
 } from "../types/bridge";
 import { FLOAT_BAR_CONFIG_CHANGED_EVENT, resizeFloatBar } from "./api";
+import FloatingHudStage from "./FloatingHudStage";
 import "./FloatBar.css";
 
 function ResetIcon({ size }: { size: number }) {
@@ -310,7 +315,12 @@ export default function FloatBar({ state }: { state: BootstrapState }) {
   // Orientation flips re-lay-out the bar without recreating the window.
   const orientation: "horizontal" | "vertical" =
     settings.floatBarOrientation === "vertical" ? "vertical" : "horizontal";
-  const style = settings.floatBarStyle === "taskbar" ? "taskbar" : "floating";
+  const style =
+    settings.floatBarStyle === "taskbar"
+      ? "taskbar"
+      : settings.floatBarStyle === "hud"
+        ? "hud"
+        : "floating";
   const filterIds = settings.floatBarProviderIds;
   const scale = Math.max(0.75, Math.min(2, settings.floatBarScale / 100));
   const showResetInline = settings.floatBarShowResetInline;
@@ -327,6 +337,21 @@ export default function FloatBar({ state }: { state: BootstrapState }) {
         b.selectedMetric.usedPercent - a.selectedMetric.usedPercent,
     );
   }, [providers, settings.enabledProviders, filterIds]);
+  const stageProviders = useMemo(
+    () => toStageProviders(visible, usageConfigFromSnapshot(settings)),
+    [visible, settings.usageDisplayMode, settings.providerUsageOverrides],
+  );
+  const [focusedProviderId, setFocusedProviderId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (stageProviders.length === 0) {
+      setFocusedProviderId(null);
+      return;
+    }
+    if (!stageProviders.some((provider) => provider.id === focusedProviderId)) {
+      setFocusedProviderId(stageProviders[0].id);
+    }
+  }, [stageProviders, focusedProviderId]);
 
   const visibleCostTargets = useMemo<FloatBarCostTarget[]>(
     () =>
@@ -477,6 +502,14 @@ export default function FloatBar({ state }: { state: BootstrapState }) {
         <div className="floatbar__empty" data-tauri-drag-region>
           {t("FloatBarNoProviders")}
         </div>
+      ) : style === "hud" ? (
+        <FloatingHudStage
+          catalog={settings.catalogTheme ?? "01-obsidian-orbit"}
+          providers={stageProviders}
+          selectedProviderId={focusedProviderId}
+          onSelectProvider={setFocusedProviderId}
+          showProviderIcons={settings.switcherShowsIcons}
+        />
       ) : (
         <>
           {visible.map((p) => (

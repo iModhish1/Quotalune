@@ -1,0 +1,160 @@
+import type { CSSProperties } from "react";
+
+import { ArcGaugeV3, QaProviderIcon, formatPercentage } from "../design-system";
+import {
+  catalogBySlug,
+  providerColor,
+  type CatalogTheme,
+} from "../design-system/themeCatalog";
+import OrbitTexture from "../components/orbit/OrbitTexture";
+import type { StageProvider } from "../components/orbit/stageTypes";
+import "./FloatingHudStage.css";
+
+interface FloatingHudStageProps {
+  catalog: string;
+  providers: StageProvider[];
+  selectedProviderId?: string | null;
+  onSelectProvider?: (providerId: string) => void;
+  showProviderIcons?: boolean;
+}
+
+const DEFAULT_THEME = "01-obsidian-orbit";
+
+export default function FloatingHudStage({
+  catalog,
+  providers,
+  selectedProviderId,
+  onSelectProvider,
+  showProviderIcons = true,
+}: FloatingHudStageProps) {
+  const theme = catalogBySlug(catalog) ?? (catalogBySlug(DEFAULT_THEME) as CatalogTheme);
+  const visible = providers.slice(0, 7);
+  const focused = visible.find((provider) => provider.id === selectedProviderId) ?? visible[0];
+  const focusedColor = focused ? providerColor(theme, focused.iconId) : theme.accent;
+  const light = theme.slug === "04-porcelain-halo";
+  const style = {
+    "--qa-hud-bg-0": theme.bg[0],
+    "--qa-hud-bg-1": theme.bg[1],
+    "--qa-hud-core": theme.core,
+    "--qa-hud-edge": theme.coreEdge,
+    "--qa-hud-accent": theme.accent,
+    "--qa-hud-focus": focusedColor,
+    "--qa-hud-hairline": theme.hairline,
+    "--qa-hud-motion": `${theme.expansionMs}ms`,
+  } as CSSProperties;
+
+  return (
+    <section
+      className="qa-floating-hud"
+      data-theme={theme.slug}
+      data-geometry={theme.geometry}
+      data-light={light}
+      style={style}
+      aria-label={`${theme.name} floating HUD`}
+      data-tauri-drag-region
+    >
+      <div className="qa-floating-hud__material" data-tauri-drag-region />
+      <svg className="qa-floating-hud__orbit" viewBox="0 0 460 500" aria-hidden="true">
+        <defs>
+          <radialGradient id="hud-core-glow">
+            <stop offset="0" stopColor={focusedColor} stopOpacity="0.22" />
+            <stop offset="0.62" stopColor={focusedColor} stopOpacity="0.04" />
+            <stop offset="1" stopColor={focusedColor} stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <ellipse cx="230" cy="241" rx="194" ry="192" fill="url(#hud-core-glow)" />
+        <OrbitTexture theme={theme} cx={230} cy={241} radiusX={186} radiusY={189} />
+        {[124, 157, 190].map((radius, index) => (
+          <ellipse
+            key={radius}
+            cx="230"
+            cy="241"
+            rx={radius}
+            ry={radius}
+            fill="none"
+            stroke={index === 1 ? theme.accent : theme.hairline}
+            strokeOpacity={index === 1 ? 0.2 : 0.75}
+            strokeWidth={index === 1 ? 1.25 : 0.8}
+            strokeDasharray={index === 2 ? "2 7" : undefined}
+          />
+        ))}
+        {visible.map((_, index) => {
+          const angle = -90 + (360 * index) / Math.max(1, visible.length);
+          const radians = (angle * Math.PI) / 180;
+          return (
+            <line
+              key={index}
+              x1="230"
+              y1="241"
+              x2={230 + 178 * Math.cos(radians)}
+              y2={241 + 178 * Math.sin(radians)}
+              stroke={theme.hairline}
+              strokeWidth="0.8"
+            />
+          );
+        })}
+      </svg>
+
+      {visible.map((provider, index) => {
+        const angle = -90 + (360 * index) / Math.max(1, visible.length);
+        const radians = (angle * Math.PI) / 180;
+        const nodeColor = providerColor(theme, provider.iconId);
+        return (
+          <button
+            key={provider.id}
+            type="button"
+            className="qa-floating-hud__node"
+            data-focused={provider.id === focused?.id}
+            data-status={provider.status}
+            style={
+              {
+                left: `${50 + 38.5 * Math.cos(radians)}%`,
+                top: `${48.2 + 38 * Math.sin(radians)}%`,
+                "--qa-hud-node": nodeColor,
+              } as CSSProperties
+            }
+            onClick={() => onSelectProvider?.(provider.id)}
+            aria-pressed={provider.id === focused?.id}
+            aria-label={`${provider.name}: ${formatPercentage(provider.primaryValue)} ${provider.primaryLabel}`}
+          >
+            <span className="qa-floating-hud__node-ring">
+              <ArcGaugeV3
+                remaining={provider.arcFraction}
+                size={58}
+                stroke={3.5}
+                colorOverride={nodeColor}
+                ariaLabel={`${provider.name} usage arc`}
+              />
+              {showProviderIcons && (
+                <span className="qa-floating-hud__node-icon">
+                  <QaProviderIcon providerId={provider.iconId} size={19} />
+                </span>
+              )}
+            </span>
+            <span className="qa-floating-hud__node-name">{provider.name}</span>
+            <strong className="qa-floating-hud__node-value">{formatPercentage(provider.primaryValue)}</strong>
+          </button>
+        );
+      })}
+
+      <div className="qa-floating-hud__focus" data-tauri-drag-region>
+        <span className="qa-floating-hud__focus-provider" data-tauri-drag-region>
+          {focused && showProviderIcons && <QaProviderIcon providerId={focused.iconId} size={22} />}
+          <span>{focused?.name ?? "QuotaArc"}</span>
+        </span>
+        <strong data-tauri-drag-region>{formatPercentage(focused?.primaryValue)}</strong>
+        <span className="qa-floating-hud__focus-mode" data-tauri-drag-region>
+          {focused?.primaryLabel ?? "unavailable"}
+        </span>
+        <span className="qa-floating-hud__focus-reset" data-tauri-drag-region>
+          ↻ Resets {focused?.reset ?? "—"}
+        </span>
+      </div>
+
+      <div className="qa-floating-hud__footer" data-tauri-drag-region>
+        <span>{theme.name}</span>
+        <span aria-hidden="true">•••</span>
+      </div>
+    </section>
+  );
+}

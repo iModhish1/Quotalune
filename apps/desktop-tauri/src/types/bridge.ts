@@ -75,7 +75,7 @@ export type MenuBarDisplayMode = "minimal" | "compact" | "detailed";
 /** How cost is rendered on provider MenuCards (#2976). */
 export type CostSummaryDisplayStyle = "compact" | "detailed" | "hidden";
 export type FloatBarOrientation = "horizontal" | "vertical";
-export type FloatBarStyle = "floating" | "taskbar";
+export type FloatBarStyle = "floating" | "taskbar" | "hud";
 
 export type TrayVisibilitySupport = "supported" | "unsupportedOs";
 export type TrayVisibilityState = "promoted" | "notPromoted" | "entryNotFound" | "unknown";

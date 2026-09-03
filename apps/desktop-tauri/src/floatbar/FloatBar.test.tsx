@@ -259,6 +259,28 @@ describe("FloatBar", () => {
     expect(titles[1]).toMatch(/Claude: 20% used/);
   });
 
+  it("renders the catalog orbital HUD through the live FloatBar window", async () => {
+    tauriMocks.getCachedProviders.mockResolvedValue([
+      snapshot("claude", "Claude", 20),
+      snapshot("codex", "Codex", 75),
+    ]);
+    tauriMocks.getSettingsSnapshot.mockResolvedValue(
+      settings({ floatBarStyle: "hud", catalogTheme: "02-aurora-bloom" }),
+    );
+
+    const { container } = renderFloatBar(
+      bootstrap({ floatBarStyle: "hud", catalogTheme: "02-aurora-bloom" }),
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector(".qa-floating-hud")?.getAttribute("data-theme")).toBe(
+        "02-aurora-bloom",
+      );
+    });
+    expect(container.querySelectorAll(".floatbar__pill")).toHaveLength(0);
+    expect(container.querySelectorAll(".qa-floating-hud__node")).toHaveLength(2);
+  });
+
   it("uses the selected session window when a weekly window is available", async () => {
     tauriMocks.getCachedProviders.mockResolvedValue([
       snapshot("claude", "Claude", 20, { secondary: { used: 90 } }),

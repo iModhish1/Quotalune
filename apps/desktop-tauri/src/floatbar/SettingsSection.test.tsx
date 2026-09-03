@@ -24,6 +24,14 @@ const settings = {
 } as unknown as SettingsSnapshot;
 
 describe("FloatBar settings", () => {
+  it("offers the catalog-driven orbital HUD style", () => {
+    render(
+      <FloatBarSettingsSection settings={settings} saving={false} set={vi.fn()} />,
+    );
+
+    expect(screen.getByRole("option", { name: "FloatBarStyleHud" })).toBeTruthy();
+  });
+
   it("renders one cost toggle", () => {
     render(
       <FloatBarSettingsSection settings={settings} saving={false} set={vi.fn()} />,

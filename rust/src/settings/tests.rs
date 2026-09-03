@@ -308,6 +308,7 @@ fn float_bar_orientation_normalization_rejects_unknown_values() {
 fn float_bar_style_normalization_rejects_unknown_values() {
     assert_eq!(normalize_float_bar_style("floating"), "floating");
     assert_eq!(normalize_float_bar_style("taskbar"), "taskbar");
+    assert_eq!(normalize_float_bar_style("hud"), "hud");
     assert_eq!(normalize_float_bar_style(""), "floating");
     assert_eq!(normalize_float_bar_style("TASKBAR"), "floating");
     assert_eq!(normalize_float_bar_style("glass"), "floating");

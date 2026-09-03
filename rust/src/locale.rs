@@ -1027,6 +1027,7 @@ locale_keys! {
     FloatBarStyleHelper,
     FloatBarStyleFloating,
     FloatBarStyleTaskbar,
+    FloatBarStyleHud,
     FloatBarOpacity,
     FloatBarOpacityHelper,
     FloatBarOpacityAriaLabel,
