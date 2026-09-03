@@ -8,6 +8,7 @@ import { useReducedMotion } from "motion/react";
 import { motionLevelFor, type MotionLevel } from "./motion";
 import "./tokens.css";
 import "./v2.css";
+import "./v6-themes.css";
 
 export { ArcGauge, type ArcGaugeProps } from "./ArcGauge";
 export { AnimatedNumber, type AnimatedNumberProps } from "./AnimatedNumber";
@@ -104,3 +105,15 @@ export {
   type QaAnchor,
   type QaPhysicalSurfaceProps,
 } from "./PhysicalSurface";
+
+// ── V6 themes + usage modes ──────────────────────────────────────────
+export {
+  V6_THEMES,
+  resolveUsageMode,
+  applyUsageSemantics,
+  type V6ThemeId,
+  type V6Theme,
+  type UsageMode,
+  type UsageDisplayConfig,
+  type UsageSemantics,
+} from "./themes";

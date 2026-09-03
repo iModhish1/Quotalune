@@ -1,0 +1,64 @@
+/**
+ * V6 theme token overrides. Applied via [data-qa-v6="<attr>"] on any
+ * ancestor of the design-system root. Bounded by design: themes change
+ * tones/material only — never geometry, layout, or status semantics.
+ */
+
+[data-qa-v6="obsidian"] {
+  --qa-graphite-0: #05070b;
+  --qa-graphite-1: #0a0e14;
+  --qa-graphite-2: #10151d;
+  --qa-graphite-3: #171d28;
+  --qa-graphite-4: #1f2632;
+  --qa-material-graphite: linear-gradient(180deg, #121822, #090d13);
+  --qa-accent-soft: rgba(45, 212, 191, 0.2);
+}
+
+[data-qa-v6="graphite"] {
+  --qa-graphite-0: #08090c;
+  --qa-graphite-1: #0e1013;
+  --qa-graphite-2: #14161a;
+  --qa-graphite-3: #1b1e23;
+  --qa-graphite-4: #23262c;
+  --qa-material-graphite: linear-gradient(180deg, #17191d, #0d0f12);
+  --qa-accent: #5eead4;
+}
+
+[data-qa-v6="midnight"] {
+  --qa-graphite-1: rgba(13, 18, 30, 0.86);
+  --qa-graphite-2: rgba(18, 25, 40, 0.82);
+  --qa-graphite-3: rgba(24, 32, 50, 0.8);
+  --qa-material-graphite: linear-gradient(180deg, rgba(22, 30, 48, 0.9), rgba(11, 15, 24, 0.94));
+  --qa-hairline: rgba(140, 170, 255, 0.1);
+}
+
+[data-qa-v6="ceramic"] {
+  color-scheme: light;
+  --qa-graphite-0: #eef1f6;
+  --qa-graphite-1: #f7f9fc;
+  --qa-graphite-2: #ffffff;
+  --qa-graphite-3: #f0f3f8;
+  --qa-graphite-4: #e6ebf2;
+  --qa-ink-1: rgba(12, 18, 27, 0.96);
+  --qa-ink-2: rgba(12, 18, 27, 0.72);
+  --qa-ink-3: rgba(12, 18, 27, 0.5);
+  --qa-ink-4: rgba(12, 18, 27, 0.32);
+  --qa-material-graphite: linear-gradient(180deg, #ffffff, #f1f4f9);
+  --qa-track: rgba(12, 18, 27, 0.08);
+  --qa-hairline: rgba(12, 18, 27, 0.08);
+  --qa-hairline-strong: rgba(12, 18, 27, 0.16);
+  --qa-shadow-2: 0 10px 30px rgba(30, 41, 59, 0.12);
+  --qa-shadow-3: 0 18px 50px rgba(30, 41, 59, 0.16);
+  --qa-accent: #14a894;
+  --qa-accent-soft: rgba(20, 168, 148, 0.12);
+  --qa-status-critical: #e04f4f;
+}
+
+[data-qa-v6="mono"] {
+  --qa-accent: #a8b3c4;
+  --qa-accent-soft: rgba(168, 179, 196, 0.14);
+  --qa-status-healthy: #c9d2e0;
+  --qa-status-moderate: #97a3b6;
+  --qa-status-high: #97a3b6;
+  --qa-status-critical: #f6f8fb;
+}

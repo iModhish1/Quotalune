@@ -5,7 +5,7 @@
  * RadialLayout. Housing exists only where needed (core disc + optional
  * connectors) — never a containing rectangle. Compact materials are opaque.
  */
-import { ArcGaugeV3, QaProviderIcon } from "../design-system";
+import { ArcGaugeV3, QaProviderIcon, applyUsageSemantics, resolveUsageMode, type UsageDisplayConfig } from "../design-system";
 import { computeOrbit, V5_MATERIAL, type OrbitMode } from "../design-system/RadialLayout";
 
 const PROVIDERS = [
@@ -23,6 +23,8 @@ function Orbital({
   delay,
   valueBelow,
   showReset,
+  focused = false,
+  usageConfig,
 }: {
   p: (typeof PROVIDERS)[number];
   size: number;
@@ -31,8 +33,14 @@ function Orbital({
   delay: number;
   valueBelow?: boolean;
   showReset?: boolean;
+  focused?: boolean;
+  usageConfig?: UsageDisplayConfig;
 }) {
-  const pct = Math.round(p.remaining * 100);
+  const mode = usageConfig
+    ? resolveUsageMode(usageConfig, p.id)
+    : "remaining";
+  const s = applyUsageSemantics(mode, p.remaining);
+  const pct = s.value == null ? null : Math.round(s.value);
   return (
     <div
       style={{
@@ -47,7 +55,12 @@ function Orbital({
     >
       <span style={{ position: "relative", display: "grid", placeItems: "center", width: size, height: size }}>
         <span style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
-          <ArcGaugeV3 remaining={p.remaining} size={size} stroke={size >= 44 ? 4 : 3.2} ariaLabel={`${p.name} arc`} />
+          <ArcGaugeV3
+            remaining={s.arc}
+            size={focused ? size + 4 : size}
+            stroke={size >= 44 ? 4 : 3.2}
+            ariaLabel={`${p.name} ${s.label} arc`}
+          />
         </span>
         <span style={{ position: "relative", display: "grid", placeItems: "center" }}>
           <QaProviderIcon providerId={p.id} size={Math.round(size * 0.42)} />
@@ -55,7 +68,9 @@ function Orbital({
       </span>
       <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
         <span className="qa-value" style={{ fontSize: size >= 44 ? 14 : 12 }}>{pct}</span>
-        {showReset && <span className="qa-reset">↻ {p.reset}</span>}
+        {showReset && (
+          <span className="qa-reset">↻ {p.reset} · {s.label}</span>
+        )}
       </span>
     </div>
   );
@@ -92,13 +107,16 @@ function Core({ size, label }: { size: number; label?: string }) {
   );
 }
 
-interface V5StageProps {
+export interface V5StageProps {
   state: "idle" | "hover" | "expanded";
   providers?: typeof PROVIDERS;
+  /** Active provider index (clock/orbit selection). */
+  focus?: number;
+  usageConfig?: UsageDisplayConfig;
 }
 
 /** Taskbar V5 — core disc on the taskbar seam; providers FAN above. */
-export function TaskbarRadialV5({ state }: V5StageProps) {
+export function TaskbarRadialV5({ state, focus = -1, usageConfig }: V5StageProps) {
   const expanded = state === "expanded";
   const radius = expanded ? 128 : 86;
   const positions = computeOrbit({ centerX: 170, centerY: 190, radius, mode: "SEMICIRCLE_UP", count: PROVIDERS.length });
@@ -113,6 +131,8 @@ export function TaskbarRadialV5({ state }: V5StageProps) {
           y={pos.y}
           delay={0.08 + i * 0.06}
           showReset={expanded}
+          focused={focus === i}
+          usageConfig={usageConfig}
         />
       ))}
       {/* connector hairlines (restrained) */}
@@ -144,7 +164,7 @@ export function TaskbarRadialV5({ state }: V5StageProps) {
 }
 
 /** Top V5 — inverted radial fan growing DOWN from the top edge. */
-export function TopRadialV5({ state }: V5StageProps) {
+export function TopRadialV5({ state, focus = -1, usageConfig }: V5StageProps) {
   const expanded = state === "expanded";
   const radius = expanded ? 120 : 80;
   const positions = computeOrbit({ centerX: 190, centerY: 24, radius, mode: "SEMICIRCLE_DOWN", count: PROVIDERS.length });
@@ -160,6 +180,8 @@ export function TopRadialV5({ state }: V5StageProps) {
           delay={0.08 + i * 0.06}
           valueBelow
           showReset={expanded}
+          focused={focus === i}
+          usageConfig={usageConfig}
         />
       ))}
       <Core size={44} />
@@ -168,7 +190,7 @@ export function TopRadialV5({ state }: V5StageProps) {
 }
 
 /** Edge V5 (right) — core half-on the edge; providers on the LEFT half orbit. */
-export function EdgeRadialV5({ state }: V5StageProps) {
+export function EdgeRadialV5({ state, focus = -1, usageConfig }: V5StageProps) {
   const expanded = state === "expanded";
   const radius = expanded ? 130 : 96;
   const positions = computeOrbit({ centerX: 240, centerY: 130, radius, mode: "LEFT_HALF_ORBIT", count: PROVIDERS.length });
@@ -184,6 +206,8 @@ export function EdgeRadialV5({ state }: V5StageProps) {
           delay={0.08 + i * 0.06}
           valueBelow
           showReset={expanded}
+          focused={focus === i}
+          usageConfig={usageConfig}
         />
       ))}
       {/* CORE: physically half beyond the right screen edge */}
@@ -213,7 +237,7 @@ export function EdgeRadialV5({ state }: V5StageProps) {
 }
 
 /** HUD V5 — full 360° orbit (purest radial identity). */
-export function HudRadialV5({ state }: V5StageProps) {
+export function HudRadialV5({ state, focus = -1, usageConfig }: V5StageProps) {
   const expanded = state === "expanded";
   const radius = expanded ? 150 : 110;
   const positions = computeOrbit({ centerX: 190, centerY: 190, radius, mode: "FULL_ORBIT", count: PROVIDERS.length });
