@@ -14,7 +14,14 @@ import { ArcGaugeV3 } from "../design-system/ArcGaugeV3";
 import { QaProviderIcon } from "../design-system";
 import { catalogBySlug, providerColor, type CatalogTheme } from "../design-system/themeCatalog";
 
-const PROVIDERS = [
+export interface StageProvider {
+  id: string;
+  name: string;
+  remaining: number | null;
+  reset: string;
+}
+
+const PROVIDERS: StageProvider[] = [
   { id: "openai", name: "OpenAI", remaining: 0.68, reset: "3h 40m" },
   { id: "claude", name: "Claude", remaining: 0.62, reset: "26h 18m" },
   { id: "gemini", name: "Gemini", remaining: 0.49, reset: "22h 38m" },
@@ -157,13 +164,15 @@ function ornament(theme: CatalogTheme, cx: number, cy: number, R: number): JSX.E
 interface Props {
   catalog: string;
   state: "idle" | "hover" | "expanded";
+  /** Live providers (production); synthetic seven used when omitted. */
+  providers?: StageProvider[];
 }
 
 /** Production Taskbar composition: the orbital instrument IS the surface. */
-export default function CatalogTaskbar({ catalog, state }: Props) {
+export default function CatalogTaskbar({ catalog, state, providers }: Props) {
   const theme = catalogBySlug(catalog) ?? (catalogBySlug("01-obsidian-orbit") as CatalogTheme);
   const expanded = state === "expanded";
-  const show = expanded ? PROVIDERS : PROVIDERS.slice(0, 3);
+  const show = providers ?? (expanded ? PROVIDERS : PROVIDERS.slice(0, 3));
   const count = show.length;
   const isLight = theme.slug.startsWith("04");
 
@@ -201,7 +210,7 @@ export default function CatalogTaskbar({ catalog, state }: Props) {
         const x = cx + orbitR * Math.sin(a);
         const y = cy - orbitR * Math.cos(a);
         const size = expanded ? 66 : 58;
-        const pct = Math.round(p.remaining * 100);
+        const pct = p.remaining == null ? null : Math.round(p.remaining * 100);
         const color = providerColor(theme, p.id);
         const focused = i === 1;
         return (
@@ -235,7 +244,7 @@ export default function CatalogTaskbar({ catalog, state }: Props) {
                 fontVariantNumeric: "tabular-nums",
               }}
             >
-              {pct}%
+              {pct == null ? "–" : `${pct}%`}
             </span>
             {expanded && (
               <span className="qa-reset" style={{ display: "block", fontSize: 10.5 }}>
