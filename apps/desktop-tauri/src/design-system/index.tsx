@@ -88,6 +88,7 @@ export {
   statusOf,
   QaProfileAvatar,
   QaProviderInstrument,
+  QaProviderIcon,
   QaProviderInstrumentMemo,
   type QaEdge,
   type QaMaterial,

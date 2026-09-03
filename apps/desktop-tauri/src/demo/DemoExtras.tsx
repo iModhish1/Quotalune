@@ -3,7 +3,7 @@
  * surfaces for the visual review gate. Rendered inside the demo stage.
  */
 import { QaCapacityArc, QaValue, QaResetTime, QaStatusIndicator, statusOf } from "../design-system";
-import { ProviderIcon } from "../components/providers/ProviderIcon";
+import { QaProviderIcon } from "../design-system";
 
 const DEMO = [
   { id: "claude", name: "Claude", remaining: 0.73, session: 0.62, reset: "51m", pace: "1.2×" },
@@ -28,7 +28,7 @@ export function HudFocus({ providerId = "claude" }: { providerId?: string }) {
       <div className="qa-hud__meta">
         <div className="qa-hud__name">
           <span className="qa-tico qa-tico--panel" aria-hidden="true">
-            <ProviderIcon providerId={p.id} size={16} />
+            <QaProviderIcon providerId={p.id} size={16} />
           </span>
           <span>{p.name}</span>
           <QaStatusIndicator status={status} />
@@ -74,7 +74,7 @@ export function DashboardHero() {
                 </div>
                 <span className="qa-dash__heroname">
                   <span className="qa-tico" aria-hidden="true">
-                    <ProviderIcon providerId={p.id} size={14} />
+                    <QaProviderIcon providerId={p.id} size={14} />
                   </span>
                   {p.name}
                 </span>

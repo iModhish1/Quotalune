@@ -90,3 +90,44 @@ No surface scores below 8 after this pass; Taskbar/Top/Edge are at 8 with
 named fixes targeting 9. The "would a designer call this finished?" test:
 not yet at 9/10 until IconFrame normalization and the listed pass-3 defects
 land. Iterate again after those fixes.
+
+
+---
+
+# PASS 3 — FINAL SCORES (after optical fixes + light/DPI passes)
+
+Fixes applied since the first critique: icon optical compensation map
+(`QaProviderIcon`, per-provider scale in 18×18 optical box), arc-value optical
+centering, content-driven Taskbar slab width, Quick Panel footer reduced to
+quiet icon-buttons, unified 44px expanded row rhythm, flush Edge pod edge,
+light-mode token verification, DPI matrix captured.
+
+| Surface | Geometry | Typography | Spacing | Icons | Arc | Material | Depth | Hierarchy | Compactness | Distinctiveness | Windows fit | Premium feel | Overall |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Taskbar Arc V2 | 9 | 8.5 | 8.5 | 8 | 9 | 8.5 | 8.5 | 9 | 9 | 9 | 9 | 8.5 | **8.7** |
+| Top Arc V2 | 9 | 8.5 | 8.5 | 8 | 8.5 | 8.5 | 8 | 8.5 | 9 | 8.5 | 9 | 8.5 | **8.6** |
+| Edge Arc V2 | 9.5 | 8.5 | 8.5 | 8 | 9 | 8.5 | 8.5 | 8.5 | 9 | 9.5 | 9 | 8.5 | **8.8** |
+| Quick Panel | 8.5 | 9 | 8.5 | 8 | 8.5 | 9 | 8.5 | 9 | 8.5 | 8.5 | 8.5 | 9 | **8.6** |
+| Floating HUD Focus | 8.5 | 8.5 | 9 | 8 | 9 | 8.5 | 8.5 | 9 | 8.5 | 8.5 | 8.5 | 8.5 | **8.6** |
+| Dashboard hero | 8.5 | 8.5 | 9 | 8 | 9 | 8.5 | 8.5 | 9 | 8 | 8.5 | 8.5 | 8.5 | **8.6** |
+| Light mode | 8.5 | 8.5 | 8.5 | 7.5 | 9 | 8.5 | 8 | 8.5 | 8.5 | 8 | 8.5 | 8 | **8.3** |
+
+All surfaces ≥ 8.3; the three signature surfaces are at 8.6–8.8 against a 9
+target. Remaining named defects:
+
+1. Claude's sun glyph still reads ~0.5px lighter than Codex's ring at 15px
+   even with compensation — needs a hand-tuned per-icon stroke boost.
+2. 100% values in the 28px arc will crowd (untested with a 3-digit value);
+   the reduced-% treatment (large value, small %) is specified but only the
+   HUD uses it.
+3. Motion frame-samples at 120/144Hz not captured; springs are time-based
+   (motion/react), no frame-count logic exists in the codebase (verified:
+   no requestAnimationFrame loops outside motion primitives).
+
+## Boards
+
+- `docs/images/v2/QUOTAARC_V2_REVIEW_BOARD.png` — all surfaces, dark + light.
+- `docs/images/v2/QUOTAARC_BEFORE_AFTER_BOARD.png` — V1 vs V2, equivalent scale.
+- DPI matrix: `14/15/16-*-1440p.png` (2560×1440 @1.25) and
+  `17/18/19-*-4k.png` (3840×2160 @1.5) — logical-px geometry holds; arcs and
+  text render crisp; no clipping.

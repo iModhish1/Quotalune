@@ -148,7 +148,8 @@
   display: flex;
   align-items: center;
   gap: var(--qa-space-3);
-  padding: var(--qa-space-2) var(--qa-space-3);
+  height: 44px;
+  padding: 0 var(--qa-space-3);
   border-radius: var(--qa-radius-control);
 }
 .qa-quick-panel__row:hover {

@@ -5,6 +5,7 @@
 import { memo } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { ArcGauge } from "./ArcGauge";
+import { ProviderIcon } from "../components/providers/ProviderIcon";
 import { statusForUsage, STATUS_LABEL, type QuotaStatus } from "./semantics";
 import "./v2.css";
 
@@ -90,6 +91,57 @@ export function QaCapacityArc({
 /** Micro arc without inner value (dense chips). */
 export function QaMicroArc(props: Omit<QaCapacityArcProps, "showDot">) {
   return <QaCapacityArc {...props} size={props.size ?? 20} stroke={props.stroke ?? 2.5} />;
+}
+
+/* ── QaProviderIcon: normalized optical box for foreign artwork ─────── */
+
+/**
+ * Optical compensation per provider: source glyphs have different visual
+ * weights, so each gets a scale factor inside the fixed 18×18 optical box
+ * (the interaction box stays 20×20 via .qa-tico).
+ */
+const ICON_OPTICAL: Record<string, number> = {
+  claude: 0.95,
+  codex: 0.88,
+  copilot: 0.92,
+  opencode: 0.88,
+  opencodego: 0.88,
+  gemini: 0.92,
+  cursor: 0.9,
+  openrouter: 0.9,
+  deepseek: 0.95,
+  groq: 0.9,
+};
+
+export function QaProviderIcon({
+  providerId,
+  size = 15,
+}: {
+  providerId: string;
+  size?: number;
+}) {
+  const scale = ICON_OPTICAL[providerId] ?? 0.92;
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        display: "inline-grid",
+        placeItems: "center",
+        width: size,
+        height: size,
+      }}
+    >
+      <span
+        style={{
+          display: "inline-flex",
+          transform: `scale(${scale})`,
+          transformOrigin: "center",
+        }}
+      >
+        <ProviderIcon providerId={providerId} size={size} />
+      </span>
+    </span>
+  );
 }
 
 /* ── QaValue ────────────────────────────────────────────────────────── */

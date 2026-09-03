@@ -98,3 +98,24 @@
   background: var(--qa-track); overflow: hidden;
 }
 .qa-dash__barfill { height: 100%; border-radius: 999px; background: var(--qa-accent); }
+
+.demo-desktop[data-demo-theme="light"] {
+  background:
+    radial-gradient(1100px 750px at 70% 28%, #d7e4f5 0%, transparent 62%),
+    radial-gradient(900px 700px at 22% 75%, #e8ddf2 0%, transparent 58%),
+    linear-gradient(155deg, #eef2f8, #dfe6ee);
+}
+.demo-desktop[data-demo-theme="light"] .demo-icon__glyph {
+  background: rgba(12, 18, 27, 0.08);
+  border-color: rgba(12, 18, 27, 0.1);
+}
+.demo-desktop[data-demo-theme="light"] .demo-icon span {
+  color: rgba(12, 18, 27, 0.45);
+}
+.demo-desktop[data-demo-theme="light"] .demo-taskbar {
+  background: rgba(246, 248, 251, 0.92);
+  border-top-color: rgba(12, 18, 27, 0.08);
+}
+.demo-desktop[data-demo-theme="light"] .demo-taskbar__tb {
+  background: rgba(12, 18, 27, 0.1);
+}

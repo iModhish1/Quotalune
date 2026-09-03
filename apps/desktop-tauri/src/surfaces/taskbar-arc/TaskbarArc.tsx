@@ -23,7 +23,7 @@ import {
 } from "../../design-system";
 import { useProviders } from "../../hooks/useProviders";
 import { useProfileStore } from "../../components/ProfileSwitcher";
-import { ProviderIcon } from "../../components/providers/ProviderIcon";
+import { QaProviderIcon } from "../../design-system";
 import { refreshProvidersIfStale, refreshProviders } from "../../lib/tauri";
 import { resizeTaskbarArc } from "../../lib/surfaceBridge";
 import type { ProviderUsageSnapshot } from "../../types/bridge";
@@ -88,7 +88,7 @@ function Chips({
             key={p.providerId}
             icon={
               <span className="qa-tico" aria-hidden="true">
-                <ProviderIcon providerId={p.providerId} size={15} />
+                <QaProviderIcon providerId={p.providerId} size={15} />
               </span>
             }
             remaining={remaining}
@@ -117,7 +117,7 @@ function QuickPanelRows({ providers }: { providers: DemoProvider[] }) {
         return (
           <div className="qa-quick-panel__row" key={p.providerId}>
             <span className="qa-tico qa-tico--panel" aria-hidden="true">
-              <ProviderIcon providerId={p.providerId} size={16} />
+              <QaProviderIcon providerId={p.providerId} size={16} />
             </span>
             <div className="qa-quick-panel__meta">
               <span className="qa-quick-panel__name">{p.displayName}</span>
@@ -175,11 +175,15 @@ export default function TaskbarArc({ demo }: TaskbarArcProps) {
   }, [demo]);
 
   useEffect(() => {
-    const w = expanded ? PANEL_W : IDLE_W;
+    // Content-driven idle width: avatar (when multi-profile) + instruments.
+    const avatarW = (profileStore?.profiles.length ?? 1) > 1 ? 30 : 0;
+    const w = expanded
+      ? PANEL_W
+      : Math.max(IDLE_W, 26 + avatarW + providers.length * 74 + 14);
     const h = expanded ? PANEL_H : IDLE_H;
     if (demo) return;
     void resizeTaskbarArc(w, h).catch(() => {});
-  }, [expanded, demo]);
+  }, [expanded, demo, providers.length, profileStore]);
 
   const multiProfile = (profileStore?.profiles.length ?? 1) > 1;
   const activeProfile = profileStore?.profiles.find((p) => p.id === profileStore?.activeProfileId);
@@ -243,18 +247,30 @@ export default function TaskbarArc({ demo }: TaskbarArcProps) {
               <div className="qa-quick-panel__footer">
                 <button
                   type="button"
+                  aria-label="Refresh"
+                  title="Refresh"
                   onClick={(e) => {
                     e.stopPropagation();
                     if (!demo) void refreshProviders().catch(() => {});
                   }}
                 >
-                  Refresh
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M12.9 7.1a5 5 0 1 0-1.2 3.9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    <path d="M12.9 3.8v3.3H9.6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 </button>
-                <button type="button" onClick={(e) => e.stopPropagation()}>
-                  History
+                <button type="button" aria-label="History" title="History" onClick={(e) => e.stopPropagation()}>
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <circle cx="8" cy="8" r="5.4" stroke="currentColor" strokeWidth="1.6" />
+                    <path d="M8 5.2V8l2 1.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  </svg>
                 </button>
-                <button type="button" onClick={(e) => e.stopPropagation()}>
-                  Settings
+                <button type="button" aria-label="Settings" title="Settings" onClick={(e) => e.stopPropagation()}>
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M2 4.5h8M2 8h5M2 11.5h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    <circle cx="12" cy="4.5" r="1.5" fill="currentColor" />
+                    <circle cx="9" cy="11.5" r="1.5" fill="currentColor" />
+                  </svg>
                 </button>
               </div>
             </motion.div>

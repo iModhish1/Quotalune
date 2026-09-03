@@ -17,7 +17,7 @@ import {
   springSoft,
 } from "../../design-system";
 import { useProviders } from "../../hooks/useProviders";
-import { ProviderIcon } from "../../components/providers/ProviderIcon";
+import { QaProviderIcon } from "../../design-system";
 import { refreshProvidersIfStale, refreshProviders } from "../../lib/tauri";
 import { resizeTopArc } from "../../lib/surfaceBridge";
 import type { ProviderUsageSnapshot } from "../../types/bridge";
@@ -131,7 +131,7 @@ export default function TopArc({ demo }: TopArcProps) {
                   key={p.providerId}
                   icon={
                     <span className="qa-tico" aria-hidden="true">
-                      <ProviderIcon providerId={p.providerId} size={15} />
+                      <QaProviderIcon providerId={p.providerId} size={15} />
                     </span>
                   }
                   remaining={p.remaining}
@@ -161,7 +161,7 @@ export default function TopArc({ demo }: TopArcProps) {
                   return (
                     <div className="qa-quick-panel__row" key={p.providerId}>
                       <span className="qa-tico qa-tico--panel" aria-hidden="true">
-                        <ProviderIcon providerId={p.providerId} size={16} />
+                        <QaProviderIcon providerId={p.providerId} size={16} />
                       </span>
                       <div className="qa-quick-panel__meta">
                         <span className="qa-quick-panel__name">{p.displayName}</span>

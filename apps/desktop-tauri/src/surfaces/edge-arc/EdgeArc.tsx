@@ -10,7 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { QaSurface, QaValue, QaStatusIndicator, statusOf, springSoft } from "../../design-system";
 import { useProviders } from "../../hooks/useProviders";
-import { ProviderIcon } from "../../components/providers/ProviderIcon";
+import { QaProviderIcon } from "../../design-system";
 import { refreshProvidersIfStale } from "../../lib/tauri";
 import { resizeEdgeArc } from "../../lib/surfaceBridge";
 import type { ProviderUsageSnapshot } from "../../types/bridge";
@@ -108,7 +108,7 @@ export default function EdgeArc({ demo }: EdgeArcProps) {
               aria-label={`${p.displayName} ${pct == null ? "unknown" : `${pct}%`}`}
             >
               <span className="qa-tico" aria-hidden="true">
-                <ProviderIcon providerId={p.providerId} size={15} />
+                <QaProviderIcon providerId={p.providerId} size={15} />
               </span>
               <span className="qa-earc__arcwrap" style={{ position: "relative", display: "grid", placeItems: "center" }}>
                 {useArc(p)}

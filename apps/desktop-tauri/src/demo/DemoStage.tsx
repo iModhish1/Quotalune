@@ -16,6 +16,7 @@ const params = new URLSearchParams(window.location.search);
 const surface = params.get("surface") ?? "taskbar";
 const state = (params.get("state") ?? "idle") as "idle" | "hover" | "expanded";
 const profileCount = Number(params.get("profiles") ?? "2");
+const theme = (params.get("theme") ?? "dark") as "dark" | "light";
 (window as unknown as { __qaDemoProfiles?: number }).__qaDemoProfiles = profileCount;
 
 
@@ -26,8 +27,8 @@ export default function DemoStage() {
   const expanded = state === "expanded";
 
   return (
-    <DesignSystemProvider theme="dark" motionSetting="off">
-      <div className="demo-desktop">
+    <DesignSystemProvider theme={theme} motionSetting="off">
+      <div className="demo-desktop" data-demo-theme={theme}>
         <div className="demo-wallpaper" />
         <div className="demo-icons">
           {[" recycle", "projects", "notes"].map((n) => (

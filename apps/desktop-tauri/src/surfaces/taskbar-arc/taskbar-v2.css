@@ -61,3 +61,12 @@
   align-items: center;
   gap: var(--qa-space-2);
 }
+
+.qa-quick-panel__footer > * {
+  display: inline-grid;
+  place-items: center;
+  color: var(--qa-ink-3);
+}
+.qa-quick-panel__footer > *:hover {
+  color: var(--qa-ink-1);
+}
