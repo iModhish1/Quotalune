@@ -17,6 +17,31 @@ export function useProfileStore(): ProfileStoreDto | null {
   const [store, setStore] = useState<ProfileStoreDto | null>(null);
 
   const reload = useCallback(() => {
+    // Demo stage (headless screenshot gate): no Tauri, deterministic store.
+    const demoCount = (window as unknown as { __qaDemoProfiles?: number }).__qaDemoProfiles;
+    if (typeof demoCount === "number") {
+      const profiles = Array.from({ length: Math.max(1, demoCount) }, (_, i) => ({
+        id: `demo-${i}`,
+        name: i === 0 ? "Default" : `Profile ${i + 1}`,
+        description: null,
+        enabled: true,
+        theme: null,
+        accent: null,
+        surfaces: { edgeArc: false, topArc: false, taskbarArc: false, floatBar: false },
+        accountIds: [],
+        highUsageThreshold: 80,
+        criticalUsageThreshold: 95,
+        createdAt: 0,
+        updatedAt: 0,
+      }));
+      setStore({
+        schemaVersion: 1,
+        profiles,
+        accounts: [],
+        activeProfileId: profiles[0]?.id ?? "",
+      });
+      return;
+    }
     getProfileStore()
       .then(setStore)
       .catch(() => setStore(null));

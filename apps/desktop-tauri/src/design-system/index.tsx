@@ -7,6 +7,7 @@ import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { useReducedMotion } from "motion/react";
 import { motionLevelFor, type MotionLevel } from "./motion";
 import "./tokens.css";
+import "./v2.css";
 
 export { ArcGauge, type ArcGaugeProps } from "./ArcGauge";
 export { AnimatedNumber, type AnimatedNumberProps } from "./AnimatedNumber";
@@ -75,3 +76,20 @@ export function DesignSystemProvider({
 export function useDesignSystem(): DesignSystemContextValue {
   return useContext(DesignSystemContext);
 }
+
+// ── V2 component system ──────────────────────────────────────────────
+export {
+  QaSurface,
+  QaCapacityArc,
+  QaMicroArc,
+  QaValue,
+  QaResetTime,
+  QaStatusIndicator,
+  statusOf,
+  QaProfileAvatar,
+  QaProviderInstrument,
+  QaProviderInstrumentMemo,
+  type QaEdge,
+  type QaMaterial,
+  type QaProviderInstrumentProps,
+} from "./v2";

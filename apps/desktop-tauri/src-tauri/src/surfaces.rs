@@ -221,7 +221,9 @@ fn position_taskbar_arc(window: &tauri::WebviewWindow) {
     let w = size.width as f64 / scale;
     let h = size.height as f64 / scale;
     let x = wx + ((ww - w) / 2.0).max(0.0);
-    let y = wy + (wh - h - 6.0).max(0.0);
+    // Flush against the work-area bottom edge: the slab RISES OUT of the
+    // taskbar (Edge Object geometry — no floating gap).
+    let y = wy + (wh - h).max(0.0);
     let _ = window.set_position(tauri::LogicalPosition::new(x.round(), y.round()));
 }
 

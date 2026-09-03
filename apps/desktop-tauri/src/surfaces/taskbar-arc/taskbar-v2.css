@@ -1,0 +1,63 @@
+/* Taskbar Arc V2 — Edge Object slab styles (uses design-system v2 tokens). */
+
+.qa-tarc {
+  transition: box-shadow var(--qa-motion-fast) var(--qa-motion-ease-out),
+    background var(--qa-motion-fast) var(--qa-motion-ease-out);
+}
+
+.qa-tarc--peek .qa-tarc__idle {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.qa-tarc__inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  cursor: default;
+}
+
+.qa-tarc__idle {
+  display: flex;
+  align-items: center;
+  gap: var(--qa-space-1);
+  padding: 0 var(--qa-space-2);
+  border-radius: var(--qa-radius-control) var(--qa-radius-control) 0 0;
+  height: 100%;
+  transition: background var(--qa-motion-fast) var(--qa-motion-ease-out);
+}
+
+.qa-tarc__panel {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.qa-tico {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--qa-radius-micro);
+  background: var(--qa-material-raised);
+  border: 1px solid var(--qa-hairline);
+  flex: none;
+}
+.qa-tico--panel {
+  width: 24px;
+  height: 24px;
+}
+
+.qa-tarc__hint {
+  font-size: var(--qa-text-label);
+  color: var(--qa-ink-3);
+  padding: 0 var(--qa-space-2) var(--qa-space-2);
+}
+
+.qa-quick-panel__profile {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--qa-space-2);
+}

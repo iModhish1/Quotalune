@@ -1,0 +1,25 @@
+
+.demo-desktop {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  font-family: var(--qa-font);
+  background:
+    radial-gradient(1100px 750px at 70% 28%, #1a2a44 0%, transparent 62%),
+    radial-gradient(900px 700px at 22% 75%, #2a1f3d 0%, transparent 58%),
+    linear-gradient(155deg, #0a0e15, #05070b);
+}
+.demo-wallpaper { position: absolute; inset: 0; }
+.demo-icons { position: absolute; top: 24px; left: 24px; display: flex; flex-direction: column; gap: 18px; }
+.demo-icon { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 72px; }
+.demo-icon__glyph { width: 34px; height: 34px; border-radius: 8px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.10); }
+.demo-icon span { font-size: 10px; color: rgba(255,255,255,.4); }
+.demo-anchor { z-index: 5; }
+.demo-taskbar {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 48px;
+  background: rgba(8, 10, 14, 0.92);
+  border-top: 1px solid rgba(255,255,255,.05);
+  display: flex; align-items: center; justify-content: center; gap: 18px;
+  z-index: 1;
+}
+.demo-taskbar__tb { width: 22px; height: 22px; border-radius: 6px; background: rgba(255,255,255,.09); }

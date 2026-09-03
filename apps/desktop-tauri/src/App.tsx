@@ -76,12 +76,28 @@ function initialSettingsTab(): string {
 }
 
 export default function App() {
+  // Demo stage: pure render, no Tauri APIs (headless screenshot gate).
+  if (new URLSearchParams(window.location.search).get("window") === "demo") {
+    return <AppDemo />;
+  }
   return (
     <LocaleProvider>
       <AppInner />
     </LocaleProvider>
   );
 }
+
+function AppDemo() {
+  const DemoStage = require_DemoStage();
+  return <DemoStage />;
+}
+
+function require_DemoStage() {
+  return DemoStageLazy;
+}
+
+import DemoStageLazy from "./demo/DemoStage";
+import "./demo/demo.css";
 
 function AppInner() {
   const { t } = useLocale();

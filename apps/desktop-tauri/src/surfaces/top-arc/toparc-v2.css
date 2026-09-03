@@ -1,0 +1,37 @@
+/* Top Arc V2 — Edge Object notch. */
+
+.qa-toparc__inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  cursor: default;
+}
+
+.qa-toparc--peek .qa-toparc__idle {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.qa-toparc__idle {
+  display: flex;
+  align-items: center;
+  gap: var(--qa-space-1);
+  padding: var(--qa-space-1) var(--qa-space-2) 0;
+  border-radius: 0 0 var(--qa-radius-control) var(--qa-radius-control);
+  height: 100%;
+  transition: background var(--qa-motion-fast) var(--qa-motion-ease-out);
+}
+
+.qa-toparc__panel {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.qa-toparc__hint {
+  font-size: var(--qa-text-label);
+  color: var(--qa-ink-3);
+  padding-bottom: var(--qa-space-2);
+}
