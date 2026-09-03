@@ -18,6 +18,7 @@ import { HudFocus, DashboardHero } from "./DemoExtras";
 import { NotchSurfaceV4, SlabSurfaceV4, SpineSurfaceV4 } from "./V4Surfaces";
 import { TaskbarRadialV5, TopRadialV5, EdgeRadialV5, HudRadialV5 } from "./V5Surfaces";
 import CatalogSurface from "./CatalogSurface";
+import CatalogTaskbar from "./CatalogTaskbar";
 import GeometrySurface from "./GeometrySurface";
 
 const params = new URLSearchParams(window.location.search);
@@ -68,6 +69,11 @@ export default function DemoStage() {
   );
 
   const catalogSlug = params.get("catalog");
+  if (catalogSlug && params.get("gen") === "v8") {
+    return stage(560, state === "expanded" ? 320 : 230,
+      { left: "50%", top: "50%", transform: "translate(-50%, -50%)" },
+      <CatalogTaskbar catalog={catalogSlug} state={state} />);
+  }
   if (catalogSlug && params.get("gen") === "v75") {
     return stage(460, 300, { left: "50%", top: "50%", transform: "translate(-50%, -50%)" },
       <GeometrySurface catalog={catalogSlug} surface={surface} reducedMotion={params.get("rm") === "1"} />);
