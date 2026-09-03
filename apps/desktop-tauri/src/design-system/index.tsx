@@ -89,6 +89,7 @@ export {
   QaProfileAvatar,
   QaProviderInstrument,
   QaProviderIcon,
+  ArcGaugeV3,
   QaProviderInstrumentMemo,
   type QaEdge,
   type QaMaterial,

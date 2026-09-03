@@ -119,3 +119,8 @@
 .demo-desktop[data-demo-theme="light"] .demo-taskbar__tb {
   background: rgba(12, 18, 27, 0.1);
 }
+
+.qa-hud__glyph { position: absolute; display: grid; place-items: center; }
+.qa-dash__glyph { position: absolute; display: grid; place-items: center; }
+.qa-hud__arcval { position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); }
+.qa-hud__arcwrap { margin-bottom: 18px; }

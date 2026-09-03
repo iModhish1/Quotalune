@@ -5,6 +5,7 @@
 import { memo } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { ArcGauge } from "./ArcGauge";
+import { ArcGaugeV3 } from "./ArcGaugeV3";
 import { ProviderIcon } from "../components/providers/ProviderIcon";
 import { statusForUsage, STATUS_LABEL, type QuotaStatus } from "./semantics";
 import "./v2.css";
@@ -219,14 +220,14 @@ export interface QaProviderInstrumentProps {
 }
 
 /**
- * The atomic capacity unit: provider icon + capacity arc + tabular value.
- * Compact surfaces are built from these alone — no names, no chrome.
+ * V3 instrument: provider glyph centered INSIDE the capacity arc, tabular
+ * value beside the ring. Identity + capacity = one object.
  */
 export function QaProviderInstrument({
   icon,
   remaining,
   showValue = true,
-  size = 26,
+  size = 30,
   statusOverride,
   ariaLabel,
   onClick,
@@ -240,27 +241,34 @@ export function QaProviderInstrument({
       role={onClick ? "button" : undefined}
       aria-label={ariaLabel}
     >
-      {icon}
-      <span className="arc-slot" style={{ position: "relative", display: "grid", placeItems: "center" }}>
-        <QaCapacityArc
-          remaining={remaining}
-          size={size}
-          stroke={size >= 30 ? 3.2 : 2.6}
-          gapDeg={90}
-          statusOverride={statusOverride}
-          ariaLabel={ariaLabel}
-        />
-        {showValue && (
-          <span
-            className="qa-value"
-            style={{ position: "absolute", fontSize: size >= 30 ? "11.5px" : "10px" }}
-          >
-            {pct ?? "–"}
-          </span>
-        )}
+      <span
+        style={{
+          position: "relative",
+          display: "grid",
+          placeItems: "center",
+          width: size,
+          height: size,
+        }}
+      >
+        <span style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
+          <ArcGaugeV3
+            remaining={remaining}
+            size={size}
+            stroke={size >= 34 ? 3.4 : 3}
+            statusOverride={statusOverride}
+            ariaLabel={ariaLabel}
+          />
+        </span>
+        <span style={{ position: "relative", display: "grid", placeItems: "center" }}>
+          {icon}
+        </span>
       </span>
+      {showValue && <QaValue size={size >= 34 ? "md" : "meta"}>{pct ?? "–"}</QaValue>}
     </span>
   );
 }
 
 export const QaProviderInstrumentMemo = memo(QaProviderInstrument);
+
+export { ArcGaugeV3 } from "./ArcGaugeV3";
+export type { ArcV3Props } from "./ArcGaugeV3";

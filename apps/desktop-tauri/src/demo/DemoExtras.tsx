@@ -2,8 +2,7 @@
  * Demo Floating HUD (Focus mode) and Dashboard hero — synthetic-only
  * surfaces for the visual review gate. Rendered inside the demo stage.
  */
-import { QaCapacityArc, QaValue, QaResetTime, QaStatusIndicator, statusOf } from "../design-system";
-import { QaProviderIcon } from "../design-system";
+import { ArcGaugeV3, QaValue, QaResetTime, QaStatusIndicator, statusOf, QaProviderIcon } from "../design-system";
 
 const DEMO = [
   { id: "claude", name: "Claude", remaining: 0.73, session: 0.62, reset: "51m", pace: "1.2×" },
@@ -19,11 +18,14 @@ export function HudFocus({ providerId = "claude" }: { providerId?: string }) {
   return (
     <div className="qa-hud">
       <div className="qa-hud__arcwrap">
-        <QaCapacityArc remaining={p.remaining} size={72} stroke={5} gapDeg={90} ariaLabel={`${p.name} ${pct}%`} />
-        <div className="qa-hud__arcval">
-          <span className="qa-hud__big">{pct}</span>
-          <span className="qa-hud__pctsign">%</span>
-        </div>
+        <ArcGaugeV3 remaining={p.remaining} size={76} stroke={5} ariaLabel={`${p.name} ${pct}%`} />
+        <span className="qa-hud__glyph" aria-hidden="true">
+          <QaProviderIcon providerId={p.id} size={22} />
+        </span>
+      </div>
+      <div className="qa-hud__arcval">
+        <span className="qa-hud__big">{pct}</span>
+        <span className="qa-hud__pctsign">%</span>
       </div>
       <div className="qa-hud__meta">
         <div className="qa-hud__name">
@@ -69,7 +71,10 @@ export function DashboardHero() {
             return (
               <div className="qa-dash__heroitem" key={p.id}>
                 <div className="qa-dash__arcwrap">
-                  <QaCapacityArc remaining={p.remaining} size={64} stroke={4.5} gapDeg={90} ariaLabel={`${p.name} ${pct}%`} />
+                  <ArcGaugeV3 remaining={p.remaining} size={68} stroke={4.5} ariaLabel={`${p.name} ${pct}%`} />
+                  <span className="qa-dash__glyph" aria-hidden="true">
+                    <QaProviderIcon providerId={p.id} size={19} />
+                  </span>
                   <span className="qa-dash__arcval">{pct}</span>
                 </div>
                 <span className="qa-dash__heroname">

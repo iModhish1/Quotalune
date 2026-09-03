@@ -1,4 +1,4 @@
-/* Edge Arc V2 — Edge Object pod. */
+/* Edge Arc V3 — narrow edge rail. */
 
 .qa-earc__inner {
   width: 100%;
@@ -7,23 +7,30 @@
   flex-direction: column;
   justify-content: center;
   gap: var(--qa-space-1);
-  padding: 0 var(--qa-space-2) 0 var(--qa-space-3);
+  padding: 0 var(--qa-space-2);
 }
 
 .qa-earc__inst {
   display: flex;
   align-items: center;
   gap: var(--qa-space-2);
-  min-height: 44px;
-  padding: var(--qa-space-1) var(--qa-space-2);
-  border-radius: var(--qa-radius-control);
-  transition: background var(--qa-motion-fast) var(--qa-motion-ease-out);
+  min-height: 54px;
+  justify-content: center;
 }
-.qa-earc__inst[data-hover="true"] {
-  background: rgba(255, 255, 255, 0.05);
+.qa-earc--expanded .qa-earc__inst {
+  justify-content: flex-start;
 }
 
-.qa-earc__arcwrap {
+.qa-earc__ringwrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+}
+.qa-earc__glyph {
+  position: relative;
   display: grid;
   place-items: center;
 }
@@ -32,10 +39,13 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  overflow: hidden;
   white-space: nowrap;
+  overflow: hidden;
 }
 .qa-earc__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: var(--qa-text-label);
   font-weight: var(--qa-weight-semibold);
   color: var(--qa-ink-1);
