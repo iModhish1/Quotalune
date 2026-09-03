@@ -7,6 +7,7 @@ import {
   type CatalogTheme,
 } from "../design-system/themeCatalog";
 import { catalogMotion, catalogMotionStyle, motionDelay } from "../design-system/themeMotion";
+import { characterizeSurfaceNodes } from "../design-system/surfaceGeometry";
 import OrbitTexture from "./orbit/OrbitTexture";
 import type { StageProvider } from "./orbit/stageTypes";
 import "./CatalogUsageHero.css";
@@ -52,6 +53,8 @@ export default function CatalogUsageHero({
   const motion = catalogMotion(theme);
   const style = {
     "--qa-hero-accent": theme.accent,
+    "--qa-hero-accent-2": theme.accent2,
+    "--qa-hero-accent-3": theme.accent3,
     "--qa-hero-core": theme.core,
     "--qa-hero-edge": theme.coreEdge,
     ...catalogMotionStyle(theme),
@@ -106,6 +109,22 @@ export default function CatalogUsageHero({
     );
   }
 
+  const orbitCenter = { x: 320, y: 165 };
+  const baseNodes = visible.map((_, index) => {
+    const angle = -90 + (360 * index) / Math.max(1, visible.length);
+    const radians = (angle * Math.PI) / 180;
+    return {
+      x: orbitCenter.x + 230 * Math.sin(radians),
+      y: orbitCenter.y - 109 * Math.cos(radians),
+    };
+  });
+  const nodes = characterizeSurfaceNodes(
+    baseNodes,
+    orbitCenter,
+    theme.geometry,
+    { left: 38, right: 602, top: 28, bottom: 278 },
+  );
+
   return (
     <section
       className="qa-catalog-hero qa-catalog-hero--dashboard"
@@ -131,27 +150,23 @@ export default function CatalogUsageHero({
             strokeWidth={index === 1 ? 1.2 : 0.8}
           />
         ))}
-        {visible.map((_, index) => {
-          const angle = -90 + (360 * index) / Math.max(1, visible.length);
-          const radians = (angle * Math.PI) / 180;
-          return (
-            <line
-              key={index}
-              x1={320}
-              y1={165}
-              x2={320 + 230 * Math.sin(radians)}
-              y2={165 - 109 * Math.cos(radians)}
-              stroke={theme.hairline}
-              strokeWidth={0.8}
-            />
-          );
-        })}
+        {nodes.map((node, index) => (
+          <line
+            key={index}
+            x1={orbitCenter.x}
+            y1={orbitCenter.y}
+            x2={node.x}
+            y2={node.y}
+            stroke={theme.hairline}
+            strokeWidth={0.8}
+          />
+        ))}
       </svg>
 
       {visible.map((provider, index) => {
-        const angle = -90 + (360 * index) / Math.max(1, visible.length);
-        const radians = (angle * Math.PI) / 180;
+        const node = nodes[index];
         const nodeColor = providerColor(theme, provider.iconId);
+        const nodeSize = 50 * node.scale;
         return (
           <button
             key={provider.id}
@@ -159,9 +174,10 @@ export default function CatalogUsageHero({
             className="qa-catalog-hero__orbit-node"
             data-selected={provider.id === focused?.id}
             style={{
-              left: `${50 + 36 * Math.sin(radians)}%`,
-              top: `${50 - 33 * Math.cos(radians)}%`,
+              left: `${(node.x / 640) * 100}%`,
+              top: `${(node.y / 330) * 100}%`,
               "--qa-hero-node": nodeColor,
+              "--qa-hero-node-size": `${nodeSize}px`,
               "--qa-theme-motion-delay": motionDelay(motion, index),
             } as CSSProperties}
             onClick={() => onSelectProvider?.(provider.id)}
@@ -172,14 +188,14 @@ export default function CatalogUsageHero({
               <ArcGaugeV3
                 className="qa-catalog-hero__node-gauge"
                 remaining={provider.arcFraction}
-                size={50}
+                size={nodeSize}
                 stroke={3.5}
                 colorOverride={nodeColor}
                 ariaLabel={`${provider.name} usage arc`}
               />
               {showProviderIcons && (
                 <span className="qa-catalog-hero__node-icon">
-                  <QaProviderIcon providerId={provider.iconId} size={16} />
+                  <QaProviderIcon providerId={provider.iconId} size={Math.round(nodeSize * 0.32)} />
                 </span>
               )}
             </span>

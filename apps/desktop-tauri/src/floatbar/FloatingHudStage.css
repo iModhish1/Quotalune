@@ -8,6 +8,7 @@
   --qa-theme-motion-enter-rotate: 0deg;
   --qa-theme-motion-enter-scale: 0.94;
   --qa-theme-motion-delay: 0ms;
+  --qa-hud-node-size: 58px;
   position: relative;
   width: 460px;
   height: 500px;
@@ -15,6 +16,8 @@
   border: 1px solid color-mix(in srgb, var(--qa-hud-edge) 82%, transparent);
   border-radius: 30px;
   background:
+    radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--qa-hud-accent-2) 16%, transparent), transparent 38%),
+    radial-gradient(circle at 88% 82%, color-mix(in srgb, var(--qa-hud-accent-3) 13%, transparent), transparent 42%),
     radial-gradient(circle at 50% 47%, color-mix(in srgb, var(--qa-hud-accent) 10%, transparent), transparent 45%),
     linear-gradient(158deg, color-mix(in srgb, var(--qa-hud-bg-0) 96%, transparent), color-mix(in srgb, var(--qa-hud-bg-1) 98%, transparent));
   box-shadow:
@@ -31,6 +34,13 @@
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.9),
     0 24px 64px rgba(49, 78, 117, 0.18);
+}
+
+.qa-floating-hud[data-light="true"] {
+  background:
+    radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--qa-hud-accent-2) 8%, transparent), transparent 40%),
+    radial-gradient(circle at 88% 82%, color-mix(in srgb, var(--qa-hud-accent-3) 7%, transparent), transparent 44%),
+    linear-gradient(158deg, color-mix(in srgb, var(--qa-hud-bg-0) 97%, transparent), color-mix(in srgb, var(--qa-hud-bg-1) 98%, transparent));
 }
 
 .qa-floating-hud__material {
@@ -107,8 +117,8 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: 58px;
-  height: 58px;
+  width: var(--qa-hud-node-size);
+  height: var(--qa-hud-node-size);
   border-radius: 50%;
   background: radial-gradient(circle, color-mix(in srgb, var(--qa-hud-core) 92%, transparent), color-mix(in srgb, var(--qa-hud-bg-1) 96%, transparent));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--qa-hud-node) 22%, transparent);

@@ -7,6 +7,7 @@ import {
   type CatalogTheme,
 } from "../design-system/themeCatalog";
 import { catalogMotion, catalogMotionStyle, motionDelay } from "../design-system/themeMotion";
+import { characterizeSurfaceNodes } from "../design-system/surfaceGeometry";
 import OrbitTexture from "../components/orbit/OrbitTexture";
 import type { StageProvider } from "../components/orbit/stageTypes";
 import "./FloatingHudStage.css";
@@ -34,12 +35,29 @@ export default function FloatingHudStage({
   const focusedColor = focused ? providerColor(theme, focused.iconId) : theme.accent;
   const light = theme.slug === "04-porcelain-halo";
   const motion = catalogMotion(theme);
+  const nodeCenter = { x: 230, y: 241 };
+  const baseNodes = visible.map((_, index) => {
+    const angle = -90 + (360 * index) / Math.max(1, visible.length);
+    const radians = (angle * Math.PI) / 180;
+    return {
+      x: nodeCenter.x + 178 * Math.cos(radians),
+      y: nodeCenter.y + 178 * Math.sin(radians),
+    };
+  });
+  const nodes = characterizeSurfaceNodes(
+    baseNodes,
+    nodeCenter,
+    theme.geometry,
+    { left: 43, right: 417, top: 43, bottom: 432 },
+  );
   const style = {
     "--qa-hud-bg-0": theme.bg[0],
     "--qa-hud-bg-1": theme.bg[1],
     "--qa-hud-core": theme.core,
     "--qa-hud-edge": theme.coreEdge,
     "--qa-hud-accent": theme.accent,
+    "--qa-hud-accent-2": theme.accent2,
+    "--qa-hud-accent-3": theme.accent3,
     "--qa-hud-focus": focusedColor,
     "--qa-hud-hairline": theme.hairline,
     ...catalogMotionStyle(theme),
@@ -81,27 +99,23 @@ export default function FloatingHudStage({
             strokeDasharray={index === 2 ? "2 7" : undefined}
           />
         ))}
-        {visible.map((_, index) => {
-          const angle = -90 + (360 * index) / Math.max(1, visible.length);
-          const radians = (angle * Math.PI) / 180;
-          return (
-            <line
-              key={index}
-              x1="230"
-              y1="241"
-              x2={230 + 178 * Math.cos(radians)}
-              y2={241 + 178 * Math.sin(radians)}
-              stroke={theme.hairline}
-              strokeWidth="0.8"
-            />
-          );
-        })}
+        {nodes.map((node, index) => (
+          <line
+            key={index}
+            x1={nodeCenter.x}
+            y1={nodeCenter.y}
+            x2={node.x}
+            y2={node.y}
+            stroke={theme.hairline}
+            strokeWidth="0.8"
+          />
+        ))}
       </svg>
 
       {visible.map((provider, index) => {
-        const angle = -90 + (360 * index) / Math.max(1, visible.length);
-        const radians = (angle * Math.PI) / 180;
+        const node = nodes[index];
         const nodeColor = providerColor(theme, provider.iconId);
+        const nodeSize = 58 * node.scale;
         return (
           <button
             key={provider.id}
@@ -111,9 +125,10 @@ export default function FloatingHudStage({
             data-status={provider.status}
             style={
               {
-                left: `${50 + 38.5 * Math.cos(radians)}%`,
-                top: `${48.2 + 38 * Math.sin(radians)}%`,
+                left: `${(node.x / 460) * 100}%`,
+                top: `${(node.y / 500) * 100}%`,
                 "--qa-hud-node": nodeColor,
+                "--qa-hud-node-size": `${nodeSize}px`,
                 "--qa-theme-motion-delay": motionDelay(motion, index),
               } as CSSProperties
             }
@@ -124,14 +139,14 @@ export default function FloatingHudStage({
             <span className="qa-floating-hud__node-ring">
               <ArcGaugeV3
                 remaining={provider.arcFraction}
-                size={58}
+                size={nodeSize}
                 stroke={3.5}
                 colorOverride={nodeColor}
                 ariaLabel={`${provider.name} usage arc`}
               />
               {showProviderIcons && (
                 <span className="qa-floating-hud__node-icon">
-                  <QaProviderIcon providerId={provider.iconId} size={19} />
+                  <QaProviderIcon providerId={provider.iconId} size={Math.round(nodeSize * 0.33)} />
                 </span>
               )}
             </span>

@@ -31,6 +31,8 @@ export default function OrbitTexture({
   radiusY,
 }: OrbitTextureProps) {
   const accent = theme.accent;
+  const accent2 = theme.accent2;
+  const accent3 = theme.accent3;
 
   switch (theme.geometry) {
     case "petals":
@@ -50,7 +52,7 @@ export default function OrbitTexture({
                 ry={radiusY * (theme.geometry === "petals" ? 0.11 : 0.15)}
                 transform={`rotate(${angle} ${point.x} ${point.y})`}
                 fill="none"
-                stroke={accent}
+                stroke={index % 3 === 0 ? accent3 : index % 2 === 0 ? accent : accent2}
                 strokeOpacity={0.48}
                 strokeWidth={1.35}
               />
@@ -79,7 +81,7 @@ export default function OrbitTexture({
                 y1={inner.y}
                 x2={outer.x}
                 y2={outer.y}
-                stroke={accent}
+                stroke={index % 4 === 0 ? accent2 : accent}
                 strokeOpacity={index % 4 === 0 ? 0.5 : 0.22}
                 strokeWidth={index % 4 === 0 ? 1.3 : 0.8}
               />
@@ -107,7 +109,7 @@ export default function OrbitTexture({
               cx={point.x}
               cy={point.y}
               r={index % 5 === 0 ? 1.8 : 0.9}
-              fill={index % 3 === 0 ? accent : "#f8fafc"}
+              fill={index % 5 === 0 ? accent3 : index % 3 === 0 ? accent : "#f8fafc"}
               fillOpacity={index % 5 === 0 ? 0.85 : 0.5}
             />
           ))}
@@ -117,14 +119,14 @@ export default function OrbitTexture({
     case "spine":
       return (
         <g opacity={0.58}>
-          <line x1={cx} y1={cy - radiusY} x2={cx} y2={cy + radiusY} stroke={accent} strokeWidth={2} />
+          <line x1={cx} y1={cy - radiusY} x2={cx} y2={cy + radiusY} stroke={accent2} strokeWidth={2} />
           {Array.from({ length: 8 }, (_, index) => (
             <circle
               key={index}
               cx={cx}
               cy={cy - radiusY + (radiusY * 2 * index) / 7}
               r={index % 2 === 0 ? 3 : 1.7}
-              fill={accent}
+              fill={index % 2 === 0 ? accent : accent3}
             />
           ))}
         </g>
@@ -132,8 +134,8 @@ export default function OrbitTexture({
     case "eclipse":
       return (
         <g>
-          <ellipse cx={cx - 14} cy={cy - 9} rx={radiusX - 8} ry={radiusY - 8} fill="none" stroke="#f8fafc" strokeOpacity={0.28} strokeWidth={3} />
-          <ellipse cx={cx + 12} cy={cy + 7} rx={radiusX - 16} ry={radiusY - 16} fill="none" stroke={accent} strokeOpacity={0.12} strokeWidth={11} />
+          <ellipse cx={cx - 14} cy={cy - 9} rx={radiusX - 8} ry={radiusY - 8} fill="none" stroke={accent} strokeOpacity={0.3} strokeWidth={3} />
+          <ellipse cx={cx + 12} cy={cy + 7} rx={radiusX - 16} ry={radiusY - 16} fill="none" stroke={accent2} strokeOpacity={0.17} strokeWidth={11} />
         </g>
       );
     case "facets":
@@ -149,7 +151,7 @@ export default function OrbitTexture({
                 key={index}
                 d={`M ${cx} ${cy} L ${first.x} ${first.y} L ${second.x} ${second.y} Z`}
                 fill={theme.geometry === "aperture" ? "rgba(255,255,255,0.018)" : "none"}
-                stroke={accent}
+                stroke={index % 2 === 0 ? accent2 : accent3}
                 strokeOpacity={0.32}
                 strokeWidth={0.9}
               />
@@ -166,9 +168,9 @@ export default function OrbitTexture({
             const angle = (360 * index) / count;
             const inner = pointOnEllipse(cx, cy, radiusX * 0.42, radiusY * 0.42, angle);
             const outer = pointOnEllipse(cx, cy, radiusX, radiusY, angle);
-            return <line key={index} x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} stroke={accent} strokeOpacity={0.38} strokeWidth={index % 3 === 0 ? 1.5 : 0.8} />;
+            return <line key={index} x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} stroke={index % 3 === 0 ? accent3 : index % 2 === 0 ? accent2 : accent} strokeOpacity={0.42} strokeWidth={index % 3 === 0 ? 1.5 : 0.8} />;
           })}
-          {theme.geometry === "nova" && <ellipse cx={cx} cy={cy} rx={radiusX} ry={radiusY} fill="none" stroke={accent} strokeOpacity={0.45} strokeDasharray="9 7" />}
+          {theme.geometry === "nova" && <ellipse cx={cx} cy={cy} rx={radiusX} ry={radiusY} fill="none" stroke={accent2} strokeOpacity={0.5} strokeDasharray="9 7" />}
         </g>
       );
     }
@@ -176,23 +178,23 @@ export default function OrbitTexture({
       return (
         <g>
           <ellipse cx={cx} cy={cy} rx={radiusX} ry={radiusY * 0.42} fill="none" stroke={accent} strokeOpacity={0.32} />
-          <ellipse cx={cx} cy={cy} rx={radiusX * 0.62} ry={radiusY} fill="none" stroke={accent} strokeOpacity={0.14} />
+          <ellipse cx={cx} cy={cy} rx={radiusX * 0.62} ry={radiusY} fill="none" stroke={accent2} strokeOpacity={0.2} />
         </g>
       );
     case "astrolabe":
       return (
         <g opacity={0.62}>
           <ellipse cx={cx} cy={cy} rx={radiusX} ry={radiusY} fill="none" stroke={accent} strokeOpacity={0.34} strokeDasharray="3 6" />
-          <ellipse cx={cx} cy={cy} rx={radiusX} ry={radiusY * 0.38} fill="none" stroke={accent} strokeOpacity={0.3} />
+          <ellipse cx={cx} cy={cy} rx={radiusX} ry={radiusY * 0.38} fill="none" stroke={accent3} strokeOpacity={0.38} />
           <line x1={cx - radiusX} y1={cy} x2={cx + radiusX} y2={cy} stroke={accent} strokeOpacity={0.24} />
           <line x1={cx} y1={cy - radiusY} x2={cx} y2={cy + radiusY} stroke={accent} strokeOpacity={0.24} />
         </g>
       );
     case "dunes":
       return (
-        <g fill="none" stroke={accent}>
-          <path d={`M ${cx - radiusX} ${cy + radiusY * 0.08} Q ${cx - radiusX * 0.4} ${cy - radiusY * 0.42} ${cx} ${cy + radiusY * 0.05} T ${cx + radiusX} ${cy + radiusY * 0.04}`} strokeOpacity={0.42} strokeWidth={1.5} />
-          <path d={`M ${cx - radiusX} ${cy + radiusY * 0.3} Q ${cx - radiusX * 0.4} ${cy - radiusY * 0.12} ${cx} ${cy + radiusY * 0.22} T ${cx + radiusX} ${cy + radiusY * 0.18}`} strokeOpacity={0.24} />
+        <g fill="none">
+          <path d={`M ${cx - radiusX} ${cy + radiusY * 0.08} Q ${cx - radiusX * 0.4} ${cy - radiusY * 0.42} ${cx} ${cy + radiusY * 0.05} T ${cx + radiusX} ${cy + radiusY * 0.04}`} stroke={accent} strokeOpacity={0.46} strokeWidth={1.5} />
+          <path d={`M ${cx - radiusX} ${cy + radiusY * 0.3} Q ${cx - radiusX * 0.4} ${cy - radiusY * 0.12} ${cx} ${cy + radiusY * 0.22} T ${cx + radiusX} ${cy + radiusY * 0.18}`} stroke={accent3} strokeOpacity={0.34} />
         </g>
       );
     default:

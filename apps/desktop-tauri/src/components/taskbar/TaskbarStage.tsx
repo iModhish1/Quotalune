@@ -7,6 +7,7 @@ import {
   type CatalogTheme,
 } from "../../design-system/themeCatalog";
 import { catalogMotion, catalogMotionStyle, motionDelay } from "../../design-system/themeMotion";
+import { characterizeSurfaceNodes } from "../../design-system/surfaceGeometry";
 import OrbitTexture from "../orbit/OrbitTexture";
 import type { StageProvider } from "../orbit/stageTypes";
 import { taskbarLayout, type TaskbarStageState } from "./taskbarLayout";
@@ -120,7 +121,23 @@ export default function TaskbarStage({
   const theme = catalogBySlug(catalog) ?? (catalogBySlug("01-obsidian-orbit") as CatalogTheme);
   const stageState: TaskbarStageState = state === "expanded" ? "expanded" : "compact";
   const visibleProviders = providers.slice(0, 7);
-  const layout = taskbarLayout(stageState, visibleProviders.length);
+  const baseLayout = taskbarLayout(stageState, visibleProviders.length);
+  const maximumNodeSize = baseLayout.nodeSize * 1.08;
+  const horizontalFootprint = Math.max(maximumNodeSize, baseLayout.labelWidth) / 2;
+  const layout = {
+    ...baseLayout,
+    nodes: characterizeSurfaceNodes(
+      baseLayout.nodes,
+      baseLayout.core,
+      theme.geometry,
+      {
+        left: horizontalFootprint,
+        right: baseLayout.width - horizontalFootprint,
+        top: maximumNodeSize / 2,
+        bottom: baseLayout.height - maximumNodeSize / 2 - baseLayout.labelDepth,
+      },
+    ),
+  };
   const boundedFocus = visibleProviders.length === 0
     ? -1
     : Math.max(0, Math.min(focusedIndex, visibleProviders.length - 1));
@@ -132,6 +149,8 @@ export default function TaskbarStage({
     width: layout.width,
     height: layout.height,
     "--qa-stage-accent": theme.accent,
+    "--qa-stage-accent-2": theme.accent2,
+    "--qa-stage-accent-3": theme.accent3,
     "--qa-stage-core": theme.core,
     "--qa-stage-edge": theme.coreEdge,
     ...catalogMotionStyle(theme),
@@ -155,12 +174,22 @@ export default function TaskbarStage({
             <stop offset="0.52" stopColor={theme.bg[0]} stopOpacity={light ? 0.94 : 0.91} />
             <stop offset="1" stopColor={theme.bg[1]} stopOpacity={light ? 0.9 : 0.84} />
           </radialGradient>
+          <radialGradient id={`${gradientId}-energy-a`} cx="18%" cy="28%" r="76%">
+            <stop offset="0" stopColor={theme.accent2} stopOpacity={light ? 0.1 : 0.2} />
+            <stop offset="1" stopColor={theme.accent2} stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id={`${gradientId}-energy-b`} cx="84%" cy="78%" r="72%">
+            <stop offset="0" stopColor={theme.accent3} stopOpacity={light ? 0.08 : 0.17} />
+            <stop offset="1" stopColor={theme.accent3} stopOpacity="0" />
+          </radialGradient>
           <filter id={`${gradientId}-shadow`} x="-25%" y="-25%" width="150%" height="160%">
             <feDropShadow dx="0" dy="16" stdDeviation="18" floodColor="#000" floodOpacity={light ? 0.22 : 0.7} />
             <feDropShadow dx="0" dy="0" stdDeviation="9" floodColor={theme.accent} floodOpacity="0.13" />
           </filter>
         </defs>
         <path d={housingPath(stageState)} fill={`url(#${gradientId})`} stroke={light ? "rgba(30,58,95,0.26)" : "rgba(255,255,255,0.16)"} strokeWidth={1.2} filter={`url(#${gradientId}-shadow)`} />
+        <path d={housingPath(stageState)} fill={`url(#${gradientId}-energy-a)`} />
+        <path d={housingPath(stageState)} fill={`url(#${gradientId}-energy-b)`} />
         <path d={housingPath(stageState)} fill="none" stroke={theme.accent} strokeOpacity={0.2} strokeWidth={3} />
         <BaseStructure theme={theme} state={stageState} nodes={layout.nodes} core={layout.core} />
       </svg>
@@ -178,11 +207,12 @@ export default function TaskbarStage({
       {visibleProviders.map((provider, index) => {
         const node = layout.nodes[index];
         const color = providerColor(theme, provider.iconId);
+        const nodeSize = layout.nodeSize * node.scale;
         const nodeStyle = {
           left: node.x,
           top: node.y,
           width: Math.max(layout.nodeSize, layout.labelWidth),
-          "--qa-node-size": `${layout.nodeSize}px`,
+          "--qa-node-size": `${nodeSize}px`,
           "--qa-node-color": color,
           "--qa-theme-motion-delay": motionDelay(motion, index),
         } as CSSProperties;
@@ -199,9 +229,9 @@ export default function TaskbarStage({
             aria-label={`${provider.name}: ${formatPercentage(provider.primaryValue)} ${provider.primaryLabel}`}
           >
             <span className="qa-taskbar-node__instrument">
-              <ArcGaugeV3 className="qa-taskbar-node__gauge" remaining={provider.arcFraction} size={layout.nodeSize} stroke={stageState === "expanded" ? 4.4 : 4} colorOverride={color} ariaLabel={`${provider.name} ${provider.primaryLabel} arc`} />
+              <ArcGaugeV3 className="qa-taskbar-node__gauge" remaining={provider.arcFraction} size={nodeSize} stroke={stageState === "expanded" ? 4.4 : 4} colorOverride={color} ariaLabel={`${provider.name} ${provider.primaryLabel} arc`} />
               <span className="qa-taskbar-node__icon">
-                <QaProviderIcon providerId={provider.iconId} size={Math.round(layout.nodeSize * 0.32)} />
+                <QaProviderIcon providerId={provider.iconId} size={Math.round(nodeSize * 0.32)} />
               </span>
             </span>
             <span className="qa-taskbar-node__value" style={{ color }}>{formatPercentage(provider.primaryValue)}</span>

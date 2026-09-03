@@ -7,6 +7,7 @@ import {
   type CatalogTheme,
 } from "../../design-system/themeCatalog";
 import { catalogMotion, catalogMotionStyle, motionDelay } from "../../design-system/themeMotion";
+import { characterizeSurfaceNodes } from "../../design-system/surfaceGeometry";
 import OrbitTexture from "../orbit/OrbitTexture";
 import type { StageProvider } from "../orbit/stageTypes";
 import { topOrbitLayout } from "./topOrbitLayout";
@@ -48,7 +49,24 @@ export default function TopOrbitStage({
   const expanded = state === "expanded";
   const stageState = expanded ? "expanded" : "compact";
   const visibleProviders = providers.slice(0, 7);
-  const layout = topOrbitLayout(stageState, visibleProviders.length);
+  const baseLayout = topOrbitLayout(stageState, visibleProviders.length);
+  const maximumNodeSize = baseLayout.nodeSize * 1.08;
+  const horizontalFootprint = Math.max(maximumNodeSize, baseLayout.nodeFootprint) / 2;
+  const nodeCenter = { x: baseLayout.width / 2, y: expanded ? 92 : 82 };
+  const layout = {
+    ...baseLayout,
+    nodes: characterizeSurfaceNodes(
+      baseLayout.nodes,
+      nodeCenter,
+      theme.geometry,
+      {
+        left: horizontalFootprint,
+        right: baseLayout.width - horizontalFootprint,
+        top: maximumNodeSize / 2,
+        bottom: baseLayout.height - maximumNodeSize / 2 - baseLayout.labelDepth,
+      },
+    ),
+  };
   const boundedFocus = visibleProviders.length === 0
     ? -1
     : Math.max(0, Math.min(focusedIndex, visibleProviders.length - 1));
@@ -60,6 +78,8 @@ export default function TopOrbitStage({
     width: layout.width,
     height: layout.height,
     "--qa-top-accent": theme.accent,
+    "--qa-top-accent-2": theme.accent2,
+    "--qa-top-accent-3": theme.accent3,
     "--qa-top-core": theme.core,
     "--qa-top-edge": theme.coreEdge,
     ...catalogMotionStyle(theme),
@@ -83,6 +103,14 @@ export default function TopOrbitStage({
             <stop offset="0.58" stopColor={theme.bg[0]} stopOpacity={light ? 0.96 : 0.9} />
             <stop offset="1" stopColor={theme.bg[1]} stopOpacity={light ? 0.92 : 0.82} />
           </radialGradient>
+          <radialGradient id={`${gradientId}-energy-a`} cx="14%" cy="28%" r="72%">
+            <stop offset="0" stopColor={theme.accent2} stopOpacity={light ? 0.08 : 0.19} />
+            <stop offset="1" stopColor={theme.accent2} stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id={`${gradientId}-energy-b`} cx="86%" cy="22%" r="72%">
+            <stop offset="0" stopColor={theme.accent3} stopOpacity={light ? 0.07 : 0.16} />
+            <stop offset="1" stopColor={theme.accent3} stopOpacity="0" />
+          </radialGradient>
           <filter id={`${gradientId}-shadow`} x="-20%" y="-20%" width="140%" height="170%">
             <feDropShadow dx="0" dy="13" stdDeviation="16" floodColor="#000" floodOpacity={light ? 0.2 : 0.68} />
             <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor={theme.accent} floodOpacity="0.12" />
@@ -95,6 +123,8 @@ export default function TopOrbitStage({
           strokeWidth={1.2}
           filter={`url(#${gradientId}-shadow)`}
         />
+        <path d={topHousingPath(layout.width, expanded)} fill={`url(#${gradientId}-energy-a)`} />
+        <path d={topHousingPath(layout.width, expanded)} fill={`url(#${gradientId}-energy-b)`} />
         <path d={topHousingPath(layout.width, expanded)} fill="none" stroke={theme.accent} strokeOpacity={0.22} strokeWidth={2.2} />
         <path
           d={`M 18 58 Q ${layout.width / 2} ${expanded ? 252 : 204} ${layout.width - 18} 58`}
@@ -136,11 +166,12 @@ export default function TopOrbitStage({
       {visibleProviders.map((provider, index) => {
         const node = layout.nodes[index];
         const color = providerColor(theme, provider.iconId);
+        const nodeSize = layout.nodeSize * node.scale;
         const nodeStyle = {
           left: node.x,
           top: node.y,
           "--qa-top-footprint": `${layout.nodeFootprint}px`,
-          "--qa-top-node-size": `${layout.nodeSize}px`,
+          "--qa-top-node-size": `${nodeSize}px`,
           "--qa-top-node-color": color,
           "--qa-theme-motion-delay": motionDelay(motion, index),
         } as CSSProperties;
@@ -159,13 +190,13 @@ export default function TopOrbitStage({
               <ArcGaugeV3
                 className="qa-top-orbit__gauge"
                 remaining={provider.arcFraction}
-                size={layout.nodeSize}
+                size={nodeSize}
                 stroke={expanded ? 3.8 : 3.4}
                 colorOverride={color}
                 ariaLabel={`${provider.name} ${provider.primaryLabel} arc`}
               />
               <span className="qa-top-orbit__icon">
-                <QaProviderIcon providerId={provider.iconId} size={Math.round(layout.nodeSize * 0.31)} />
+                <QaProviderIcon providerId={provider.iconId} size={Math.round(nodeSize * 0.31)} />
               </span>
             </span>
             <span className="qa-top-orbit__value">{formatPercentage(provider.primaryValue)}</span>

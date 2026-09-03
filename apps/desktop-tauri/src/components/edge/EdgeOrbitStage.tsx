@@ -7,6 +7,7 @@ import {
   type CatalogTheme,
 } from "../../design-system/themeCatalog";
 import { catalogMotion, catalogMotionStyle, motionDelay } from "../../design-system/themeMotion";
+import { characterizeSurfaceNodes } from "../../design-system/surfaceGeometry";
 import OrbitTexture from "../orbit/OrbitTexture";
 import type { StageProvider } from "../orbit/stageTypes";
 import { edgeOrbitLayout } from "./edgeOrbitLayout";
@@ -40,7 +41,22 @@ export default function EdgeOrbitStage({
   const stageState = state === "expanded" ? "expanded" : "compact";
   const expanded = stageState === "expanded";
   const visibleProviders = providers.slice(0, 7);
-  const layout = edgeOrbitLayout(stageState, visibleProviders.length);
+  const baseLayout = edgeOrbitLayout(stageState, visibleProviders.length);
+  const maximumNodeSize = baseLayout.nodeSize * 1.08;
+  const layout = {
+    ...baseLayout,
+    nodes: characterizeSurfaceNodes(
+      baseLayout.nodes,
+      baseLayout.core,
+      theme.geometry,
+      {
+        left: maximumNodeSize / 2,
+        right: baseLayout.width - baseLayout.detailWidth - maximumNodeSize / 2 - 8,
+        top: maximumNodeSize / 2,
+        bottom: baseLayout.height - maximumNodeSize / 2 - baseLayout.labelDepth,
+      },
+    ),
+  };
   const boundedFocus = visibleProviders.length === 0
     ? -1
     : Math.max(0, Math.min(focusedIndex, visibleProviders.length - 1));
@@ -52,6 +68,8 @@ export default function EdgeOrbitStage({
     width: layout.width,
     height: layout.height,
     "--qa-edge-accent": theme.accent,
+    "--qa-edge-accent-2": theme.accent2,
+    "--qa-edge-accent-3": theme.accent3,
     "--qa-edge-core": theme.core,
     "--qa-edge-surface": theme.coreEdge,
     ...catalogMotionStyle(theme),
@@ -75,6 +93,14 @@ export default function EdgeOrbitStage({
             <stop offset="0.56" stopColor={theme.bg[0]} stopOpacity={light ? 0.96 : 0.91} />
             <stop offset="1" stopColor={theme.bg[1]} stopOpacity={light ? 0.92 : 0.83} />
           </radialGradient>
+          <radialGradient id={`${gradientId}-energy-a`} cx="100%" cy="18%" r="70%">
+            <stop offset="0" stopColor={theme.accent2} stopOpacity={light ? 0.08 : 0.2} />
+            <stop offset="1" stopColor={theme.accent2} stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id={`${gradientId}-energy-b`} cx="72%" cy="86%" r="68%">
+            <stop offset="0" stopColor={theme.accent3} stopOpacity={light ? 0.07 : 0.17} />
+            <stop offset="1" stopColor={theme.accent3} stopOpacity="0" />
+          </radialGradient>
           <filter id={`${gradientId}-shadow`} x="-45%" y="-15%" width="155%" height="130%">
             <feDropShadow dx="-13" dy="0" stdDeviation="17" floodColor="#000" floodOpacity={light ? 0.22 : 0.7} />
             <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor={theme.accent} floodOpacity="0.13" />
@@ -87,6 +113,8 @@ export default function EdgeOrbitStage({
           strokeWidth={1.2}
           filter={`url(#${gradientId}-shadow)`}
         />
+        <path d={edgeHousingPath(layout.width, layout.height, expanded)} fill={`url(#${gradientId}-energy-a)`} />
+        <path d={edgeHousingPath(layout.width, layout.height, expanded)} fill={`url(#${gradientId}-energy-b)`} />
         <path d={edgeHousingPath(layout.width, layout.height, expanded)} fill="none" stroke={theme.accent} strokeOpacity={0.22} strokeWidth={2.2} />
         <path
           d={expanded
@@ -123,12 +151,13 @@ export default function EdgeOrbitStage({
       {visibleProviders.map((provider, index) => {
         const node = layout.nodes[index];
         const color = providerColor(theme, provider.iconId);
+        const nodeSize = layout.nodeSize * node.scale;
         const nodeStyle = {
-          left: node.x - layout.nodeSize / 2,
-          top: node.y - layout.nodeSize / 2,
-          width: layout.nodeSize + layout.detailWidth,
-          height: layout.nodeSize,
-          "--qa-edge-node-size": `${layout.nodeSize}px`,
+          left: node.x - nodeSize / 2,
+          top: node.y - nodeSize / 2,
+          width: nodeSize + layout.detailWidth,
+          height: nodeSize,
+          "--qa-edge-node-size": `${nodeSize}px`,
           "--qa-edge-node-color": color,
           "--qa-theme-motion-delay": motionDelay(motion, index),
         } as CSSProperties;
@@ -147,13 +176,13 @@ export default function EdgeOrbitStage({
               <ArcGaugeV3
                 className="qa-edge-orbit__gauge"
                 remaining={provider.arcFraction}
-                size={layout.nodeSize}
+                size={nodeSize}
                 stroke={expanded ? 3.8 : 3.4}
                 colorOverride={color}
                 ariaLabel={`${provider.name} ${provider.primaryLabel} arc`}
               />
               <span className="qa-edge-orbit__icon">
-                <QaProviderIcon providerId={provider.iconId} size={Math.round(layout.nodeSize * 0.31)} />
+                <QaProviderIcon providerId={provider.iconId} size={Math.round(nodeSize * 0.31)} />
               </span>
             </span>
             <span className="qa-edge-orbit__compact-value">{formatPercentage(provider.primaryValue)}</span>
