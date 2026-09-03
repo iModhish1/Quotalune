@@ -19,6 +19,7 @@ import ProvidersTab from "./settings/tabs/ProvidersTab";
 import UsageSpendTab from "./settings/tabs/UsageSpendTab";
 import SurfacesTab from "./settings/tabs/SurfacesTab";
 import ThemeGallery from "./settings/tabs/ThemeGallery";
+import UsageDisplaySection from "./settings/tabs/UsageDisplaySection";
 
 // Inline monochrome SVG icons stand in for the upstream macOS SF Symbols
 // (gearshape / square.grid.2x2 / eye / slider.horizontal.3 / info.circle).
@@ -276,7 +277,12 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
           <UsageSpendTab settings={settings} set={set} saving={saving} />
         )}
         {activeTab === "surfaces" && <SurfacesTab />}
-        {activeTab === "themes" && <ThemeGallery />}
+        {activeTab === "themes" && (
+          <>
+            <ThemeGallery />
+            <UsageDisplaySection />
+          </>
+        )}
         {activeTab === "advanced" && (
           <AdvancedTab settings={settings} set={set} saving={saving} />
         )}

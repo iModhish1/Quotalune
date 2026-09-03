@@ -378,6 +378,41 @@ pub fn set_catalog_theme(app: AppHandle, slug: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Persist the usage display configuration: global mode + per-provider
+/// overrides. Provider overrides absent from the map are REMOVED from
+/// persistence (Follow-global = no stored entry). Unknown mode strings are
+/// rejected server-side; the broadcast re-themes every live surface.
+#[tauri::command]
+pub fn set_usage_settings(
+    app: AppHandle,
+    global_mode: String,
+    provider_overrides: std::collections::HashMap<String, String>,
+) -> Result<(), String> {
+    let normalized_global =
+        codexbar::settings::normalize_usage_display_mode(global_mode.trim())
+            .ok_or_else(|| format!("invalid usage display mode: {global_mode}"))?;
+
+    let mut normalized_overrides = std::collections::HashMap::new();
+    for (provider, mode) in &provider_overrides {
+        let provider_id = codexbar::core::ProviderId::from_cli_name(provider.trim())
+            .ok_or_else(|| format!("unknown provider: {provider}"))?;
+        if mode == "global" || mode.trim().is_empty() {
+            continue; // Follow-global = remove the stored override.
+        }
+        let normalized = codexbar::settings::normalize_usage_display_mode(mode)
+            .ok_or_else(|| format!("invalid usage mode: {mode}"))?;
+        normalized_overrides.insert(provider_id.cli_name().to_string(), normalized);
+    }
+
+    let mut settings = Settings::load();
+    settings.usage_display_mode = Some(normalized_global);
+    settings.provider_usage_overrides = normalized_overrides;
+    settings.save().map_err(|e| e.to_string())?;
+    use tauri::Emitter;
+    let _ = app.emit("codexbar:settings-updated", ());
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

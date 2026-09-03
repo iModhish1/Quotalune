@@ -295,6 +295,7 @@ fn main() {
             command_profiles::remove_account,
             command_profiles::set_privacy_mode,
             command_profiles::set_catalog_theme,
+            command_profiles::set_usage_settings,
         ])
         .setup(move |app| {
             if let Some(window) = app.get_webview_window("main") {
