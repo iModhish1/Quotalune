@@ -18,7 +18,7 @@ vi.mock("@tauri-apps/api/event", () => eventMocks);
 
 import { LocaleProvider } from "../i18n/LocaleProvider";
 import { buildBundle } from "../test/localeHarness";
-import { MenuSummary } from "./MenuSurface";
+import MenuSurface, { MenuSummary } from "./MenuSurface";
 
 function renderSummary(total: number) {
   return render(
@@ -52,5 +52,25 @@ describe("MenuSummary", () => {
     renderSummary(2);
 
     expect(await screen.findByText("2 providers")).toBeInTheDocument();
+  });
+
+  it("applies catalog material tokens to the production menu surface", async () => {
+    render(
+      <LocaleProvider>
+        <MenuSurface
+          variant="tray"
+          catalogTheme="03-solar-ember"
+          onRefresh={vi.fn()}
+          isRefreshing={false}
+          actions={[]}
+        >
+          content
+        </MenuSurface>
+      </LocaleProvider>,
+    );
+
+    const surface = (await screen.findByText("content")).closest(".menu-surface");
+    expect(surface).toHaveAttribute("data-catalog-theme", "03-solar-ember");
+    expect(surface).toHaveStyle({ "--qa-menu-accent": "#f59e0b" });
   });
 });

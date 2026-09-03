@@ -1,0 +1,72 @@
+.menu-surface[data-catalog-theme] {
+  --qa-menu-accent: #2dd4bf;
+  --qa-menu-core: #0d141d;
+  --qa-menu-edge: #1c2634;
+  --qa-menu-bg0: #0b1220;
+  --qa-menu-bg1: #05070b;
+  position: relative;
+  isolation: isolate;
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--qa-menu-accent) 28%, rgba(255, 255, 255, 0.13));
+  background:
+    radial-gradient(ellipse 92% 42% at 50% 0%, color-mix(in srgb, var(--qa-menu-accent) 10%, transparent), transparent 72%),
+    radial-gradient(ellipse 80% 64% at 50% 42%, var(--qa-menu-bg0), var(--qa-menu-bg1) 78%);
+  box-shadow:
+    0 18px 56px rgba(0, 0, 0, 0.56),
+    0 0 0 1px color-mix(in srgb, var(--qa-menu-accent) 8%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.menu-surface[data-catalog-theme]::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--qa-menu-accent) 3%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--qa-menu-accent) 3%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(ellipse at 50% 22%, black, transparent 70%);
+}
+
+.menu-surface[data-catalog-theme] .menu-card,
+.menu-surface[data-catalog-theme] .provider-grid,
+.menu-surface[data-catalog-theme] .provider-detail-section {
+  border-color: color-mix(in srgb, var(--qa-menu-accent) 18%, rgba(255, 255, 255, 0.1));
+  background:
+    radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--qa-menu-accent) 7%, transparent), transparent 42%),
+    linear-gradient(145deg, color-mix(in srgb, var(--qa-menu-edge) 48%, transparent), color-mix(in srgb, var(--qa-menu-core) 82%, transparent));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.menu-surface[data-catalog-theme] .provider-grid__item:hover,
+.menu-surface[data-catalog-theme] .provider-grid__item--active {
+  background: color-mix(in srgb, var(--qa-menu-accent) 12%, transparent);
+}
+
+.menu-surface[data-catalog-theme] .provider-grid__item--active {
+  box-shadow: inset 0 -2px 0 var(--qa-menu-accent);
+}
+
+.menu-surface[data-catalog-theme] .menu-surface__footer,
+.menu-surface[data-catalog-theme] .provider-grid__divider,
+.menu-surface[data-catalog-theme] .menu-stack__sep {
+  border-color: color-mix(in srgb, var(--qa-menu-accent) 13%, rgba(255, 255, 255, 0.08));
+}
+
+.menu-surface[data-catalog-light="true"] {
+  color: #111827;
+  background:
+    radial-gradient(ellipse 92% 42% at 50% 0%, color-mix(in srgb, var(--qa-menu-accent) 10%, transparent), transparent 72%),
+    linear-gradient(145deg, var(--qa-menu-bg0), var(--qa-menu-bg1));
+  box-shadow: 0 18px 52px rgba(30, 58, 95, 0.2), inset 0 1px 0 #fff;
+}
+
+.menu-surface[data-catalog-light="true"] .menu-card,
+.menu-surface[data-catalog-light="true"] .provider-grid,
+.menu-surface[data-catalog-light="true"] .provider-detail-section {
+  border-color: color-mix(in srgb, var(--qa-menu-accent) 22%, rgba(30, 58, 95, 0.12));
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: inset 0 1px 0 #fff, 0 8px 24px rgba(30, 58, 95, 0.08);
+}

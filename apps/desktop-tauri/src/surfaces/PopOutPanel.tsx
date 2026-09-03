@@ -15,6 +15,11 @@ import MenuSurface, {
 import UpdateBanner from "../components/UpdateBanner";
 import ProviderGrid from "../components/ProviderGrid";
 import { orderProviderSnapshots } from "../lib/providerOrder";
+import CatalogUsageHero from "../components/CatalogUsageHero";
+import {
+  toStageProviders,
+  usageConfigFromSnapshot,
+} from "../components/orbit/stageProviders";
 
 /**
  * Pop-out window — dashboard and provider deep-links both keep the full card
@@ -200,9 +205,12 @@ export default function PopOutPanel({
     />
   );
 
+  const stageProviders = toStageProviders(sorted, usageConfigFromSnapshot(settings));
+
   const surface = sorted.length === 0 ? (
     <MenuSurface
       variant="popout"
+      catalogTheme={settings.catalogTheme}
       titleBar={<PopOutTitleBar />}
       onRefresh={refresh}
       isRefreshing={isRefreshing}
@@ -218,6 +226,7 @@ export default function PopOutPanel({
   ) : (
     <MenuSurface
       variant="popout"
+      catalogTheme={settings.catalogTheme}
       titleBar={<PopOutTitleBar />}
       onRefresh={refresh}
       isRefreshing={isRefreshing}
@@ -234,6 +243,14 @@ export default function PopOutPanel({
         onExpandedChange={setGridExpanded}
         onSelect={handleGridClick}
         onReorder={handleReorder}
+      />
+      <CatalogUsageHero
+        variant="dashboard"
+        catalog={settings.catalogTheme ?? "01-obsidian-orbit"}
+        providers={stageProviders}
+        selectedProviderId={selectedProviderId}
+        onSelectProvider={(providerId) => handleGridClick(providerId)}
+        showProviderIcons={settings.switcherShowsIcons}
       />
       <div className="provider-grid__divider" />
       <div className="menu-stack">

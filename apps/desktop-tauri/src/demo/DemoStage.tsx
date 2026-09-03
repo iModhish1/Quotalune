@@ -36,6 +36,7 @@ import {
   EDGE_ORBIT_EXPANDED_HEIGHT,
   EDGE_ORBIT_EXPANDED_WIDTH,
 } from "../components/edge/edgeOrbitLayout";
+import CatalogUsageHero from "../components/CatalogUsageHero";
 import "./demo.css";
 
 const LegacyTaskbarArc = lazy(() => import("../surfaces/taskbar-arc/TaskbarArc"));
@@ -91,6 +92,26 @@ export default function DemoStage() {
 
   const catalogSlug = params.get("catalog");
   if (catalogSlug && params.get("gen") === "v8") {
+    if (surface === "quick" || surface === "dashboard") {
+      const dashboard = surface === "dashboard";
+      const width = dashboard ? 700 : 340;
+      const height = dashboard ? 350 : 200;
+      const scale = Math.min(1, Math.max(0.48, (window.innerWidth - 24) / width));
+      return stage(
+        width,
+        height,
+        {
+          left: "50%",
+          top: "50%",
+          transform: `translate(-50%, -50%) scale(${scale})`,
+        },
+        <CatalogUsageHero
+          variant={dashboard ? "dashboard" : "quick"}
+          catalog={catalogSlug}
+          providers={CATALOG_TASKBAR_FIXTURE}
+        />,
+      );
+    }
     if (surface === "edge") {
       const edgeExpanded = state === "expanded";
       const edgeWidth = edgeExpanded ? EDGE_ORBIT_EXPANDED_WIDTH : EDGE_ORBIT_COMPACT_WIDTH;

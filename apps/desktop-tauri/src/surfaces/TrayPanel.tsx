@@ -14,6 +14,11 @@ import MenuSurface, { MenuEmpty } from "../components/MenuSurface";
 import UpdateBanner from "../components/UpdateBanner";
 import ProviderGrid from "../components/ProviderGrid";
 import AgentSessions from "../components/AgentSessions";
+import CatalogUsageHero from "../components/CatalogUsageHero";
+import {
+  toStageProviders,
+  usageConfigFromSnapshot,
+} from "../components/orbit/stageProviders";
 
 /** Provider IDs that have a dashboard URL in the backend */
 const HAS_DASHBOARD = new Set([
@@ -109,6 +114,8 @@ export default function TrayPanel({ state }: { state: BootstrapState }) {
     />
   );
 
+  const stageProviders = toStageProviders(sorted, usageConfigFromSnapshot(settings));
+
   const renderProviderCard = (p: ProviderUsageSnapshot) => {
     const isSelected =
       selectedProviderId !== null && p.providerId === selectedProviderId;
@@ -142,6 +149,7 @@ export default function TrayPanel({ state }: { state: BootstrapState }) {
       <div className={revealClassName}>
         <MenuSurface
           variant="tray"
+          catalogTheme={settings.catalogTheme}
           onRefresh={refresh}
           isRefreshing={isRefreshing}
           actions={headerActions}
@@ -165,6 +173,7 @@ export default function TrayPanel({ state }: { state: BootstrapState }) {
     <div className={revealClassName}>
       <MenuSurface
         variant="tray"
+        catalogTheme={settings.catalogTheme}
         onRefresh={refresh}
         isRefreshing={isRefreshing}
         actions={headerActions}
@@ -185,6 +194,13 @@ export default function TrayPanel({ state }: { state: BootstrapState }) {
           onReorder={handleReorder}
           onGestureStart={handleGestureStart}
           onGestureEnd={handleGestureEnd}
+        />
+        <CatalogUsageHero
+          variant="quick"
+          catalog={settings.catalogTheme ?? "01-obsidian-orbit"}
+          providers={stageProviders}
+          selectedProviderId={selectedProviderId}
+          showProviderIcons={settings.switcherShowsIcons}
         />
         <div className="provider-grid__divider" />
         {selectedProviderId === null && (

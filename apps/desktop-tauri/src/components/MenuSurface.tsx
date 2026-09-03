@@ -1,5 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useLocale } from "../hooks/useLocale";
+import { catalogBySlug } from "../design-system/themeCatalog";
+import "./CatalogMenuSurface.css";
 
 export interface MenuSurfaceAction {
   icon: string;
@@ -32,6 +34,8 @@ interface MenuSurfaceProps {
   /** Inline style applied to the root `menu-surface` element (e.g. CSS
    *  `zoom` for the tray flyout). */
   style?: CSSProperties;
+  /** Legendary catalog theme applied to the real Quick Panel/Dashboard. */
+  catalogTheme?: string;
   children: ReactNode;
 }
 
@@ -54,11 +58,28 @@ export default function MenuSurface({
   footerLead,
   footerRows,
   style,
+  catalogTheme,
   children,
 }: MenuSurfaceProps) {
   const { t } = useLocale();
+  const catalog = catalogTheme ? catalogBySlug(catalogTheme) : undefined;
+  const themedStyle = catalog
+    ? ({
+        ...style,
+        "--qa-menu-accent": catalog.accent,
+        "--qa-menu-core": catalog.core,
+        "--qa-menu-edge": catalog.coreEdge,
+        "--qa-menu-bg0": catalog.bg[0],
+        "--qa-menu-bg1": catalog.bg[1],
+      } as CSSProperties)
+    : style;
   return (
-    <div className={`menu-surface menu-surface--${variant}`} style={style}>
+    <div
+      className={`menu-surface menu-surface--${variant}`}
+      style={themedStyle}
+      data-catalog-theme={catalog?.slug}
+      data-catalog-light={catalog?.slug === "04-porcelain-halo" || undefined}
+    >
       {titleBar}
       {banner}
       {summary}
