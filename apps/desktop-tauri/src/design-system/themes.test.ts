@@ -24,9 +24,11 @@ describe("resolveUsageMode", () => {
 });
 
 describe("applyUsageSemantics", () => {
-  it("used mode: arc fills through consumption, value reads used", () => {
+  it("used mode: arc follows the primary used value (V8.4 contract)", () => {
     const s = applyUsageSemantics("used", 0.73);
-    expect(s.arc).toBeCloseTo(0.73);
+    // V8.4 rule: the arc ALWAYS displays the same fraction as the primary
+    // value, so text, arc endpoint, and accessible name cannot disagree.
+    expect(s.arc).toBeCloseTo(0.27);
     expect(s.value).toBeCloseTo(27);
     expect(s.label).toBe("used");
   });
