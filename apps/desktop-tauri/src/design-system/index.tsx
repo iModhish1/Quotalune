@@ -95,3 +95,12 @@ export {
   type QaMaterial,
   type QaProviderInstrumentProps,
 } from "./v2";
+
+// ── V4 physical surface engine ───────────────────────────────────────
+export {
+  QaPhysicalSurface,
+  CHOREOGRAPHY,
+  housingPath,
+  type QaAnchor,
+  type QaPhysicalSurfaceProps,
+} from "./PhysicalSurface";

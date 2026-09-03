@@ -11,6 +11,7 @@ import TaskbarArc from "../surfaces/taskbar-arc/TaskbarArc";
 import TopArc from "../surfaces/top-arc/TopArc";
 import EdgeArc from "../surfaces/edge-arc/EdgeArc";
 import { HudFocus, DashboardHero } from "./DemoExtras";
+import { NotchSurfaceV4, SlabSurfaceV4, SpineSurfaceV4 } from "./V4Surfaces";
 
 const params = new URLSearchParams(window.location.search);
 const surface = params.get("surface") ?? "taskbar";
@@ -21,9 +22,37 @@ const theme = (params.get("theme") ?? "dark") as "dark" | "light";
 
 
 export default function DemoStage() {
+  const gen = params.get("gen") ?? "v3";
   const showTaskbar = surface === "taskbar";
   const showTop = surface === "top";
   const showEdge = surface === "edge";
+
+        if (gen === "v4") {
+          const W = state === "expanded" ? 620 : 320;
+          const H = state === "expanded" ? 176 : 50;
+          const anchors: Record<string, { anchor: "top" | "bottom" | "right"; w: number; h: number; pos: import("react").CSSProperties }> = {
+            top: { anchor: "top", w: state === "expanded" ? 520 : 320, h: state === "expanded" ? 168 : 46, pos: { left: "50%", top: 0, transform: "translateX(-50%)" } },
+            taskbar: { anchor: "bottom", w: state === "expanded" ? 620 : 300, h: state === "expanded" ? 176 : 50, pos: { left: "50%", bottom: 48, transform: "translateX(-50%)" } },
+            edge: { anchor: "right", w: state === "expanded" ? 240 : 64, h: 240, pos: { right: 0, top: "50%", transform: "translateY(-50%)" } },
+          };
+          const a = anchors[surface === "top" ? "top" : surface === "edge" ? "edge" : "taskbar"];
+          const Comp = surface === "top" ? NotchSurfaceV4 : surface === "edge" ? SpineSurfaceV4 : SlabSurfaceV4;
+          return (
+            <DesignSystemProvider theme={theme} motionSetting="off">
+              <div className="demo-desktop" data-demo-theme={theme}>
+                <div className="demo-wallpaper" />
+                <div className="demo-anchor" style={{ position: "absolute", ...a.pos, width: a.w, height: a.h, zIndex: 5 }}>
+                  <Comp state={state === "hover" ? "idle" : state} />
+                </div>
+                <div className="demo-taskbar">
+                  <div className="demo-taskbar__tb" /><div className="demo-taskbar__tb" />
+                  <div className="demo-taskbar__tb" /><div className="demo-taskbar__tb" />
+                </div>
+              </div>
+            </DesignSystemProvider>
+          );
+        }
+
   const expanded = state === "expanded";
 
   return (
