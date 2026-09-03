@@ -29,6 +29,9 @@ vi.mock("@tauri-apps/api/window", () => windowMocks);
 vi.mock("../hooks/useLocale", () => ({
   useLocale: () => ({ t: (key: string) => key, language: "english" }),
 }));
+vi.mock("./ProfileSwitcher", () => ({
+  default: () => null,
+}));
 
 import PopOutTitleBar from "./PopOutTitleBar";
 

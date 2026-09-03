@@ -7,16 +7,10 @@ vi.mock("../../../hooks/useLocale", () => ({
 
 // Mock Tauri invoke for get_available_languages
 vi.mock("@tauri-apps/api/core", () => ({
-  invoke: vi.fn().mockResolvedValue([
-    { value: "english", display: "English" },
-    { value: "chinese", display: "中文" },
-    { value: "chinesetraditional", display: "繁體中文" },
-    { value: "japanese", display: "日本語" },
-    { value: "korean", display: "한국어" },
-    { value: "spanish", display: "Español" },
-    { value: "russian", display: "Русский" },
-    { value: "turkish", display: "Türkçe" },
-  ]),
+  // Keep the mount-only language refresh pending in unit tests. The component
+  // intentionally ships the same fallback list, and resolving this request
+  // after a synchronous assertion creates unrelated React act() warnings.
+  invoke: vi.fn(() => new Promise(() => {})),
 }));
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({

@@ -45,6 +45,7 @@ describe("useLocale", () => {
   });
 
   it("falls back to the raw key when the backend omits it", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     (tauri.getLocaleStrings as ReturnType<typeof vi.fn>).mockResolvedValue({
       language: "english",
       entries: {}, // intentionally empty — probe should see the key name
@@ -59,6 +60,8 @@ describe("useLocale", () => {
     await waitFor(() => {
       expect(screen.getByTestId("app-name")).toHaveTextContent("TabGeneral");
     });
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it("suspends rendering until the bundle is loaded", async () => {

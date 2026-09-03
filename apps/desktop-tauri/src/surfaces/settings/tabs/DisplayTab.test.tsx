@@ -9,6 +9,11 @@ vi.mock("../../../hooks/useLocale", () => ({
 vi.mock("../../../floatbar/SettingsSection", () => ({
   default: () => null,
 }));
+vi.mock("../../../lib/tauri", () => ({
+  // Tray visibility belongs to Menu Bar mode, not the Menu controls covered
+  // here. Leaving the background request pending avoids post-assert updates.
+  getTrayVisibilityStatus: vi.fn(() => new Promise(() => {})),
+}));
 
 import DisplayTab from "./DisplayTab";
 import type { SettingsSnapshot } from "../../../types/bridge";
