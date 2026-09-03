@@ -80,6 +80,7 @@ nul
 !dev.ps1
 !scripts/*.ps1
 !scripts/**/*.ps1
+!/scripts/capture-native-usage-proof.mjs
 !/scripts/macos-windows-cross-build.sh
 !/scripts/run_vm_provider_proof.sh
 !/scripts/vm/provider_osclick_proof_unc.ps1

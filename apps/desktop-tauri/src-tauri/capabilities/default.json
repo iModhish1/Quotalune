@@ -1,7 +1,15 @@
 {
   "identifier": "default",
   "description": "Default permissions for the CodexBar desktop scaffold.",
-  "windows": ["main", "settings", "floatbar", "flyout"],
+  "windows": [
+    "main",
+    "settings",
+    "floatbar",
+    "flyout",
+    "edge-arc",
+    "top-arc",
+    "taskbar-arc"
+  ],
   "permissions": [
     "core:event:allow-listen",
     "core:event:allow-unlisten",

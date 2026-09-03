@@ -216,6 +216,10 @@ export default function TaskbarStage({
           "--qa-node-color": color,
           "--qa-theme-motion-delay": motionDelay(motion, index),
         } as CSSProperties;
+        const hybridDetail =
+          provider.resolvedMode === "hybrid" && provider.secondaryValue != null
+            ? `, ${formatPercentage(provider.secondaryValue)} remaining`
+            : "";
         return (
           <button
             key={provider.id}
@@ -226,7 +230,7 @@ export default function TaskbarStage({
             style={nodeStyle}
             onClick={() => onFocusProvider?.(index)}
             aria-pressed={index === boundedFocus}
-            aria-label={`${provider.name}: ${formatPercentage(provider.primaryValue)} ${provider.primaryLabel}`}
+            aria-label={`${provider.name}: ${formatPercentage(provider.primaryValue)} ${provider.primaryLabel}${hybridDetail}`}
           >
             <span className="qa-taskbar-node__instrument">
               <ArcGaugeV3 className="qa-taskbar-node__gauge" remaining={provider.arcFraction} size={nodeSize} stroke={stageState === "expanded" ? 4.4 : 4} colorOverride={color} ariaLabel={`${provider.name} ${provider.primaryLabel} arc`} />
@@ -251,7 +255,11 @@ export default function TaskbarStage({
         <span className="qa-taskbar-core__content">
           <span className="qa-taskbar-core__name">{focused?.name ?? "QuotaArc"}</span>
           <span className="qa-taskbar-core__value">{formatPercentage(focused?.primaryValue)}</span>
-          <span className="qa-taskbar-core__mode">{focused?.primaryLabel ?? "unavailable"}</span>
+          <span className="qa-taskbar-core__mode">
+            {focused?.resolvedMode === "hybrid" && focused.secondaryValue != null
+              ? `${focused.primaryLabel} · ${formatPercentage(focused.secondaryValue)} remaining`
+              : (focused?.primaryLabel ?? "unavailable")}
+          </span>
           <span className="qa-taskbar-core__reset">{focused ? `Resets ${focused.reset}` : "No providers connected"}</span>
         </span>
       </button>

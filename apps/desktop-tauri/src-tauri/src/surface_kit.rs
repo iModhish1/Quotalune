@@ -174,10 +174,14 @@ pub fn resize_surface(
     height: f64,
     click_through: bool,
 ) -> Result<(), String> {
-    let width = width.ceil().clamp(1.0, u32::MAX as f64) as u32;
-    let height = height.ceil().clamp(1.0, u32::MAX as f64) as u32;
+    // The webview reports CSS/logical pixels. Passing those values as a
+    // PhysicalSize shrinks the viewport by the monitor scale factor (820 CSS
+    // px became 328 CSS px at 250% DPI), clipping most of every orbital stage.
+    // Keep the contract logical end-to-end; Tauri performs the DPI conversion.
+    let width = width.ceil().clamp(1.0, u32::MAX as f64);
+    let height = height.ceil().clamp(1.0, u32::MAX as f64);
     window
-        .set_size(tauri::PhysicalSize::new(width, height))
+        .set_size(tauri::LogicalSize::new(width, height))
         .map_err(|e| e.to_string())?;
     apply_no_activate(window);
     apply_click_through(window, click_through);

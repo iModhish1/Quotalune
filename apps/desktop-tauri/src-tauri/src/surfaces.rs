@@ -312,6 +312,7 @@ pub fn install(app: &tauri::AppHandle) {
 
 /// Bring both surfaces in line with persisted settings (after a settings save).
 pub fn apply_state(app: &tauri::AppHandle, settings: &Settings) {
+    let fullscreen_active = foreground_is_content_fullscreen();
     let edge_open = app.get_webview_window(EDGE_ARC_LABEL).is_some();
     if settings.edge_arc_enabled && !edge_open {
         let _show = show_edge_arc(app);
@@ -322,6 +323,16 @@ pub fn apply_state(app: &tauri::AppHandle, settings: &Settings) {
         let side = codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
         position_edge_arc(&w, &side);
         apply_always_on_top(&w);
+    }
+    if let Some(w) = app.get_webview_window(EDGE_ARC_LABEL) {
+        reconcile_surface_visibility(
+            &w,
+            surface_should_be_visible(
+                settings.edge_arc_enabled,
+                settings.edge_arc_hide_fullscreen,
+                fullscreen_active,
+            ),
+        );
     }
 
     let top_open = app.get_webview_window(TOP_ARC_LABEL).is_some();
@@ -334,6 +345,16 @@ pub fn apply_state(app: &tauri::AppHandle, settings: &Settings) {
         position_top_arc(&w);
         apply_always_on_top(&w);
     }
+    if let Some(w) = app.get_webview_window(TOP_ARC_LABEL) {
+        reconcile_surface_visibility(
+            &w,
+            surface_should_be_visible(
+                settings.top_arc_enabled,
+                settings.top_arc_hide_fullscreen,
+                fullscreen_active,
+            ),
+        );
+    }
 
     let taskbar_open = app.get_webview_window(TASKBAR_ARC_LABEL).is_some();
     if settings.taskbar_arc_enabled && !taskbar_open {
@@ -344,6 +365,16 @@ pub fn apply_state(app: &tauri::AppHandle, settings: &Settings) {
         apply_taskbar_arc_attrs(&w, settings);
         position_taskbar_arc(&w);
         apply_always_on_top(&w);
+    }
+    if let Some(w) = app.get_webview_window(TASKBAR_ARC_LABEL) {
+        reconcile_surface_visibility(
+            &w,
+            surface_should_be_visible(
+                settings.taskbar_arc_enabled,
+                settings.taskbar_arc_hide_fullscreen,
+                fullscreen_active,
+            ),
+        );
     }
 }
 
@@ -385,8 +416,23 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) -
 
 const FULLSCREEN_POLL_MS: u64 = 3_000;
 
-static HIDDEN_BY_FULLSCREEN: std::sync::atomic::AtomicBool =
-    std::sync::atomic::AtomicBool::new(false);
+fn surface_should_be_visible(
+    enabled: bool,
+    hide_during_fullscreen: bool,
+    fullscreen_active: bool,
+) -> bool {
+    enabled && !(hide_during_fullscreen && fullscreen_active)
+}
+
+fn reconcile_surface_visibility(window: &tauri::WebviewWindow, should_be_visible: bool) {
+    let is_visible = window.is_visible().unwrap_or(false);
+    if should_be_visible && !is_visible {
+        let _ = window.show();
+        apply_always_on_top(window);
+    } else if !should_be_visible && is_visible {
+        let _ = window.hide();
+    }
+}
 
 /// Periodically hide/show surfaces based on foreground fullscreen detection.
 /// Only runs while at least one surface window exists (visible or hidden-by-
@@ -401,56 +447,39 @@ fn spawn_fullscreen_watcher(app: tauri::AppHandle) {
             let taskbar = app.get_webview_window(TASKBAR_ARC_LABEL);
             if edge.is_none() && top.is_none() && taskbar.is_none() {
                 // No surfaces alive; park cheaply.
-                HIDDEN_BY_FULLSCREEN.store(false, std::sync::atomic::Ordering::Relaxed);
                 continue;
             }
-            let should_hide = foreground_is_content_fullscreen();
-            let mut changed = false;
+            let fullscreen_active = foreground_is_content_fullscreen();
 
-            if should_hide {
-                if settings.edge_arc_hide_fullscreen
-                    && let Some(w) = &edge
-                    && w.is_visible().unwrap_or(false)
-                {
-                    let _ = w.hide();
-                    changed = true;
-                }
-                if settings.top_arc_hide_fullscreen
-                    && let Some(w) = &top
-                    && w.is_visible().unwrap_or(false)
-                {
-                    let _ = w.hide();
-                    changed = true;
-                }
-                if settings.taskbar_arc_hide_fullscreen
-                    && let Some(w) = &taskbar
-                    && w.is_visible().unwrap_or(false)
-                {
-                    let _ = w.hide();
-                    changed = true;
-                }
-                if changed {
-                    HIDDEN_BY_FULLSCREEN.store(true, std::sync::atomic::Ordering::Relaxed);
-                }
-            } else if HIDDEN_BY_FULLSCREEN.swap(false, std::sync::atomic::Ordering::Relaxed) {
-                if settings.edge_arc_enabled
-                    && let Some(w) = &edge
-                {
-                    let _ = w.show();
-                    apply_always_on_top(w);
-                }
-                if settings.top_arc_enabled
-                    && let Some(w) = &top
-                {
-                    let _ = w.show();
-                    apply_always_on_top(w);
-                }
-                if settings.taskbar_arc_enabled
-                    && let Some(w) = &taskbar
-                {
-                    let _ = w.show();
-                    apply_always_on_top(w);
-                }
+            if let Some(w) = &edge {
+                reconcile_surface_visibility(
+                    w,
+                    surface_should_be_visible(
+                        settings.edge_arc_enabled,
+                        settings.edge_arc_hide_fullscreen,
+                        fullscreen_active,
+                    ),
+                );
+            }
+            if let Some(w) = &top {
+                reconcile_surface_visibility(
+                    w,
+                    surface_should_be_visible(
+                        settings.top_arc_enabled,
+                        settings.top_arc_hide_fullscreen,
+                        fullscreen_active,
+                    ),
+                );
+            }
+            if let Some(w) = &taskbar {
+                reconcile_surface_visibility(
+                    w,
+                    surface_should_be_visible(
+                        settings.taskbar_arc_enabled,
+                        settings.taskbar_arc_hide_fullscreen,
+                        fullscreen_active,
+                    ),
+                );
             }
         }
     });
@@ -686,5 +715,49 @@ mod tests {
     fn default_sizes_are_sane() {
         const { assert!(TASKBAR_ARC_DEFAULT_WIDTH > TOP_ARC_DEFAULT_WIDTH / 2.0) };
         const { assert!(TASKBAR_ARC_DEFAULT_HEIGHT < TOP_ARC_DEFAULT_HEIGHT) };
+    }
+
+    #[test]
+    fn enabled_surface_stays_visible_in_fullscreen_when_hiding_is_disabled() {
+        assert!(surface_should_be_visible(true, false, true));
+    }
+
+    #[test]
+    fn enabled_surface_hides_only_when_fullscreen_hiding_is_enabled() {
+        assert!(!surface_should_be_visible(true, true, true));
+        assert!(surface_should_be_visible(true, true, false));
+    }
+
+    #[test]
+    fn disabled_surface_is_never_visible() {
+        assert!(!surface_should_be_visible(false, false, false));
+        assert!(!surface_should_be_visible(false, false, true));
+    }
+
+    #[test]
+    fn every_detached_arc_has_event_listener_capability() {
+        let capability: serde_json::Value =
+            serde_json::from_str(include_str!("../capabilities/default.json"))
+                .expect("default capability JSON");
+        let windows = capability["windows"]
+            .as_array()
+            .expect("capability windows array");
+        for label in [EDGE_ARC_LABEL, TOP_ARC_LABEL, TASKBAR_ARC_LABEL] {
+            assert!(
+                windows.iter().any(|window| window.as_str() == Some(label)),
+                "{label} must be covered by the default capability"
+            );
+        }
+        let permissions = capability["permissions"]
+            .as_array()
+            .expect("capability permissions array");
+        for permission in ["core:event:allow-listen", "core:event:allow-unlisten"] {
+            assert!(
+                permissions
+                    .iter()
+                    .any(|entry| entry.as_str() == Some(permission)),
+                "{permission} is required for live settings updates"
+            );
+        }
     }
 }

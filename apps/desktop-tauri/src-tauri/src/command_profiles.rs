@@ -477,20 +477,8 @@ pub fn set_usage_settings(
     global_mode: String,
     provider_overrides: std::collections::HashMap<String, String>,
 ) -> Result<(), String> {
-    let normalized_global = codexbar::settings::normalize_usage_display_mode(global_mode.trim())
-        .ok_or_else(|| format!("invalid usage display mode: {global_mode}"))?;
-
-    let mut normalized_overrides = std::collections::HashMap::new();
-    for (provider, mode) in &provider_overrides {
-        let provider_id = codexbar::core::ProviderId::from_cli_name(provider.trim())
-            .ok_or_else(|| format!("unknown provider: {provider}"))?;
-        if mode == "global" || mode.trim().is_empty() {
-            continue; // Follow-global = remove the stored override.
-        }
-        let normalized = codexbar::settings::normalize_usage_display_mode(mode)
-            .ok_or_else(|| format!("invalid usage mode: {mode}"))?;
-        normalized_overrides.insert(provider_id.cli_name().to_string(), normalized);
-    }
+    let (normalized_global, normalized_overrides) =
+        normalize_usage_settings_input(&global_mode, &provider_overrides)?;
 
     let mut settings = Settings::load();
     settings.usage_display_mode = Some(normalized_global);
@@ -501,9 +489,76 @@ pub fn set_usage_settings(
     Ok(())
 }
 
+fn normalize_usage_settings_input(
+    global_mode: &str,
+    provider_overrides: &std::collections::HashMap<String, String>,
+) -> Result<(String, std::collections::HashMap<String, String>), String> {
+    let normalized_global = codexbar::settings::normalize_usage_display_mode(global_mode.trim())
+        .ok_or_else(|| format!("invalid usage display mode: {global_mode}"))?;
+
+    let mut normalized_overrides = std::collections::HashMap::new();
+    for (provider, mode) in provider_overrides {
+        let provider_id = codexbar::core::ProviderId::from_cli_name(provider.trim())
+            .ok_or_else(|| format!("unknown provider: {provider}"))?;
+        if mode == "global" || mode.trim().is_empty() {
+            continue; // Follow-global = remove the stored override.
+        }
+        let normalized = codexbar::settings::normalize_usage_display_mode(mode)
+            .ok_or_else(|| format!("invalid usage mode: {mode}"))?;
+        normalized_overrides.insert(provider_id.cli_name().to_string(), normalized);
+    }
+    Ok((normalized_global, normalized_overrides))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn usage_settings_accept_all_three_global_modes() {
+        let overrides = std::collections::HashMap::new();
+        for mode in ["remaining", "used", "hybrid"] {
+            let (normalized, stored) =
+                normalize_usage_settings_input(mode, &overrides).expect("valid usage mode");
+            assert_eq!(normalized, mode);
+            assert!(stored.is_empty());
+        }
+    }
+
+    #[test]
+    fn usage_settings_follow_global_removes_override_and_aliases_provider() {
+        let overrides = std::collections::HashMap::from([
+            ("claude".to_string(), "global".to_string()),
+            ("openai".to_string(), "remaining".to_string()),
+        ]);
+        let (_, stored) =
+            normalize_usage_settings_input("used", &overrides).expect("valid settings");
+        assert!(!stored.contains_key("claude"));
+        assert_eq!(stored.get("codex").map(String::as_str), Some("remaining"));
+    }
+
+    #[test]
+    fn usage_settings_reject_invalid_global_override_and_provider() {
+        let empty = std::collections::HashMap::new();
+        assert!(normalize_usage_settings_input("future", &empty).is_err());
+        assert!(
+            normalize_usage_settings_input(
+                "used",
+                &std::collections::HashMap::from([("claude".to_string(), "future".to_string(),)]),
+            )
+            .is_err()
+        );
+        assert!(
+            normalize_usage_settings_input(
+                "used",
+                &std::collections::HashMap::from([(
+                    "not-a-provider".to_string(),
+                    "used".to_string(),
+                )]),
+            )
+            .is_err()
+        );
+    }
 
     #[test]
     fn apply_profile_maps_enabled_accounts_to_providers() {

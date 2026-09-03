@@ -62,4 +62,29 @@ describe("TaskbarStage", () => {
     expect(screen.getByRole("button", { name: "OpenAI: – remaining" })).toBeInTheDocument();
     expect(screen.getAllByText("–").length).toBeGreaterThan(0);
   });
+
+  it("renders both values when the resolved mode is hybrid", () => {
+    render(
+      <TaskbarStage
+        catalog="01-obsidian-orbit"
+        state="expanded"
+        providers={[
+          {
+            ...CATALOG_TASKBAR_FIXTURE[0],
+            resolvedMode: "hybrid",
+            primaryValue: 73,
+            secondaryValue: 27,
+            primaryLabel: "used",
+          },
+        ]}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: "OpenAI: 73% used, 27% remaining",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("used · 27% remaining")).toBeInTheDocument();
+  });
 });

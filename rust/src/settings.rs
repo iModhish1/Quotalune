@@ -512,6 +512,7 @@ fn default_catalog_theme() -> String {
 /// Normalize a usage display mode; unknown values become None (remaining).
 pub fn normalize_usage_display_mode(value: &str) -> Option<String> {
     match value {
+        "remaining" => Some("remaining".to_string()),
         "used" => Some("used".to_string()),
         "hybrid" => Some("hybrid".to_string()),
         _ => None,
