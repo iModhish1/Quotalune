@@ -75,7 +75,7 @@ export function applyUsageSemantics(
     case "used":
       return { arc: value / 100, value, secondary, label: "used" };
     case "remaining":
-      return { arc: secondary / 100, value, secondary, label: "remaining" };
+      return { arc: remainingFraction, value: secondary, secondary: value, label: "remaining" };
     case "hybrid":
       return { arc: secondary / 100, value, secondary, label: "used" };
   }
