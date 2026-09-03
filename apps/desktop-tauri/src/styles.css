@@ -5193,10 +5193,11 @@ html:has(.menu-surface--tray) {
   color: var(--accent);
 }
 
-/* ── Settings body container: padded, centered, capped at 560px ─── */
+/* ── Settings body container: wide enough for the theme/runtime tools while
+   retaining a centered form rhythm on large screens. ─── */
 .settings-body {
   width: 100%;
-  max-width: 560px;
+  max-width: 840px;
   margin: 0 auto;
   padding: 16px 20px 24px;
   flex: 1;
@@ -5208,7 +5209,7 @@ html:has(.menu-surface--tray) {
   overflow: clip;
 }
 .settings-status {
-  max-width: 560px;
+  max-width: 840px;
   margin: 6px auto 0;
 }
 

@@ -350,10 +350,15 @@ pub fn parse_providers_bundle(json: &str) -> Result<Vec<ProviderUsageSnapshot>, 
         if !entry.used_percent.is_finite() {
             return Err("used_percent not finite".to_string());
         }
-        let status = match entry.status.as_deref() {
-            Some("attention") => "ready",
-            Some(other) if other == "ok" || other == "ready" => "ready",
-            _ => "ready",
+        let (error, error_state) = match entry.status.as_deref() {
+            None | Some("ok" | "ready" | "attention") => {
+                (None, codexbar::core::ProviderStateKind::Ready)
+            }
+            Some("offline" | "unavailable") => (
+                Some("Proof fixture: usage unavailable".to_string()),
+                codexbar::core::ProviderStateKind::LocalRuntimeOffline,
+            ),
+            Some(other) => return Err(format!("unknown status '{other}'")),
         };
         let remaining = 100.0 - entry.used_percent;
         let window = |used: f64, remaining: f64| crate::commands::RateWindowSnapshot {
@@ -388,8 +393,8 @@ pub fn parse_providers_bundle(json: &str) -> Result<Vec<ProviderUsageSnapshot>, 
             account_email: None,
             source_label: "proof-bundle".to_string(),
             updated_at: "2026-09-03T12:00:00Z".to_string(),
-            error: None,
-            error_state: codexbar::core::ProviderStateKind::Ready,
+            error,
+            error_state,
             pace: None,
             account_organization: None,
             tray_status_label: None,
@@ -398,7 +403,6 @@ pub fn parse_providers_bundle(json: &str) -> Result<Vec<ProviderUsageSnapshot>, 
             wayfinder_usage: None,
             fetch_duration_ms: None,
         };
-        let _ = status;
         out.push(snapshot);
     }
     // Deterministic ordering: by provider id.
@@ -761,6 +765,28 @@ mod bundle_tests {
         assert_eq!(out[0].display_name, "Claude");
         assert_eq!(out[0].primary.used_percent, 73.0);
         assert_eq!(out[0].primary.remaining_percent, 27.0);
+    }
+
+    #[test]
+    fn offline_status_produces_an_honest_unavailable_snapshot() {
+        let json = r#"{"version": 1, "providers": [
+            {"provider": "deepseek", "account_id": "proof-offline", "used_percent": 0, "status": "offline"}
+        ]}"#;
+        let out = parse_providers_bundle(json).expect("offline fixture parses");
+        assert_eq!(out.len(), 1);
+        assert!(out[0].error.is_some());
+        assert_eq!(
+            out[0].error_state,
+            codexbar::core::ProviderStateKind::LocalRuntimeOffline
+        );
+    }
+
+    #[test]
+    fn unknown_status_is_rejected_instead_of_silently_ignored() {
+        let json = r#"{"version": 1, "providers": [
+            {"provider": "claude", "used_percent": 10, "status": "mystery"}
+        ]}"#;
+        assert!(parse_providers_bundle(json).is_err());
     }
 
     #[test]

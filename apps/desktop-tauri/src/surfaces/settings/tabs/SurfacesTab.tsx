@@ -1,5 +1,5 @@
 /**
- * Surfaces — QuotaArc surface editor (Edge Arc, Top Arc).
+ * Surfaces — QuotaArc surface editor (Taskbar, Edge, and Top arcs).
  *
  * Live configuration: every change is applied immediately through the
  * surface bridge, so the real surface windows update while editing.
@@ -96,6 +96,46 @@ export default function SurfacesTab() {
   return (
     <>
       <section className="settings-section">
+        <h3 className="settings-section__title">Show Taskbar Arc · Taskbar Arc</h3>
+        <div className="settings-section__group">
+          <Field
+            label="Show Taskbar Arc"
+            description="Places the orbital quota instrument directly above the Windows taskbar."
+          >
+            <Toggle
+              checked={config.taskbarArcEnabled}
+              ariaLabel="Show Taskbar Arc"
+              disabled={false}
+              onChange={(v) => patch({ taskbarArcEnabled: v })}
+            />
+          </Field>
+          <Field label="Opacity">
+            <OpacitySlider
+              value={config.taskbarArcOpacity}
+              disabled={!config.taskbarArcEnabled}
+              onChange={(v) => patch({ taskbarArcOpacity: v })}
+            />
+          </Field>
+          <Field label="Click-through" description="Mouse input passes through the surface.">
+            <Toggle
+              checked={config.taskbarArcClickThrough}
+              ariaLabel="Taskbar Arc click-through"
+              disabled={!config.taskbarArcEnabled}
+              onChange={(v) => patch({ taskbarArcClickThrough: v })}
+            />
+          </Field>
+          <Field label="Hide during fullscreen apps" description="Games and video take over the whole screen.">
+            <Toggle
+              checked={config.taskbarArcHideFullscreen}
+              ariaLabel="Hide Taskbar Arc during fullscreen apps"
+              disabled={!config.taskbarArcEnabled}
+              onChange={(v) => patch({ taskbarArcHideFullscreen: v })}
+            />
+          </Field>
+        </div>
+      </section>
+
+      <section className="settings-section">
         <h3 className="settings-section__title">
           {t("TrayShowEdgeArc")} · Edge Arc
         </h3>
@@ -103,6 +143,7 @@ export default function SurfacesTab() {
           <Field label={t("TrayShowEdgeArc")}>
             <Toggle
               checked={config.edgeArcEnabled}
+              ariaLabel={t("TrayShowEdgeArc")}
               disabled={false}
               onChange={(v) => patch({ edgeArcEnabled: v })}
             />
@@ -113,6 +154,7 @@ export default function SurfacesTab() {
           >
             <Select
               value={config.edgeArcSide}
+              ariaLabel="Edge Arc side"
               disabled={!config.edgeArcEnabled}
               options={[
                 { value: "right", label: "Right edge" },
@@ -138,6 +180,7 @@ export default function SurfacesTab() {
           <Field label="Click-through" description="Mouse input passes through the surface.">
             <Toggle
               checked={config.edgeArcClickThrough}
+              ariaLabel="Edge Arc click-through"
               disabled={!config.edgeArcEnabled}
               onChange={(v) => patch({ edgeArcClickThrough: v })}
             />
@@ -145,6 +188,7 @@ export default function SurfacesTab() {
           <Field label="Hide during fullscreen apps" description="Games and video take over the whole screen.">
             <Toggle
               checked={config.edgeArcHideFullscreen}
+              ariaLabel="Hide Edge Arc during fullscreen apps"
               disabled={!config.edgeArcEnabled}
               onChange={(v) => patch({ edgeArcHideFullscreen: v })}
             />
@@ -160,6 +204,7 @@ export default function SurfacesTab() {
           <Field label={t("TrayShowTopArc")}>
             <Toggle
               checked={config.topArcEnabled}
+              ariaLabel={t("TrayShowTopArc")}
               disabled={false}
               onChange={(v) => patch({ topArcEnabled: v })}
             />
@@ -181,6 +226,7 @@ export default function SurfacesTab() {
           <Field label="Click-through" description="Mouse input passes through the surface.">
             <Toggle
               checked={config.topArcClickThrough}
+              ariaLabel="Top Arc click-through"
               disabled={!config.topArcEnabled}
               onChange={(v) => patch({ topArcClickThrough: v })}
             />
@@ -188,6 +234,7 @@ export default function SurfacesTab() {
           <Field label="Hide during fullscreen apps" description="Games and video take over the whole screen.">
             <Toggle
               checked={config.topArcHideFullscreen}
+              ariaLabel="Hide Top Arc during fullscreen apps"
               disabled={!config.topArcEnabled}
               onChange={(v) => patch({ topArcHideFullscreen: v })}
             />

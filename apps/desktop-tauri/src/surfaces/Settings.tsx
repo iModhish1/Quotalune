@@ -20,6 +20,11 @@ import UsageSpendTab from "./settings/tabs/UsageSpendTab";
 import SurfacesTab from "./settings/tabs/SurfacesTab";
 import ThemeGallery from "./settings/tabs/ThemeGallery";
 import UsageDisplaySection from "./settings/tabs/UsageDisplaySection";
+import {
+  SETTINGS_WINDOW_HEIGHT,
+  SETTINGS_WINDOW_WIDTH,
+  fitSettingsWindowSize,
+} from "./settings/settingsWindowGeometry";
 
 // Inline monochrome SVG icons stand in for the upstream macOS SF Symbols
 // (gearshape / square.grid.2x2 / eye / slider.horizontal.3 / info.circle).
@@ -116,23 +121,13 @@ const TabIcons: Record<SettingsTabId, ReactElement> = {
 };
 
 
-const SETTINGS_WINDOW_HEIGHT = 580;
-const SETTINGS_WINDOW_WIDTH = 600;
-
 async function applySettingsWindowSize() {
   const workArea = await getWorkAreaRect().catch(() => null);
   const screenWidth = window.screen.availWidth || window.innerWidth || SETTINGS_WINDOW_WIDTH;
   const screenHeight = window.screen.availHeight || window.innerHeight || SETTINGS_WINDOW_HEIGHT;
   const maxWidth = Math.min(workArea?.width ?? screenWidth, screenWidth);
   const maxHeight = Math.min(workArea?.height ?? screenHeight, screenHeight);
-  const width = Math.max(
-    360,
-    Math.min(SETTINGS_WINDOW_WIDTH, maxWidth - 16),
-  );
-  const height = Math.max(
-    360,
-    Math.min(SETTINGS_WINDOW_HEIGHT, maxHeight - 16),
-  );
+  const { width, height } = fitSettingsWindowSize(maxWidth, maxHeight);
   const win = getCurrentWindow();
   await win.setSize(new LogicalSize(width, height)).catch(() => {});
   const screenOrigin = window.screen as Screen & {
@@ -186,6 +181,13 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
   useEffect(() => {
     void applySettingsWindowSize();
   }, []);
+
+  useEffect(() => {
+    const active = document.querySelector<HTMLElement>(
+      '.settings-tab[aria-selected="true"]',
+    );
+    active?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [activeTab]);
 
   const set = (patch: SettingsUpdate) => void update(patch);
   const handleTabClick = useCallback((tab: SettingsTabId) => {

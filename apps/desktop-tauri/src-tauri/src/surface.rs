@@ -1,5 +1,13 @@
 use serde::{Deserialize, Serialize};
 
+/// Shared Settings-window geometry. Both the main-shell proof path and the
+/// detached production window use these values so the tab strip and theme
+/// gallery cannot regress to the legacy narrow layout on one path only.
+pub const SETTINGS_WINDOW_WIDTH: f64 = 900.0;
+pub const SETTINGS_WINDOW_HEIGHT: f64 = 720.0;
+pub const SETTINGS_WINDOW_MIN_WIDTH: f64 = 640.0;
+pub const SETTINGS_WINDOW_MIN_HEIGHT: f64 = 520.0;
+
 /// The four surfaces the desktop shell can present.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -84,10 +92,10 @@ impl SurfaceMode {
                 visible: true,
                 decorations: true,
                 resizable: true,
-                width: 496.0,
-                height: 580.0,
-                min_width: None,
-                min_height: None,
+                width: SETTINGS_WINDOW_WIDTH,
+                height: SETTINGS_WINDOW_HEIGHT,
+                min_width: Some(SETTINGS_WINDOW_MIN_WIDTH),
+                min_height: Some(SETTINGS_WINDOW_MIN_HEIGHT),
                 always_on_top: false,
                 blur_dismiss: false,
                 skip_taskbar: false,
@@ -288,8 +296,10 @@ mod tests {
     #[test]
     fn settings_properties() {
         let props = SurfaceMode::Settings.window_properties();
-        assert_eq!(props.width, 496.0);
-        assert_eq!(props.height, 580.0);
+        assert_eq!(props.width, 900.0);
+        assert_eq!(props.height, 720.0);
+        assert_eq!(props.min_width, Some(640.0));
+        assert_eq!(props.min_height, Some(520.0));
     }
 
     #[test]

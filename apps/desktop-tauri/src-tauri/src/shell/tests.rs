@@ -335,7 +335,16 @@ fn larger_visible_destination_reclamps_preserved_top_left() {
     let reclamped =
         reclamp_preserved_visible_position(current_top_left, &monitor, SurfaceMode::Settings, 1.0);
 
-    assert_eq!(reclamped, (1416, 492));
+    let settings_size = surface_panel_size(SurfaceMode::Settings);
+    assert_ne!(reclamped, current_top_left);
+    assert_eq!(
+        reclamped.0 + settings_size.width as i32,
+        monitor.width as i32 - 8
+    );
+    assert_eq!(
+        reclamped.1 + settings_size.height as i32,
+        monitor.height as i32 - 8
+    );
 }
 
 #[test]
