@@ -373,6 +373,12 @@ pub struct Settings {
     #[serde(default = "default_true")]
     pub taskbar_arc_hide_fullscreen: bool,
 
+    /// Orbital theme catalog selection (themeCatalog slug, e.g.
+    /// "01-obsidian-orbit"). Invalid or missing slugs fall back to the
+    /// Obsidian Orbit default at read time.
+    #[serde(default = "default_catalog_theme")]
+    pub catalog_theme: String,
+
     /// Privacy Mode: hide account/profile names, emails, and costs across
     /// surfaces. Persisted so it survives restarts; toggleable from the tray.
     #[serde(default)]
@@ -477,6 +483,37 @@ pub fn clamp_float_bar_scale(value: u8) -> u8 {
 }
 
 // ── QuotaArc Surface Engine defaults/clamps ──────────────────────────────
+
+fn default_catalog_theme() -> String {
+    "01-obsidian-orbit".to_string()
+}
+
+/// Validate a catalog theme slug; unknown values fall back to the default
+/// so a corrupt settings file can never select a nonexistent theme.
+pub fn normalize_catalog_theme(value: &str) -> String {
+    const KNOWN: &[&str] = &[
+        "01-obsidian-orbit",
+        "02-aurora-bloom",
+        "03-solar-ember",
+        "04-porcelain-halo",
+        "05-noir-constellation",
+        "06-halo-spine",
+        "07-eclipse-dial",
+        "08-prism-zenith",
+        "09-quantum-orchid",
+        "10-celestial-ice",
+        "11-emerald-singularity",
+        "12-crimson-nova",
+        "13-lunar-titanium",
+        "14-sapphire-observatory",
+        "15-astral-dune",
+    ];
+    if KNOWN.contains(&value) {
+        value.to_string()
+    } else {
+        default_catalog_theme()
+    }
+}
 
 fn default_edge_arc_side() -> String {
     "right".to_string()
@@ -670,6 +707,7 @@ impl Default for Settings {
             taskbar_arc_opacity: default_surface_opacity(),
             taskbar_arc_click_through: false,
             taskbar_arc_hide_fullscreen: true,
+            catalog_theme: default_catalog_theme(),
             privacy_mode: false,
             promote_tray_icon: true,
             claude_daily_routines_usage_visible: true,

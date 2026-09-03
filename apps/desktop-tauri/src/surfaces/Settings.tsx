@@ -18,6 +18,7 @@ import AboutTab from "./settings/tabs/AboutTab";
 import ProvidersTab from "./settings/tabs/ProvidersTab";
 import UsageSpendTab from "./settings/tabs/UsageSpendTab";
 import SurfacesTab from "./settings/tabs/SurfacesTab";
+import ThemeGallery from "./settings/tabs/ThemeGallery";
 
 // Inline monochrome SVG icons stand in for the upstream macOS SF Symbols
 // (gearshape / square.grid.2x2 / eye / slider.horizontal.3 / info.circle).
@@ -88,6 +89,12 @@ const TabIcons: Record<SettingsTabId, ReactElement> = {
     <Svg>
       <path d="M8 2.5 14 5.5 8 8.5 2 5.5Z" />
       <path d="M2 9.5 8 12.5 14 9.5" />
+    </Svg>
+  ),
+  themes: (
+    <Svg>
+      <circle cx="8" cy="8" r="6" />
+      <circle cx="8" cy="8" r="2.4" />
     </Svg>
   ),
   advanced: (
@@ -269,6 +276,7 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
           <UsageSpendTab settings={settings} set={set} saving={saving} />
         )}
         {activeTab === "surfaces" && <SurfacesTab />}
+        {activeTab === "themes" && <ThemeGallery />}
         {activeTab === "advanced" && (
           <AdvancedTab settings={settings} set={set} saving={saving} />
         )}

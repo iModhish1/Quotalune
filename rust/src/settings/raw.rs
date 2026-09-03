@@ -191,6 +191,8 @@ pub(super) struct RawSettings {
     taskbar_arc_click_through: bool,
     #[serde(default = "default_true")]
     taskbar_arc_hide_fullscreen: bool,
+    #[serde(default = "default_catalog_theme")]
+    catalog_theme: String,
     #[serde(default)]
     privacy_mode: bool,
     #[serde(default = "default_true")]
@@ -317,6 +319,7 @@ impl Default for RawSettings {
             top_arc_click_through: s.top_arc_click_through,
             top_arc_hide_fullscreen: s.top_arc_hide_fullscreen,
             privacy_mode: s.privacy_mode,
+            catalog_theme: s.catalog_theme,
             taskbar_arc_enabled: s.taskbar_arc_enabled,
             taskbar_arc_opacity: s.taskbar_arc_opacity,
             taskbar_arc_click_through: s.taskbar_arc_click_through,
@@ -634,6 +637,7 @@ impl From<RawSettings> for Settings {
             top_arc_click_through: raw.top_arc_click_through,
             top_arc_hide_fullscreen: raw.top_arc_hide_fullscreen,
             privacy_mode: raw.privacy_mode,
+            catalog_theme: normalize_catalog_theme(&raw.catalog_theme),
             taskbar_arc_enabled: raw.taskbar_arc_enabled,
             taskbar_arc_opacity: clamp_surface_opacity(raw.taskbar_arc_opacity),
             taskbar_arc_click_through: raw.taskbar_arc_click_through,

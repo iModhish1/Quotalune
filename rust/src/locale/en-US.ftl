@@ -7,6 +7,7 @@ TabApiKeys = API Keys
 TabCookies = Cookies
 TabUsageSpend = Usage & Spend
 TabSurfaces = Surfaces
+TabThemes = Themes
 TabAdvanced = Advanced
 TabAbout = About
 TabShortcuts = Shortcuts

@@ -7,6 +7,7 @@ TabApiKeys = API キー
 TabCookies = Cookie
 TabUsageSpend = Usage & Spend
 TabSurfaces = サーフェス
+TabThemes = テーマ
 TabAdvanced = 詳細
 TabAbout = 情報
 TabShortcuts = ショートカット

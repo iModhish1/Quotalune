@@ -224,6 +224,7 @@ export const ALL_LOCALE_KEYS = [
   "TrayOpenQuotaArc",
   "TrayShowEdgeArc",
   "TabSurfaces",
+  "TabThemes",
   "TrayShowTopArc",
   "TrayPopOutDashboard",
   "TrayShowWindow",

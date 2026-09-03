@@ -8,6 +8,7 @@ export type SettingsTabId =
   | "menu"
   | "usageSpend"
   | "surfaces"
+  | "themes"
   | "advanced"
   | "about";
 
@@ -201,6 +202,7 @@ export interface SettingsSnapshot {
   menuBarDisplayMode: MenuBarDisplayMode;
   hidePersonalInfo: boolean;
   privacyMode?: boolean;
+  catalogTheme?: string;
   updateChannel: UpdateChannel;
   autoDownloadUpdates: boolean;
   installUpdatesOnQuit: boolean;

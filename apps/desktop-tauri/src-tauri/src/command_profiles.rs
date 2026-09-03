@@ -365,6 +365,19 @@ pub fn set_privacy_mode(app: AppHandle, enabled: bool) -> Result<(), String> {
     Ok(())
 }
 
+/// Apply a catalog theme globally (validated server-side; invalid slugs
+/// fall back to the Obsidian Orbit default). Persisted and broadcast so
+/// every live surface re-themes without restart.
+#[tauri::command]
+pub fn set_catalog_theme(app: AppHandle, slug: String) -> Result<(), String> {
+    let mut settings = Settings::load();
+    settings.catalog_theme = codexbar::settings::normalize_catalog_theme(slug.trim());
+    settings.save().map_err(|e| e.to_string())?;
+    use tauri::Emitter;
+    let _ = app.emit("codexbar:settings-updated", ());
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

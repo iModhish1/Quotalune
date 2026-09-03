@@ -7,6 +7,7 @@ TabApiKeys = API 金鑰
 TabCookies = Cookie
 TabUsageSpend = Usage & Spend
 TabSurfaces = 懸浮面
+TabThemes = 主題
 TabAdvanced = 高階
 TabAbout = 關於
 TabShortcuts = 快捷鍵

@@ -7,6 +7,7 @@ TabApiKeys = API Anahtarları
 TabCookies = Çerezler
 TabUsageSpend = Kullanım ve Harcama
 TabSurfaces = Yüzeyler
+TabThemes = Temalar
 TabAdvanced = Gelişmiş
 TabAbout = Hakkında
 TabShortcuts = Kısayollar

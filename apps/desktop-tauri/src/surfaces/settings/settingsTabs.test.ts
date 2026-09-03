@@ -43,7 +43,7 @@ describe("TAB_META", () => {
       "menu",
       "usageSpend",
       "surfaces",
-      "advanced",
+      "themes",      "advanced",
       "about",
     ];
     expect(declared).toEqual(new Set(expected));

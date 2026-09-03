@@ -452,6 +452,7 @@ locale_keys! {
     TrayOpenQuotaArc,
     TrayShowEdgeArc,
     TabSurfaces,
+    TabThemes,
     TrayShowTopArc,
     TrayPopOutDashboard,
     TrayShowWindow,

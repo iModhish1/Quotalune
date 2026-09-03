@@ -7,6 +7,7 @@ TabApiKeys = API 키
 TabCookies = 쿠키
 TabUsageSpend = Usage & Spend
 TabSurfaces = 서페이스
+TabThemes = 테마
 TabAdvanced = 고급
 TabAbout = 정보
 TabShortcuts = 단축키

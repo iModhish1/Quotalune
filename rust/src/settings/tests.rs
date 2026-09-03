@@ -1031,3 +1031,24 @@ fn codex_spark_usage_visibility_defaults_to_visible_and_roundtrips() {
 
     assert!(!loaded.codex_spark_usage_visible());
 }
+
+#[test]
+fn catalog_theme_validation_falls_back_to_default() {
+    assert_eq!(
+        crate::settings::normalize_catalog_theme("01-obsidian-orbit"),
+        "01-obsidian-orbit"
+    );
+    assert_eq!(
+        crate::settings::normalize_catalog_theme("15-astral-dune"),
+        "15-astral-dune"
+    );
+    // Invalid slugs (corrupt file, removed theme) fall back to default.
+    assert_eq!(
+        crate::settings::normalize_catalog_theme("99-nonexistent"),
+        "01-obsidian-orbit"
+    );
+    assert_eq!(
+        crate::settings::normalize_catalog_theme(""),
+        "01-obsidian-orbit"
+    );
+}

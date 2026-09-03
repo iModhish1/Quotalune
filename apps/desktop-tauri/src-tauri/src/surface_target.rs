@@ -15,6 +15,7 @@ const SETTINGS_TAB_IDS: &[&str] = &[
     "menu",
     "usageSpend",
     "surfaces",
+    "themes",
     "advanced",
     "about",
 ];
