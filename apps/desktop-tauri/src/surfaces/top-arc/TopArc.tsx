@@ -1,184 +1,78 @@
-/**
- * Top Arc V2 — Edge Object notch.
- *
- * A graphite notch descending from the top edge of the screen (flush top,
- * rounded bottom corners). Idle: provider instruments only. Hover: subtle
- * peek. Click: morphs into a compact provider summary — the same object,
- * never a separate window.
- */
-import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+/** Live catalog-themed top orbital notch. */
+import { useCallback, useEffect, useState } from "react";
+
+import TopOrbitStage from "../../components/top/TopOrbitStage";
 import {
-  QaSurface,
-  QaProviderInstrument,
-  QaValue,
-  QaStatusIndicator,
-  statusOf,
-  springSoft,
-} from "../../design-system";
-import { useProviders } from "../../hooks/useProviders";
-import { QaProviderIcon } from "../../design-system";
-import { refreshProvidersIfStale, refreshProviders } from "../../lib/tauri";
+  TOP_ORBIT_COMPACT_HEIGHT,
+  TOP_ORBIT_COMPACT_WIDTH,
+  TOP_ORBIT_EXPANDED_HEIGHT,
+  TOP_ORBIT_EXPANDED_WIDTH,
+} from "../../components/top/topOrbitLayout";
+import type { StageProvider } from "../../components/orbit/stageTypes";
+import { useStageRuntime } from "../../hooks/useStageRuntime";
 import { resizeTopArc } from "../../lib/surfaceBridge";
-import type { ProviderUsageSnapshot } from "../../types/bridge";
-import "./toparc-v2.css";
 
-const IDLE_W = 300;
-const IDLE_H = 48;
-const PANEL_W = 348;
-const PANEL_H = 280;
-
-function remainingOf(p: ProviderUsageSnapshot): number | null {
-  const win = p.selectedMetric ?? p.primary;
-  if (!win) return null;
-  if (typeof win.remainingPercent === "number") {
-    return Math.max(0, Math.min(1, win.remainingPercent / 100));
-  }
-  return Math.max(0, Math.min(1, 1 - win.usedPercent / 100));
-}
-
-export interface DemoProvider {
-  providerId: string;
-  displayName: string;
-  remaining: number | null;
-  reset?: string | null;
-  error?: string | null;
-}
+const DEMO_PROVIDERS: StageProvider[] = [
+  { id: "codex", name: "OpenAI", iconId: "openai", resolvedMode: "remaining", arcFraction: 0.74, primaryValue: 74, secondaryValue: 26, primaryLabel: "remaining", reset: "3h 40m", status: "ok" },
+  { id: "claude", name: "Claude", iconId: "claude", resolvedMode: "remaining", arcFraction: 0.68, primaryValue: 68, secondaryValue: 32, primaryLabel: "remaining", reset: "26h", status: "ok" },
+  { id: "gemini", name: "Gemini", iconId: "gemini", resolvedMode: "remaining", arcFraction: 0.55, primaryValue: 55, secondaryValue: 45, primaryLabel: "remaining", reset: "22h", status: "ok" },
+  { id: "llama", name: "Meta", iconId: "llama", resolvedMode: "remaining", arcFraction: 0.6, primaryValue: 60, secondaryValue: 40, primaryLabel: "remaining", reset: "5d", status: "ok" },
+  { id: "mistral", name: "Mistral", iconId: "mistral", resolvedMode: "remaining", arcFraction: 0.45, primaryValue: 45, secondaryValue: 55, primaryLabel: "remaining", reset: "1d", status: "attention" },
+  { id: "deepseek", name: "DeepSeek", iconId: "deepseek", resolvedMode: "remaining", arcFraction: 0.7, primaryValue: 70, secondaryValue: 30, primaryLabel: "remaining", reset: "19h", status: "ok" },
+  { id: "perplexity", name: "Perplexity", iconId: "perplexity", resolvedMode: "remaining", arcFraction: 0.5, primaryValue: 50, secondaryValue: 50, primaryLabel: "remaining", reset: "3d", status: "ok" },
+];
 
 interface TopArcProps {
   demo?: { state: "idle" | "hover" | "expanded" };
 }
 
 export default function TopArc({ demo }: TopArcProps) {
-  const live = useProviders({ refreshOnMount: true });
+  const runtime = useStageRuntime({ enabled: !demo });
   const [expanded, setExpanded] = useState(demo?.state === "expanded");
-  const [hover, setHover] = useState(demo?.state === "hover");
-
-  const demoProviders: DemoProvider[] = useMemo(
-    () =>
-      demo
-        ? [
-            { providerId: "claude", displayName: "Claude", remaining: 0.73, reset: "51m" },
-            { providerId: "codex", displayName: "Codex", remaining: 0.61, reset: "4d 4h" },
-            { providerId: "opencode", displayName: "OpenCode", remaining: 0.06, reset: "2h 10m" },
-          ]
-        : [],
-    [demo],
-  );
-
-  const providers: DemoProvider[] =
-    demoProviders.length > 0
-      ? demoProviders
-      : (live.providers ?? []).map((p: ProviderUsageSnapshot) => {
-          const win = p.selectedMetric ?? p.primary;
-          return {
-            providerId: p.providerId,
-            displayName: p.displayName,
-            remaining: remainingOf(p),
-            reset: win?.resetDescription?.replace(/^resets?\s+(in\s+)?/i, "") ?? null,
-            error: p.error,
-          };
-        });
+  const [focus, setFocus] = useState(0);
+  const providers = demo ? DEMO_PROVIDERS : runtime.providers;
 
   useEffect(() => {
     if (demo) return;
-    void refreshProvidersIfStale().catch(() => {});
-  }, [demo]);
-
-  useEffect(() => {
-    if (demo) return;
-    const w = expanded ? PANEL_W : IDLE_W;
-    const h = expanded ? PANEL_H : IDLE_H;
-    void resizeTopArc(w, h).catch(() => {});
+    void resizeTopArc(
+      expanded ? TOP_ORBIT_EXPANDED_WIDTH : TOP_ORBIT_COMPACT_WIDTH,
+      expanded ? TOP_ORBIT_EXPANDED_HEIGHT : TOP_ORBIT_COMPACT_HEIGHT,
+    ).catch(() => {});
   }, [expanded, demo]);
 
-  const sorted = useMemo(
-    () => [...providers].sort((a, b) => (a.remaining ?? 2) - (b.remaining ?? 2)),
-    [providers],
-  );
+  useEffect(() => {
+    if (focus >= providers.length) setFocus(0);
+  }, [focus, providers.length]);
+
+  const cycle = useCallback((direction: 1 | -1) => {
+    setFocus((current) => {
+      if (providers.length === 0) return 0;
+      return (current + direction + providers.length) % providers.length;
+    });
+  }, [providers.length]);
+
+  useEffect(() => {
+    if (demo) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowRight" || event.key === "ArrowDown") cycle(1);
+      if (event.key === "ArrowLeft" || event.key === "ArrowUp") cycle(-1);
+      if (event.key === "Escape") setExpanded(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [cycle, demo]);
 
   return (
-    <QaSurface
-      edge="top"
-      material={expanded ? "glass" : "graphite"}
-      className={`qa-toparc ${hover && !expanded ? "qa-toparc--peek" : ""}`}
-      style={{ inset: 0 }}
-      role="region"
-      ariaLabel="QuotaArc Top Arc"
-    >
-      <div
-        className="qa-toparc__inner"
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-        onClick={() => {
-          if (demo) return;
-          setExpanded((v) => !v);
-          if (!expanded) void refreshProviders().catch(() => {});
-        }}
-      >
-        <AnimatePresence mode="wait" initial={false}>
-          {!expanded ? (
-            <motion.div
-              key="idle"
-              className="qa-toparc__idle"
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={springSoft}
-            >
-              {providers.slice(0, 5).map((p) => (
-                <QaProviderInstrument
-                  key={p.providerId}
-                  icon={
-                    <span className="qa-tico" aria-hidden="true">
-                      <QaProviderIcon providerId={p.providerId} size={15} />
-                    </span>
-                  }
-                  remaining={p.remaining}
-                  statusOverride={p.error ? "offline" : undefined}
-                  ariaLabel={`${p.displayName} ${p.remaining == null ? "unknown" : `${Math.round((p.remaining ?? 0) * 100)}%`}`}
-                  size={26}
-                />
-              ))}
-              {providers.length === 0 && <span className="qa-toparc__hint">QuotaArc</span>}
-            </motion.div>
-          ) : (
-            <motion.div
-              key="panel"
-              className="qa-toparc__panel"
-              initial={{ opacity: 0, y: -14 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={springSoft}
-            >
-              <div className="qa-quick-panel__head">
-                <span className="qa-quick-panel__brand">QuotaArc</span>
-              </div>
-              <div className="qa-quick-panel__rows">
-                {sorted.map((p) => {
-                  const pct = p.remaining == null ? null : Math.round(p.remaining * 100);
-                  const status = p.error ? "offline" : statusOf(p.remaining);
-                  return (
-                    <div className="qa-quick-panel__row" key={p.providerId}>
-                      <span className="qa-tico qa-tico--panel" aria-hidden="true">
-                        <QaProviderIcon providerId={p.providerId} size={16} />
-                      </span>
-                      <div className="qa-quick-panel__meta">
-                        <span className="qa-quick-panel__name">{p.displayName}</span>
-                        <span className="qa-reset" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <QaStatusIndicator status={status} />
-                          {p.error ? "Needs attention" : `resets in ${p.reset ?? "—"}`}
-                        </span>
-                      </div>
-                      <QaValue>{pct == null ? "—" : `${pct}%`}</QaValue>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </QaSurface>
+    <TopOrbitStage
+      catalog={runtime.catalog}
+      state={demo?.state ?? (expanded ? "expanded" : "idle")}
+      providers={providers}
+      focusedIndex={focus}
+      onFocusProvider={setFocus}
+      onToggleExpanded={demo ? undefined : () => {
+        setExpanded((value) => !value);
+        if (!expanded) runtime.refresh();
+      }}
+    />
   );
 }

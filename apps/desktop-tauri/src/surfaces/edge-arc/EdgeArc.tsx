@@ -1,145 +1,78 @@
-/**
- * Edge Arc V3 — narrow screen-edge instrument RAIL.
- *
- * V2's half-capsule wasted the space a giant semicircle needs. V3 is a
- * 64px rail grafted flush onto the screen edge, stacking one ring-instrument
- * per provider: Arc V3 with the provider glyph inside, tabular value
- * beneath. Hover/expand grows rows inward; the rail stays edge-anchored.
- */
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "motion/react";
-import { QaSurface, QaValue, QaStatusIndicator, statusOf, springSoft, ArcGaugeV3, QaProviderIcon } from "../../design-system";
-import { useProviders } from "../../hooks/useProviders";
-import { refreshProvidersIfStale } from "../../lib/tauri";
+/** Live catalog-themed right-edge half orbit. */
+import { useCallback, useEffect, useState } from "react";
+
+import EdgeOrbitStage from "../../components/edge/EdgeOrbitStage";
+import {
+  EDGE_ORBIT_COMPACT_HEIGHT,
+  EDGE_ORBIT_COMPACT_WIDTH,
+  EDGE_ORBIT_EXPANDED_HEIGHT,
+  EDGE_ORBIT_EXPANDED_WIDTH,
+} from "../../components/edge/edgeOrbitLayout";
+import type { StageProvider } from "../../components/orbit/stageTypes";
+import { useStageRuntime } from "../../hooks/useStageRuntime";
 import { resizeEdgeArc } from "../../lib/surfaceBridge";
-import type { ProviderUsageSnapshot } from "../../types/bridge";
-import "./edgearc-v3.css";
 
-const ROW_H = 62;
-const PAD = 18;
-
-function remainingOf(p: ProviderUsageSnapshot): number | null {
-  const win = p.selectedMetric ?? p.primary;
-  if (!win) return null;
-  if (typeof win.remainingPercent === "number") {
-    return Math.max(0, Math.min(1, win.remainingPercent / 100));
-  }
-  return Math.max(0, Math.min(1, 1 - win.usedPercent / 100));
-}
-
-export interface DemoProvider {
-  providerId: string;
-  displayName: string;
-  remaining: number | null;
-  reset?: string | null;
-  error?: string | null;
-}
+const DEMO_PROVIDERS: StageProvider[] = [
+  { id: "codex", name: "OpenAI", iconId: "openai", resolvedMode: "remaining", arcFraction: 0.74, primaryValue: 74, secondaryValue: 26, primaryLabel: "remaining", reset: "3h 40m", status: "ok" },
+  { id: "claude", name: "Claude", iconId: "claude", resolvedMode: "remaining", arcFraction: 0.68, primaryValue: 68, secondaryValue: 32, primaryLabel: "remaining", reset: "26h", status: "ok" },
+  { id: "gemini", name: "Gemini", iconId: "gemini", resolvedMode: "remaining", arcFraction: 0.55, primaryValue: 55, secondaryValue: 45, primaryLabel: "remaining", reset: "22h", status: "ok" },
+  { id: "llama", name: "Meta", iconId: "llama", resolvedMode: "remaining", arcFraction: 0.6, primaryValue: 60, secondaryValue: 40, primaryLabel: "remaining", reset: "5d", status: "ok" },
+  { id: "mistral", name: "Mistral", iconId: "mistral", resolvedMode: "remaining", arcFraction: 0.45, primaryValue: 45, secondaryValue: 55, primaryLabel: "remaining", reset: "1d", status: "attention" },
+  { id: "deepseek", name: "DeepSeek", iconId: "deepseek", resolvedMode: "remaining", arcFraction: 0.7, primaryValue: 70, secondaryValue: 30, primaryLabel: "remaining", reset: "19h", status: "ok" },
+  { id: "perplexity", name: "Perplexity", iconId: "perplexity", resolvedMode: "remaining", arcFraction: 0.5, primaryValue: 50, secondaryValue: 50, primaryLabel: "remaining", reset: "3d", status: "ok" },
+];
 
 interface EdgeArcProps {
-  demo?: { state: "idle" | "expanded" };
+  demo?: { state: "idle" | "hover" | "expanded" };
 }
 
 export default function EdgeArc({ demo }: EdgeArcProps) {
-  const live = useProviders({ refreshOnMount: true });
-  const [hoverId, setHoverId] = useState<string | null>(null);
-
-  const demoProviders: DemoProvider[] = useMemo(
-    () =>
-      demo
-        ? [
-            { providerId: "claude", displayName: "Claude", remaining: 0.73, reset: "51m" },
-            { providerId: "codex", displayName: "Codex", remaining: 0.61, reset: "4d 4h" },
-            { providerId: "opencode", displayName: "OpenCode", remaining: 0.06, reset: "2h 10m" },
-          ]
-        : [],
-    [demo],
-  );
-
-  const providers: DemoProvider[] =
-    demoProviders.length > 0
-      ? demoProviders
-      : (live.providers ?? []).map((p: ProviderUsageSnapshot) => {
-          const win = p.selectedMetric ?? p.primary;
-          return {
-            providerId: p.providerId,
-            displayName: p.displayName,
-            remaining: remainingOf(p),
-            reset: win?.resetDescription?.replace(/^resets?\s+(in\s+)?/i, "") ?? null,
-            error: p.error,
-          };
-        });
+  const runtime = useStageRuntime({ enabled: !demo });
+  const [expanded, setExpanded] = useState(demo?.state === "expanded");
+  const [focus, setFocus] = useState(0);
+  const providers = demo ? DEMO_PROVIDERS : runtime.providers;
 
   useEffect(() => {
     if (demo) return;
-    void refreshProvidersIfStale().catch(() => {});
-  }, [demo]);
+    void resizeEdgeArc(
+      expanded ? EDGE_ORBIT_EXPANDED_WIDTH : EDGE_ORBIT_COMPACT_WIDTH,
+      expanded ? EDGE_ORBIT_EXPANDED_HEIGHT : EDGE_ORBIT_COMPACT_HEIGHT,
+    ).catch(() => {});
+  }, [expanded, demo]);
 
-  const expanded = demo?.state === "expanded";
+  useEffect(() => {
+    if (focus >= providers.length) setFocus(0);
+  }, [focus, providers.length]);
+
+  const cycle = useCallback((direction: 1 | -1) => {
+    setFocus((current) => {
+      if (providers.length === 0) return 0;
+      return (current + direction + providers.length) % providers.length;
+    });
+  }, [providers.length]);
 
   useEffect(() => {
     if (demo) return;
-    const height = PAD * 2 + providers.length * ROW_H;
-    void resizeEdgeArc(expanded ? 210 : 64, height).catch(() => {});
-  }, [providers.length, expanded, demo]);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowDown" || event.key === "ArrowRight") cycle(1);
+      if (event.key === "ArrowUp" || event.key === "ArrowLeft") cycle(-1);
+      if (event.key === "Escape") setExpanded(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [cycle, demo]);
 
   return (
-    <QaSurface
-      edge="right"
-      material={expanded ? "glass" : "graphite"}
-      className={`qa-earc ${expanded ? "qa-earc--expanded" : ""}`}
-      style={{ inset: 0 }}
-      role="region"
-      ariaLabel="QuotaArc Edge Arc"
-    >
-      <div className="qa-earc__inner">
-        {providers.slice(0, 6).map((p) => {
-          const pct = p.remaining == null ? null : Math.round(p.remaining * 100);
-          const status = p.error ? "offline" : statusOf(p.remaining);
-          const hovered = hoverId === p.providerId;
-          return (
-            <motion.div
-              key={p.providerId}
-              className="qa-earc__inst"
-              data-hover={hovered ? "true" : "false"}
-              onMouseEnter={() => setHoverId(p.providerId)}
-              onMouseLeave={() => setHoverId(null)}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={springSoft}
-              aria-label={`${p.displayName} ${pct == null ? "unknown" : `${pct}%`}`}
-            >
-              <div className="qa-earc__ringwrap">
-                <ArcGaugeV3
-                  remaining={p.remaining}
-                  size={34}
-                  stroke={3.2}
-                  statusOverride={p.error ? "offline" : undefined}
-                  ariaLabel={`${p.displayName} arc`}
-                />
-                <span className="qa-earc__glyph" aria-hidden="true">
-                  <QaProviderIcon providerId={p.providerId} size={13} />
-                </span>
-              </div>
-              <QaValue size="meta">{pct == null ? "–" : pct}</QaValue>
-              {expanded && (
-                <motion.div
-                  className="qa-earc__detail"
-                  initial={{ opacity: 0, x: 12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={springSoft}
-                >
-                  <span className="qa-earc__name">
-                    {p.displayName}
-                    <QaStatusIndicator status={status} />
-                  </span>
-                  <span className="qa-reset">↻ {p.reset ?? "—"}</span>
-                </motion.div>
-              )}
-            </motion.div>
-          );
-        })}
-        {providers.length === 0 && <span className="qa-earc__empty">·</span>}
-      </div>
-    </QaSurface>
+    <EdgeOrbitStage
+      catalog={runtime.catalog}
+      state={demo?.state === "expanded" || expanded ? "expanded" : "idle"}
+      providers={providers}
+      focusedIndex={focus}
+      onFocusProvider={setFocus}
+      onToggleExpanded={demo ? undefined : () => {
+        setExpanded((value) => !value);
+        if (!expanded) runtime.refresh();
+      }}
+    />
   );
 }

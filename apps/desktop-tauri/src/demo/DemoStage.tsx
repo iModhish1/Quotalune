@@ -8,23 +8,39 @@
  *   &v6=obsidian|graphite|midnight|ceramic|mono
  *   &usage=used|remaining|hybrid&usageCustom=claude:used,codex:remaining&focus=N
  */
-import { useEffect, useState, type ComponentType, type CSSProperties, type ReactNode } from "react";
+import { lazy, Suspense, type CSSProperties, type ReactNode } from "react";
 import { DesignSystemProvider } from "../design-system";
 import type { UsageDisplayConfig } from "../design-system";
-import TaskbarArc from "../surfaces/taskbar-arc/TaskbarArc";
-import TopArc from "../surfaces/top-arc/TopArc";
-import EdgeArc from "../surfaces/edge-arc/EdgeArc";
 import { HudFocus, DashboardHero } from "./DemoExtras";
 import { NotchSurfaceV4, SlabSurfaceV4, SpineSurfaceV4 } from "./V4Surfaces";
 import { TaskbarRadialV5, TopRadialV5, EdgeRadialV5, HudRadialV5 } from "./V5Surfaces";
 import CatalogSurface from "./CatalogSurface";
-import CatalogTaskbar from "./CatalogTaskbar";
+import CatalogTaskbar, { CATALOG_TASKBAR_FIXTURE } from "./CatalogTaskbar";
 import GeometrySurface from "./GeometrySurface";
 import {
   TASKBAR_COMPACT_HEIGHT,
   TASKBAR_EXPANDED_HEIGHT,
   TASKBAR_STAGE_WIDTH,
 } from "../components/taskbar/taskbarLayout";
+import TopOrbitStage from "../components/top/TopOrbitStage";
+import {
+  TOP_ORBIT_COMPACT_HEIGHT,
+  TOP_ORBIT_COMPACT_WIDTH,
+  TOP_ORBIT_EXPANDED_HEIGHT,
+  TOP_ORBIT_EXPANDED_WIDTH,
+} from "../components/top/topOrbitLayout";
+import EdgeOrbitStage from "../components/edge/EdgeOrbitStage";
+import {
+  EDGE_ORBIT_COMPACT_HEIGHT,
+  EDGE_ORBIT_COMPACT_WIDTH,
+  EDGE_ORBIT_EXPANDED_HEIGHT,
+  EDGE_ORBIT_EXPANDED_WIDTH,
+} from "../components/edge/edgeOrbitLayout";
+import "./demo.css";
+
+const LegacyTaskbarArc = lazy(() => import("../surfaces/taskbar-arc/TaskbarArc"));
+const LegacyTopArc = lazy(() => import("../surfaces/top-arc/TopArc"));
+const LegacyEdgeArc = lazy(() => import("../surfaces/edge-arc/EdgeArc"));
 
 const params = new URLSearchParams(window.location.search);
 const surface = params.get("surface") ?? "taskbar";
@@ -75,6 +91,55 @@ export default function DemoStage() {
 
   const catalogSlug = params.get("catalog");
   if (catalogSlug && params.get("gen") === "v8") {
+    if (surface === "edge") {
+      const edgeExpanded = state === "expanded";
+      const edgeWidth = edgeExpanded ? EDGE_ORBIT_EXPANDED_WIDTH : EDGE_ORBIT_COMPACT_WIDTH;
+      const edgeHeight = edgeExpanded ? EDGE_ORBIT_EXPANDED_HEIGHT : EDGE_ORBIT_COMPACT_HEIGHT;
+      const edgeScale = Math.min(
+        1,
+        Math.max(0.5, (window.innerHeight - 64) / edgeHeight),
+      );
+      return stage(
+        edgeWidth,
+        edgeHeight,
+        {
+          right: 0,
+          top: "50%",
+          transform: `translateY(-50%) scale(${edgeScale})`,
+          transformOrigin: "center right",
+        },
+        <EdgeOrbitStage
+          catalog={catalogSlug}
+          state={edgeExpanded ? "expanded" : "idle"}
+          providers={CATALOG_TASKBAR_FIXTURE}
+        />,
+      );
+    }
+    if (surface === "top") {
+      const topExpanded = state === "expanded";
+      const topWidth = topExpanded ? TOP_ORBIT_EXPANDED_WIDTH : TOP_ORBIT_COMPACT_WIDTH;
+      const topHeight = topExpanded ? TOP_ORBIT_EXPANDED_HEIGHT : TOP_ORBIT_COMPACT_HEIGHT;
+      const topScale = Math.min(
+        1,
+        Math.max(0.36, (window.innerWidth - 24) / topWidth),
+        Math.max(0.36, (window.innerHeight - 64) / topHeight),
+      );
+      return stage(
+        topWidth,
+        topHeight,
+        {
+          left: "50%",
+          top: 0,
+          transform: `translateX(-50%) scale(${topScale})`,
+          transformOrigin: "top center",
+        },
+        <TopOrbitStage
+          catalog={catalogSlug}
+          state={state}
+          providers={CATALOG_TASKBAR_FIXTURE}
+        />,
+      );
+    }
     const taskbarHeight = state === "expanded" ? TASKBAR_EXPANDED_HEIGHT : TASKBAR_COMPACT_HEIGHT;
     const taskbarScale = Math.min(
       1,
@@ -166,22 +231,12 @@ export default function DemoStage() {
   return stage(n.w, n.h, n.pos, n.node);
 }
 
-function useLazyComponent(Comp: ComponentType<{ demo?: { state: "idle" | "hover" | "expanded" } }>, state: "idle" | "hover" | "expanded") {
-  const [Mounted, setMounted] = useState<null | ComponentType<{ demo?: { state: "idle" | "hover" | "expanded" } }>>(null);
-  useEffect(() => setMounted(() => Comp), [Comp]);
-  if (!Mounted) return null;
-  return <Mounted demo={{ state: state === "expanded" ? "expanded" : state === "hover" ? "hover" : "idle" }} />;
-}
-
 function TaskbarArcWrapped({ state }: { state: "idle" | "hover" | "expanded" }) {
-  return useLazyComponent(TaskbarArc, state);
+  return <Suspense fallback={null}><LegacyTaskbarArc demo={{ state }} /></Suspense>;
 }
 function TopArcWrapped({ state }: { state: "idle" | "hover" | "expanded" }) {
-  return useLazyComponent(TopArc, state);
+  return <Suspense fallback={null}><LegacyTopArc demo={{ state }} /></Suspense>;
 }
 function EdgeArcWrapped({ state }: { state: "idle" | "hover" | "expanded" }) {
-  return useLazyComponent(
-    EdgeArc as ComponentType<{ demo?: { state: "idle" | "hover" | "expanded" } }>,
-    state,
-  );
+  return <Suspense fallback={null}><LegacyEdgeArc demo={{ state }} /></Suspense>;
 }

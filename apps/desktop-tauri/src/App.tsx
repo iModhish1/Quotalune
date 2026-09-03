@@ -34,6 +34,7 @@ const FloatBar = lazy(() => import("./floatbar/FloatBar"));
 const EdgeArc = lazy(() => import("./surfaces/edge-arc/EdgeArc"));
 const TopArc = lazy(() => import("./surfaces/top-arc/TopArc"));
 const TaskbarArc = lazy(() => import("./surfaces/taskbar-arc/TaskbarArc"));
+const DemoStage = lazy(() => import("./demo/DemoStage"));
 
 function SurfaceFallback() {
   return null;
@@ -78,7 +79,11 @@ function initialSettingsTab(): string {
 export default function App() {
   // Demo stage: pure render, no Tauri APIs (headless screenshot gate).
   if (new URLSearchParams(window.location.search).get("window") === "demo") {
-    return <AppDemo />;
+    return (
+      <Suspense fallback={<SurfaceFallback />}>
+        <DemoStage />
+      </Suspense>
+    );
   }
   return (
     <LocaleProvider>
@@ -86,18 +91,6 @@ export default function App() {
     </LocaleProvider>
   );
 }
-
-function AppDemo() {
-  const DemoStage = require_DemoStage();
-  return <DemoStage />;
-}
-
-function require_DemoStage() {
-  return DemoStageLazy;
-}
-
-import DemoStageLazy from "./demo/DemoStage";
-import "./demo/demo.css";
 
 function AppInner() {
   const { t } = useLocale();

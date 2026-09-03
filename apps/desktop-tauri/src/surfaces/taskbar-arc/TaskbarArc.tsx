@@ -6,126 +6,30 @@
  * snapshots, real reset info, compact/expanded interaction, focus cycling
  * (wheel/keyboard), and honest unavailable states. No synthetic fallbacks.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { listen } from "@tauri-apps/api/event";
-import TaskbarStage, { type StageProvider } from "../../components/taskbar/TaskbarStage";
+import TaskbarStage from "../../components/taskbar/TaskbarStage";
 import {
   TASKBAR_COMPACT_HEIGHT,
   TASKBAR_EXPANDED_HEIGHT,
   TASKBAR_STAGE_WIDTH,
 } from "../../components/taskbar/taskbarLayout";
-import { useProviders } from "../../hooks/useProviders";
-import { refreshProvidersIfStale, refreshProviders } from "../../lib/tauri";
 import { resizeTaskbarArc } from "../../lib/surfaceBridge";
-import { applyUsageSemantics, resolveUsageMode, type UsageDisplayConfig } from "../../design-system/themes";
-import type { ProviderUsageSnapshot } from "../../types/bridge";
-import { getSettingsSnapshot } from "../../lib/tauri";
+import { useStageRuntime } from "../../hooks/useStageRuntime";
+
+export { toStageProviders, usageConfigFromSnapshot } from "../../components/orbit/stageProviders";
 
 interface TaskbarArcProps {
   demo?: { state: "idle" | "hover" | "expanded" };
 }
 
-function remainingOf(p: ProviderUsageSnapshot): number | null {
-  const win = p.selectedMetric ?? p.primary;
-  if (!win) return null;
-  if (typeof win.remainingPercent === "number") {
-    return Math.max(0, Math.min(1, win.remainingPercent / 100));
-  }
-  return Math.max(0, Math.min(1, 1 - win.usedPercent / 100));
-}
-
-function resetOf(p: ProviderUsageSnapshot): string {
-  const win = p.selectedMetric ?? p.primary;
-  const text = win?.resetDescription ?? "";
-  const shortened = text.replace(/^resets?\s+(in\s+)?/i, "").trim();
-  return shortened.length > 0 ? shortened : "—";
-}
-
-/**
- * Pure pipeline: settings config + raw snapshots → StageProvider[].
- * No module state: identical arguments always produce identical output,
- * regardless of prior calls, renders, or tests (V8.7 state-isolation fix).
- */
-export function toStageProviders(
-  providers: ProviderUsageSnapshot[],
-  config: UsageDisplayConfig | undefined,
-): StageProvider[] {
-  return providers.slice(0, 7).map((p) => {
-    const remaining = p.error == null ? remainingOf(p) : null;
-    const mode = resolveUsageMode(
-      config ?? { global: "remaining", providerOverrides: {} },
-      p.providerId,
-    );
-    const s = applyUsageSemantics(mode, remaining);
-    return {
-      id: p.providerId,
-      name: p.displayName,
-      iconId: p.providerId,
-      resolvedMode: mode,
-      arcFraction: s.arc,
-      primaryValue: s.value,
-      secondaryValue: s.secondary,
-      primaryLabel: s.label,
-      reset: resetOf(p),
-      status: p.error ? "offline" : "ok",
-    };
-  });
-}
-
-/** Pure: settings snapshot → usage config (invalid values fall back). */
-export function usageConfigFromSnapshot(s: {
-  usageDisplayMode?: string | null;
-  providerUsageOverrides?: Record<string, string>;
-}): UsageDisplayConfig | undefined {
-  if (s.usageDisplayMode == null && !s.providerUsageOverrides) {
-    return undefined;
-  }
-  return {
-    global: (s.usageDisplayMode ?? "remaining") as "used" | "remaining" | "hybrid",
-    providerOverrides: Object.fromEntries(
-      Object.entries(s.providerUsageOverrides ?? {}).map(([k, v]) => [
-        k,
-        v as "used" | "remaining" | "hybrid",
-      ]),
-    ),
-  };
-}
-
 export default function TaskbarArc({ demo }: TaskbarArcProps) {
-  const live = useProviders({ refreshOnMount: true });
-  const [catalog, setCatalog] = useState<string>("01-obsidian-orbit");
-  const [usageConfig, setUsageConfigState] = useState<UsageDisplayConfig | undefined>(undefined);
+  const runtime = useStageRuntime({ enabled: !demo });
   const [expanded, setExpanded] = useState(demo?.state === "expanded");
   const [focus, setFocus] = useState(0);
   const wheelRef = useRef(0);
 
-  // Persisted catalog theme + live re-theme on broadcast.
-  useEffect(() => {
-    const load = () =>
-      getSettingsSnapshot()
-        .then((s) => {
-          setCatalog(s.catalogTheme ?? "01-obsidian-orbit");
-          setUsageConfigState(usageConfigFromSnapshot(s));
-        })
-        .catch(() => {});
-    load();
-    const unlistenPromise = listen("codexbar:settings-updated", load);
-    const unlisten = unlistenPromise.catch(() => (() => {}) as () => void);
-    return () => {
-      void unlisten.then((fn) => fn());
-    };
-  }, []);
-
-  useEffect(() => {
-    if (demo) return;
-    void refreshProvidersIfStale().catch(() => {});
-  }, [demo]);
-
-  const stageProviders = useMemo(
-    () => toStageProviders(live.providers ?? [], usageConfig),
-    [live.providers, usageConfig],
-  );
+  const stageProviders = runtime.providers;
 
   // Resize the native window with the stage.
   useEffect(() => {
@@ -184,7 +88,7 @@ export default function TaskbarArc({ demo }: TaskbarArcProps) {
   return (
     <div id="qa-taskbar-root" style={{ position: "fixed", inset: 0 }}>
       <TaskbarStage
-        catalog={catalog}
+        catalog={runtime.catalog}
         state={stageState}
         providers={stageProviders}
         focusedIndex={focus}
@@ -228,11 +132,4 @@ export default function TaskbarArc({ demo }: TaskbarArcProps) {
       </div>
     </div>
   );
-}
-
-import { useRef } from "react";
-
-async function getCatalogTheme(): Promise<string> {
-  const s = (await getSettingsSnapshot()) as { catalogTheme?: string };
-  return s.catalogTheme ?? "01-obsidian-orbit";
 }
