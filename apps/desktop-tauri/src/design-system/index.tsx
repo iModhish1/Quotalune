@@ -117,3 +117,11 @@ export {
   type UsageDisplayConfig,
   type UsageSemantics,
 } from "./themes";
+
+// ── Numeric formatting ───────────────────────────────────────────────
+export {
+  normalizePercentage,
+  formatPercentage,
+  arcFraction,
+  formatTokenCount,
+} from "./percent";

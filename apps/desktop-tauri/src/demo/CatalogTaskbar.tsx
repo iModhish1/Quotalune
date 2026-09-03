@@ -11,7 +11,7 @@
  * Demo route (Dev): ?window=demo&gen=v8&catalog=<slug>&state=idle|hover|expanded
  */
 import { ArcGaugeV3 } from "../design-system/ArcGaugeV3";
-import { QaProviderIcon } from "../design-system";
+import { QaProviderIcon, formatPercentage, arcFraction } from "../design-system";
 import { catalogBySlug, providerColor, type CatalogTheme } from "../design-system/themeCatalog";
 
 export type UsageMode = "used" | "remaining" | "hybrid";
@@ -265,7 +265,7 @@ export default function CatalogTaskbar({ catalog, state, providers }: Props) {
                 fontVariantNumeric: "tabular-nums",
               }}
             >
-              {pct == null ? "–" : `${pct}%`}
+              {formatPercentage(p.value)}
             </span>
             {expanded && (
               <span className="qa-reset" style={{ display: "block", fontSize: 10.5 }}>
