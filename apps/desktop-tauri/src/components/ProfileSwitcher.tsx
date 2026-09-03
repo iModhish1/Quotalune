@@ -51,7 +51,7 @@ export function useProfileStore(): ProfileStoreDto | null {
     reload();
     const unlisten = listen("profiles-changed", reload);
     return () => {
-      void unlisten.then((fn) => fn());
+      void unlisten.then((fn) => fn()).catch(() => {});
     };
   }, [reload]);
 
@@ -69,7 +69,7 @@ export function usePrivacyMode(): boolean {
     load();
     const unlisten = listen("codexbar:settings-updated", load);
     return () => {
-      void unlisten.then((fn) => fn());
+      void unlisten.then((fn) => fn()).catch(() => {});
     };
   }, []);
   return privacy;

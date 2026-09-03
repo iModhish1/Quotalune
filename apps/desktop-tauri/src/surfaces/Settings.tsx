@@ -280,7 +280,7 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
         {activeTab === "themes" && (
           <>
             <ThemeGallery />
-            <UsageDisplaySection />
+            <UsageDisplaySection providerCatalog={state.providers} />
           </>
         )}
         {activeTab === "advanced" && (
@@ -293,4 +293,3 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
     </div>
   );
 }
-

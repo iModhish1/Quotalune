@@ -13,7 +13,6 @@
  * visible via the design-system focus ring.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
   applyUsageSemantics,
@@ -23,7 +22,12 @@ import {
 } from "../../../design-system/themes";
 import { formatPercentage } from "../../../design-system/percent";
 import { QaProviderIcon } from "../../../design-system";
-import { getSettingsSnapshot } from "../../../lib/tauri";
+import { useProviders } from "../../../hooks/useProviders";
+import { getSettingsSnapshot, setUsageSettings } from "../../../lib/tauri";
+import type {
+  ProviderCatalogEntry,
+  ProviderUsageSnapshot,
+} from "../../../types/bridge";
 
 type Mode = "global" | "used" | "remaining" | "hybrid";
 
@@ -31,7 +35,6 @@ interface ProviderRow {
   id: string;
   name: string;
   remainingPercent: number | null;
-  error: boolean;
 }
 
 const USAGE_MODES: { value: UsageMode; label: string }[] = [
@@ -44,20 +47,32 @@ function isUsageMode(v: string | null | undefined): v is UsageMode {
   return v === "used" || v === "remaining" || v === "hybrid";
 }
 
-/** Canonical fixture values for the usage-semantics preview rows. */
-const PREVIEW_PROVIDERS: ProviderRow[] = [
-  { id: "codex", name: "Codex", remainingPercent: 79, error: false },
-  { id: "claude", name: "Claude", remainingPercent: 27, error: false },
-  { id: "gemini", name: "Gemini", remainingPercent: 42, error: false },
-];
+function remainingPercent(snapshot: ProviderUsageSnapshot | undefined): number | null {
+  if (!snapshot || snapshot.error != null) return null;
+  const window = snapshot.selectedMetric ?? snapshot.primary;
+  if (!window) return null;
+  if (Number.isFinite(window.remainingPercent)) {
+    return Math.max(0, Math.min(100, window.remainingPercent));
+  }
+  if (Number.isFinite(window.usedPercent)) {
+    return Math.max(0, Math.min(100, 100 - window.usedPercent));
+  }
+  return null;
+}
 
-export default function UsageDisplaySection() {
+interface UsageDisplaySectionProps {
+  providerCatalog: ProviderCatalogEntry[];
+}
+
+export default function UsageDisplaySection({
+  providerCatalog,
+}: UsageDisplaySectionProps) {
   const [globalMode, setGlobalMode] = useState<UsageMode>("remaining");
   const [overrides, setOverrides] = useState<Record<string, UsageMode>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
-  const [providers, setProviders] = useState<ProviderRow[]>(PREVIEW_PROVIDERS);
+  const live = useProviders({ refreshOnMount: false });
 
   useEffect(() => {
     const load = () =>
@@ -78,13 +93,10 @@ export default function UsageDisplaySection() {
             if (isUsageMode(v)) ov[k] = v;
           }
           setOverrides(ov);
-          if (Array.isArray(snap.enabledProviders) && snap.enabledProviders.length > 0) {
-            setProviders(
-              PREVIEW_PROVIDERS.filter((p) => snap.enabledProviders!.includes(p.id)),
-            );
-          }
         })
-        .catch(() => {});
+        .catch((reason: unknown) => {
+          setError(reason instanceof Error ? reason.message : String(reason));
+        });
     load();
     const unlisten = listen("codexbar:settings-updated", load).catch(
       () => (() => {}) as () => void,
@@ -99,7 +111,7 @@ export default function UsageDisplaySection() {
       setSaving(true);
       setError(null);
       // Optimistic UI: state already updated by the caller; revert on failure.
-      invoke("set_usage_settings", { globalMode: global, providerOverrides: ov })
+      setUsageSettings(global, ov)
         .then(() => setDirty(false))
         .catch((e: unknown) => {
           setError(e instanceof Error ? e.message : String(e));
@@ -117,7 +129,9 @@ export default function UsageDisplaySection() {
               }
               setOverrides(ovRestored);
             })
-            .catch(() => {});
+            .catch((reason: unknown) => {
+              setError(reason instanceof Error ? reason.message : String(reason));
+            });
         })
         .finally(() => setSaving(false));
     },
@@ -165,6 +179,15 @@ export default function UsageDisplaySection() {
   );
 
   const hasOverrides = Object.keys(overrides).length > 0;
+
+  const providers = useMemo<ProviderRow[]>(() => {
+    const snapshots = new Map(live.providers.map((provider) => [provider.providerId, provider]));
+    return providerCatalog.map((provider) => ({
+      id: provider.id,
+      name: provider.displayName,
+      remainingPercent: remainingPercent(snapshots.get(provider.id)),
+    }));
+  }, [live.providers, providerCatalog]);
 
   const rows = useMemo(
     () => providers.map((p) => ({ p, eff: effectiveMode(p) })),
@@ -255,7 +278,7 @@ export default function UsageDisplaySection() {
           {rows.map(({ p, eff }) => {
             const s = applyUsageSemantics(
               eff.mode,
-              p.error ? null : (p.remainingPercent ?? 0) / 100,
+              p.remainingPercent == null ? null : p.remainingPercent / 100,
             );
             const primary = formatPercentage(s.value);
             const overridden = overrides[p.id] != null;
@@ -296,7 +319,7 @@ export default function UsageDisplaySection() {
                     </span>
                   )}
                 </span>
-                <span
+                <output
                   style={{
                     fontSize: "var(--qa-text-micro)",
                     color: "var(--qa-ink-3)",
@@ -304,9 +327,9 @@ export default function UsageDisplaySection() {
                   }}
                 >
                   {s.value == null
-                    ? "unavailable"
-                    : `${Math.round(s.value)}% ${s.label} · arc ${Math.round((s.arc ?? 0) * 100)}%`}
-                </span>
+                    ? "Unavailable"
+                    : `${primary} ${s.label}`}
+                </output>
                 <select
                   aria-label={`Usage display mode for ${p.name}`}
                   value={overrides[p.id] ?? "global"}

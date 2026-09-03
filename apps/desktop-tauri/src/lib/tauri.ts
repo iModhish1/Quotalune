@@ -64,6 +64,13 @@ export function updateSettings(
   return invoke<SettingsSnapshot>("update_settings", { patch });
 }
 
+export function setUsageSettings(
+  globalMode: "used" | "remaining" | "hybrid",
+  providerOverrides: Record<string, "used" | "remaining" | "hybrid">,
+): Promise<void> {
+  return invoke<void>("set_usage_settings", { globalMode, providerOverrides });
+}
+
 export function getTrayVisibilityStatus(): Promise<TrayVisibilityStatusDto> {
   return invoke<TrayVisibilityStatusDto>("tray_visibility_status");
 }
