@@ -1,25 +1,22 @@
 /**
- * End-to-end usage-semantics tests: persisted settings snapshot + seeded
- * ProviderUsageSnapshot → exact StageProvider presentation fields.
- * Proves USED/REMAINING/HYBRID reach the Taskbar with no inversion.
+ * V8.7 acceptance tests — unskipped.
+ *
+ * Proves the full usage-semantics pipeline as a PURE function:
+ * seeded ProviderUsageSnapshot[] + explicit config → StageProvider[],
+ * with order-independence and state-isolation guarantees.
+ *
+ * These are the acceptance criteria the V8.4 mode-pollution defect blocked;
+ * the pure pipeline (toStageProviders(providers, config)) removed the
+ * module state that caused the inversion.
  */
 import { describe, expect, it } from "vitest";
-
-/**
- * V8.4 OPEN DEFECT (documented, do not silently delete):
- * Under mode switching inside one process, toStageProviders returns values
- * that mix modes across providers (codex resolved USED under global
- * REMAINING; arc picked up another provider's remaining). Unit-level
- * resolver/semantics tests pass; the defect is in the module-state bridge
- * between applyUsageConfigFromSnapshot and toStageProviders.
- * These tests are skipped until that defect is fixed — they are the
- * acceptance criteria for the fix.
- */
 import type { ProviderUsageSnapshot } from "../../types/bridge";
 import {
-  applyUsageConfigFromSnapshot,
-  toStageProviders,
-} from "./TaskbarArc";
+  applyUsageSemantics,
+  resolveUsageMode,
+  type UsageDisplayConfig,
+} from "../../design-system/themes";
+import { toStageProviders } from "./TaskbarArc";
 
 function seededSnapshot(
   providerId: string,
@@ -32,7 +29,7 @@ function seededSnapshot(
     remainingPercent,
     windowMinutes: null,
     resetsAt: null,
-    resetDescription: `resets in 4h`,
+    resetDescription: "resets in 4h",
     isExhausted: false,
     isInformational: false,
     reservePercent: null,
@@ -69,35 +66,25 @@ const FIXTURE = [
   seededSnapshot("gemini", "Gemini", 42), // 58 used
 ];
 
-function stageFor(usageDisplayMode: string | null) {
-  // Mirrors the live load(): settings snapshot → config → stage providers.
-  applyUsageConfigFromSnapshot({
-    usageDisplayMode,
-    providerUsageOverrides: {},
-  });
-  return toStageProviders(FIXTURE);
-}
+const toRows = (config?: UsageDisplayConfig) => toStageProviders(FIXTURE, config);
 
-function byId(rows: ReturnType<typeof toStageProviders>, id: string) {
-  return rows.find((r) => r.id === id)!;
-}
+const byId = (rows: ReturnType<typeof toRows>, id: string) => rows.find((r) => r.id === id)!;
 
-describe.skip("end-to-end usage semantics (settings → stage) — BLOCKED by V8.4 mode-pollution defect", () => {
+describe("usage semantics: global modes (pure, order-independent)", () => {
   it("GLOBAL USED: primary values are the USED fractions", () => {
-    const rows = stageFor("used");
+    const rows = toRows({ global: "used", providerOverrides: {} });
     expect(byId(rows, "codex").primaryValue).toBe(21);
     expect(byId(rows, "claude").primaryValue).toBe(73);
     expect(byId(rows, "gemini").primaryValue).toBe(58);
     for (const r of rows) {
       expect(r.primaryLabel).toBe("used");
       expect(r.resolvedMode).toBe("used");
-      // Arc displays the same fraction the value reports — no inversion.
       expect(r.arcFraction).toBeCloseTo(r.primaryValue! / 100, 6);
     }
   });
 
   it("GLOBAL REMAINING: primary values are the REMAINING fractions", () => {
-    const rows = stageFor("remaining");
+    const rows = toRows({ global: "remaining", providerOverrides: {} });
     expect(byId(rows, "codex").primaryValue).toBe(79);
     expect(byId(rows, "claude").primaryValue).toBe(27);
     expect(byId(rows, "gemini").primaryValue).toBe(42);
@@ -108,63 +95,99 @@ describe.skip("end-to-end usage semantics (settings → stage) — BLOCKED by V8
     }
   });
 
-  it("GLOBAL HYBRID: documented primary/secondary contract", () => {
-    const rows = stageFor("hybrid");
-    // Documented hybrid contract: arc shows remaining, primary value leads
-    // with used, secondary carries remaining.
+  it("GLOBAL HYBRID: documented contract — arc follows remaining, primary leads with used", () => {
+    const rows = toRows({ global: "hybrid", providerOverrides: {} });
     for (const r of rows) {
       expect(r.resolvedMode).toBe("hybrid");
       expect(r.primaryLabel).toBe("used");
-      expect(r.arcFraction).toBeCloseTo(r.secondaryValue! / 100, 6);
       expect(Math.round(r.primaryValue! + r.secondaryValue!)).toBe(100);
+      expect(r.arcFraction).toBeCloseTo(r.secondaryValue! / 100, 6);
     }
   });
 
+  it("USED → REMAINING → USED produces identical results each time", () => {
+    const first = toRows({ global: "used", providerOverrides: {} });
+    toRows({ global: "remaining", providerOverrides: {} });
+    const third = toRows({ global: "used", providerOverrides: {} });
+    expect(third).toEqual(first);
+  });
+
+  it("REMAINING → USED → REMAINING produces identical results each time", () => {
+    const first = toRows({ global: "remaining", providerOverrides: {} });
+    toRows({ global: "used", providerOverrides: {} });
+    const third = toRows({ global: "remaining", providerOverrides: {} });
+    expect(third).toEqual(first);
+  });
+});
+
+describe("usage semantics: per-provider overrides (pure)", () => {
   it("provider override beats global (claude: used under global remaining)", () => {
-    applyUsageConfigFromSnapshot({
-      usageDisplayMode: "remaining",
-      providerUsageOverrides: {},
+    const rows = toRows({
+      global: "remaining",
+      providerOverrides: { claude: "used" },
     });
-    applyUsageConfigFromSnapshot({
-      usageDisplayMode: "remaining",
-      providerUsageOverrides: { claude: "used" },
-    });
-    const rows = toStageProviders(FIXTURE);
-    expect(byId(rows, "claude").primaryValue).toBe(73);
     expect(byId(rows, "claude").primaryLabel).toBe("used");
+    expect(byId(rows, "claude").primaryValue).toBe(73);
     expect(byId(rows, "codex").primaryLabel).toBe("remaining");
   });
 
   it("global used + claude remaining override → claude 27", () => {
-    applyUsageConfigFromSnapshot({
-      usageDisplayMode: "used",
-      providerUsageOverrides: { claude: "remaining" },
+    const rows = toRows({
+      global: "used",
+      providerOverrides: { claude: "remaining" },
     });
-    const rows = toStageProviders(FIXTURE);
-    expect(byId(rows, "claude").primaryValue).toBe(27);
     expect(byId(rows, "claude").primaryLabel).toBe("remaining");
+    expect(byId(rows, "claude").primaryValue).toBe(27);
     expect(byId(rows, "codex").primaryLabel).toBe("used");
   });
 
-  it("unavailable providers keep the honest dash", () => {
-    applyUsageConfigFromSnapshot({
-      usageDisplayMode: "used",
-      providerUsageOverrides: {},
+  it("an override applied to one surface does not leak to another config", () => {
+    const surfaceA = toRows({ global: "used", providerOverrides: {} });
+    const surfaceB = toRows({ global: "remaining", providerOverrides: {} });
+    expect(byId(surfaceA, "codex").primaryLabel).toBe("used");
+    expect(byId(surfaceB, "codex").primaryLabel).toBe("remaining");
+  });
+
+  it("invalid config values fall back to remaining without throwing", () => {
+    const rows = toRows({
+      global: "bogus" as unknown as UsageDisplayConfig["global"],
+      providerOverrides: { claude: "nonsense" as unknown as UsageDisplayConfig["global"] },
     });
+    for (const r of rows) expect(r.primaryLabel).toBe("remaining");
+  });
+});
+
+describe("usage semantics: unavailable providers", () => {
+  it("unavailable provider keeps the honest dash, never a fabricated value", () => {
     const withError = [
       ...FIXTURE,
       seededSnapshot("copilot", "Copilot", 50),
     ];
     withError[3].error = "auth expired";
-    const rows = toStageProviders(withError);
+    const rows = toStageProviders(withError, {
+      global: "used",
+      providerOverrides: {},
+    });
     const copilot = rows.find((r) => r.id === "copilot")!;
     expect(copilot.arcFraction).toBeNull();
     expect(copilot.primaryValue).toBeNull();
   });
+});
 
-  it("missing mode falls back to remaining without throwing", () => {
-    applyUsageConfigFromSnapshot({ usageDisplayMode: null, providerUsageOverrides: {} });
-    const rows = toStageProviders(FIXTURE);
-    for (const r of rows) expect(r.resolvedMode).toBe("remaining");
+describe("usage semantics: resolver determinism", () => {
+  it("resolveUsageMode is pure and precedence-correct", () => {
+    const config: UsageDisplayConfig = {
+      global: "remaining",
+      providerOverrides: { claude: "used" },
+    };
+    expect(resolveUsageMode(config, "codex")).toBe("remaining");
+    expect(resolveUsageMode(config, "claude")).toBe("used");
+    expect(resolveUsageMode(config, "claude")).toBe("used"); // stable
+  });
+
+  it("applyUsageSemantics is deterministic per (mode, remaining)", () => {
+    const a = applyUsageSemantics("used", 0.73);
+    const b = applyUsageSemantics("used", 0.73);
+    expect(a).toEqual(b);
   });
 });

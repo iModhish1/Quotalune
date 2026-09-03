@@ -41,35 +41,19 @@ function resetOf(p: ProviderUsageSnapshot): string {
   return shortened.length > 0 ? shortened : "—";
 }
 
-/** Map live snapshots → stage providers; honest unavailable states. */
-
-/** Usage config resolved from the settings snapshot (live + tests). */
-export let usageConfig: UsageDisplayConfig | undefined;
-
-export function applyUsageConfigFromSnapshot(s: {
-  usageDisplayMode?: string | null;
-  providerUsageOverrides?: Record<string, string>;
-}) {
-  if (s.usageDisplayMode == null && !s.providerUsageOverrides) {
-    usageConfig = undefined;
-    return;
-  }
-  usageConfig = {
-    global: (s.usageDisplayMode ?? "remaining") as "used" | "remaining" | "hybrid",
-    providerOverrides: Object.fromEntries(
-      Object.entries(s.providerUsageOverrides ?? {}).map(([k, v]) => [
-        k,
-        v as "used" | "remaining" | "hybrid",
-      ]),
-    ),
-  };
-}
-
-export function toStageProviders(providers: ProviderUsageSnapshot[]): StageProvider[] {
+/**
+ * Pure pipeline: settings config + raw snapshots → StageProvider[].
+ * No module state: identical arguments always produce identical output,
+ * regardless of prior calls, renders, or tests (V8.7 state-isolation fix).
+ */
+export function toStageProviders(
+  providers: ProviderUsageSnapshot[],
+  config: UsageDisplayConfig | undefined,
+): StageProvider[] {
   return providers.slice(0, 7).map((p) => {
     const remaining = p.error == null ? remainingOf(p) : null;
     const mode = resolveUsageMode(
-      usageConfig ?? { global: "remaining", providerOverrides: {} },
+      config ?? { global: "remaining", providerOverrides: {} },
       p.providerId,
     );
     const s = applyUsageSemantics(mode, remaining);
@@ -88,9 +72,29 @@ export function toStageProviders(providers: ProviderUsageSnapshot[]): StageProvi
   });
 }
 
+/** Pure: settings snapshot → usage config (invalid values fall back). */
+export function usageConfigFromSnapshot(s: {
+  usageDisplayMode?: string | null;
+  providerUsageOverrides?: Record<string, string>;
+}): UsageDisplayConfig | undefined {
+  if (s.usageDisplayMode == null && !s.providerUsageOverrides) {
+    return undefined;
+  }
+  return {
+    global: (s.usageDisplayMode ?? "remaining") as "used" | "remaining" | "hybrid",
+    providerOverrides: Object.fromEntries(
+      Object.entries(s.providerUsageOverrides ?? {}).map(([k, v]) => [
+        k,
+        v as "used" | "remaining" | "hybrid",
+      ]),
+    ),
+  };
+}
+
 export default function TaskbarArc({ demo }: TaskbarArcProps) {
   const live = useProviders({ refreshOnMount: true });
   const [catalog, setCatalog] = useState<string>("01-obsidian-orbit");
+  const [usageConfig, setUsageConfigState] = useState<UsageDisplayConfig | undefined>(undefined);
   const [expanded, setExpanded] = useState(demo?.state === "expanded");
   const [focus, setFocus] = useState(0);
   const wheelRef = useRef(0);
@@ -101,7 +105,7 @@ export default function TaskbarArc({ demo }: TaskbarArcProps) {
       getSettingsSnapshot()
         .then((s) => {
           setCatalog(s.catalogTheme ?? "01-obsidian-orbit");
-          applyUsageConfigFromSnapshot(s);
+          setUsageConfigState(usageConfigFromSnapshot(s));
         })
         .catch(() => {});
     load();
@@ -118,8 +122,8 @@ export default function TaskbarArc({ demo }: TaskbarArcProps) {
   }, [demo]);
 
   const stageProviders = useMemo(
-    () => toStageProviders(live.providers ?? []),
-    [live.providers],
+    () => toStageProviders(live.providers ?? [], usageConfig),
+    [live.providers, usageConfig],
   );
 
   // Resize the native window with the stage.

@@ -78,6 +78,9 @@ export function applyUsageSemantics(
       return { arc: remainingFraction, value: secondary, secondary: value, label: "remaining" };
     case "hybrid":
       return { arc: secondary / 100, value, secondary, label: "used" };
+    default:
+      // Unknown mode: remaining is the documented safe fallback.
+      return { arc: remainingFraction, value: secondary, secondary: value, label: "remaining" };
   }
 }
 
