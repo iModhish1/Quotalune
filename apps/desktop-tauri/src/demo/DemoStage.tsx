@@ -17,6 +17,7 @@ import EdgeArc from "../surfaces/edge-arc/EdgeArc";
 import { HudFocus, DashboardHero } from "./DemoExtras";
 import { NotchSurfaceV4, SlabSurfaceV4, SpineSurfaceV4 } from "./V4Surfaces";
 import { TaskbarRadialV5, TopRadialV5, EdgeRadialV5, HudRadialV5 } from "./V5Surfaces";
+import CatalogSurface from "./CatalogSurface";
 
 const params = new URLSearchParams(window.location.search);
 const surface = params.get("surface") ?? "taskbar";
@@ -65,6 +66,11 @@ export default function DemoStage() {
     </DesignSystemProvider>
   );
 
+  const catalogSlug = params.get("catalog");
+  if (catalogSlug) {
+    return stage(460, 300, { left: "50%", top: "50%", transform: "translate(-50%, -50%)" },
+      <CatalogSurface catalog={catalogSlug} surface={surface} state={state} />);
+  }
   if (gen === "v5") {
     const layout: Record<string, { w: number; h: number; pos: CSSProperties }> = {
       taskbar: { w: 340, h: 240, pos: { left: "50%", bottom: 48, transform: "translateX(-50%)" } },

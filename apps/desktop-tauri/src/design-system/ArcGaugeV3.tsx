@@ -29,6 +29,8 @@ export interface ArcV3Props {
   showDot?: boolean;
   /** Show the origin notch (default on at >=24px). */
   showNotch?: boolean;
+  /** Provider-color override (theme catalog: provider-color forward). */
+  colorOverride?: string;
   ariaLabel: string;
   className?: string;
 }
@@ -55,6 +57,7 @@ export const ArcGaugeV3 = memo(function ArcGaugeV3({
   statusOverride,
   showDot = true,
   showNotch = true,
+  colorOverride,
   ariaLabel,
   className,
 }: ArcV3Props) {
@@ -82,7 +85,7 @@ export const ArcGaugeV3 = memo(function ArcGaugeV3({
   }, [path]);
 
   const filled = clamped == null || arcLen == null ? null : arcLen * clamped;
-  const statusColor = STATUS_TOKEN[status];
+  const statusColor = colorOverride ?? STATUS_TOKEN[status];
 
   const [dotX, dotY] =
     clamped == null ? [0, 0] : polar(cx, cy, r, ORIGIN_DEG + SWEEP_DEG * clamped);
