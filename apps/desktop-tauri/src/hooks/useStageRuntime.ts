@@ -8,13 +8,24 @@ import {
   toStageProviders,
   usageConfigFromSnapshot,
 } from "../components/orbit/stageProviders";
-
-const DEFAULT_THEME = "01-obsidian-orbit";
+import {
+  DEFAULT_CATALOG_THEME,
+  resolveCatalogTheme,
+  type CatalogSurfaceId,
+  type CatalogThemeSource,
+} from "../design-system/themeResolution";
 
 /** Shared live theme + usage runtime for detached orbital surfaces. */
-export function useStageRuntime({ enabled = true }: { enabled?: boolean } = {}) {
+export function useStageRuntime({
+  enabled = true,
+  surface,
+}: {
+  enabled?: boolean;
+  surface: CatalogSurfaceId;
+}) {
   const live = useProviders({ refreshOnMount: enabled });
-  const [catalog, setCatalog] = useState(DEFAULT_THEME);
+  const [catalog, setCatalog] = useState(DEFAULT_CATALOG_THEME);
+  const [catalogSource, setCatalogSource] = useState<CatalogThemeSource>("default");
   const [usageConfig, setUsageConfig] = useState<UsageDisplayConfig | undefined>();
   const [settingsError, setSettingsError] = useState<string | null>(null);
 
@@ -22,14 +33,16 @@ export function useStageRuntime({ enabled = true }: { enabled?: boolean } = {}) 
     if (!enabled) return Promise.resolve();
     return getSettingsSnapshot()
       .then((snapshot) => {
-        setCatalog(snapshot.catalogTheme ?? DEFAULT_THEME);
+        const resolved = resolveCatalogTheme(snapshot, surface);
+        setCatalog(resolved.slug);
+        setCatalogSource(resolved.source);
         setUsageConfig(usageConfigFromSnapshot(snapshot));
         setSettingsError(null);
       })
       .catch((cause: unknown) => {
         setSettingsError(cause instanceof Error ? cause.message : String(cause));
       });
-  }, [enabled]);
+  }, [enabled, surface]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -52,6 +65,7 @@ export function useStageRuntime({ enabled = true }: { enabled?: boolean } = {}) 
 
   return {
     catalog,
+    catalogSource,
     providers,
     settingsError,
     refresh: live.refresh,

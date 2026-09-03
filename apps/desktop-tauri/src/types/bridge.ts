@@ -203,6 +203,8 @@ export interface SettingsSnapshot {
   hidePersonalInfo: boolean;
   privacyMode?: boolean;
   catalogTheme?: string;
+  activeProfileCatalogTheme?: string | null;
+  surfaceCatalogThemes?: Partial<Record<"taskbar" | "top" | "edge" | "hud" | "quick" | "dashboard", string>>;
   usageDisplayMode?: string | null;
   providerUsageOverrides?: Record<string, string>;
   updateChannel: UpdateChannel;

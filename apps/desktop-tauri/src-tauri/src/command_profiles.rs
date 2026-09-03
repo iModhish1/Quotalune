@@ -11,6 +11,9 @@ use tauri::{AppHandle, Emitter};
 
 fn emit_changed(app: &AppHandle) {
     let _ = app.emit("profiles-changed", ());
+    // Active-profile fields are projected into Settings; detached orbital
+    // windows listen to this event and must re-resolve their theme immediately.
+    let _ = app.emit("codexbar:settings-updated", ());
 }
 
 /// Reconcile global settings with the active profile: enabled providers,
@@ -32,8 +35,10 @@ fn apply_active_profile_to_settings(store: &ProfileStore, settings: &mut Setting
     if let Some(theme) = profile.theme {
         settings.theme = theme;
     }
+    settings.active_profile_catalog_theme = profile.catalog_theme.clone();
     settings.edge_arc_enabled = profile.surfaces.edge_arc;
     settings.top_arc_enabled = profile.surfaces.top_arc;
+    settings.taskbar_arc_enabled = profile.surfaces.taskbar_arc;
     settings.float_bar_enabled = profile.surfaces.float_bar;
 }
 
@@ -180,13 +185,19 @@ pub fn reorder_profiles(app: AppHandle, profile_ids: Vec<String>) -> Result<(), 
 }
 
 #[tauri::command]
+// Tauri exposes command parameters as named bridge arguments. Keeping this
+// boundary flat preserves the existing TypeScript contract and lets callers
+// patch one profile field without wrapping it in a second payload object.
+#[allow(clippy::too_many_arguments)]
 pub fn update_profile(
     app: AppHandle,
     profile_id: String,
     theme: Option<Option<ThemePreference>>,
+    catalog_theme: Option<Option<String>>,
     accent: Option<Option<String>>,
     edge_arc: Option<bool>,
     top_arc: Option<bool>,
+    taskbar_arc: Option<bool>,
     float_bar: Option<bool>,
 ) -> Result<(), String> {
     let mut store = ProfileStore::load();
@@ -196,6 +207,15 @@ pub fn update_profile(
     if let Some(theme) = theme {
         profile.theme = theme;
     }
+    if let Some(catalog_theme) = catalog_theme {
+        profile.catalog_theme = match catalog_theme {
+            Some(slug) => Some(
+                codexbar::settings::canonical_catalog_theme(slug.trim())
+                    .ok_or_else(|| format!("Unknown catalog theme: {slug}"))?,
+            ),
+            None => None,
+        };
+    }
     if let Some(accent) = accent {
         profile.accent = accent.filter(|a| !a.trim().is_empty());
     }
@@ -204,6 +224,9 @@ pub fn update_profile(
     }
     if let Some(v) = top_arc {
         profile.surfaces.top_arc = v;
+    }
+    if let Some(v) = taskbar_arc {
+        profile.surfaces.taskbar_arc = v;
     }
     if let Some(v) = float_bar {
         profile.surfaces.float_bar = v;
@@ -365,13 +388,79 @@ pub fn set_privacy_mode(app: AppHandle, enabled: bool) -> Result<(), String> {
     Ok(())
 }
 
-/// Apply a catalog theme globally (validated server-side; invalid slugs
-/// fall back to the Obsidian Orbit default). Persisted and broadcast so
-/// every live surface re-themes without restart.
+fn apply_catalog_theme_scope(
+    settings: &mut Settings,
+    store: &mut ProfileStore,
+    scope: &str,
+    slug: &str,
+) -> Result<bool, String> {
+    let requested = slug.trim();
+    let normalized = || {
+        codexbar::settings::canonical_catalog_theme(requested)
+            .ok_or_else(|| format!("Unknown catalog theme: {slug}"))
+    };
+
+    match scope {
+        "global" => {
+            settings.catalog_theme = if requested.is_empty() {
+                codexbar::settings::normalize_catalog_theme("")
+            } else {
+                normalized()?
+            };
+            Ok(false)
+        }
+        "profile" => {
+            let profile = store
+                .active_profile_mut()
+                .ok_or_else(|| "Active profile not found".to_string())?;
+            profile.catalog_theme = if requested.is_empty() {
+                None
+            } else {
+                Some(normalized()?)
+            };
+            profile.touch();
+            settings.active_profile_catalog_theme = profile.catalog_theme.clone();
+            Ok(true)
+        }
+        value if value.starts_with("surface:") => {
+            let surface = &value["surface:".len()..];
+            const SURFACES: &[&str] = &["taskbar", "top", "edge", "hud", "quick", "dashboard"];
+            if !SURFACES.contains(&surface) {
+                return Err(format!("Unknown catalog surface: {surface}"));
+            }
+            if requested.is_empty() {
+                settings.surface_catalog_themes.remove(surface);
+            } else {
+                settings
+                    .surface_catalog_themes
+                    .insert(surface.to_string(), normalized()?);
+            }
+            Ok(false)
+        }
+        _ => Err(format!("Unknown catalog theme scope: {scope}")),
+    }
+}
+
+/// Apply a catalog theme to the global, active-profile or surface scope.
+/// Empty profile/surface slugs clear the override and resume inheritance.
 #[tauri::command]
-pub fn set_catalog_theme(app: AppHandle, slug: String) -> Result<(), String> {
+pub fn set_catalog_theme(
+    app: AppHandle,
+    slug: String,
+    scope: Option<String>,
+) -> Result<(), String> {
     let mut settings = Settings::load();
-    settings.catalog_theme = codexbar::settings::normalize_catalog_theme(slug.trim());
+    let mut store = ProfileStore::load();
+    let profile_changed = apply_catalog_theme_scope(
+        &mut settings,
+        &mut store,
+        scope.as_deref().unwrap_or("global"),
+        &slug,
+    )?;
+    if profile_changed {
+        store.save()?;
+        let _ = app.emit("profiles-changed", ());
+    }
     settings.save().map_err(|e| e.to_string())?;
     use tauri::Emitter;
     let _ = app.emit("codexbar:settings-updated", ());
@@ -388,9 +477,8 @@ pub fn set_usage_settings(
     global_mode: String,
     provider_overrides: std::collections::HashMap<String, String>,
 ) -> Result<(), String> {
-    let normalized_global =
-        codexbar::settings::normalize_usage_display_mode(global_mode.trim())
-            .ok_or_else(|| format!("invalid usage display mode: {global_mode}"))?;
+    let normalized_global = codexbar::settings::normalize_usage_display_mode(global_mode.trim())
+        .ok_or_else(|| format!("invalid usage display mode: {global_mode}"))?;
 
     let mut normalized_overrides = std::collections::HashMap::new();
     for (provider, mode) in &provider_overrides {
@@ -448,10 +536,79 @@ mod tests {
         let settings = Settings::default();
         let mut store = codexbar::profiles::migrate_from_legacy(&settings);
         store.profiles[0].theme = Some(ThemePreference::Light);
+        store.profiles[0].catalog_theme = Some("02-aurora-bloom".to_string());
         store.profiles[0].surfaces.top_arc = true;
+        store.profiles[0].surfaces.taskbar_arc = true;
         let mut s2 = Settings::default();
         apply_active_profile_to_settings(&store, &mut s2);
         assert_eq!(s2.theme, ThemePreference::Light);
+        assert_eq!(
+            s2.active_profile_catalog_theme.as_deref(),
+            Some("02-aurora-bloom")
+        );
         assert!(s2.top_arc_enabled);
+        assert!(s2.taskbar_arc_enabled);
+    }
+
+    #[test]
+    fn catalog_scope_precedence_storage_is_bounded_and_clearable() {
+        let mut settings = Settings::default();
+        let mut store = ProfileStore::default();
+
+        assert!(
+            !apply_catalog_theme_scope(&mut settings, &mut store, "global", "03-solar-ember",)
+                .unwrap()
+        );
+        assert_eq!(settings.catalog_theme, "03-solar-ember");
+
+        assert!(
+            apply_catalog_theme_scope(&mut settings, &mut store, "profile", "02-aurora-bloom",)
+                .unwrap()
+        );
+        assert_eq!(
+            settings.active_profile_catalog_theme.as_deref(),
+            Some("02-aurora-bloom")
+        );
+
+        apply_catalog_theme_scope(
+            &mut settings,
+            &mut store,
+            "surface:taskbar",
+            "12-crimson-nova",
+        )
+        .unwrap();
+        assert_eq!(
+            settings
+                .surface_catalog_themes
+                .get("taskbar")
+                .map(String::as_str),
+            Some("12-crimson-nova"),
+        );
+
+        apply_catalog_theme_scope(&mut settings, &mut store, "profile", "").unwrap();
+        apply_catalog_theme_scope(&mut settings, &mut store, "surface:taskbar", "").unwrap();
+        assert!(settings.active_profile_catalog_theme.is_none());
+        assert!(!settings.surface_catalog_themes.contains_key("taskbar"));
+    }
+
+    #[test]
+    fn deleted_active_profile_falls_back_without_stale_catalog_theme() {
+        let mut store = ProfileStore::default();
+        let mut second = QuotaArcProfile::new("Second");
+        second.catalog_theme = Some("12-crimson-nova".to_string());
+        store.active_profile_id = second.id.clone();
+        store.profiles.push(second.clone());
+
+        let mut settings = Settings::default();
+        apply_active_profile_to_settings(&store, &mut settings);
+        assert_eq!(
+            settings.active_profile_catalog_theme.as_deref(),
+            Some("12-crimson-nova"),
+        );
+
+        store.profiles.retain(|profile| profile.id != second.id);
+        store.normalize();
+        apply_active_profile_to_settings(&store, &mut settings);
+        assert!(settings.active_profile_catalog_theme.is_none());
     }
 }

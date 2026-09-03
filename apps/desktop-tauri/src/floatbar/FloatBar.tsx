@@ -30,6 +30,7 @@ import type {
   ProviderUsageSnapshot,
   SettingsSnapshot,
 } from "../types/bridge";
+import { resolveCatalogTheme } from "../design-system/themeResolution";
 import { FLOAT_BAR_CONFIG_CHANGED_EVENT, resizeFloatBar } from "./api";
 import FloatingHudStage from "./FloatingHudStage";
 import "./FloatBar.css";
@@ -341,6 +342,7 @@ export default function FloatBar({ state }: { state: BootstrapState }) {
     () => toStageProviders(visible, usageConfigFromSnapshot(settings)),
     [visible, settings.usageDisplayMode, settings.providerUsageOverrides],
   );
+  const hudCatalog = resolveCatalogTheme(settings, "hud").slug;
   const [focusedProviderId, setFocusedProviderId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -504,7 +506,7 @@ export default function FloatBar({ state }: { state: BootstrapState }) {
         </div>
       ) : style === "hud" ? (
         <FloatingHudStage
-          catalog={settings.catalogTheme ?? "01-obsidian-orbit"}
+          catalog={hudCatalog}
           providers={stageProviders}
           selectedProviderId={focusedProviderId}
           onSelectProvider={setFocusedProviderId}

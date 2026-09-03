@@ -292,20 +292,20 @@ pub fn install(app: &tauri::AppHandle) {
         taskbar = settings.taskbar_arc_enabled,
         "restoring QuotaArc surfaces at startup"
     );
-    if settings.edge_arc_enabled {
-        if let Err(error) = show_edge_arc(app) {
-            tracing::warn!(%error, "failed to show Edge Arc at startup");
-        }
+    if settings.edge_arc_enabled
+        && let Err(error) = show_edge_arc(app)
+    {
+        tracing::warn!(%error, "failed to show Edge Arc at startup");
     }
-    if settings.top_arc_enabled {
-        if let Err(error) = show_top_arc(app) {
-            tracing::warn!(%error, "failed to show Top Arc at startup");
-        }
+    if settings.top_arc_enabled
+        && let Err(error) = show_top_arc(app)
+    {
+        tracing::warn!(%error, "failed to show Top Arc at startup");
     }
-    if settings.taskbar_arc_enabled {
-        if let Err(error) = show_taskbar_arc(app) {
-            tracing::warn!(%error, "failed to show Taskbar Arc at startup");
-        }
+    if settings.taskbar_arc_enabled
+        && let Err(error) = show_taskbar_arc(app)
+    {
+        tracing::warn!(%error, "failed to show Taskbar Arc at startup");
     }
     spawn_fullscreen_watcher(app.clone());
 }

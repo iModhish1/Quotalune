@@ -24,7 +24,7 @@ interface TaskbarArcProps {
 }
 
 export default function TaskbarArc({ demo }: TaskbarArcProps) {
-  const runtime = useStageRuntime({ enabled: !demo });
+  const runtime = useStageRuntime({ enabled: !demo, surface: "taskbar" });
   const [expanded, setExpanded] = useState(demo?.state === "expanded");
   const [focus, setFocus] = useState(0);
   const wheelRef = useRef(0);

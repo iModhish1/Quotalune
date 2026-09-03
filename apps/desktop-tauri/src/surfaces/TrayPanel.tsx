@@ -19,6 +19,7 @@ import {
   toStageProviders,
   usageConfigFromSnapshot,
 } from "../components/orbit/stageProviders";
+import { resolveCatalogTheme } from "../design-system/themeResolution";
 
 /** Provider IDs that have a dashboard URL in the backend */
 const HAS_DASHBOARD = new Set([
@@ -115,6 +116,7 @@ export default function TrayPanel({ state }: { state: BootstrapState }) {
   );
 
   const stageProviders = toStageProviders(sorted, usageConfigFromSnapshot(settings));
+  const catalog = resolveCatalogTheme(settings, "quick").slug;
 
   const renderProviderCard = (p: ProviderUsageSnapshot) => {
     const isSelected =
@@ -149,7 +151,7 @@ export default function TrayPanel({ state }: { state: BootstrapState }) {
       <div className={revealClassName}>
         <MenuSurface
           variant="tray"
-          catalogTheme={settings.catalogTheme}
+          catalogTheme={catalog}
           onRefresh={refresh}
           isRefreshing={isRefreshing}
           actions={headerActions}
@@ -173,7 +175,7 @@ export default function TrayPanel({ state }: { state: BootstrapState }) {
     <div className={revealClassName}>
       <MenuSurface
         variant="tray"
-        catalogTheme={settings.catalogTheme}
+        catalogTheme={catalog}
         onRefresh={refresh}
         isRefreshing={isRefreshing}
         actions={headerActions}
@@ -197,7 +199,7 @@ export default function TrayPanel({ state }: { state: BootstrapState }) {
         />
         <CatalogUsageHero
           variant="quick"
-          catalog={settings.catalogTheme ?? "01-obsidian-orbit"}
+          catalog={catalog}
           providers={stageProviders}
           selectedProviderId={selectedProviderId}
           showProviderIcons={settings.switcherShowsIcons}

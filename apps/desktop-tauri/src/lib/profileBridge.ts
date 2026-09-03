@@ -24,6 +24,7 @@ export interface ProviderAccountDto {
 export interface ProfileSurfacesDto {
   edgeArc: boolean;
   topArc: boolean;
+  taskbarArc: boolean;
   floatBar: boolean;
 }
 
@@ -34,6 +35,7 @@ export interface ProfileDto {
   enabled: boolean;
   /** "system" | "light" | "dark" | null (inherit) */
   theme?: string | null;
+  catalogTheme?: string | null;
   accent?: string | null;
   surfaces: ProfileSurfacesDto;
   accountIds: string[];
@@ -81,9 +83,11 @@ export function reorderProfiles(profileIds: string[]): Promise<void> {
 export function updateProfile(patch: {
   profileId: string;
   theme?: string | null | undefined;
+  catalogTheme?: string | null | undefined;
   accent?: string | null | undefined;
   edgeArc?: boolean;
   topArc?: boolean;
+  taskbarArc?: boolean;
   floatBar?: boolean;
 }): Promise<void> {
   return invoke("update_profile", patch);

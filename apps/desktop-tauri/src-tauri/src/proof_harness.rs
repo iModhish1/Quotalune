@@ -337,7 +337,10 @@ pub fn parse_providers_bundle(json: &str) -> Result<Vec<ProviderUsageSnapshot>, 
     for entry in &bundle.providers {
         let provider_id = codexbar::core::ProviderId::from_cli_name(entry.provider.trim())
             .ok_or_else(|| format!("unknown provider '{}'", entry.provider))?;
-        let stable_id = entry.account_id.as_deref().unwrap_or(entry.provider.as_str());
+        let stable_id = entry
+            .account_id
+            .as_deref()
+            .unwrap_or(entry.provider.as_str());
         if !seen.insert(stable_id.to_string()) {
             return Err(format!("duplicate stable id '{}'", stable_id));
         }
@@ -370,7 +373,7 @@ pub fn parse_providers_bundle(json: &str) -> Result<Vec<ProviderUsageSnapshot>, 
             .display_name
             .clone()
             .unwrap_or_else(|| entry.provider.clone());
-        let mut snapshot = ProviderUsageSnapshot {
+        let snapshot = ProviderUsageSnapshot {
             provider_id: provider_id.cli_name().to_string(),
             display_name: display.clone(),
             primary: window(entry.used_percent, remaining),
@@ -413,7 +416,10 @@ pub fn providers_bundle_from_env() -> Vec<ProviderUsageSnapshot> {
     let raw = match std::fs::read_to_string(&path) {
         Ok(raw) => raw,
         Err(err) => {
-            tracing::warn!("{SEED_PROVIDERS_ENV_VAR}: cannot read {}: {err}", path.display());
+            tracing::warn!(
+                "{SEED_PROVIDERS_ENV_VAR}: cannot read {}: {err}",
+                path.display()
+            );
             return Vec::new();
         }
     };
@@ -729,7 +735,6 @@ mod tests {
     }
 }
 
-
 #[cfg(test)]
 mod bundle_tests {
     use super::*;
@@ -745,7 +750,6 @@ mod bundle_tests {
 
     #[test]
     fn valid_three_provider_bundle_parses() {
-        let out = parse_providers_bundle(VALID).expect("parses");
         let out = parse_providers_bundle(VALID).expect("parses");
         assert_eq!(out.len(), 3);
         assert_eq!(out[0].provider_id, "claude");
@@ -771,7 +775,8 @@ mod bundle_tests {
 
     #[test]
     fn unknown_provider_is_rejected() {
-        let json = r#"{"version": 1, "providers": [{"provider": "not-a-provider", "used_percent": 10}]}"#;
+        let json =
+            r#"{"version": 1, "providers": [{"provider": "not-a-provider", "used_percent": 10}]}"#;
         assert!(parse_providers_bundle(json).is_err());
     }
 

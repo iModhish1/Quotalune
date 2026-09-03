@@ -41,6 +41,7 @@ import type {
   CodexSwitchResult,
   DeepSeekPricingStatus,
 } from "../types/bridge";
+import type { CatalogSurfaceId } from "../design-system/themeResolution";
 
 export function getBootstrapState(): Promise<BootstrapState> {
   return invoke<BootstrapState>("get_bootstrap_state");
@@ -69,6 +70,15 @@ export function setUsageSettings(
   providerOverrides: Record<string, "used" | "remaining" | "hybrid">,
 ): Promise<void> {
   return invoke<void>("set_usage_settings", { globalMode, providerOverrides });
+}
+
+export type CatalogThemeScope = "global" | "profile" | `surface:${CatalogSurfaceId}`;
+
+export function setCatalogTheme(
+  slug: string,
+  scope: CatalogThemeScope = "global",
+): Promise<void> {
+  return invoke<void>("set_catalog_theme", { slug, scope });
 }
 
 export function getTrayVisibilityStatus(): Promise<TrayVisibilityStatusDto> {

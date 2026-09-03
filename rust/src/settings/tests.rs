@@ -315,6 +315,37 @@ fn float_bar_style_normalization_rejects_unknown_values() {
 }
 
 #[test]
+fn catalog_theme_scope_fields_round_trip_and_reject_corrupt_entries() {
+    let s = Settings {
+        catalog_theme: "03-solar-ember".to_string(),
+        active_profile_catalog_theme: Some("02-aurora-bloom".to_string()),
+        surface_catalog_themes: [
+            ("taskbar".to_string(), "12-crimson-nova".to_string()),
+            ("unknown".to_string(), "03-solar-ember".to_string()),
+            ("edge".to_string(), "not-a-theme".to_string()),
+        ]
+        .into_iter()
+        .collect(),
+        ..Settings::default()
+    };
+
+    let json = serde_json::to_string(&s).expect("serialize");
+    let back: Settings = serde_json::from_str(&json).expect("deserialize");
+    assert_eq!(back.catalog_theme, "03-solar-ember");
+    assert_eq!(
+        back.active_profile_catalog_theme.as_deref(),
+        Some("02-aurora-bloom"),
+    );
+    assert_eq!(
+        back.surface_catalog_themes
+            .get("taskbar")
+            .map(String::as_str),
+        Some("12-crimson-nova"),
+    );
+    assert_eq!(back.surface_catalog_themes.len(), 1);
+}
+
+#[test]
 fn float_bar_settings_round_trip_through_raw() {
     // Serialize a Settings with custom float-bar values then deserialize
     // through the `from = "RawSettings"` path — values must survive intact

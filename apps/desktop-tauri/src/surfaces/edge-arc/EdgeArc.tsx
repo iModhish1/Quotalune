@@ -27,7 +27,7 @@ interface EdgeArcProps {
 }
 
 export default function EdgeArc({ demo }: EdgeArcProps) {
-  const runtime = useStageRuntime({ enabled: !demo });
+  const runtime = useStageRuntime({ enabled: !demo, surface: "edge" });
   const [expanded, setExpanded] = useState(demo?.state === "expanded");
   const [focus, setFocus] = useState(0);
   const providers = demo ? DEMO_PROVIDERS : runtime.providers;

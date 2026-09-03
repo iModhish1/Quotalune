@@ -27,7 +27,7 @@ interface TopArcProps {
 }
 
 export default function TopArc({ demo }: TopArcProps) {
-  const runtime = useStageRuntime({ enabled: !demo });
+  const runtime = useStageRuntime({ enabled: !demo, surface: "top" });
   const [expanded, setExpanded] = useState(demo?.state === "expanded");
   const [focus, setFocus] = useState(0);
   const providers = demo ? DEMO_PROVIDERS : runtime.providers;

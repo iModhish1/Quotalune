@@ -198,6 +198,10 @@ pub(super) struct RawSettings {
     #[serde(default = "default_catalog_theme")]
     catalog_theme: String,
     #[serde(default)]
+    active_profile_catalog_theme: Option<String>,
+    #[serde(default)]
+    surface_catalog_themes: std::collections::HashMap<String, String>,
+    #[serde(default)]
     privacy_mode: bool,
     #[serde(default = "default_true")]
     promote_tray_icon: bool,
@@ -326,6 +330,8 @@ impl Default for RawSettings {
             usage_display_mode: s.usage_display_mode,
             provider_usage_overrides: s.provider_usage_overrides,
             catalog_theme: s.catalog_theme,
+            active_profile_catalog_theme: s.active_profile_catalog_theme,
+            surface_catalog_themes: s.surface_catalog_themes,
             taskbar_arc_enabled: s.taskbar_arc_enabled,
             taskbar_arc_opacity: s.taskbar_arc_opacity,
             taskbar_arc_click_through: s.taskbar_arc_click_through,
@@ -643,9 +649,16 @@ impl From<RawSettings> for Settings {
             top_arc_click_through: raw.top_arc_click_through,
             top_arc_hide_fullscreen: raw.top_arc_hide_fullscreen,
             privacy_mode: raw.privacy_mode,
-            usage_display_mode: normalize_usage_display_mode(&raw.usage_display_mode.clone().unwrap_or_default()),
+            usage_display_mode: normalize_usage_display_mode(
+                &raw.usage_display_mode.clone().unwrap_or_default(),
+            ),
             provider_usage_overrides: raw.provider_usage_overrides,
             catalog_theme: normalize_catalog_theme(&raw.catalog_theme),
+            active_profile_catalog_theme: raw
+                .active_profile_catalog_theme
+                .as_deref()
+                .and_then(canonical_catalog_theme),
+            surface_catalog_themes: normalize_surface_catalog_themes(raw.surface_catalog_themes),
             taskbar_arc_enabled: raw.taskbar_arc_enabled,
             taskbar_arc_opacity: clamp_surface_opacity(raw.taskbar_arc_opacity),
             taskbar_arc_click_through: raw.taskbar_arc_click_through,

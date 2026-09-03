@@ -1,137 +1,232 @@
-/**
- * Theme Gallery — production Settings surface for the 15-theme catalog.
- *
- * Every tile renders the real production runtime (CatalogSurface over the
- * radial instruments) — not a static mock. Click applies the theme through
- * the backend (persisted, validated, broadcast); the active theme is
- * checked; Reset restores the Obsidian Orbit default.
- */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { invoke } from "@tauri-apps/api/core";
-import CatalogSurface from "../../../demo/CatalogSurface";
-import { getSettingsSnapshot } from "../../../lib/tauri";
 
-const CATALOG: { slug: string; name: string }[] = [
-  { slug: "01-obsidian-orbit", name: "Obsidian Orbit" },
-  { slug: "02-aurora-bloom", name: "Aurora Bloom" },
-  { slug: "03-solar-ember", name: "Solar Ember" },
-  { slug: "04-porcelain-halo", name: "Porcelain Halo" },
-  { slug: "05-noir-constellation", name: "Noir Constellation" },
-  { slug: "06-halo-spine", name: "Halo Spine" },
-  { slug: "07-eclipse-dial", name: "Eclipse Dial" },
-  { slug: "08-prism-zenith", name: "Prism Zenith" },
-  { slug: "09-quantum-orchid", name: "Quantum Orchid" },
-  { slug: "10-celestial-ice", name: "Celestial Ice" },
-  { slug: "11-emerald-singularity", name: "Emerald Singularity" },
-  { slug: "12-crimson-nova", name: "Crimson Nova" },
-  { slug: "13-lunar-titanium", name: "Lunar Titanium" },
-  { slug: "14-sapphire-observatory", name: "Sapphire Observatory" },
-  { slug: "15-astral-dune", name: "Astral Dune" },
+import CatalogUsageHero from "../../../components/CatalogUsageHero";
+import { CATALOG_STAGE_FIXTURE } from "../../../components/orbit/stageFixture";
+import { THEME_CATALOG, catalogBySlug } from "../../../design-system/themeCatalog";
+import {
+  DEFAULT_CATALOG_THEME,
+  resolveCatalogTheme,
+  type CatalogSurfaceId,
+} from "../../../design-system/themeResolution";
+import { getProfileStore, type ProfileStoreDto } from "../../../lib/profileBridge";
+import {
+  getSettingsSnapshot,
+  setCatalogTheme,
+  type CatalogThemeScope,
+} from "../../../lib/tauri";
+import type { SettingsSnapshot } from "../../../types/bridge";
+import "./ThemeGallery.css";
+
+type GalleryScope = CatalogThemeScope;
+
+const SCOPE_OPTIONS: Array<{ id: GalleryScope; label: string }> = [
+  { id: "global", label: "Global" },
+  { id: "profile", label: "Current profile" },
+  { id: "surface:taskbar", label: "Taskbar" },
+  { id: "surface:top", label: "Top" },
+  { id: "surface:edge", label: "Edge" },
+  { id: "surface:hud", label: "HUD" },
+  { id: "surface:quick", label: "Quick panel" },
+  { id: "surface:dashboard", label: "Dashboard" },
 ];
 
-const DEFAULT_THEME = "01-obsidian-orbit";
+const SURFACE_LABELS: Record<CatalogSurfaceId, string> = {
+  taskbar: "Taskbar",
+  top: "Top",
+  edge: "Edge",
+  hud: "HUD",
+  quick: "Quick panel",
+  dashboard: "Dashboard",
+};
+
+function surfaceFromScope(scope: GalleryScope): CatalogSurfaceId | null {
+  return scope.startsWith("surface:")
+    ? (scope.slice("surface:".length) as CatalogSurfaceId)
+    : null;
+}
 
 export default function ThemeGallery() {
-  const [active, setActive] = useState<string>(DEFAULT_THEME);
+  const [settings, setSettings] = useState<SettingsSnapshot | null>(null);
+  const [profiles, setProfiles] = useState<ProfileStoreDto | null>(null);
+  const [scope, setScope] = useState<GalleryScope>("global");
   const [preview, setPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const [nextSettings, nextProfiles] = await Promise.all([
+        getSettingsSnapshot(),
+        getProfileStore(),
+      ]);
+      setSettings(nextSettings);
+      setProfiles(nextProfiles);
+      setError(null);
+    } catch (cause: unknown) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
+  }, []);
 
   useEffect(() => {
-    const load = () =>
-      getSettingsSnapshot()
-        .then((s: { catalogTheme?: string }) => setActive((s as { catalogTheme?: string }).catalogTheme ?? DEFAULT_THEME))
-        .catch(() => {});
-    load();
-    const unlistenPromise = listen("codexbar:settings-updated", load);
-    const unlisten = unlistenPromise.catch(() => () => {});
+    void load();
+    const settingsListener = listen("codexbar:settings-updated", load);
+    const profilesListener = listen("profiles-changed", load);
     return () => {
-      void unlisten.then((fn) => fn());
+      void settingsListener.then((unlisten) => unlisten()).catch(() => {});
+      void profilesListener.then((unlisten) => unlisten()).catch(() => {});
     };
-  }, []);
+  }, [load]);
 
-  const apply = useCallback((slug: string) => {
-    setSaving(true);
-    invoke("set_catalog_theme", { slug })
-      .then(() => setActive(slug))
-      .catch(() => {})
-      .finally(() => setSaving(false));
-  }, []);
+  const activeProfile = profiles?.profiles.find(
+    (profile) => profile.id === profiles.activeProfileId,
+  );
+  const resolution = useMemo(() => {
+    if (!settings) return { slug: DEFAULT_CATALOG_THEME, source: "default" as const };
+    if (scope === "global") {
+      const slug = catalogBySlug(settings.catalogTheme ?? "")?.slug;
+      return slug
+        ? { slug, source: "global" as const }
+        : { slug: DEFAULT_CATALOG_THEME, source: "default" as const };
+    }
+    if (scope === "profile") {
+      const slug = catalogBySlug(activeProfile?.catalogTheme ?? "")?.slug;
+      if (slug) return { slug, source: "profile" as const };
+      const global = catalogBySlug(settings.catalogTheme ?? "")?.slug;
+      return global
+        ? { slug: global, source: "global" as const }
+        : { slug: DEFAULT_CATALOG_THEME, source: "default" as const };
+    }
+    const surface = surfaceFromScope(scope) as CatalogSurfaceId;
+    return resolveCatalogTheme(
+      { ...settings, activeProfileCatalogTheme: activeProfile?.catalogTheme ?? null },
+      surface,
+    );
+  }, [activeProfile?.catalogTheme, scope, settings]);
 
-  const shown = preview ?? active;
+  const scopeSurface = surfaceFromScope(scope);
+  const hasExplicitOverride =
+    scope === "global"
+      ? resolution.slug !== DEFAULT_CATALOG_THEME
+      : scope === "profile"
+        ? Boolean(activeProfile?.catalogTheme)
+        : Boolean(scopeSurface && settings?.surfaceCatalogThemes?.[scopeSurface]);
+
+  const provenance = (() => {
+    if (scope === "global") return resolution.source === "default" ? "Default theme" : "Global theme";
+    if (scope === "profile") {
+      return resolution.source === "profile"
+        ? `Profile override · ${activeProfile?.name ?? "Current profile"}`
+        : resolution.source === "global"
+          ? "Inherited from global"
+          : "Inherited from default";
+    }
+    const label = SURFACE_LABELS[scopeSurface as CatalogSurfaceId];
+    if (resolution.source === "surface") return `Surface override · ${label}`;
+    if (resolution.source === "profile") {
+      return `Inherited from profile · ${activeProfile?.name ?? "Current profile"}`;
+    }
+    return resolution.source === "global" ? "Inherited from global" : "Inherited from default";
+  })();
+
+  const apply = useCallback(
+    async (slug: string) => {
+      setSaving(true);
+      setError(null);
+      try {
+        await setCatalogTheme(slug, scope);
+        setPreview(null);
+        await load();
+      } catch (cause: unknown) {
+        setError(cause instanceof Error ? cause.message : String(cause));
+      } finally {
+        setSaving(false);
+      }
+    },
+    [load, scope],
+  );
+
+  const shown = preview ?? resolution.slug;
 
   return (
-    <section className="settings-section">
-      <h3 className="settings-section__title">Theme Gallery</h3>
-      <p className="settings-section__description" style={{ marginBottom: 12 }}>
-        Live previews of the orbital theme catalog. Click a theme to apply it
-        everywhere; Reset restores the default.
-      </p>
+    <section className="settings-section theme-gallery">
+      <div className="theme-gallery__heading">
+        <div>
+          <h3 className="settings-section__title">Theme Gallery</h3>
+          <p className="settings-section__description">
+            Assign one of the 15 orbital worlds globally, to this profile, or to a single surface.
+          </p>
+        </div>
+        <div className="theme-gallery__provenance" data-source={resolution.source}>
+          <span>{provenance}</span>
+          <strong>{catalogBySlug(shown)?.name ?? "Obsidian Orbit"}</strong>
+        </div>
+      </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-          gap: 10,
-        }}
-      >
-        {CATALOG.map(({ slug, name }) => (
+      <div className="theme-gallery__scopes" role="tablist" aria-label="Theme assignment scope">
+        {SCOPE_OPTIONS.map((option) => (
           <button
-            key={slug}
+            key={option.id}
+            type="button"
+            role="tab"
+            aria-selected={scope === option.id}
+            className="theme-gallery__scope"
+            onClick={() => {
+              setScope(option.id);
+              setPreview(null);
+            }}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
+      {error && <div className="theme-gallery__error" role="alert">{error}</div>}
+
+      <div className="theme-gallery__grid">
+        {THEME_CATALOG.map((theme) => (
+          <button
+            key={theme.slug}
             type="button"
             disabled={saving}
-            onClick={() => apply(slug)}
-            onMouseEnter={() => setPreview(slug)}
+            className="theme-gallery__tile"
+            data-active={resolution.slug === theme.slug}
+            onClick={() => void apply(theme.slug)}
+            onMouseEnter={() => setPreview(theme.slug)}
             onMouseLeave={() => setPreview(null)}
-            onFocus={() => setPreview(slug)}
-            style={{
-              background: "none",
-              border: `1px solid ${shown === slug ? "var(--qa-accent)" : "var(--qa-hairline)"}`,
-              borderRadius: 10,
-              padding: 0,
-              cursor: "pointer",
-              overflow: "hidden",
-              textAlign: "left",
-              color: "inherit",
-            }}
-            aria-pressed={active === slug}
-            aria-label={`Apply theme ${name}`}
+            onFocus={() => setPreview(theme.slug)}
+            onBlur={() => setPreview(null)}
+            aria-pressed={resolution.slug === theme.slug}
+            aria-label={`Apply theme ${theme.name}`}
           >
-            <div style={{ height: 110, pointerEvents: "none" }}>
-              <CatalogSurface catalog={slug} surface="taskbar" state="expanded" />
+            <div className="theme-gallery__preview" aria-hidden="true">
+              <CatalogUsageHero
+                variant="quick"
+                catalog={theme.slug}
+                providers={CATALOG_STAGE_FIXTURE}
+                selectedProviderId="openai"
+              />
             </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "6px 9px",
-                fontSize: 12,
-                fontWeight: 500,
-              }}
-            >
-              <span>{name}</span>
-              {active === slug && (
-                <span style={{ color: "var(--qa-accent)", fontSize: 10, fontWeight: 700 }}>
-                  ACTIVE
-                </span>
-              )}
+            <div className="theme-gallery__tile-label">
+              <span>
+                <strong>{theme.name}</strong>
+                <small>{theme.geometry}</small>
+              </span>
+              {resolution.slug === theme.slug && <b>ACTIVE</b>}
             </div>
           </button>
         ))}
       </div>
 
-      <div style={{ marginTop: 12 }}>
-        <button
-          type="button"
-          className="qa-icon-btn"
-          style={{ width: "auto", padding: "6px 12px", fontSize: 12 }}
-          disabled={saving || active === DEFAULT_THEME}
-          onClick={() => apply(DEFAULT_THEME)}
-        >
-          Reset to default
-        </button>
-      </div>
+      <button
+        type="button"
+        className="theme-gallery__inherit"
+        disabled={saving || !hasExplicitOverride}
+        onClick={() => void apply("")}
+        aria-label={scope === "global" ? "Reset to default theme" : "Use inherited theme"}
+      >
+        {scope === "global" ? "Reset to default" : "Use inherited theme"}
+      </button>
     </section>
   );
 }

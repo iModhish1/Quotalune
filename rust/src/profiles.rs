@@ -101,6 +101,8 @@ pub struct QuotaArcProfile {
     pub enabled: bool,
     /// `None` inherits the global theme.
     pub theme: Option<ThemePreference>,
+    /// `None` inherits the global orbital catalog theme.
+    pub catalog_theme: Option<String>,
     /// Optional in-app accent override (CSS color).
     pub accent: Option<String>,
     /// Optional profile mark: monogram of the name, or an imported asset id.
@@ -163,6 +165,7 @@ impl QuotaArcProfile {
             description: None,
             enabled: true,
             theme: None,
+            catalog_theme: None,
             accent: None,
             mark: None,
             surfaces: ProfileSurfaces::default(),
@@ -377,6 +380,7 @@ pub fn migrate_from_legacy(settings: &Settings) -> ProfileStore {
     let mut profile = QuotaArcProfile::new("Default");
     profile.surfaces = ProfileSurfaces::from_settings(settings);
     profile.theme = Some(settings.theme);
+    profile.catalog_theme = None;
 
     // Deterministic order: HashSet iteration must not leak into storage.
     let mut provider_names: Vec<String> = settings.enabled_providers.iter().cloned().collect();
@@ -468,6 +472,10 @@ impl ProfileStore {
             profile.account_ids.retain(|id| account_ids.contains(id));
             profile.high_usage_threshold = profile.high_usage_threshold.clamp(1, 99);
             profile.critical_usage_threshold = profile.critical_usage_threshold.clamp(1, 100);
+            profile.catalog_theme = profile
+                .catalog_theme
+                .as_deref()
+                .and_then(crate::settings::canonical_catalog_theme);
         }
         self.schema_version = PROFILES_SCHEMA_VERSION;
     }
@@ -572,6 +580,14 @@ mod tests {
     }
 
     #[test]
+    fn normalize_drops_corrupt_profile_catalog_theme() {
+        let mut store = migrate_from_legacy(&legacy_settings());
+        store.profiles[0].catalog_theme = Some("not-a-theme".to_string());
+        store.normalize();
+        assert!(store.profiles[0].catalog_theme.is_none());
+    }
+
+    #[test]
     fn normalize_drops_dangling_account_references() {
         let mut store = migrate_from_legacy(&legacy_settings());
         let profile_id = store.profiles[0].id.clone();
@@ -601,6 +617,7 @@ mod tests {
         let mut store = migrate_from_legacy(&legacy_settings());
         let mut p = QuotaArcProfile::new("Night");
         p.theme = Some(ThemePreference::Dark);
+        p.catalog_theme = Some("05-noir-constellation".to_string());
         p.account_ids = store.accounts.iter().map(|a| a.id.clone()).collect();
         store.profiles.push(p);
         let json = serde_json::to_string(&store).unwrap();
@@ -611,5 +628,9 @@ mod tests {
             back.profiles[1].theme,
             Some(ThemePreference::Dark)
         ));
+        assert_eq!(
+            back.profiles[1].catalog_theme.as_deref(),
+            Some("05-noir-constellation"),
+        );
     }
 }

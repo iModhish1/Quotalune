@@ -20,6 +20,7 @@ import {
   toStageProviders,
   usageConfigFromSnapshot,
 } from "../components/orbit/stageProviders";
+import { resolveCatalogTheme } from "../design-system/themeResolution";
 
 /**
  * Pop-out window — dashboard and provider deep-links both keep the full card
@@ -206,11 +207,12 @@ export default function PopOutPanel({
   );
 
   const stageProviders = toStageProviders(sorted, usageConfigFromSnapshot(settings));
+  const catalog = resolveCatalogTheme(settings, "dashboard").slug;
 
   const surface = sorted.length === 0 ? (
     <MenuSurface
       variant="popout"
-      catalogTheme={settings.catalogTheme}
+      catalogTheme={catalog}
       titleBar={<PopOutTitleBar />}
       onRefresh={refresh}
       isRefreshing={isRefreshing}
@@ -226,7 +228,7 @@ export default function PopOutPanel({
   ) : (
     <MenuSurface
       variant="popout"
-      catalogTheme={settings.catalogTheme}
+      catalogTheme={catalog}
       titleBar={<PopOutTitleBar />}
       onRefresh={refresh}
       isRefreshing={isRefreshing}
@@ -246,7 +248,7 @@ export default function PopOutPanel({
       />
       <CatalogUsageHero
         variant="dashboard"
-        catalog={settings.catalogTheme ?? "01-obsidian-orbit"}
+        catalog={catalog}
         providers={stageProviders}
         selectedProviderId={selectedProviderId}
         onSelectProvider={(providerId) => handleGridClick(providerId)}

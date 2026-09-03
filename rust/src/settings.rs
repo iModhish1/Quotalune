@@ -388,6 +388,16 @@ pub struct Settings {
     #[serde(default = "default_catalog_theme")]
     pub catalog_theme: String,
 
+    /// Catalog theme assigned by the active profile. This is a derived cache
+    /// refreshed on profile switches; `None` means inherit the global theme.
+    #[serde(default)]
+    pub active_profile_catalog_theme: Option<String>,
+
+    /// Per-surface catalog overrides. Keys are the bounded public surface ids
+    /// (taskbar/top/edge/hud/quick/dashboard).
+    #[serde(default)]
+    pub surface_catalog_themes: std::collections::HashMap<String, String>,
+
     /// Privacy Mode: hide account/profile names, emails, and costs across
     /// surfaces. Persisted so it survives restarts; toggleable from the tray.
     #[serde(default)]
@@ -509,6 +519,11 @@ pub fn normalize_usage_display_mode(value: &str) -> Option<String> {
 }
 
 pub fn normalize_catalog_theme(value: &str) -> String {
+    canonical_catalog_theme(value).unwrap_or_else(default_catalog_theme)
+}
+
+/// Return a canonical catalog slug only when the input is a registered theme.
+pub fn canonical_catalog_theme(value: &str) -> Option<String> {
     const KNOWN: &[&str] = &[
         "01-obsidian-orbit",
         "02-aurora-bloom",
@@ -526,11 +541,22 @@ pub fn normalize_catalog_theme(value: &str) -> String {
         "14-sapphire-observatory",
         "15-astral-dune",
     ];
-    if KNOWN.contains(&value) {
-        value.to_string()
-    } else {
-        default_catalog_theme()
-    }
+    KNOWN.contains(&value).then(|| value.to_string())
+}
+
+pub fn normalize_surface_catalog_themes(
+    values: std::collections::HashMap<String, String>,
+) -> std::collections::HashMap<String, String> {
+    const SURFACES: &[&str] = &["taskbar", "top", "edge", "hud", "quick", "dashboard"];
+    values
+        .into_iter()
+        .filter_map(|(surface, slug)| {
+            if !SURFACES.contains(&surface.as_str()) {
+                return None;
+            }
+            canonical_catalog_theme(&slug).map(|slug| (surface, slug))
+        })
+        .collect()
 }
 
 fn default_edge_arc_side() -> String {
@@ -729,6 +755,8 @@ impl Default for Settings {
             usage_display_mode: None,
             provider_usage_overrides: std::collections::HashMap::new(),
             catalog_theme: default_catalog_theme(),
+            active_profile_catalog_theme: None,
+            surface_catalog_themes: std::collections::HashMap::new(),
             privacy_mode: false,
             promote_tray_icon: true,
             claude_daily_routines_usage_visible: true,
