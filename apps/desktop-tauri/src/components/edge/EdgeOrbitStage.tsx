@@ -6,6 +6,7 @@ import {
   providerColor,
   type CatalogTheme,
 } from "../../design-system/themeCatalog";
+import { catalogMotion, catalogMotionStyle, motionDelay } from "../../design-system/themeMotion";
 import OrbitTexture from "../orbit/OrbitTexture";
 import type { StageProvider } from "../orbit/stageTypes";
 import { edgeOrbitLayout } from "./edgeOrbitLayout";
@@ -45,6 +46,7 @@ export default function EdgeOrbitStage({
     : Math.max(0, Math.min(focusedIndex, visibleProviders.length - 1));
   const focused = visibleProviders[boundedFocus];
   const light = theme.slug === "04-porcelain-halo";
+  const motion = catalogMotion(theme);
   const gradientId = `qa-edge-${theme.slug}-${stageState}`;
   const style = {
     width: layout.width,
@@ -52,6 +54,7 @@ export default function EdgeOrbitStage({
     "--qa-edge-accent": theme.accent,
     "--qa-edge-core": theme.core,
     "--qa-edge-surface": theme.coreEdge,
+    ...catalogMotionStyle(theme),
   } as CSSProperties;
 
   return (
@@ -60,6 +63,8 @@ export default function EdgeOrbitStage({
       data-state={stageState}
       data-light={light}
       data-theme={theme.slug}
+      data-geometry={theme.geometry}
+      data-motion={motion.character}
       style={style}
       aria-label={`${theme.name} right edge half orbit`}
     >
@@ -125,6 +130,7 @@ export default function EdgeOrbitStage({
           height: layout.nodeSize,
           "--qa-edge-node-size": `${layout.nodeSize}px`,
           "--qa-edge-node-color": color,
+          "--qa-theme-motion-delay": motionDelay(motion, index),
         } as CSSProperties;
         return (
           <button

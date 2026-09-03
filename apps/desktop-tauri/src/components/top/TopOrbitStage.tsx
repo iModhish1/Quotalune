@@ -6,6 +6,7 @@ import {
   providerColor,
   type CatalogTheme,
 } from "../../design-system/themeCatalog";
+import { catalogMotion, catalogMotionStyle, motionDelay } from "../../design-system/themeMotion";
 import OrbitTexture from "../orbit/OrbitTexture";
 import type { StageProvider } from "../orbit/stageTypes";
 import { topOrbitLayout } from "./topOrbitLayout";
@@ -53,6 +54,7 @@ export default function TopOrbitStage({
     : Math.max(0, Math.min(focusedIndex, visibleProviders.length - 1));
   const focused = visibleProviders[boundedFocus];
   const light = theme.slug === "04-porcelain-halo";
+  const motion = catalogMotion(theme);
   const gradientId = `qa-top-${theme.slug}-${stageState}`;
   const style = {
     width: layout.width,
@@ -60,6 +62,7 @@ export default function TopOrbitStage({
     "--qa-top-accent": theme.accent,
     "--qa-top-core": theme.core,
     "--qa-top-edge": theme.coreEdge,
+    ...catalogMotionStyle(theme),
   } as CSSProperties;
 
   return (
@@ -68,6 +71,8 @@ export default function TopOrbitStage({
       data-state={stageState}
       data-light={light}
       data-theme={theme.slug}
+      data-geometry={theme.geometry}
+      data-motion={motion.character}
       style={style}
       aria-label={`${theme.name} top orbital notch`}
     >
@@ -137,6 +142,7 @@ export default function TopOrbitStage({
           "--qa-top-footprint": `${layout.nodeFootprint}px`,
           "--qa-top-node-size": `${layout.nodeSize}px`,
           "--qa-top-node-color": color,
+          "--qa-theme-motion-delay": motionDelay(motion, index),
         } as CSSProperties;
         return (
           <button

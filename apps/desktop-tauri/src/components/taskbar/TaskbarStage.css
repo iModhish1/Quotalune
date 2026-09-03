@@ -4,6 +4,15 @@
   --qa-stage-edge: #1c2634;
   --qa-stage-ink: #f8fafc;
   --qa-stage-muted: rgba(226, 232, 240, 0.62);
+  --qa-theme-motion-duration: 240ms;
+  --qa-theme-motion-easing: cubic-bezier(0.22, 1, 0.36, 1);
+  --qa-theme-motion-focus-scale: 1.09;
+  --qa-theme-motion-lift: -2px;
+  --qa-theme-motion-enter-x: 0px;
+  --qa-theme-motion-enter-y: 7px;
+  --qa-theme-motion-enter-rotate: 0deg;
+  --qa-theme-motion-enter-scale: 0.94;
+  --qa-theme-motion-delay: 0ms;
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -48,6 +57,20 @@
   transform: translate(-50%, -50%);
   cursor: pointer;
   outline: none;
+  animation: qa-taskbar-node-arrive var(--qa-theme-motion-duration) var(--qa-theme-motion-easing) both;
+  animation-delay: var(--qa-theme-motion-delay);
+}
+
+@keyframes qa-taskbar-node-arrive {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(var(--qa-theme-motion-enter-x), var(--qa-theme-motion-enter-y)) rotate(var(--qa-theme-motion-enter-rotate)) scale(var(--qa-theme-motion-enter-scale));
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
 }
 
 .qa-taskbar-node__instrument {
@@ -57,7 +80,7 @@
   height: var(--qa-node-size);
   place-items: center;
   border-radius: 999px;
-  transition: transform 180ms ease, filter 180ms ease;
+  transition: transform var(--qa-theme-motion-duration) var(--qa-theme-motion-easing), filter 160ms ease;
 }
 
 .qa-taskbar-node__instrument::before {
@@ -83,7 +106,7 @@
 .qa-taskbar-node:hover .qa-taskbar-node__instrument,
 .qa-taskbar-node:focus-visible .qa-taskbar-node__instrument,
 .qa-taskbar-node[data-focused="true"] .qa-taskbar-node__instrument {
-  transform: scale(1.1);
+  transform: translateY(var(--qa-theme-motion-lift)) scale(var(--qa-theme-motion-focus-scale));
   filter: drop-shadow(0 0 11px color-mix(in srgb, var(--qa-node-color) 54%, transparent));
 }
 
@@ -241,7 +264,17 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .qa-taskbar-node,
   .qa-taskbar-node__instrument {
+    animation: none;
     transition: none;
   }
+}
+
+[data-qa-motion="reduced"] .qa-taskbar-node,
+[data-qa-motion="off"] .qa-taskbar-node,
+[data-qa-motion="reduced"] .qa-taskbar-node__instrument,
+[data-qa-motion="off"] .qa-taskbar-node__instrument {
+  animation: none;
+  transition: none;
 }

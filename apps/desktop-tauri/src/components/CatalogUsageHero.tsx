@@ -6,6 +6,7 @@ import {
   providerColor,
   type CatalogTheme,
 } from "../design-system/themeCatalog";
+import { catalogMotion, catalogMotionStyle, motionDelay } from "../design-system/themeMotion";
 import OrbitTexture from "./orbit/OrbitTexture";
 import type { StageProvider } from "./orbit/stageTypes";
 import "./CatalogUsageHero.css";
@@ -48,10 +49,12 @@ export default function CatalogUsageHero({
   const color = focused ? providerColor(theme, focused.iconId) : theme.accent;
   const values = complementaryValues(focused);
   const light = theme.slug === "04-porcelain-halo";
+  const motion = catalogMotion(theme);
   const style = {
     "--qa-hero-accent": theme.accent,
     "--qa-hero-core": theme.core,
     "--qa-hero-edge": theme.coreEdge,
+    ...catalogMotionStyle(theme),
   } as CSSProperties;
 
   if (variant === "quick") {
@@ -60,6 +63,8 @@ export default function CatalogUsageHero({
         className="qa-catalog-hero qa-catalog-hero--quick"
         data-theme={theme.slug}
         data-light={light}
+        data-geometry={theme.geometry}
+        data-motion={motion.character}
         style={style}
         aria-label={`${theme.name} usage focus`}
       >
@@ -106,6 +111,8 @@ export default function CatalogUsageHero({
       className="qa-catalog-hero qa-catalog-hero--dashboard"
       data-theme={theme.slug}
       data-light={light}
+      data-geometry={theme.geometry}
+      data-motion={motion.character}
       style={style}
       aria-label={`${theme.name} dashboard orbit`}
     >
@@ -155,6 +162,7 @@ export default function CatalogUsageHero({
               left: `${50 + 36 * Math.sin(radians)}%`,
               top: `${50 - 33 * Math.cos(radians)}%`,
               "--qa-hero-node": nodeColor,
+              "--qa-theme-motion-delay": motionDelay(motion, index),
             } as CSSProperties}
             onClick={() => onSelectProvider?.(provider.id)}
             aria-pressed={provider.id === focused?.id}

@@ -4,6 +4,15 @@
   --qa-top-edge: #1c2634;
   --qa-top-ink: #f8fafc;
   --qa-top-muted: rgba(226, 232, 240, 0.64);
+  --qa-theme-motion-duration: 240ms;
+  --qa-theme-motion-easing: cubic-bezier(0.22, 1, 0.36, 1);
+  --qa-theme-motion-focus-scale: 1.09;
+  --qa-theme-motion-lift: -2px;
+  --qa-theme-motion-enter-x: 0px;
+  --qa-theme-motion-enter-y: 7px;
+  --qa-theme-motion-enter-rotate: 0deg;
+  --qa-theme-motion-enter-scale: 0.94;
+  --qa-theme-motion-delay: 0ms;
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -78,6 +87,20 @@
   background: transparent;
   transform: translate(-50%, -50%);
   cursor: pointer;
+  animation: qa-top-node-arrive var(--qa-theme-motion-duration) var(--qa-theme-motion-easing) both;
+  animation-delay: var(--qa-theme-motion-delay);
+}
+
+@keyframes qa-top-node-arrive {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(var(--qa-theme-motion-enter-x), var(--qa-theme-motion-enter-y)) rotate(var(--qa-theme-motion-enter-rotate)) scale(var(--qa-theme-motion-enter-scale));
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
 }
 
 .qa-top-orbit__node-ring {
@@ -87,7 +110,7 @@
   height: var(--qa-top-node-size);
   place-items: center;
   border-radius: 999px;
-  transition: transform 180ms ease, filter 180ms ease;
+  transition: transform var(--qa-theme-motion-duration) var(--qa-theme-motion-easing), filter 160ms ease;
 }
 
 .qa-top-orbit__node-ring::before {
@@ -103,7 +126,7 @@
 .qa-top-orbit__node:hover .qa-top-orbit__node-ring,
 .qa-top-orbit__node:focus-visible .qa-top-orbit__node-ring,
 .qa-top-orbit__node[data-focused="true"] .qa-top-orbit__node-ring {
-  transform: scale(1.1);
+  transform: translateY(var(--qa-theme-motion-lift)) scale(var(--qa-theme-motion-focus-scale));
   filter: drop-shadow(0 0 9px color-mix(in srgb, var(--qa-top-node-color) 58%, transparent));
 }
 
@@ -196,7 +219,17 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .qa-top-orbit__node,
   .qa-top-orbit__node-ring {
+    animation: none;
     transition: none;
   }
+}
+
+[data-qa-motion="reduced"] .qa-top-orbit__node,
+[data-qa-motion="off"] .qa-top-orbit__node,
+[data-qa-motion="reduced"] .qa-top-orbit__node-ring,
+[data-qa-motion="off"] .qa-top-orbit__node-ring {
+  animation: none;
+  transition: none;
 }

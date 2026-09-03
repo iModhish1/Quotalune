@@ -6,6 +6,7 @@ import {
   providerColor,
   type CatalogTheme,
 } from "../design-system/themeCatalog";
+import { catalogMotion, catalogMotionStyle, motionDelay } from "../design-system/themeMotion";
 import OrbitTexture from "../components/orbit/OrbitTexture";
 import type { StageProvider } from "../components/orbit/stageTypes";
 import "./FloatingHudStage.css";
@@ -32,6 +33,7 @@ export default function FloatingHudStage({
   const focused = visible.find((provider) => provider.id === selectedProviderId) ?? visible[0];
   const focusedColor = focused ? providerColor(theme, focused.iconId) : theme.accent;
   const light = theme.slug === "04-porcelain-halo";
+  const motion = catalogMotion(theme);
   const style = {
     "--qa-hud-bg-0": theme.bg[0],
     "--qa-hud-bg-1": theme.bg[1],
@@ -40,7 +42,7 @@ export default function FloatingHudStage({
     "--qa-hud-accent": theme.accent,
     "--qa-hud-focus": focusedColor,
     "--qa-hud-hairline": theme.hairline,
-    "--qa-hud-motion": `${theme.expansionMs}ms`,
+    ...catalogMotionStyle(theme),
   } as CSSProperties;
 
   return (
@@ -48,6 +50,7 @@ export default function FloatingHudStage({
       className="qa-floating-hud"
       data-theme={theme.slug}
       data-geometry={theme.geometry}
+      data-motion={motion.character}
       data-light={light}
       style={style}
       aria-label={`${theme.name} floating HUD`}
@@ -111,6 +114,7 @@ export default function FloatingHudStage({
                 left: `${50 + 38.5 * Math.cos(radians)}%`,
                 top: `${48.2 + 38 * Math.sin(radians)}%`,
                 "--qa-hud-node": nodeColor,
+                "--qa-theme-motion-delay": motionDelay(motion, index),
               } as CSSProperties
             }
             onClick={() => onSelectProvider?.(provider.id)}

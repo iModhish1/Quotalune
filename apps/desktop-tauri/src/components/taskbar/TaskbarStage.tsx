@@ -6,6 +6,7 @@ import {
   providerColor,
   type CatalogTheme,
 } from "../../design-system/themeCatalog";
+import { catalogMotion, catalogMotionStyle, motionDelay } from "../../design-system/themeMotion";
 import OrbitTexture from "../orbit/OrbitTexture";
 import type { StageProvider } from "../orbit/stageTypes";
 import { taskbarLayout, type TaskbarStageState } from "./taskbarLayout";
@@ -125,6 +126,7 @@ export default function TaskbarStage({
     : Math.max(0, Math.min(focusedIndex, visibleProviders.length - 1));
   const focused = visibleProviders[boundedFocus];
   const light = theme.slug === "04-porcelain-halo";
+  const motion = catalogMotion(theme);
   const gradientId = `qa-stage-${theme.slug}-${stageState}`;
   const style = {
     width: layout.width,
@@ -132,6 +134,7 @@ export default function TaskbarStage({
     "--qa-stage-accent": theme.accent,
     "--qa-stage-core": theme.core,
     "--qa-stage-edge": theme.coreEdge,
+    ...catalogMotionStyle(theme),
   } as CSSProperties;
 
   return (
@@ -139,6 +142,8 @@ export default function TaskbarStage({
       className="qa-taskbar-stage"
       data-state={stageState}
       data-theme={theme.slug}
+      data-geometry={theme.geometry}
+      data-motion={motion.character}
       data-light={light}
       style={style}
       aria-label={`${theme.name} taskbar quota instrument`}
@@ -179,6 +184,7 @@ export default function TaskbarStage({
           width: Math.max(layout.nodeSize, layout.labelWidth),
           "--qa-node-size": `${layout.nodeSize}px`,
           "--qa-node-color": color,
+          "--qa-theme-motion-delay": motionDelay(motion, index),
         } as CSSProperties;
         return (
           <button

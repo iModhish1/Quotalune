@@ -4,6 +4,15 @@
   --qa-edge-surface: #1c2634;
   --qa-edge-ink: #f8fafc;
   --qa-edge-muted: rgba(226, 232, 240, 0.62);
+  --qa-theme-motion-duration: 240ms;
+  --qa-theme-motion-easing: cubic-bezier(0.22, 1, 0.36, 1);
+  --qa-theme-motion-focus-scale: 1.09;
+  --qa-theme-motion-lift: -2px;
+  --qa-theme-motion-enter-x: 0px;
+  --qa-theme-motion-enter-y: 7px;
+  --qa-theme-motion-enter-rotate: 0deg;
+  --qa-theme-motion-enter-scale: 0.94;
+  --qa-theme-motion-delay: 0ms;
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -46,6 +55,20 @@
   background: transparent;
   cursor: pointer;
   outline: none;
+  animation: qa-edge-node-arrive var(--qa-theme-motion-duration) var(--qa-theme-motion-easing) both;
+  animation-delay: var(--qa-theme-motion-delay);
+}
+
+@keyframes qa-edge-node-arrive {
+  from {
+    opacity: 0;
+    transform: translate(var(--qa-theme-motion-enter-x), var(--qa-theme-motion-enter-y)) rotate(var(--qa-theme-motion-enter-rotate)) scale(var(--qa-theme-motion-enter-scale));
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .qa-edge-orbit__node-ring {
@@ -56,7 +79,7 @@
   flex: 0 0 var(--qa-edge-node-size);
   place-items: center;
   border-radius: 999px;
-  transition: transform 180ms ease, filter 180ms ease;
+  transition: transform var(--qa-theme-motion-duration) var(--qa-theme-motion-easing), filter 160ms ease;
 }
 
 .qa-edge-orbit__node-ring::before {
@@ -72,7 +95,7 @@
 .qa-edge-orbit__node:hover .qa-edge-orbit__node-ring,
 .qa-edge-orbit__node:focus-visible .qa-edge-orbit__node-ring,
 .qa-edge-orbit__node[data-focused="true"] .qa-edge-orbit__node-ring {
-  transform: scale(1.1);
+  transform: translateY(var(--qa-theme-motion-lift)) scale(var(--qa-theme-motion-focus-scale));
   filter: drop-shadow(0 0 9px color-mix(in srgb, var(--qa-edge-node-color) 55%, transparent));
 }
 
@@ -205,7 +228,17 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .qa-edge-orbit__node,
   .qa-edge-orbit__node-ring {
+    animation: none;
     transition: none;
   }
+}
+
+[data-qa-motion="reduced"] .qa-edge-orbit__node,
+[data-qa-motion="off"] .qa-edge-orbit__node,
+[data-qa-motion="reduced"] .qa-edge-orbit__node-ring,
+[data-qa-motion="off"] .qa-edge-orbit__node-ring {
+  animation: none;
+  transition: none;
 }
