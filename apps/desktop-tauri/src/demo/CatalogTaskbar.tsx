@@ -83,7 +83,7 @@ function ornament(theme: CatalogTheme, cx: number, cy: number, R: number): JSX.E
           {Array.from({ length: 26 }, (_, i) => {
             const x = cx + ((i * 97) % 300) - 150;
             const y = cy + ((i * 61) % 200) - 100;
-            return <circle key={i} cx={x} cy={y} r={i % 4 === 0 ? 1.4 : 0.8} fill="#d4b483" fillOpacity={0.35} />;
+            return <circle key={i} cx={x} cy={y} r={i % 4 === 0 ? 1.4 : 0.8} fill="#d4b483" fillOpacity={0.7} />;
           })}
         </g>
       );
@@ -94,7 +94,7 @@ function ornament(theme: CatalogTheme, cx: number, cy: number, R: number): JSX.E
             const a = (i * 60 * Math.PI) / 180;
             const x = cx + R * 0.9 * Math.sin(a);
             const y = cy - R * 0.9 * Math.cos(a);
-            return <ellipse key={i} cx={x} cy={y} rx={R * 0.42} ry={R * 0.2} transform={`rotate(${i * 60} ${x} ${y})`} fill="none" stroke="#67e8f9" strokeOpacity={0.2} strokeWidth={1.2} />;
+            return <ellipse key={i} cx={x} cy={y} rx={R * 0.42} ry={R * 0.2} transform={`rotate(${i * 60} ${x} ${y})`} fill="none" stroke="#67e8f9" strokeOpacity={0.4} strokeWidth={1.6} />;
           })}
         </g>
       );
@@ -110,15 +110,15 @@ function ornament(theme: CatalogTheme, cx: number, cy: number, R: number): JSX.E
         <g opacity={0.6}>
           {Array.from({ length: 6 }, (_, i) => {
             const a = (i * 60 + 30) * (Math.PI / 180);
-            return <line key={i} x1={cx} y1={cy} x2={cx + (R + 10) * Math.sin(a)} y2={cy - (R + 10) * Math.cos(a)} stroke="#7dd3fc" strokeOpacity={0.22} strokeWidth={1} />;
+            return <line key={i} x1={cx} y1={cy} x2={cx + (R + 10) * Math.sin(a)} y2={cy - (R + 10) * Math.cos(a)} stroke="#7dd3fc" strokeOpacity={0.45} strokeWidth={1.4} />;
           })}
         </g>
       );
     case "dunes":
       return (
         <g opacity={0.4}>
-          <path d={`M ${cx - R - 20} ${cy + 30} Q ${cx} ${cy + 6} ${cx + R + 20} ${cy + 30}`} fill="none" stroke="#fbbf24" strokeOpacity={0.25} strokeWidth={1.2} />
-          <path d={`M ${cx - R - 30} ${cy + 52} Q ${cx - 20} ${cy + 30} ${cx + R + 30} ${cy + 52}`} fill="none" stroke="#fbbf24" strokeOpacity={0.15} strokeWidth={1} />
+          <path d={`M ${cx - R - 20} ${cy + 30} Q ${cx} ${cy + 6} ${cx + R + 20} ${cy + 30}`} fill="none" stroke="#fbbf24" strokeOpacity={0.5} strokeWidth={1.6} />
+          <path d={`M ${cx - R - 30} ${cy + 52} Q ${cx - 20} ${cy + 30} ${cx + R + 30} ${cy + 52}`} fill="none" stroke="#fbbf24" strokeOpacity={0.32} strokeWidth={1.2} />
         </g>
       );
     case "facets":
@@ -127,7 +127,7 @@ function ornament(theme: CatalogTheme, cx: number, cy: number, R: number): JSX.E
           {Array.from({ length: 6 }, (_, i) => {
             const a1 = (i * 60 * Math.PI) / 180, a2 = ((i + 1) * 60 * Math.PI) / 180;
             const p = `M ${cx} ${cy} L ${cx + R * Math.sin(a1)} ${cy - R * Math.cos(a1)} L ${cx + R * Math.sin(a2)} ${cy - R * Math.cos(a2)} Z`;
-            return <path key={i} d={p} fill="none" stroke="#a78bfa" strokeOpacity={0.18} strokeWidth={1} />;
+            return <path key={i} d={p} fill="none" stroke="#a78bfa" strokeOpacity={0.4} strokeWidth={1.4} />;
           })}
         </g>
       );
@@ -136,7 +136,7 @@ function ornament(theme: CatalogTheme, cx: number, cy: number, R: number): JSX.E
         <g opacity={0.45}>
           {Array.from({ length: 5 }, (_, i) => {
             const a = (i * 72 * Math.PI) / 180;
-            return <ellipse key={i} cx={cx + R * 0.75 * Math.sin(a)} cy={cy - R * 0.75 * Math.cos(a)} rx={R * 0.34} ry={R * 0.2} transform={`rotate(${i * 72} ${cx + R * 0.75 * Math.sin(a)} ${cy - R * 0.75 * Math.cos(a)})`} fill="none" stroke="#e879f9" strokeOpacity={0.25} strokeWidth={1.1} />;
+            return <ellipse key={i} cx={cx + R * 0.75 * Math.sin(a)} cy={cy - R * 0.75 * Math.cos(a)} rx={R * 0.34} ry={R * 0.2} transform={`rotate(${i * 72} ${cx + R * 0.75 * Math.sin(a)} ${cy - R * 0.75 * Math.cos(a)})`} fill="none" stroke="#e879f9" strokeOpacity={0.5} strokeWidth={1.4} />;
           })}
         </g>
       );
@@ -169,10 +169,11 @@ export default function CatalogTaskbar({ catalog, state }: Props) {
 
   // Occupancy: instrument ring diameter fills the frame.
   const W = 820;
-  const H = expanded ? 500 : 290;
-  const R = expanded ? 168 : 112;
+  const H = expanded ? 540 : 400;
+  const R = expanded ? 168 : 118;
   const cx = W / 2;
-  const cy = H - R - (expanded ? 66 : 44);
+  // Generous safe area below the arc for bottom instruments + labels + glow.
+  const cy = expanded ? H - R - 120 : H / 2;
 
   return (
     <div
@@ -193,7 +194,9 @@ export default function CatalogTaskbar({ catalog, state }: Props) {
 
       {/* provider orbital instruments */}
       {show.map((p, i) => {
-        const a = (-72 + (i - (count - 1) / 2) * (144 / Math.max(1, count - 1))) * (Math.PI / 180);
+        const a = expanded
+          ? (-60 + i * 20) * (Math.PI / 180)
+          : (-90 + i * 90) * (Math.PI / 180);
         const orbitR = R + (expanded ? 40 : 22);
         const x = cx + orbitR * Math.sin(a);
         const y = cy - orbitR * Math.cos(a);
@@ -266,7 +269,7 @@ export default function CatalogTaskbar({ catalog, state }: Props) {
       </div>
 
       {/* insight line under the core (expanded only) */}
-      {expanded && (
+      {false && (
         <div
           style={{
             position: "absolute",
