@@ -8,7 +8,7 @@
  *   &v6=obsidian|graphite|midnight|ceramic|mono
  *   &usage=used|remaining|hybrid&usageCustom=claude:used,codex:remaining&focus=N
  */
-import { useEffect, useState, type ComponentType, type CSSProperties } from "react";
+import { useEffect, useState, type ComponentType, type CSSProperties, type ReactNode } from "react";
 import { DesignSystemProvider } from "../design-system";
 import type { UsageDisplayConfig } from "../design-system";
 import TaskbarArc from "../surfaces/taskbar-arc/TaskbarArc";
@@ -18,6 +18,7 @@ import { HudFocus, DashboardHero } from "./DemoExtras";
 import { NotchSurfaceV4, SlabSurfaceV4, SpineSurfaceV4 } from "./V4Surfaces";
 import { TaskbarRadialV5, TopRadialV5, EdgeRadialV5, HudRadialV5 } from "./V5Surfaces";
 import CatalogSurface from "./CatalogSurface";
+import GeometrySurface from "./GeometrySurface";
 
 const params = new URLSearchParams(window.location.search);
 const surface = params.get("surface") ?? "taskbar";
@@ -45,7 +46,7 @@ const usageConfig: UsageDisplayConfig | undefined =
 export default function DemoStage() {
   const gen = params.get("gen") ?? "v3";
 
-  const stage = (w: number, h: number, pos: CSSProperties, node: React.ReactNode) => (
+  const stage = (w: number, h: number, pos: CSSProperties, node: ReactNode) => (
     <DesignSystemProvider theme={theme} motionSetting="off">
       <div
         className="demo-desktop"
@@ -67,6 +68,10 @@ export default function DemoStage() {
   );
 
   const catalogSlug = params.get("catalog");
+  if (catalogSlug && params.get("gen") === "v75") {
+    return stage(460, 300, { left: "50%", top: "50%", transform: "translate(-50%, -50%)" },
+      <GeometrySurface catalog={catalogSlug} surface={surface} reducedMotion={params.get("rm") === "1"} />);
+  }
   if (catalogSlug) {
     return stage(460, 300, { left: "50%", top: "50%", transform: "translate(-50%, -50%)" },
       <CatalogSurface catalog={catalogSlug} surface={surface} state={state} />);
@@ -101,7 +106,7 @@ export default function DemoStage() {
 
   // V3 generation + hud/dashboard heroes
   const expanded = state === "expanded";
-  const nodes: Record<string, { w: number; h: number; pos: CSSProperties; node: React.ReactNode }> = {
+  const nodes: Record<string, { w: number; h: number; pos: CSSProperties; node: ReactNode }> = {
     taskbar: {
       w: expanded ? 348 : 260,
       h: expanded ? 292 : 48,
