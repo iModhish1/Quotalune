@@ -39,14 +39,14 @@ function seededSnapshot(
     reserveDescription: null,
     reserveEtaSeconds: null,
     reserveWillLastToReset: false,
-  } as ProviderUsageSnapshot["primary"];
+  } as unknown as ProviderUsageSnapshot["primary"];
   return {
     providerId,
     displayName,
     primary: win,
     selectedMetric: win,
     secondary: null,
-    secondaryLabel: null,
+    secondaryLabel: undefined,
     modelSpecific: null,
     tertiary: null,
     extraRateWindows: [],
@@ -60,7 +60,7 @@ function seededSnapshot(
     pace: null,
     accountOrganization: null,
     trayStatusLabel: null,
-  } as ProviderUsageSnapshot;
+  } as unknown as ProviderUsageSnapshot;
 }
 
 const FIXTURE = [
@@ -92,7 +92,7 @@ describe.skip("end-to-end usage semantics (settings → stage) — BLOCKED by V8
       expect(r.primaryLabel).toBe("used");
       expect(r.resolvedMode).toBe("used");
       // Arc displays the same fraction the value reports — no inversion.
-      expect(r.arcFraction).toBeCloseTo(r.primaryValue / 100, 6);
+      expect(r.arcFraction).toBeCloseTo(r.primaryValue! / 100, 6);
     }
   });
 
@@ -104,7 +104,7 @@ describe.skip("end-to-end usage semantics (settings → stage) — BLOCKED by V8
     for (const r of rows) {
       expect(r.primaryLabel).toBe("remaining");
       expect(r.resolvedMode).toBe("remaining");
-      expect(r.arcFraction).toBeCloseTo(r.primaryValue / 100, 6);
+      expect(r.arcFraction).toBeCloseTo(r.primaryValue! / 100, 6);
     }
   });
 
@@ -123,11 +123,11 @@ describe.skip("end-to-end usage semantics (settings → stage) — BLOCKED by V8
   it("provider override beats global (claude: used under global remaining)", () => {
     applyUsageConfigFromSnapshot({
       usageDisplayMode: "remaining",
-      providerOverrides: {},
+      providerUsageOverrides: {},
     });
     applyUsageConfigFromSnapshot({
       usageDisplayMode: "remaining",
-      providerOverrides: { claude: "used" },
+      providerUsageOverrides: { claude: "used" },
     });
     const rows = toStageProviders(FIXTURE);
     expect(byId(rows, "claude").primaryValue).toBe(73);
@@ -138,7 +138,7 @@ describe.skip("end-to-end usage semantics (settings → stage) — BLOCKED by V8
   it("global used + claude remaining override → claude 27", () => {
     applyUsageConfigFromSnapshot({
       usageDisplayMode: "used",
-      providerOverrides: { claude: "remaining" },
+      providerUsageOverrides: { claude: "remaining" },
     });
     const rows = toStageProviders(FIXTURE);
     expect(byId(rows, "claude").primaryValue).toBe(27);
@@ -149,7 +149,7 @@ describe.skip("end-to-end usage semantics (settings → stage) — BLOCKED by V8
   it("unavailable providers keep the honest dash", () => {
     applyUsageConfigFromSnapshot({
       usageDisplayMode: "used",
-      providerOverrides: {},
+      providerUsageOverrides: {},
     });
     const withError = [
       ...FIXTURE,
