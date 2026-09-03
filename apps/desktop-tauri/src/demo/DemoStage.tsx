@@ -12,6 +12,7 @@ import TopArc from "../surfaces/top-arc/TopArc";
 import EdgeArc from "../surfaces/edge-arc/EdgeArc";
 import { HudFocus, DashboardHero } from "./DemoExtras";
 import { NotchSurfaceV4, SlabSurfaceV4, SpineSurfaceV4 } from "./V4Surfaces";
+import { TaskbarRadialV5, TopRadialV5, EdgeRadialV5, HudRadialV5 } from "./V5Surfaces";
 
 const params = new URLSearchParams(window.location.search);
 const surface = params.get("surface") ?? "taskbar";
@@ -27,6 +28,35 @@ export default function DemoStage() {
   const showTop = surface === "top";
   const showEdge = surface === "edge";
 
+        if (gen === "v5") {
+          const Comp =
+            surface === "top" ? TopRadialV5
+            : surface === "edge" ? EdgeRadialV5
+            : surface === "hud" ? HudRadialV5
+            : TaskbarRadialV5;
+          const stage: Record<string, { w: number; h: number; pos: import("react").CSSProperties }> = {
+            top: { w: 380, h: 220, pos: { left: "50%", top: 0, transform: "translateX(-50%)" } },
+            edge: { w: 240, h: 260, pos: { right: 0, top: "50%", transform: "translateY(-50%)" } },
+            hud: { w: 380, h: 380, pos: { left: "50%", top: "50%", transform: "translate(-50%, -50%)" } },
+            taskbar: { w: 340, h: 240, pos: { left: "50%", bottom: 48, transform: "translateX(-50%)" } },
+          };
+          const s = stage[surface] ?? stage.taskbar;
+          const st = (state === "hover" ? "hover" : state) as "idle" | "hover" | "expanded";
+          return (
+            <DesignSystemProvider theme={theme} motionSetting="off">
+              <div className="demo-desktop" data-demo-theme={theme}>
+                <div className="demo-wallpaper" />
+                <div className="demo-anchor" style={{ position: "absolute", ...s.pos, width: s.w, height: s.h, zIndex: 5, overflow: "visible" }}>
+                  <Comp state={st} />
+                </div>
+                <div className="demo-taskbar">
+                  <div className="demo-taskbar__tb" /><div className="demo-taskbar__tb" />
+                  <div className="demo-taskbar__tb" /><div className="demo-taskbar__tb" />
+                </div>
+              </div>
+            </DesignSystemProvider>
+          );
+        }
         if (gen === "v4") {
           const W = state === "expanded" ? 620 : 320;
           const H = state === "expanded" ? 176 : 50;
