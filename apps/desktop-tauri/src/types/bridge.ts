@@ -203,6 +203,8 @@ export interface SettingsSnapshot {
   hidePersonalInfo: boolean;
   privacyMode?: boolean;
   catalogTheme?: string;
+  usageDisplayMode?: string | null;
+  providerUsageOverrides?: Record<string, string>;
   updateChannel: UpdateChannel;
   autoDownloadUpdates: boolean;
   installUpdatesOnQuit: boolean;

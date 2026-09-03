@@ -14,21 +14,42 @@ import { ArcGaugeV3 } from "../design-system/ArcGaugeV3";
 import { QaProviderIcon } from "../design-system";
 import { catalogBySlug, providerColor, type CatalogTheme } from "../design-system/themeCatalog";
 
+export type UsageMode = "used" | "remaining" | "hybrid";
+export type ProviderStatus = "ok" | "attention" | "offline";
+
+/**
+ * Presentation-neutral provider contract for TaskbarStageV8.
+ * The live surface resolves usage semantics (via applyUsageSemantics) and
+ * passes the RENDER-READY values — the stage never computes modes itself.
+ */
 export interface StageProvider {
+  /** Stable provider/account ID (not a display name). */
   id: string;
   name: string;
-  remaining: number | null;
+  /** Icon identifier for the normalized provider icon system. */
+  iconId: string;
+  /** Resolved arc fill: what the arc displays (0..=1 or null=unknown). */
+  arcRemaining: number | null;
+  /** Primary numeric value (per resolved mode), in percent. */
+  value: number | null;
+  /** Secondary value for HYBRID, in percent. */
+  secondary: number | null;
+  /** What the primary value means. */
+  valueLabel: "used" | "remaining";
   reset: string;
+  status: ProviderStatus;
+  /** Optional non-identifying account label ("Work", "Main"). */
+  accountLabel?: string | null;
 }
 
 const PROVIDERS: StageProvider[] = [
-  { id: "openai", name: "OpenAI", remaining: 0.68, reset: "3h 40m" },
-  { id: "claude", name: "Claude", remaining: 0.62, reset: "26h 18m" },
-  { id: "gemini", name: "Gemini", remaining: 0.49, reset: "22h 38m" },
-  { id: "llama", name: "Llama", remaining: 0.81, reset: "5d 4h" },
-  { id: "mistral", name: "Mistral", remaining: 0.57, reset: "1d 2h" },
-  { id: "deepseek", name: "DeepSeek", remaining: 0.38, reset: "19h 12m" },
-  { id: "perplexity", name: "Perplexity", remaining: 0.45, reset: "3d 12h" },
+  { id: "openai", name: "OpenAI", iconId: "openai", arcRemaining: 0.68, value: 68, secondary: 32, valueLabel: "remaining", reset: "3h 40m", status: "ok" },
+  { id: "claude", name: "Claude", iconId: "claude", arcRemaining: 0.62, value: 62, secondary: 38, valueLabel: "remaining", reset: "26h 18m", status: "ok" },
+  { id: "gemini", name: "Gemini", iconId: "gemini", arcRemaining: 0.49, value: 49, secondary: 51, valueLabel: "remaining", reset: "22h 38m", status: "ok" },
+  { id: "llama", name: "Llama", iconId: "llama", arcRemaining: 0.81, value: 81, secondary: 19, valueLabel: "remaining", reset: "5d 4h", status: "ok" },
+  { id: "mistral", name: "Mistral", iconId: "mistral", arcRemaining: 0.57, value: 57, secondary: 43, valueLabel: "remaining", reset: "1d 2h", status: "ok" },
+  { id: "deepseek", name: "DeepSeek", iconId: "deepseek", arcRemaining: 0.38, value: 38, secondary: 62, valueLabel: "remaining", reset: "19h 12m", status: "ok" },
+  { id: "perplexity", name: "Perplexity", iconId: "perplexity", arcRemaining: 0.45, value: 45, secondary: 55, valueLabel: "remaining", reset: "3d 12h", status: "ok" },
 ];
 
 /** Theme ornament: SVG structure behind/around the instruments. */
@@ -210,14 +231,14 @@ export default function CatalogTaskbar({ catalog, state, providers }: Props) {
         const x = cx + orbitR * Math.sin(a);
         const y = cy - orbitR * Math.cos(a);
         const size = expanded ? 66 : 58;
-        const pct = p.remaining == null ? null : Math.round(p.remaining * 100);
-        const color = providerColor(theme, p.id);
+        const pct = p.value;
+        const color = providerColor(theme, p.iconId);
         const focused = i === 1;
         return (
           <div key={p.id} style={{ position: "absolute", left: x - size / 2, top: y - size / 2, width: size, textAlign: "center" }}>
             <span style={{ position: "relative", display: "grid", placeItems: "center", width: size, height: size }}>
               <span style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
-                <ArcGaugeV3 remaining={p.remaining} size={size} stroke={expanded ? 4.2 : 4} colorOverride={color} ariaLabel={`${p.name} arc`} />
+                <ArcGaugeV3 remaining={p.arcRemaining} size={size} stroke={expanded ? 4.2 : 4} colorOverride={color} ariaLabel={`${p.name} ${p.valueLabel} arc`} />
               </span>
               <span
                 style={{
@@ -231,7 +252,7 @@ export default function CatalogTaskbar({ catalog, state, providers }: Props) {
                   border: `1px solid ${color}55`,
                 }}
               >
-                <QaProviderIcon providerId={p.id} size={Math.round(size * 0.34)} />
+                <QaProviderIcon providerId={p.iconId} size={Math.round(size * 0.34)} />
               </span>
             </span>
             <span

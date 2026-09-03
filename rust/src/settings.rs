@@ -373,6 +373,15 @@ pub struct Settings {
     #[serde(default = "default_true")]
     pub taskbar_arc_hide_fullscreen: bool,
 
+    /// Global usage display mode: "used" | "remaining" | "hybrid".
+    /// Per-provider overrides live in provider_usage_overrides.
+    #[serde(default)]
+    pub usage_display_mode: Option<String>,
+
+    /// Per-provider usage mode overrides keyed by provider CLI name.
+    #[serde(default)]
+    pub provider_usage_overrides: std::collections::HashMap<String, String>,
+
     /// Orbital theme catalog selection (themeCatalog slug, e.g.
     /// "01-obsidian-orbit"). Invalid or missing slugs fall back to the
     /// Obsidian Orbit default at read time.
@@ -490,6 +499,15 @@ fn default_catalog_theme() -> String {
 
 /// Validate a catalog theme slug; unknown values fall back to the default
 /// so a corrupt settings file can never select a nonexistent theme.
+/// Normalize a usage display mode; unknown values become None (remaining).
+pub fn normalize_usage_display_mode(value: &str) -> Option<String> {
+    match value {
+        "used" => Some("used".to_string()),
+        "hybrid" => Some("hybrid".to_string()),
+        _ => None,
+    }
+}
+
 pub fn normalize_catalog_theme(value: &str) -> String {
     const KNOWN: &[&str] = &[
         "01-obsidian-orbit",
@@ -707,6 +725,8 @@ impl Default for Settings {
             taskbar_arc_opacity: default_surface_opacity(),
             taskbar_arc_click_through: false,
             taskbar_arc_hide_fullscreen: true,
+            usage_display_mode: None,
+            provider_usage_overrides: std::collections::HashMap::new(),
             catalog_theme: default_catalog_theme(),
             privacy_mode: false,
             promote_tray_icon: true,

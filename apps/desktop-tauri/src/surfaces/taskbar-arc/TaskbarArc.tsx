@@ -13,7 +13,9 @@ import CatalogTaskbarStage, { type StageProvider } from "../../demo/CatalogTaskb
 import { useProviders } from "../../hooks/useProviders";
 import { refreshProvidersIfStale, refreshProviders } from "../../lib/tauri";
 import { resizeTaskbarArc } from "../../lib/surfaceBridge";
+import { applyUsageSemantics, resolveUsageMode, type UsageDisplayConfig } from "../../design-system/themes";
 import type { ProviderUsageSnapshot } from "../../types/bridge";
+import { getSettingsSnapshot } from "../../lib/tauri";
 
 const W = 820;
 const H_EXPANDED = 500;
@@ -40,13 +42,51 @@ function resetOf(p: ProviderUsageSnapshot): string {
 }
 
 /** Map live snapshots → stage providers; honest unavailable states. */
+/** Usage config injected from settings (set by the live surface). */
+let usageConfig: UsageDisplayConfig | undefined;
+
+export function setUsageConfig(config: UsageDisplayConfig | undefined) {
+  usageConfig = config;
+}
+
+let activeUsageConfig: UsageDisplayConfig | undefined;
+
+function applyUsageConfigFromSnapshot(s: { usageDisplayMode?: string | null; providerUsageOverrides?: Record<string, string> }) {
+  if (s.usageDisplayMode == null && !s.providerUsageOverrides) {
+    activeUsageConfig = undefined;
+    return;
+  }
+  activeUsageConfig = {
+    global: (s.usageDisplayMode ?? "remaining") as "used" | "remaining" | "hybrid",
+    providerOverrides: Object.fromEntries(
+      Object.entries(s.providerUsageOverrides ?? {}).map(([k, v]) => [
+        k,
+        v as "used" | "remaining" | "hybrid",
+      ]),
+    ),
+  };
+}
+
 function toStageProviders(providers: ProviderUsageSnapshot[]): StageProvider[] {
-  return providers.slice(0, 7).map((p) => ({
-    id: p.providerId,
-    name: p.displayName,
-    remaining: p.error == null ? remainingOf(p) : null,
-    reset: resetOf(p),
-  }));
+  return providers.slice(0, 7).map((p) => {
+    const remaining = p.error == null ? remainingOf(p) : null;
+    const mode = resolveUsageMode(
+      usageConfig ?? activeUsageConfig ?? { global: "remaining", providerOverrides: {} },
+      p.providerId,
+    );
+    const s = applyUsageSemantics(mode, remaining);
+    return {
+      id: p.providerId,
+      name: p.displayName,
+      iconId: p.providerId,
+      arcRemaining: s.arc,
+      value: s.value,
+      secondary: s.secondary,
+      valueLabel: s.label,
+      reset: resetOf(p),
+      status: p.error ? "offline" : "ok",
+    };
+  });
 }
 
 export default function TaskbarArc({ demo }: TaskbarArcProps) {
@@ -59,7 +99,12 @@ export default function TaskbarArc({ demo }: TaskbarArcProps) {
   // Persisted catalog theme + live re-theme on broadcast.
   useEffect(() => {
     const load = () =>
-      getCatalogTheme().then(setCatalog).catch(() => {});
+      getSettingsSnapshot()
+        .then((s) => {
+          setCatalog(s.catalogTheme ?? "01-obsidian-orbit");
+          applyUsageConfigFromSnapshot(s);
+        })
+        .catch(() => {});
     load();
     const unlistenPromise = listen("codexbar:settings-updated", load);
     const unlisten = unlistenPromise.catch(() => (() => {}) as () => void);
@@ -171,7 +216,7 @@ export default function TaskbarArc({ demo }: TaskbarArcProps) {
         style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clipPath: "inset(50%)" }}
       >
         {focused
-          ? `${focused.name}: ${focused.remaining == null ? "quota unavailable" : `${Math.round(focused.remaining * 100)} percent remaining`}, resets ${focused.reset}`
+          ? `${focused.name}: ${focused.value == null ? "quota unavailable" : `${Math.round(focused.value)} percent ${focused.valueLabel}`}, resets ${focused.reset}`
           : "No providers connected"}
       </div>
     </div>
@@ -179,7 +224,6 @@ export default function TaskbarArc({ demo }: TaskbarArcProps) {
 }
 
 import { useRef } from "react";
-import { getSettingsSnapshot } from "../../lib/tauri";
 
 async function getCatalogTheme(): Promise<string> {
   const s = (await getSettingsSnapshot()) as { catalogTheme?: string };
