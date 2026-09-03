@@ -35,7 +35,9 @@
 .qa-surface--edge-right {
   border-radius: var(--qa-edge-right-pod-radius);
   border-right: none;
+  /* Perfectly flush: no shadow bleed past the physical edge. */
   box-shadow: -18px 0 44px rgba(0, 0, 0, 0.4), var(--qa-edge-highlight);
+  clip-path: inset(-40px -1px -40px -40px);
 }
 .qa-surface--edge-left {
   border-radius: var(--qa-edge-left-pod-radius);
@@ -48,9 +50,12 @@
   display: inline-flex;
   align-items: center;
   gap: var(--qa-space-2);
-  padding: var(--qa-space-1) var(--qa-space-2);
+  padding: var(--qa-space-1) var(--qa-space-3) var(--qa-space-1) var(--qa-space-2);
   border-radius: var(--qa-radius-control);
   transition: background var(--qa-motion-fast) var(--qa-motion-ease-out);
+}
+.qa-avatar {
+  opacity: 0.85;
 }
 .qa-instrument:hover {
   background: rgba(255, 255, 255, 0.05);

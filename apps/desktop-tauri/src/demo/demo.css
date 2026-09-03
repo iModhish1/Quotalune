@@ -23,3 +23,78 @@
   z-index: 1;
 }
 .demo-taskbar__tb { width: 22px; height: 22px; border-radius: 6px; background: rgba(255,255,255,.09); }
+
+/* ── Floating HUD V2 (Focus) ───────────────────────────────────────── */
+.qa-hud {
+  display: flex;
+  align-items: center;
+  gap: var(--qa-space-5);
+  padding: var(--qa-space-5);
+  background: var(--qa-material-graphite);
+  border: 1px solid var(--qa-hairline);
+  border-radius: var(--qa-radius-surface-lg);
+  box-shadow: var(--qa-shadow-3), var(--qa-edge-highlight);
+  font-family: var(--qa-font);
+  color: var(--qa-ink-1);
+}
+.qa-hud__arcwrap { position: relative; display: grid; place-items: center; }
+.qa-hud__arcval { position: absolute; display: flex; align-items: baseline; gap: 1px; }
+.qa-hud__big { font-size: 21px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.qa-hud__pctsign { font-size: 12px; color: var(--qa-ink-3); }
+.qa-hud__meta { display: flex; flex-direction: column; gap: 8px; min-width: 140px; }
+.qa-hud__name { display: flex; align-items: center; gap: 8px; font-size: var(--qa-text-title); font-weight: var(--qa-weight-semibold); }
+.qa-hud__row { display: flex; align-items: center; justify-content: space-between; gap: var(--qa-space-4); }
+.qa-hud__k { font-size: var(--qa-text-meta); color: var(--qa-ink-3); }
+
+/* ── Dashboard hero ────────────────────────────────────────────────── */
+.qa-dash {
+  width: 620px;
+  background: var(--qa-material-graphite);
+  border: 1px solid var(--qa-hairline);
+  border-radius: var(--qa-radius-surface-lg);
+  box-shadow: var(--qa-shadow-3), var(--qa-edge-highlight);
+  font-family: var(--qa-font);
+  color: var(--qa-ink-1);
+  overflow: hidden;
+}
+.qa-dash__hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--qa-space-6);
+  padding: var(--qa-space-6);
+}
+.qa-dash__heroarcs { display: flex; gap: var(--qa-space-6); }
+.qa-dash__heroitem { display: flex; flex-direction: column; align-items: center; gap: var(--qa-space-2); }
+.qa-dash__arcwrap { position: relative; display: grid; place-items: center; }
+.qa-dash__arcval {
+  position: absolute; font-size: 16px; font-weight: 650;
+  font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1;
+}
+.qa-dash__heroname {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--qa-text-label); color: var(--qa-ink-2); font-weight: var(--qa-weight-medium);
+}
+.qa-dash__callout { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; text-align: right; }
+.qa-dash__callout-k {
+  font-size: var(--qa-text-micro); letter-spacing: var(--qa-tracking-caps);
+  text-transform: uppercase; color: var(--qa-ink-3); font-weight: var(--qa-weight-semibold);
+}
+.qa-dash__timeline {
+  border-top: 1px solid var(--qa-hairline);
+  padding: var(--qa-space-4) var(--qa-space-6) var(--qa-space-5);
+}
+.qa-dash__tl-title {
+  font-size: var(--qa-text-micro); letter-spacing: var(--qa-tracking-caps);
+  text-transform: uppercase; color: var(--qa-ink-3); font-weight: var(--qa-weight-semibold);
+}
+.qa-dash__tlrow {
+  display: flex; align-items: center; gap: var(--qa-space-4);
+  padding: var(--qa-space-2) 0;
+}
+.qa-dash__tlrow .qa-quick-panel__name { width: 90px; }
+.qa-dash__bar {
+  flex: 1; height: 4px; border-radius: 999px;
+  background: var(--qa-track); overflow: hidden;
+}
+.qa-dash__barfill { height: 100%; border-radius: 999px; background: var(--qa-accent); }

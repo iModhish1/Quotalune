@@ -21,8 +21,8 @@
 .qa-tarc__idle {
   display: flex;
   align-items: center;
-  gap: var(--qa-space-1);
-  padding: 0 var(--qa-space-2);
+  gap: var(--qa-space-2);
+  padding: 0 var(--qa-space-3);
   border-radius: var(--qa-radius-control) var(--qa-radius-control) 0 0;
   height: 100%;
   transition: background var(--qa-motion-fast) var(--qa-motion-ease-out);

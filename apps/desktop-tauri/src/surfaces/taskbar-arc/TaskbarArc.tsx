@@ -29,8 +29,8 @@ import { resizeTaskbarArc } from "../../lib/surfaceBridge";
 import type { ProviderUsageSnapshot } from "../../types/bridge";
 import "./taskbar-v2.css";
 
-const IDLE_W = 260;
-const IDLE_H = 48;
+const IDLE_W = 288;
+const IDLE_H = 52;
 const PANEL_W = 348;
 const PANEL_H = 292;
 
@@ -95,7 +95,7 @@ function Chips({
             statusOverride={p.error ? "offline" : undefined}
             ariaLabel={`${p.displayName} ${remaining == null ? "unknown" : `${Math.round((remaining ?? 0) * 100)}% remaining`}`}
             onClick={onClick}
-            size={26}
+            size={28}
           />
         );
       })}

@@ -10,6 +10,7 @@ import { DesignSystemProvider } from "../design-system";
 import TaskbarArc from "../surfaces/taskbar-arc/TaskbarArc";
 import TopArc from "../surfaces/top-arc/TopArc";
 import EdgeArc from "../surfaces/edge-arc/EdgeArc";
+import { HudFocus, DashboardHero } from "./DemoExtras";
 
 const params = new URLSearchParams(window.location.search);
 const surface = params.get("surface") ?? "taskbar";
@@ -66,6 +67,18 @@ export default function DemoStage() {
             style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", width: 150, height: 200 }}
           >
             <EdgeArcDemo state={state} />
+          </div>
+        )}
+        {(surface === "hud" || surface === "dashboard") && (
+          <div
+            className="demo-anchor"
+            style={
+              surface === "hud"
+                ? { position: "absolute", right: 160, top: 120, width: 340, height: 200 }
+                : { position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", width: 620, height: 420 }
+            }
+          >
+            {surface === "hud" ? <HudFocus /> : <DashboardHero />}
           </div>
         )}
         <div className="demo-taskbar">

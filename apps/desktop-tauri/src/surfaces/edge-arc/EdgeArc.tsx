@@ -110,8 +110,14 @@ export default function EdgeArc({ demo }: EdgeArcProps) {
               <span className="qa-tico" aria-hidden="true">
                 <ProviderIcon providerId={p.providerId} size={15} />
               </span>
-              <span className="qa-earc__arcwrap">
+              <span className="qa-earc__arcwrap" style={{ position: "relative", display: "grid", placeItems: "center" }}>
                 {useArc(p)}
+                <span
+                  className="qa-value"
+                  style={{ position: "absolute", fontSize: "10.5px" }}
+                >
+                  {pct ?? "–"}
+                </span>
               </span>
               <AnimatePresence>
                 {hovered && (
@@ -130,7 +136,6 @@ export default function EdgeArc({ demo }: EdgeArcProps) {
                   </motion.div>
                 )}
               </AnimatePresence>
-              {!hovered && <QaValue>{pct == null ? "–" : pct}</QaValue>}
             </motion.div>
           );
         })}
