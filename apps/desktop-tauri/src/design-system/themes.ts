@@ -10,6 +10,8 @@
  * account-level overrides).
  */
 
+import { normalizePercentage } from "./percent";
+
 export type UsageMode = "used" | "remaining" | "hybrid";
 
 export interface UsageDisplayConfig {
@@ -53,17 +55,29 @@ export function applyUsageSemantics(
   if (remaining == null) {
     return { arc: null, value: null, secondary: null, label: "remaining" };
   }
-  const used = 1 - remaining;
+  // Normalize at the semantics source so no downstream surface ever sees
+  // IEEE-754 drift (e.g. 20.999999999999996 from 1 - 0.79).
+  const clean = normalizePercentage(remaining * 100);
+  if (clean === null) {
+    return { arc: null, value: null, secondary: null, label: "remaining" };
+  }
+  const remainingFraction = clean / 100;
+  const used = 1 - remainingFraction;
+  // Every emitted number passes normalization: used*100 can re-introduce
+  // drift (1 - 0.79 = 0.21000000000000002), so normalize each output.
+  const value = normalizePercentage(used * 100);
+  const secondary = normalizePercentage(remainingFraction * 100);
+  // Product rule (V8.4): the arc ALWAYS displays the same fraction as the
+  // primary value, so text, arc endpoint, and accessible name can never
+  // disagree. Hybrid keeps the documented contract: primary = used,
+  // secondary = remaining, arc follows the remaining fraction.
   switch (mode) {
     case "used":
-      // Arc fills forward through consumption; value reads used.
-      return { arc: remaining, value: used * 100, secondary: remaining * 100, label: "used" };
+      return { arc: value / 100, value, secondary, label: "used" };
     case "remaining":
-      // Arc shows what's left; value reads remaining.
-      return { arc: remaining, value: remaining * 100, secondary: used * 100, label: "remaining" };
+      return { arc: secondary / 100, value, secondary, label: "remaining" };
     case "hybrid":
-      // Arc shows remaining (spatial intuition), value leads with used.
-      return { arc: remaining, value: used * 100, secondary: remaining * 100, label: "used" };
+      return { arc: secondary / 100, value, secondary, label: "used" };
   }
 }
 

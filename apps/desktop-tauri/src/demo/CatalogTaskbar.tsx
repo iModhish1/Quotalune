@@ -28,14 +28,16 @@ export interface StageProvider {
   name: string;
   /** Icon identifier for the normalized provider icon system. */
   iconId: string;
-  /** Resolved arc fill: what the arc displays (0..=1 or null=unknown). */
-  arcRemaining: number | null;
+  /** Resolved usage mode — semantic source of the fields below. */
+  resolvedMode: "used" | "remaining" | "hybrid";
+  /** Arc fill fraction (0..=1) per the resolved mode. */
+  arcFraction: number | null;
   /** Primary numeric value (per resolved mode), in percent. */
-  value: number | null;
+  primaryValue: number | null;
   /** Secondary value for HYBRID, in percent. */
-  secondary: number | null;
-  /** What the primary value means. */
-  valueLabel: "used" | "remaining";
+  secondaryValue: number | null;
+  /** What the primary value means ("used" | "remaining"). */
+  primaryLabel: "used" | "remaining";
   reset: string;
   status: ProviderStatus;
   /** Optional non-identifying account label ("Work", "Main"). */
@@ -43,13 +45,13 @@ export interface StageProvider {
 }
 
 const PROVIDERS: StageProvider[] = [
-  { id: "openai", name: "OpenAI", iconId: "openai", arcRemaining: 0.68, value: 68, secondary: 32, valueLabel: "remaining", reset: "3h 40m", status: "ok" },
-  { id: "claude", name: "Claude", iconId: "claude", arcRemaining: 0.62, value: 62, secondary: 38, valueLabel: "remaining", reset: "26h 18m", status: "ok" },
-  { id: "gemini", name: "Gemini", iconId: "gemini", arcRemaining: 0.49, value: 49, secondary: 51, valueLabel: "remaining", reset: "22h 38m", status: "ok" },
-  { id: "llama", name: "Llama", iconId: "llama", arcRemaining: 0.81, value: 81, secondary: 19, valueLabel: "remaining", reset: "5d 4h", status: "ok" },
-  { id: "mistral", name: "Mistral", iconId: "mistral", arcRemaining: 0.57, value: 57, secondary: 43, valueLabel: "remaining", reset: "1d 2h", status: "ok" },
-  { id: "deepseek", name: "DeepSeek", iconId: "deepseek", arcRemaining: 0.38, value: 38, secondary: 62, valueLabel: "remaining", reset: "19h 12m", status: "ok" },
-  { id: "perplexity", name: "Perplexity", iconId: "perplexity", arcRemaining: 0.45, value: 45, secondary: 55, valueLabel: "remaining", reset: "3d 12h", status: "ok" },
+  { id: "openai", name: "OpenAI", iconId: "openai", resolvedMode: "remaining", arcFraction: 0.68, primaryValue: 68, secondaryValue: 32, primaryLabel: "remaining", reset: "3h 40m", status: "ok" },
+  { id: "claude", name: "Claude", iconId: "claude", resolvedMode: "remaining", arcFraction: 0.62, primaryValue: 62, secondaryValue: 38, primaryLabel: "remaining", reset: "26h 18m", status: "ok" },
+  { id: "gemini", name: "Gemini", iconId: "gemini", resolvedMode: "remaining", arcFraction: 0.49, primaryValue: 49, secondaryValue: 51, primaryLabel: "remaining", reset: "22h 38m", status: "ok" },
+  { id: "llama", name: "Llama", iconId: "llama", resolvedMode: "remaining", arcFraction: 0.81, primaryValue: 81, secondaryValue: 19, primaryLabel: "remaining", reset: "5d 4h", status: "ok" },
+  { id: "mistral", name: "Mistral", iconId: "mistral", resolvedMode: "remaining", arcFraction: 0.57, primaryValue: 57, secondaryValue: 43, primaryLabel: "remaining", reset: "1d 2h", status: "ok" },
+  { id: "deepseek", name: "DeepSeek", iconId: "deepseek", resolvedMode: "remaining", arcFraction: 0.38, primaryValue: 38, secondaryValue: 62, primaryLabel: "remaining", reset: "19h 12m", status: "ok" },
+  { id: "perplexity", name: "Perplexity", iconId: "perplexity", resolvedMode: "remaining", arcFraction: 0.45, primaryValue: 45, secondaryValue: 55, primaryLabel: "remaining", reset: "3d 12h", status: "ok" },
 ];
 
 /** Theme ornament: SVG structure behind/around the instruments. */
@@ -231,14 +233,14 @@ export default function CatalogTaskbar({ catalog, state, providers }: Props) {
         const x = cx + orbitR * Math.sin(a);
         const y = cy - orbitR * Math.cos(a);
         const size = expanded ? 66 : 58;
-        const pct = p.value;
+        const pct = p.primaryValue;
         const color = providerColor(theme, p.iconId);
         const focused = i === 1;
         return (
           <div key={p.id} style={{ position: "absolute", left: x - size / 2, top: y - size / 2, width: size, textAlign: "center" }}>
             <span style={{ position: "relative", display: "grid", placeItems: "center", width: size, height: size }}>
               <span style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
-                <ArcGaugeV3 remaining={p.arcRemaining} size={size} stroke={expanded ? 4.2 : 4} colorOverride={color} ariaLabel={`${p.name} ${p.valueLabel} arc`} />
+                <ArcGaugeV3 remaining={p.arcFraction} size={size} stroke={expanded ? 4.2 : 4} colorOverride={color} ariaLabel={`${p.name} ${p.primaryLabel} arc`} />
               </span>
               <span
                 style={{
@@ -265,7 +267,7 @@ export default function CatalogTaskbar({ catalog, state, providers }: Props) {
                 fontVariantNumeric: "tabular-nums",
               }}
             >
-              {formatPercentage(p.value)}
+              {formatPercentage(p.primaryValue)}
             </span>
             {expanded && (
               <span className="qa-reset" style={{ display: "block", fontSize: 10.5 }}>

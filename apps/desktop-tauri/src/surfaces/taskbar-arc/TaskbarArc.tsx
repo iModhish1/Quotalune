@@ -42,21 +42,19 @@ function resetOf(p: ProviderUsageSnapshot): string {
 }
 
 /** Map live snapshots → stage providers; honest unavailable states. */
-/** Usage config injected from settings (set by the live surface). */
-let usageConfig: UsageDisplayConfig | undefined;
 
-export function setUsageConfig(config: UsageDisplayConfig | undefined) {
-  usageConfig = config;
-}
+/** Usage config resolved from the settings snapshot (live + tests). */
+export let usageConfig: UsageDisplayConfig | undefined;
 
-let activeUsageConfig: UsageDisplayConfig | undefined;
-
-function applyUsageConfigFromSnapshot(s: { usageDisplayMode?: string | null; providerUsageOverrides?: Record<string, string> }) {
+export function applyUsageConfigFromSnapshot(s: {
+  usageDisplayMode?: string | null;
+  providerUsageOverrides?: Record<string, string>;
+}) {
   if (s.usageDisplayMode == null && !s.providerUsageOverrides) {
-    activeUsageConfig = undefined;
+    usageConfig = undefined;
     return;
   }
-  activeUsageConfig = {
+  usageConfig = {
     global: (s.usageDisplayMode ?? "remaining") as "used" | "remaining" | "hybrid",
     providerOverrides: Object.fromEntries(
       Object.entries(s.providerUsageOverrides ?? {}).map(([k, v]) => [
@@ -67,11 +65,11 @@ function applyUsageConfigFromSnapshot(s: { usageDisplayMode?: string | null; pro
   };
 }
 
-function toStageProviders(providers: ProviderUsageSnapshot[]): StageProvider[] {
+export function toStageProviders(providers: ProviderUsageSnapshot[]): StageProvider[] {
   return providers.slice(0, 7).map((p) => {
     const remaining = p.error == null ? remainingOf(p) : null;
     const mode = resolveUsageMode(
-      usageConfig ?? activeUsageConfig ?? { global: "remaining", providerOverrides: {} },
+      usageConfig ?? { global: "remaining", providerOverrides: {} },
       p.providerId,
     );
     const s = applyUsageSemantics(mode, remaining);
@@ -79,10 +77,11 @@ function toStageProviders(providers: ProviderUsageSnapshot[]): StageProvider[] {
       id: p.providerId,
       name: p.displayName,
       iconId: p.providerId,
-      arcRemaining: s.arc,
-      value: s.value,
-      secondary: s.secondary,
-      valueLabel: s.label,
+      resolvedMode: mode,
+      arcFraction: s.arc,
+      primaryValue: s.value,
+      secondaryValue: s.secondary,
+      primaryLabel: s.label,
       reset: resetOf(p),
       status: p.error ? "offline" : "ok",
     };
@@ -216,7 +215,7 @@ export default function TaskbarArc({ demo }: TaskbarArcProps) {
         style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clipPath: "inset(50%)" }}
       >
         {focused
-          ? `${focused.name}: ${focused.value == null ? "quota unavailable" : `${Math.round(focused.value)} percent ${focused.valueLabel}`}, resets ${focused.reset}`
+          ? `${focused.name}: ${focused.primaryValue == null ? "quota unavailable" : `${Math.round(focused.primaryValue)} percent ${focused.primaryLabel}`}, resets ${focused.reset}`
           : "No providers connected"}
       </div>
     </div>
