@@ -337,7 +337,10 @@ fn archived_catalog_values_normalize_to_the_canonical_theme() {
     assert!(back.active_profile_catalog_theme.is_none());
     assert!(back.surface_catalog_themes.is_empty());
     assert!(!back.edge_arc_enabled, "edge overlay is retired on load");
-    assert!(!back.taskbar_arc_enabled, "taskbar overlay is retired on load");
+    assert!(
+        !back.taskbar_arc_enabled,
+        "taskbar overlay is retired on load"
+    );
 }
 
 #[test]

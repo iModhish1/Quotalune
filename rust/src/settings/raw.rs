@@ -640,7 +640,10 @@ impl From<RawSettings> for Settings {
             float_bar_dark_text: raw.float_bar_dark_text,
             float_bar_show_reset_inline: raw.float_bar_show_reset_inline,
             float_bar_show_cost: raw.float_bar_show_cost,
-            edge_arc_enabled: raw.edge_arc_enabled,
+            // The V9 foundation intentionally exposes one bounded Quota
+            // Island. Never revive the archived Edge/Taskbar experiments
+            // while deserializing an older settings file.
+            edge_arc_enabled: false,
             edge_arc_side: normalize_edge_arc_side(&raw.edge_arc_side),
             edge_arc_opacity: clamp_surface_opacity(raw.edge_arc_opacity),
             edge_arc_scale: clamp_surface_scale(raw.edge_arc_scale),
@@ -662,7 +665,7 @@ impl From<RawSettings> for Settings {
                 .as_deref()
                 .and_then(canonical_catalog_theme),
             surface_catalog_themes: normalize_surface_catalog_themes(raw.surface_catalog_themes),
-            taskbar_arc_enabled: raw.taskbar_arc_enabled,
+            taskbar_arc_enabled: false,
             taskbar_arc_opacity: clamp_surface_opacity(raw.taskbar_arc_opacity),
             taskbar_arc_click_through: raw.taskbar_arc_click_through,
             taskbar_arc_scale: clamp_surface_scale(raw.taskbar_arc_scale),
