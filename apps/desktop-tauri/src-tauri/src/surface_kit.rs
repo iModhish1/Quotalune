@@ -101,6 +101,38 @@ pub fn apply_no_activate(window: &WebviewWindow) {
     }
 }
 
+/// Switch between a passive desktop widget and an interactive panel. Compact
+/// overlays stay no-activate; expanded details must accept keyboard focus so
+/// Escape, Tab and provider navigation work like a normal Windows panel.
+pub fn apply_interaction_mode(window: &WebviewWindow, interactive: bool) {
+    #[cfg(windows)]
+    {
+        use raw_window_handle::HasWindowHandle;
+        let Ok(handle) = window.window_handle() else {
+            return;
+        };
+        let raw_window_handle::RawWindowHandle::Win32(h) = handle.as_raw() else {
+            return;
+        };
+        unsafe {
+            const WS_EX_NOACTIVATE: isize = 0x0800_0000;
+            let ex = GetWindowLongPtrW(h.hwnd.get(), GWL_EXSTYLE);
+            let new_ex = if interactive {
+                ex & !WS_EX_NOACTIVATE
+            } else {
+                ex | WS_EX_NOACTIVATE
+            };
+            if new_ex != ex {
+                set_extended_style(h.hwnd.get(), new_ex);
+            }
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (window, interactive);
+    }
+}
+
 /// Toggle full click-through (`WS_EX_TRANSPARENT`) overlay mode.
 pub fn apply_click_through(window: &WebviewWindow, click_through: bool) {
     #[cfg(windows)]

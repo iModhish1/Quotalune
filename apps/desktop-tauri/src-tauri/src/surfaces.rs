@@ -11,18 +11,39 @@
 //! at least one surface is visible.
 
 use codexbar::settings::Settings;
+use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
 use tauri::{LogicalPosition, Manager, WebviewUrl};
 
 use crate::geometry_store::{self, StoredGeometry};
 use crate::surface_kit::{
     EDGE_ARC_LABEL, TASKBAR_ARC_LABEL, TOP_ARC_LABEL, apply_always_on_top, apply_click_through,
-    apply_no_activate, apply_opacity, foreground_is_content_fullscreen, monitor_work_area_logical,
-    resize_surface,
+    apply_interaction_mode, apply_no_activate, apply_opacity, foreground_is_content_fullscreen,
+    monitor_work_area_logical, resize_surface,
 };
 
 /// Edge margin for the Top Arc from the top of the work area, logical px.
 const TOP_ARC_MARGIN: f64 = 10.0;
 const TOP_ARC_FREE_POSITION_KEY: &str = TOP_ARC_LABEL;
+
+fn surface_states() -> &'static Mutex<HashMap<String, SurfaceState>> {
+    static STATES: OnceLock<Mutex<HashMap<String, SurfaceState>>> = OnceLock::new();
+    STATES.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn set_surface_state(label: &str, state: SurfaceState) {
+    if let Ok(mut states) = surface_states().lock() {
+        states.insert(label.to_string(), state);
+    }
+}
+
+fn current_surface_state(label: &str) -> SurfaceState {
+    surface_states()
+        .lock()
+        .ok()
+        .and_then(|states| states.get(label).copied())
+        .unwrap_or(SurfaceState::Compact)
+}
 
 use codexbar::surface_layout::{
     AnchorEdge, LayoutInput, ResolvedSurfaceLayout, SurfaceKind, SurfaceState,
@@ -81,6 +102,9 @@ fn apply_surface_layout(
     state: SurfaceState,
     provider_count: u32,
 ) {
+    if surface == SurfaceKind::Top {
+        set_surface_state(TOP_ARC_LABEL, state);
+    }
     let layout = resolved_layout(window, surface, state, provider_count);
     let (w, h) = layout.window_bounds_logical;
     let settings = Settings::load();
@@ -91,7 +115,10 @@ fn apply_surface_layout(
             let side = codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
             position_edge_arc(window, &side);
         }
-        SurfaceKind::Top => position_top_arc(window),
+        SurfaceKind::Top => {
+            apply_top_arc_attrs(window, &settings, state);
+            position_top_arc(window);
+        }
         SurfaceKind::Taskbar => position_taskbar_arc(window),
         _ => {}
     }
@@ -291,7 +318,7 @@ fn position_top_arc(window: &tauri::WebviewWindow) {
 pub fn show_top_arc(app: &tauri::AppHandle) -> Result<(), String> {
     let settings = Settings::load();
     if let Some(window) = app.get_webview_window(TOP_ARC_LABEL) {
-        apply_top_arc_attrs(&window, &settings);
+        apply_top_arc_attrs(&window, &settings, current_surface_state(TOP_ARC_LABEL));
         let _ = window.show();
         apply_always_on_top(&window);
         position_top_arc(&window);
@@ -305,17 +332,21 @@ pub fn show_top_arc(app: &tauri::AppHandle) -> Result<(), String> {
         .visible(false);
 
     let window = builder.build().map_err(|e| e.to_string())?;
-    apply_top_arc_attrs(&window, &settings);
+    set_surface_state(TOP_ARC_LABEL, SurfaceState::Compact);
+    apply_top_arc_attrs(&window, &settings, SurfaceState::Compact);
     apply_surface_layout(&window, SurfaceKind::Top, SurfaceState::Compact, 3);
     window.show().map_err(|e| e.to_string())?;
     apply_always_on_top(&window);
     Ok(())
 }
 
-fn apply_top_arc_attrs(window: &tauri::WebviewWindow, settings: &Settings) {
+fn apply_top_arc_attrs(window: &tauri::WebviewWindow, settings: &Settings, state: SurfaceState) {
     apply_opacity(window, settings.top_arc_opacity);
-    apply_click_through(window, settings.top_arc_click_through);
-    apply_no_activate(window);
+    apply_click_through(
+        window,
+        effective_click_through(settings, SurfaceKind::Top, state),
+    );
+    apply_interaction_mode(window, state != SurfaceState::Compact);
 }
 
 /// Hide (destroy) the Top Arc.
@@ -339,10 +370,19 @@ pub fn resize_top_arc(
 /// Mark the island as freely placed before the webview begins its native drag
 /// gesture. The subsequent Moved event records the final logical position.
 #[tauri::command]
-pub fn begin_top_arc_drag() -> Result<(), String> {
+pub fn begin_top_arc_drag(window: tauri::WebviewWindow) -> Result<(), String> {
     let mut settings = Settings::load();
+    let previous_placement = settings.top_arc_placement.clone();
     settings.top_arc_placement = "free".to_string();
-    settings.save().map_err(|error| error.to_string())
+    settings.save().map_err(|error| error.to_string())?;
+    if let Err(error) = window.start_dragging() {
+        // Do not leave Settings claiming a successful free placement when the
+        // native gesture could not begin.
+        settings.top_arc_placement = previous_placement;
+        let _ = settings.save();
+        return Err(error.to_string());
+    }
+    Ok(())
 }
 
 /// Restore the safe default top-center placement and discard any remembered
@@ -488,7 +528,7 @@ pub fn apply_state(app: &tauri::AppHandle, settings: &Settings) -> Result<(), St
             errors.push(format!("top: {error}"));
         }
     } else if let Some(w) = app.get_webview_window(TOP_ARC_LABEL) {
-        apply_top_arc_attrs(&w, settings);
+        apply_top_arc_attrs(&w, settings, current_surface_state(TOP_ARC_LABEL));
         position_top_arc(&w);
         apply_always_on_top(&w);
     }
@@ -569,12 +609,16 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) -
                     // to snap the user back to the top center.
                     if matches!(event, tauri::WindowEvent::Moved(_)) {
                         if settings.top_arc_placement == "free" {
+                            // Clamp the live drag as well as the restored
+                            // position; an oversized expanded panel can never
+                            // be left mostly off-screen for this session.
+                            position_top_arc(&webview);
                             remember_top_arc_position(&webview);
                         } else {
                             position_top_arc(&webview);
                         }
                     }
-                    apply_top_arc_attrs(&webview, &settings);
+                    apply_top_arc_attrs(&webview, &settings, current_surface_state(TOP_ARC_LABEL));
                 } else {
                     position_taskbar_arc(&webview);
                     apply_taskbar_arc_attrs(&webview, &settings);

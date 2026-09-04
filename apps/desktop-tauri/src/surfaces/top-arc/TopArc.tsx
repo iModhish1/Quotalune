@@ -1,6 +1,5 @@
 /** The legacy top-window host for the single Quota Island composition. */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import type { StageProvider } from "../../components/orbit/stageTypes";
 import { useStageRuntime } from "../../hooks/useStageRuntime";
@@ -67,12 +66,10 @@ export default function TopArc({ demo }: TopArcProps) {
 
   const startDrag = useCallback(() => {
     if (demo) return;
-    // Persist the free-placement intent first. startDragging is deferred until
-    // that acknowledgement returns, so the Moved handler never recenters the
-    // island midway through a user gesture.
-    void beginQuotaIslandDrag()
-      .then(() => getCurrentWindow().startDragging())
-      .catch(() => {});
+    // One native command changes the placement intent and begins the Windows
+    // drag gesture together. This avoids losing a short drag behind a
+    // round-trip through the WebView.
+    void beginQuotaIslandDrag().catch(() => {});
   }, [demo]);
 
   useEffect(() => {
