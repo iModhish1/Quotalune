@@ -1084,3 +1084,38 @@ fn catalog_theme_validation_falls_back_to_default() {
         "01-obsidian-orbit"
     );
 }
+
+#[test]
+fn taskbar_arc_scale_defaults_when_absent_and_migrates_old_settings() {
+    let absent: Settings = serde_json::from_str(r#"{ "enabled_providers": [] }"#)
+        .expect("settings without taskbar_arc_scale load safely");
+    assert_eq!(absent.taskbar_arc_scale, 100, "migration default is 100%");
+    // Independence: a file carrying only a top_arc_scale must not move the
+    // taskbar scale.
+    let top_only: Settings = serde_json::from_str(
+        r#"{ "enabled_providers": [], "top_arc_scale": 180 }"#,
+    )
+    .expect("top-only scale loads");
+    assert_eq!(top_only.top_arc_scale, 180);
+    assert_eq!(top_only.taskbar_arc_scale, 100);
+}
+
+#[test]
+fn taskbar_arc_scale_clamps_and_round_trips_independently() {
+    let clamped: Settings = serde_json::from_str(
+        r#"{ "enabled_providers": [], "taskbar_arc_scale": 250, "top_arc_scale": 10 }"#,
+    )
+    .expect("corrupt scales clamp");
+    assert_eq!(clamped.taskbar_arc_scale, 200);
+    assert_eq!(clamped.top_arc_scale, 75);
+
+    let settings = Settings {
+        taskbar_arc_scale: 135,
+        top_arc_scale: 90,
+        ..Settings::default()
+    };
+    let json = serde_json::to_string(&settings).expect("serialize");
+    let loaded: Settings = serde_json::from_str(&json).expect("deserialize");
+    assert_eq!(loaded.taskbar_arc_scale, 135);
+    assert_eq!(loaded.top_arc_scale, 90);
+}

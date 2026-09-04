@@ -189,6 +189,8 @@ pub(super) struct RawSettings {
     taskbar_arc_enabled: bool,
     #[serde(default)]
     taskbar_arc_click_through: bool,
+    #[serde(default = "default_surface_scale")]
+    taskbar_arc_scale: u8,
     #[serde(default = "default_true")]
     taskbar_arc_hide_fullscreen: bool,
     #[serde(default)]
@@ -335,6 +337,7 @@ impl Default for RawSettings {
             taskbar_arc_enabled: s.taskbar_arc_enabled,
             taskbar_arc_opacity: s.taskbar_arc_opacity,
             taskbar_arc_click_through: s.taskbar_arc_click_through,
+            taskbar_arc_scale: s.taskbar_arc_scale,
             taskbar_arc_hide_fullscreen: s.taskbar_arc_hide_fullscreen,
             promote_tray_icon: s.promote_tray_icon,
             claude_daily_routines_usage_visible: s.claude_daily_routines_usage_visible,
@@ -662,6 +665,7 @@ impl From<RawSettings> for Settings {
             taskbar_arc_enabled: raw.taskbar_arc_enabled,
             taskbar_arc_opacity: clamp_surface_opacity(raw.taskbar_arc_opacity),
             taskbar_arc_click_through: raw.taskbar_arc_click_through,
+            taskbar_arc_scale: clamp_surface_scale(raw.taskbar_arc_scale),
             taskbar_arc_hide_fullscreen: raw.taskbar_arc_hide_fullscreen,
             promote_tray_icon: raw.promote_tray_icon,
             claude_daily_routines_usage_visible: raw.claude_daily_routines_usage_visible,

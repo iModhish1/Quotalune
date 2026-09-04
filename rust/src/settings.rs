@@ -369,6 +369,11 @@ pub struct Settings {
     #[serde(default)]
     pub taskbar_arc_click_through: bool,
 
+    /// Taskbar Arc visual scale, 75..=200 (percent). INDEPENDENT of
+    /// top_arc_scale: changing one must never move the other.
+    #[serde(default = "default_surface_scale")]
+    pub taskbar_arc_scale: u8,
+
     /// Hide the Taskbar Arc while a fullscreen app/game is in the foreground.
     #[serde(default = "default_true")]
     pub taskbar_arc_hide_fullscreen: bool,
@@ -751,6 +756,7 @@ impl Default for Settings {
             top_arc_hide_fullscreen: true,
             taskbar_arc_enabled: false,
             taskbar_arc_opacity: default_surface_opacity(),
+            taskbar_arc_scale: default_surface_scale(),
             taskbar_arc_click_through: false,
             taskbar_arc_hide_fullscreen: true,
             usage_display_mode: None,
