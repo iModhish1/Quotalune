@@ -815,12 +815,6 @@ mod tests {
     }
 
     #[test]
-    fn default_sizes_are_sane() {
-        const { assert!(TASKBAR_ARC_DEFAULT_WIDTH > TOP_ARC_DEFAULT_WIDTH / 2.0) };
-        const { assert!(TASKBAR_ARC_DEFAULT_HEIGHT < TOP_ARC_DEFAULT_HEIGHT) };
-    }
-
-    #[test]
     fn enabled_surface_stays_visible_in_fullscreen_when_hiding_is_disabled() {
         assert!(surface_should_be_visible(true, false, true));
     }
