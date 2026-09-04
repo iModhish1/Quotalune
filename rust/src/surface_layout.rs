@@ -7,7 +7,7 @@
 //!
 //! Envelope contract (logical px):
 //!   Taskbar      compact 360–440 ×  90–140   expanded 520–640 × 260–340
-//!   Top          compact 360–480 ×  72–110   expanded  ≤560 ×  ≤260
+//!   Top / Island compact 280–320 ×  44– 56   expanded 440–520 × 300–420
 //!   Edge         compact  72–110 × 360–480   expanded  ≤260 ×  ≤520
 //!                (edge width is the thickness crossing the screen edge)
 //!   HUD           compact 300–360 × 320–400
@@ -73,8 +73,10 @@ impl SurfaceKind {
                 fits_work_area: false,
             },
             SurfaceKind::Top => Envelope {
-                compact: (360.0, 480.0, 72.0, 110.0),
-                expanded: (520.0, 560.0, 220.0, 260.0),
+                // The only interactive overlay: a small top-center status
+                // island that opens downward into a bounded detail card.
+                compact: (280.0, 320.0, 44.0, 56.0),
+                expanded: (440.0, 520.0, 300.0, 420.0),
                 cap_w: 0.35,
                 cap_h: 0.20,
                 cap_w_expanded: 0.50,
@@ -437,9 +439,9 @@ mod tests {
         assert!((520.0..=640.0).contains(&w), "taskbar expanded w={w}");
         assert!((260.0..=340.0).contains(&h), "taskbar expanded h={h}");
         let (w, h) = bounds(SurfaceKind::Top, SurfaceState::Compact);
-        assert!((360.0..=480.0).contains(&w) && (72.0..=110.0).contains(&h));
+        assert!((280.0..=320.0).contains(&w) && (44.0..=56.0).contains(&h));
         let (w, h) = bounds(SurfaceKind::Top, SurfaceState::Expanded);
-        assert!(w <= 560.0 && h <= 260.0);
+        assert!((440.0..=520.0).contains(&w) && (300.0..=420.0).contains(&h));
         let (w, h) = bounds(SurfaceKind::Edge, SurfaceState::Compact);
         assert!((72.0..=110.0).contains(&w) && (360.0..=480.0).contains(&h));
         let (w, h) = bounds(SurfaceKind::Edge, SurfaceState::Expanded);

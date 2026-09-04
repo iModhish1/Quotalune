@@ -1,16 +1,10 @@
-/** Live catalog-themed top orbital notch. */
+/** The legacy top-window host for the single Quota Island composition. */
 import { useCallback, useEffect, useState } from "react";
 
-import TopOrbitStage from "../../components/top/TopOrbitStage";
-import {
-  TOP_ORBIT_COMPACT_HEIGHT,
-  TOP_ORBIT_COMPACT_WIDTH,
-  TOP_ORBIT_EXPANDED_HEIGHT,
-  TOP_ORBIT_EXPANDED_WIDTH,
-} from "../../components/top/topOrbitLayout";
 import type { StageProvider } from "../../components/orbit/stageTypes";
 import { useStageRuntime } from "../../hooks/useStageRuntime";
-import { resizeTopArc } from "../../lib/surfaceBridge";
+import { resizeTopArc, type SurfaceWindowState } from "../../lib/surfaceBridge";
+import QuotaIsland, { type QuotaIslandState } from "../quota-island/QuotaIsland";
 
 const DEMO_PROVIDERS: StageProvider[] = [
   { id: "codex", name: "OpenAI", iconId: "openai", resolvedMode: "remaining", arcFraction: 0.74, primaryValue: 74, secondaryValue: 26, primaryLabel: "remaining", reset: "3h 40m", status: "ok" },
@@ -26,27 +20,35 @@ interface TopArcProps {
   demo?: { state: "idle" | "hover" | "expanded" };
 }
 
+function initialState(demo: TopArcProps["demo"]): SurfaceWindowState {
+  if (demo?.state === "expanded") return "expanded";
+  if (demo?.state === "hover") return "hover";
+  return "compact";
+}
+
+function islandState(state: SurfaceWindowState): QuotaIslandState {
+  return state;
+}
+
 export default function TopArc({ demo }: TopArcProps) {
   const runtime = useStageRuntime({ enabled: !demo, surface: "top" });
-  const [expanded, setExpanded] = useState(demo?.state === "expanded");
+  const [surfaceState, setSurfaceState] = useState<SurfaceWindowState>(() => initialState(demo));
   const [focus, setFocus] = useState(0);
   const providers = demo ? DEMO_PROVIDERS : runtime.providers;
 
   useEffect(() => {
     if (demo) return;
-    // State data only — the Rust layout runtime computes the geometry.
-    void resizeTopArc(expanded ? "expanded" : "compact", providers.length).catch(() => {});
-  }, [expanded, demo]);
+    // The webview sends state and density only. Rust remains the authority for
+    // the native size before this composition fills the resulting viewport.
+    void resizeTopArc(surfaceState, providers.length).catch(() => {});
+  }, [demo, providers.length, surfaceState]);
 
   useEffect(() => {
     if (focus >= providers.length) setFocus(0);
   }, [focus, providers.length]);
 
   const cycle = useCallback((direction: 1 | -1) => {
-    setFocus((current) => {
-      if (providers.length === 0) return 0;
-      return (current + direction + providers.length) % providers.length;
-    });
+    setFocus((current) => providers.length === 0 ? 0 : (current + direction + providers.length) % providers.length);
   }, [providers.length]);
 
   useEffect(() => {
@@ -54,20 +56,27 @@ export default function TopArc({ demo }: TopArcProps) {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "ArrowRight" || event.key === "ArrowDown") cycle(1);
       if (event.key === "ArrowLeft" || event.key === "ArrowUp") cycle(-1);
-      if (event.key === "Escape") setExpanded(false);
+      if (event.key === "Escape") setSurfaceState("compact");
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [cycle, demo]);
 
   return (
-    <TopOrbitStage
-      catalog={runtime.catalog}
-      state={demo?.state ?? (expanded ? "expanded" : "idle")}
-      providers={providers}
-      focusedIndex={focus}
-      onFocusProvider={setFocus}
-      onToggleExpanded={demo ? undefined : () => setExpanded((value) => !value)}
-    />
+    <div
+      className="quota-island-host"
+      onMouseEnter={() => setSurfaceState((state) => state === "compact" ? "hover" : state)}
+      onMouseLeave={() => setSurfaceState((state) => state === "hover" ? "compact" : state)}
+    >
+      <QuotaIsland
+        catalog={runtime.catalog}
+        state={islandState(surfaceState)}
+        providers={providers}
+        focusedIndex={focus}
+        onFocusProvider={setFocus}
+        onToggleExpanded={() => setSurfaceState((state) => state === "expanded" ? "compact" : "expanded")}
+        onRequestCompact={() => setSurfaceState("compact")}
+      />
+    </div>
   );
 }

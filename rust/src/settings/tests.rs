@@ -326,28 +326,18 @@ fn archived_catalog_values_normalize_to_the_canonical_theme() {
         ]
         .into_iter()
         .collect(),
+        edge_arc_enabled: true,
+        taskbar_arc_enabled: true,
         ..Settings::default()
     };
 
     let json = serde_json::to_string(&s).expect("serialize");
     let back: Settings = serde_json::from_str(&json).expect("deserialize");
-    assert_eq!(back.catalog_theme, "03-solar-ember");
-    assert_eq!(
-        back.active_profile_catalog_theme.as_deref(),
-        Some("02-aurora-bloom")
-    );
-    assert_eq!(back.surface_catalog_themes.len(), 1);
-    assert_eq!(
-        normalize_catalog_theme(&back.catalog_theme),
-        "01-obsidian-orbit"
-    );
-    assert_eq!(
-        back.active_profile_catalog_theme
-            .as_deref()
-            .and_then(canonical_catalog_theme),
-        None,
-    );
-    assert!(normalize_surface_catalog_themes(back.surface_catalog_themes).is_empty());
+    assert_eq!(back.catalog_theme, "01-obsidian-orbit");
+    assert!(back.active_profile_catalog_theme.is_none());
+    assert!(back.surface_catalog_themes.is_empty());
+    assert!(!back.edge_arc_enabled, "edge overlay is retired on load");
+    assert!(!back.taskbar_arc_enabled, "taskbar overlay is retired on load");
 }
 
 #[test]

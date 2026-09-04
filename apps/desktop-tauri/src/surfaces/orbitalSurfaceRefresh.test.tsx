@@ -42,7 +42,7 @@ describe("live orbital surface expansion", () => {
   beforeEach(() => runtime.refresh.mockClear());
 
   it.each([
-    ["Top", TopArc, "Expand top orbital notch"],
+    ["Quota Island", TopArc, "Expand quota details"],
     ["Edge", EdgeArc, "Expand right edge orbit"],
   ])("does not turn %s expansion into a forced provider refresh", (_name, Surface, label) => {
     render(<Surface />);

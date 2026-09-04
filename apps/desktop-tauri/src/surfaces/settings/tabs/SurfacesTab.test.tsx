@@ -41,17 +41,17 @@ const SETTINGS = {
 } as const;
 
 describe("SurfacesTab", () => {
-  it("exposes named toggles for every detached arc and enables Taskbar Arc", async () => {
+  it("exposes one bounded Quota Island control and persists its visibility", async () => {
     bridge.getSurfaceSettings.mockResolvedValue(SETTINGS);
     render(<SurfacesTab />);
 
-    const taskbar = await screen.findByRole("checkbox", { name: "Show Taskbar Arc" });
-    expect(screen.getByRole("checkbox", { name: "Show Edge Arc" })).toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: "Show Top Arc" })).toBeInTheDocument();
+    const island = await screen.findByRole("checkbox", { name: "Show Quota Island" });
+    expect(screen.queryByRole("checkbox", { name: "Show Edge Arc" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "Show Taskbar Arc" })).not.toBeInTheDocument();
 
-    fireEvent.click(taskbar);
+    fireEvent.click(island);
     await waitFor(() =>
-      expect(bridge.updateSurfaceSettings).toHaveBeenCalledWith({ taskbarArcEnabled: true }),
+      expect(bridge.updateSurfaceSettings).toHaveBeenCalledWith({ topArcEnabled: true }),
     );
   });
 });

@@ -78,9 +78,7 @@ impl TrayMenuEntry {
 #[derive(Debug, Clone, Copy, Default)]
 pub(crate) struct SurfaceToggles {
     pub float_bar: bool,
-    pub edge_arc: bool,
     pub top_arc: bool,
-    pub taskbar_arc: bool,
 }
 
 #[allow(
@@ -159,19 +157,9 @@ pub(crate) fn build_tray_menu_with(
         surfaces.float_bar,
     ));
     menu.push(TrayMenuEntry::check_item(
-        "toggle_edge_arc",
-        text(LocaleKey::TrayShowEdgeArc),
-        surfaces.edge_arc,
-    ));
-    menu.push(TrayMenuEntry::check_item(
         "toggle_top_arc",
-        text(LocaleKey::TrayShowTopArc),
+        "Show Quota Island",
         surfaces.top_arc,
-    ));
-    menu.push(TrayMenuEntry::check_item(
-        "toggle_taskbar_arc",
-        "Show Taskbar Arc",
-        surfaces.taskbar_arc,
     ));
     menu.push(TrayMenuEntry::separator());
 
@@ -288,9 +276,7 @@ mod tests {
             /* surfaces = */
             SurfaceToggles {
                 float_bar: true,
-                edge_arc: false,
                 top_arc: false,
-                taskbar_arc: false,
             },
             &[],
             false,

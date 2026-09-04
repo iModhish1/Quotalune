@@ -1,61 +1,41 @@
-/**
- * Surfaces — QuotaArc surface editor (Taskbar, Edge, and Top arcs).
- *
- * Live configuration: every change is applied immediately through the
- * surface bridge, so the real surface windows update while editing.
- */
+/** Settings for the single Quota Island overlay. */
 import { useCallback, useEffect, useState } from "react";
+
+import { Field, Toggle } from "../../../components/FormControls";
 import { useLocale } from "../../../hooks/useLocale";
-import { Field, Select, Toggle } from "../../../components/FormControls";
 import {
   getSurfaceSettings,
   updateSurfaceSettings,
   type SurfaceSettings,
 } from "../../../lib/surfaceBridge";
 
-function OpacitySlider({
+function RangeControl({
+  label,
   value,
+  min,
+  max,
+  step,
   disabled,
   onChange,
 }: {
+  label: string;
   value: number;
+  min: number;
+  max: number;
+  step: number;
   disabled: boolean;
-  onChange: (v: number) => void;
+  onChange: (value: number) => void;
 }) {
   return (
     <input
       type="range"
-      min={30}
-      max={100}
-      step={5}
+      min={min}
+      max={max}
+      step={step}
       value={value}
       disabled={disabled}
-      onChange={(e) => onChange(Number(e.target.value))}
-      aria-label={`Opacity ${value} percent`}
-      style={{ width: "100%" }}
-    />
-  );
-}
-
-function ScaleSlider({
-  value,
-  disabled,
-  onChange,
-}: {
-  value: number;
-  disabled: boolean;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <input
-      type="range"
-      min={75}
-      max={200}
-      step={5}
-      value={value}
-      disabled={disabled}
-      onChange={(e) => onChange(Number(e.target.value))}
-      aria-label={`Scale ${value} percent`}
+      onChange={(event) => onChange(Number(event.target.value))}
+      aria-label={`${label} ${value} percent`}
       style={{ width: "100%" }}
     />
   );
@@ -69,12 +49,15 @@ export default function SurfacesTab() {
   useEffect(() => {
     getSurfaceSettings()
       .then(setConfig)
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : String(cause)));
   }, []);
 
-  const patch = useCallback((p: Partial<SurfaceSettings>) => {
-    setConfig((prev) => (prev ? { ...prev, ...p } : prev));
-    void updateSurfaceSettings(p as SurfaceSettings).catch(() => {});
+  const patch = useCallback((next: Partial<SurfaceSettings>) => {
+    setConfig((current) => current ? { ...current, ...next } : current);
+    void updateSurfaceSettings(next).catch((cause: unknown) => {
+      setError(cause instanceof Error ? cause.message : String(cause));
+      void getSurfaceSettings().then(setConfig).catch(() => {});
+    });
   }, []);
 
   if (error) {
@@ -86,161 +69,40 @@ export default function SurfacesTab() {
     );
   }
   if (!config) {
-    return (
-      <section className="settings-section">
-        <h3 className="settings-section__title">{t("TabSurfaces")}</h3>
-      </section>
-    );
+    return <section className="settings-section"><h3 className="settings-section__title">{t("TabSurfaces")}</h3></section>;
   }
 
   return (
-    <>
-      <section className="settings-section">
-        <h3 className="settings-section__title">Show Taskbar Arc · Taskbar Arc</h3>
-        <div className="settings-section__group">
-          <Field
-            label="Show Taskbar Arc"
-            description="Places the orbital quota instrument directly above the Windows taskbar."
-          >
-            <Toggle
-              checked={config.taskbarArcEnabled}
-              ariaLabel="Show Taskbar Arc"
-              disabled={false}
-              onChange={(v) => patch({ taskbarArcEnabled: v })}
-            />
-          </Field>
-          <Field label="Opacity">
-            <OpacitySlider
-              value={config.taskbarArcOpacity}
-              disabled={!config.taskbarArcEnabled}
-              onChange={(v) => patch({ taskbarArcOpacity: v })}
-            />
-          </Field>
-          <Field label="Click-through" description="Mouse input passes through the surface.">
-            <Toggle
-              checked={config.taskbarArcClickThrough}
-              ariaLabel="Taskbar Arc click-through"
-              disabled={!config.taskbarArcEnabled}
-              onChange={(v) => patch({ taskbarArcClickThrough: v })}
-            />
-          </Field>
-          <Field label="Hide during fullscreen apps" description="Games and video take over the whole screen.">
-            <Toggle
-              checked={config.taskbarArcHideFullscreen}
-              ariaLabel="Hide Taskbar Arc during fullscreen apps"
-              disabled={!config.taskbarArcEnabled}
-              onChange={(v) => patch({ taskbarArcHideFullscreen: v })}
-            />
-          </Field>
-        </div>
-      </section>
-
-      <section className="settings-section">
-        <h3 className="settings-section__title">
-          {t("TrayShowEdgeArc")} · Edge Arc
-        </h3>
-        <div className="settings-section__group">
-          <Field label={t("TrayShowEdgeArc")}>
-            <Toggle
-              checked={config.edgeArcEnabled}
-              ariaLabel={t("TrayShowEdgeArc")}
-              disabled={false}
-              onChange={(v) => patch({ edgeArcEnabled: v })}
-            />
-          </Field>
-          <Field
-            label={t("TabSurfaces") + " — side"}
-            description="Attaches the strip to the right or left screen edge."
-          >
-            <Select
-              value={config.edgeArcSide}
-              ariaLabel="Edge Arc side"
-              disabled={!config.edgeArcEnabled}
-              options={[
-                { value: "right", label: "Right edge" },
-                { value: "left", label: "Left edge" },
-              ]}
-              onChange={(v) => patch({ edgeArcSide: v as "left" | "right" })}
-            />
-          </Field>
-          <Field label="Opacity">
-            <OpacitySlider
-              value={config.edgeArcOpacity}
-              disabled={!config.edgeArcEnabled}
-              onChange={(v) => patch({ edgeArcOpacity: v })}
-            />
-          </Field>
-          <Field label="Scale">
-            <ScaleSlider
-              value={config.edgeArcScale}
-              disabled={!config.edgeArcEnabled}
-              onChange={(v) => patch({ edgeArcScale: v })}
-            />
-          </Field>
-          <Field label="Click-through" description="Mouse input passes through the surface.">
-            <Toggle
-              checked={config.edgeArcClickThrough}
-              ariaLabel="Edge Arc click-through"
-              disabled={!config.edgeArcEnabled}
-              onChange={(v) => patch({ edgeArcClickThrough: v })}
-            />
-          </Field>
-          <Field label="Hide during fullscreen apps" description="Games and video take over the whole screen.">
-            <Toggle
-              checked={config.edgeArcHideFullscreen}
-              ariaLabel="Hide Edge Arc during fullscreen apps"
-              disabled={!config.edgeArcEnabled}
-              onChange={(v) => patch({ edgeArcHideFullscreen: v })}
-            />
-          </Field>
-        </div>
-      </section>
-
-      <section className="settings-section">
-        <h3 className="settings-section__title">
-          {t("TrayShowTopArc")} · Top Arc
-        </h3>
-        <div className="settings-section__group">
-          <Field label={t("TrayShowTopArc")}>
-            <Toggle
-              checked={config.topArcEnabled}
-              ariaLabel={t("TrayShowTopArc")}
-              disabled={false}
-              onChange={(v) => patch({ topArcEnabled: v })}
-            />
-          </Field>
-          <Field label="Opacity">
-            <OpacitySlider
-              value={config.topArcOpacity}
-              disabled={!config.topArcEnabled}
-              onChange={(v) => patch({ topArcOpacity: v })}
-            />
-          </Field>
-          <Field label="Scale">
-            <ScaleSlider
-              value={config.topArcScale}
-              disabled={!config.topArcEnabled}
-              onChange={(v) => patch({ topArcScale: v })}
-            />
-          </Field>
-          <Field label="Click-through" description="Mouse input passes through the surface.">
-            <Toggle
-              checked={config.topArcClickThrough}
-              ariaLabel="Top Arc click-through"
-              disabled={!config.topArcEnabled}
-              onChange={(v) => patch({ topArcClickThrough: v })}
-            />
-          </Field>
-          <Field label="Hide during fullscreen apps" description="Games and video take over the whole screen.">
-            <Toggle
-              checked={config.topArcHideFullscreen}
-              ariaLabel="Hide Top Arc during fullscreen apps"
-              disabled={!config.topArcEnabled}
-              onChange={(v) => patch({ topArcHideFullscreen: v })}
-            />
-          </Field>
-        </div>
-      </section>
-    </>
+    <section className="settings-section">
+      <h3 className="settings-section__title">Quota Island</h3>
+      <p className="settings-section__description">
+        A small status island at the top of the screen. It expands downward only when you ask for details.
+      </p>
+      <div className="settings-section__group">
+        <Field label="Show Quota Island" description="Keeps the compact quota summary available above your work.">
+          <Toggle
+            checked={config.topArcEnabled}
+            ariaLabel="Show Quota Island"
+            disabled={false}
+            onChange={(topArcEnabled) => patch({ topArcEnabled })}
+          />
+        </Field>
+        <Field label="Opacity">
+          <RangeControl label="Opacity" value={config.topArcOpacity} min={30} max={100} step={5} disabled={!config.topArcEnabled} onChange={(topArcOpacity) => patch({ topArcOpacity })} />
+        </Field>
+        <Field label="Display scale" description="Changes only the bounded island, never the rest of the desktop.">
+          <RangeControl label="Scale" value={config.topArcScale} min={75} max={200} step={5} disabled={!config.topArcEnabled} onChange={(topArcScale) => patch({ topArcScale })} />
+        </Field>
+        <Field label="Click-through" description="Mouse input passes through the compact island.">
+          <Toggle checked={config.topArcClickThrough} ariaLabel="Quota Island click-through" disabled={!config.topArcEnabled} onChange={(topArcClickThrough) => patch({ topArcClickThrough })} />
+        </Field>
+        <Field label="Hide during fullscreen apps" description="Games and video can use the entire screen.">
+          <Toggle checked={config.topArcHideFullscreen} ariaLabel="Hide Quota Island during fullscreen apps" disabled={!config.topArcEnabled} onChange={(topArcHideFullscreen) => patch({ topArcHideFullscreen })} />
+        </Field>
+      </div>
+      <p className="settings-section__hint">
+        Previous Taskbar and Edge experiments are archived while this shared surface foundation is completed.
+      </p>
+    </section>
   );
 }

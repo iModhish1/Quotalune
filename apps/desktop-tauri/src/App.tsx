@@ -31,9 +31,7 @@ function DesignSystemBridge({ children }: { children: React.ReactNode }) {
 const Settings = lazy(() => import("./surfaces/Settings"));
 const PopOutPanel = lazy(() => import("./surfaces/PopOutPanel"));
 const FloatBar = lazy(() => import("./floatbar/FloatBar"));
-const EdgeArc = lazy(() => import("./surfaces/edge-arc/EdgeArc"));
 const TopArc = lazy(() => import("./surfaces/top-arc/TopArc"));
-const TaskbarArc = lazy(() => import("./surfaces/taskbar-arc/TaskbarArc"));
 const DemoStage = lazy(() => import("./demo/DemoStage"));
 
 function SurfaceFallback() {
@@ -50,19 +48,9 @@ function isFloatBarWindow(): boolean {
   return getCurrentWebviewWindow().label === FLOATBAR_WINDOW_LABEL;
 }
 
-/** True when running inside the detached Edge Arc surface window. */
-function isEdgeArcWindow(): boolean {
-  return getCurrentWebviewWindow().label === "edge-arc";
-}
-
 /** True when running inside the detached Top Arc surface window. */
 function isTopArcWindow(): boolean {
   return getCurrentWebviewWindow().label === "top-arc";
-}
-
-/** True when running inside the detached Taskbar Arc surface window. */
-function isTaskbarArcWindow(): boolean {
-  return getCurrentWebviewWindow().label === "taskbar-arc";
 }
 
 /** True when running inside the detached flyout ("Pop Out Dashboard") window. */
@@ -220,15 +208,6 @@ function AppInner() {
   }
 
   // QuotaArc Surface Engine windows — self-contained provider-data surfaces.
-  if (isEdgeArcWindow()) {
-    return (
-      <Suspense fallback={<SurfaceFallback />}>
-        <DesignSystemBridge>
-          <EdgeArc />
-        </DesignSystemBridge>
-      </Suspense>
-    );
-  }
   if (isTopArcWindow()) {
     return (
       <Suspense fallback={<SurfaceFallback />}>
@@ -238,16 +217,6 @@ function AppInner() {
       </Suspense>
     );
   }
-  if (isTaskbarArcWindow()) {
-    return (
-      <Suspense fallback={<SurfaceFallback />}>
-        <DesignSystemBridge>
-          <TaskbarArc />
-        </DesignSystemBridge>
-      </Suspense>
-    );
-  }
-
   // Detached flyout ("Pop Out Dashboard") window — render TrayPanel directly.
   // TrayPanel is statically imported (not lazy), so no Suspense boundary is
   // needed here, unlike the other detached-window branches above.

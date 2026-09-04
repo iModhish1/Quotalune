@@ -146,9 +146,7 @@ fn build_native_tray_menu(
         &enabled,
         crate::tray_menu::SurfaceToggles {
             float_bar: settings.float_bar_enabled,
-            edge_arc: settings.edge_arc_enabled,
             top_arc: settings.top_arc_enabled,
-            taskbar_arc: settings.taskbar_arc_enabled,
         },
         &profile_entries,
         settings.privacy_mode,

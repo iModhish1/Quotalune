@@ -1,0 +1,611 @@
+{
+  "dashboard:compact": {
+    "center": [
+      260.0,
+      310.0
+    ],
+    "clampedBy": null,
+    "instrumentSize": 37.0,
+    "labelBounds": [
+      520.0,
+      18.0
+    ],
+    "orbitRadius": 198.0,
+    "safeContentBounds": [
+      520.0,
+      620.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "compact",
+    "surface": "dashboard",
+    "viewportBoundsLogical": [
+      520.0,
+      620.0
+    ],
+    "windowBoundsLogical": [
+      520.0,
+      620.0
+    ]
+  },
+  "dashboard:expanded": {
+    "center": [
+      260.0,
+      310.0
+    ],
+    "clampedBy": null,
+    "instrumentSize": 43.0,
+    "labelBounds": [
+      520.0,
+      24.0
+    ],
+    "orbitRadius": 198.0,
+    "safeContentBounds": [
+      520.0,
+      620.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "expanded",
+    "surface": "dashboard",
+    "viewportBoundsLogical": [
+      520.0,
+      620.0
+    ],
+    "windowBoundsLogical": [
+      520.0,
+      620.0
+    ]
+  },
+  "dashboard:hover": {
+    "center": [
+      260.0,
+      310.0
+    ],
+    "clampedBy": null,
+    "instrumentSize": 37.0,
+    "labelBounds": [
+      520.0,
+      18.0
+    ],
+    "orbitRadius": 198.0,
+    "safeContentBounds": [
+      520.0,
+      620.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "hover",
+    "surface": "dashboard",
+    "viewportBoundsLogical": [
+      520.0,
+      620.0
+    ],
+    "windowBoundsLogical": [
+      520.0,
+      620.0
+    ]
+  },
+  "edge:compact": {
+    "center": [
+      55.0,
+      180.0
+    ],
+    "clampedBy": null,
+    "instrumentSize": 28.0,
+    "labelBounds": [
+      110.0,
+      18.0
+    ],
+    "orbitRadius": 130.0,
+    "safeContentBounds": [
+      110.0,
+      360.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "compact",
+    "surface": "edge",
+    "viewportBoundsLogical": [
+      110.0,
+      360.0
+    ],
+    "windowBoundsLogical": [
+      110.0,
+      360.0
+    ]
+  },
+  "edge:expanded": {
+    "center": [
+      128.0,
+      260.0
+    ],
+    "clampedBy": "work-area-width",
+    "instrumentSize": 36.0,
+    "labelBounds": [
+      256.0,
+      24.0
+    ],
+    "orbitRadius": 187.0,
+    "safeContentBounds": [
+      256.0,
+      520.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "expanded",
+    "surface": "edge",
+    "viewportBoundsLogical": [
+      256.0,
+      520.0
+    ],
+    "windowBoundsLogical": [
+      256.0,
+      520.0
+    ]
+  },
+  "edge:hover": {
+    "center": [
+      55.0,
+      180.0
+    ],
+    "clampedBy": null,
+    "instrumentSize": 28.0,
+    "labelBounds": [
+      110.0,
+      18.0
+    ],
+    "orbitRadius": 130.0,
+    "safeContentBounds": [
+      110.0,
+      360.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "hover",
+    "surface": "edge",
+    "viewportBoundsLogical": [
+      110.0,
+      360.0
+    ],
+    "windowBoundsLogical": [
+      110.0,
+      360.0
+    ]
+  },
+  "hud:compact": {
+    "center": [
+      180.0,
+      200.0
+    ],
+    "clampedBy": null,
+    "instrumentSize": 28.0,
+    "labelBounds": [
+      360.0,
+      18.0
+    ],
+    "orbitRadius": 137.0,
+    "safeContentBounds": [
+      360.0,
+      400.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "compact",
+    "surface": "hud",
+    "viewportBoundsLogical": [
+      360.0,
+      400.0
+    ],
+    "windowBoundsLogical": [
+      360.0,
+      400.0
+    ]
+  },
+  "hud:expanded": {
+    "center": [
+      180.0,
+      200.0
+    ],
+    "clampedBy": null,
+    "instrumentSize": 36.0,
+    "labelBounds": [
+      360.0,
+      24.0
+    ],
+    "orbitRadius": 137.0,
+    "safeContentBounds": [
+      360.0,
+      400.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "expanded",
+    "surface": "hud",
+    "viewportBoundsLogical": [
+      360.0,
+      400.0
+    ],
+    "windowBoundsLogical": [
+      360.0,
+      400.0
+    ]
+  },
+  "hud:hover": {
+    "center": [
+      180.0,
+      200.0
+    ],
+    "clampedBy": null,
+    "instrumentSize": 28.0,
+    "labelBounds": [
+      360.0,
+      18.0
+    ],
+    "orbitRadius": 137.0,
+    "safeContentBounds": [
+      360.0,
+      400.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "hover",
+    "surface": "hud",
+    "viewportBoundsLogical": [
+      360.0,
+      400.0
+    ],
+    "windowBoundsLogical": [
+      360.0,
+      400.0
+    ]
+  },
+  "quick-panel:compact": {
+    "center": [
+      190.0,
+      260.0
+    ],
+    "clampedBy": null,
+    "instrumentSize": 28.0,
+    "labelBounds": [
+      380.0,
+      18.0
+    ],
+    "orbitRadius": 144.0,
+    "safeContentBounds": [
+      380.0,
+      520.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "compact",
+    "surface": "quick-panel",
+    "viewportBoundsLogical": [
+      380.0,
+      520.0
+    ],
+    "windowBoundsLogical": [
+      380.0,
+      520.0
+    ]
+  },
+  "quick-panel:expanded": {
+    "center": [
+      190.0,
+      260.0
+    ],
+    "clampedBy": null,
+    "instrumentSize": 36.0,
+    "labelBounds": [
+      380.0,
+      24.0
+    ],
+    "orbitRadius": 144.0,
+    "safeContentBounds": [
+      380.0,
+      520.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "expanded",
+    "surface": "quick-panel",
+    "viewportBoundsLogical": [
+      380.0,
+      520.0
+    ],
+    "windowBoundsLogical": [
+      380.0,
+      520.0
+    ]
+  },
+  "quick-panel:hover": {
+    "center": [
+      190.0,
+      260.0
+    ],
+    "clampedBy": null,
+    "instrumentSize": 28.0,
+    "labelBounds": [
+      380.0,
+      18.0
+    ],
+    "orbitRadius": 144.0,
+    "safeContentBounds": [
+      380.0,
+      520.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "hover",
+    "surface": "quick-panel",
+    "viewportBoundsLogical": [
+      380.0,
+      520.0
+    ],
+    "windowBoundsLogical": [
+      380.0,
+      520.0
+    ]
+  },
+  "settings:compact": {
+    "center": [
+      457.5,
+      376.0
+    ],
+    "clampedBy": "work-area-fit",
+    "instrumentSize": 42.0,
+    "labelBounds": [
+      915.0,
+      18.0
+    ],
+    "orbitRadius": 301.0,
+    "safeContentBounds": [
+      915.0,
+      752.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "compact",
+    "surface": "settings",
+    "viewportBoundsLogical": [
+      915.0,
+      752.0
+    ],
+    "windowBoundsLogical": [
+      915.0,
+      752.0
+    ]
+  },
+  "settings:expanded": {
+    "center": [
+      457.5,
+      376.0
+    ],
+    "clampedBy": "work-area-fit",
+    "instrumentSize": 56.0,
+    "labelBounds": [
+      915.0,
+      24.0
+    ],
+    "orbitRadius": 301.0,
+    "safeContentBounds": [
+      915.0,
+      752.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "expanded",
+    "surface": "settings",
+    "viewportBoundsLogical": [
+      915.0,
+      752.0
+    ],
+    "windowBoundsLogical": [
+      915.0,
+      752.0
+    ]
+  },
+  "settings:hover": {
+    "center": [
+      457.5,
+      376.0
+    ],
+    "clampedBy": "work-area-fit",
+    "instrumentSize": 42.0,
+    "labelBounds": [
+      915.0,
+      18.0
+    ],
+    "orbitRadius": 301.0,
+    "safeContentBounds": [
+      915.0,
+      752.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "hover",
+    "surface": "settings",
+    "viewportBoundsLogical": [
+      915.0,
+      752.0
+    ],
+    "windowBoundsLogical": [
+      915.0,
+      752.0
+    ]
+  },
+  "taskbar:compact": {
+    "center": [
+      180.0,
+      70.0
+    ],
+    "clampedBy": null,
+    "instrumentSize": 28.0,
+    "labelBounds": [
+      360.0,
+      18.0
+    ],
+    "orbitRadius": 56.0,
+    "safeContentBounds": [
+      360.0,
+      140.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "compact",
+    "surface": "taskbar",
+    "viewportBoundsLogical": [
+      360.0,
+      140.0
+    ],
+    "windowBoundsLogical": [
+      360.0,
+      140.0
+    ]
+  },
+  "taskbar:expanded": {
+    "center": [
+      320.0,
+      169.0
+    ],
+    "clampedBy": "work-area-height",
+    "instrumentSize": 53.0,
+    "labelBounds": [
+      640.0,
+      24.0
+    ],
+    "orbitRadius": 135.0,
+    "safeContentBounds": [
+      640.0,
+      338.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "expanded",
+    "surface": "taskbar",
+    "viewportBoundsLogical": [
+      640.0,
+      338.0
+    ],
+    "windowBoundsLogical": [
+      640.0,
+      338.0
+    ]
+  },
+  "taskbar:hover": {
+    "center": [
+      180.0,
+      70.0
+    ],
+    "clampedBy": null,
+    "instrumentSize": 28.0,
+    "labelBounds": [
+      360.0,
+      18.0
+    ],
+    "orbitRadius": 56.0,
+    "safeContentBounds": [
+      360.0,
+      140.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "hover",
+    "surface": "taskbar",
+    "viewportBoundsLogical": [
+      360.0,
+      140.0
+    ],
+    "windowBoundsLogical": [
+      360.0,
+      140.0
+    ]
+  },
+  "top:compact": {
+    "center": [
+      140.0,
+      28.0
+    ],
+    "clampedBy": null,
+    "instrumentSize": 28.0,
+    "labelBounds": [
+      280.0,
+      18.0
+    ],
+    "orbitRadius": 22.0,
+    "safeContentBounds": [
+      280.0,
+      56.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "compact",
+    "surface": "top",
+    "viewportBoundsLogical": [
+      280.0,
+      56.0
+    ],
+    "windowBoundsLogical": [
+      280.0,
+      56.0
+    ]
+  },
+  "top:expanded": {
+    "center": [
+      260.0,
+      169.0
+    ],
+    "clampedBy": "work-area-height",
+    "instrumentSize": 43.0,
+    "labelBounds": [
+      520.0,
+      24.0
+    ],
+    "orbitRadius": 135.0,
+    "safeContentBounds": [
+      520.0,
+      338.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "expanded",
+    "surface": "top",
+    "viewportBoundsLogical": [
+      520.0,
+      338.0
+    ],
+    "windowBoundsLogical": [
+      520.0,
+      338.0
+    ]
+  },
+  "top:hover": {
+    "center": [
+      140.0,
+      28.0
+    ],
+    "clampedBy": null,
+    "instrumentSize": 28.0,
+    "labelBounds": [
+      280.0,
+      18.0
+    ],
+    "orbitRadius": 22.0,
+    "safeContentBounds": [
+      280.0,
+      56.0
+    ],
+    "scale": 1.0,
+    "scaleFactor": 1.5,
+    "state": "hover",
+    "surface": "top",
+    "viewportBoundsLogical": [
+      280.0,
+      56.0
+    ],
+    "windowBoundsLogical": [
+      280.0,
+      56.0
+    ]
+  }
+}

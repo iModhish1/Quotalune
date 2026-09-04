@@ -803,6 +803,12 @@ impl Settings {
         settings.surface_catalog_themes =
             normalize_surface_catalog_themes(std::mem::take(&mut settings.surface_catalog_themes));
 
+        // V9 retires the competing edge and taskbar overlays. Preserve their
+        // old configuration on disk until a normal save, but never restore a
+        // large legacy surface over the desktop again.
+        settings.edge_arc_enabled = false;
+        settings.taskbar_arc_enabled = false;
+
         settings
     }
 

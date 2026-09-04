@@ -15,8 +15,8 @@ Replace the active multi-theme orbital runtime with one compact, Windows-first c
 
 ### Phase 1: Canonical runtime inventory and archival boundary
 
-- [ ] Task 1: Map every active catalog/geometry/motion runtime import and define the archive boundary.
-- [ ] Task 2: Preserve inactive catalog data under an explicit archive namespace and expose one canonical theme contract.
+- [x] Task 1: Map every active catalog/geometry/motion runtime import and define the archive boundary.
+- [x] Task 2: Preserve inactive catalog data under an explicit archive namespace and expose one canonical theme contract.
 
 ### Checkpoint: Runtime boundary
 
@@ -25,8 +25,8 @@ Replace the active multi-theme orbital runtime with one compact, Windows-first c
 
 ### Phase 2: Canonical composition
 
-- [ ] Task 3: Build `QuotaIsland`: a compact top-center status pill that expands downward into provider details.
-- [ ] Task 4: Retire legacy Taskbar, Edge, HUD, and Quick Panel overlays from the production path and preserve them only in Git history.
+- [x] Task 3: Build `QuotaIsland`: a compact top-center status pill that expands downward into provider details.
+- [x] Task 4: Retire legacy Taskbar and Edge overlays from the production path and preserve them only in Git history. HUD and Quick Panel retirement remains part of Task 5.
 - [ ] Task 5: Keep Dashboard and Settings as normal windows; repair clipping and flex collapse.
 
 ### Checkpoint: Live Windows usability
