@@ -62,7 +62,7 @@ pub fn switch_profile(app: AppHandle, profile_id: String) -> Result<(), String> 
     apply_active_profile_to_settings(&store, &mut settings);
     store.save()?;
     save_settings(&settings)?;
-    crate::surfaces::apply_state(&app, &settings);
+    crate::surfaces::reconcile_persisted_state_async(app.clone());
     crate::tray_bridge::rebuild_tray_menu(&app);
     emit_changed(&app);
     Ok(())
@@ -161,7 +161,7 @@ pub fn delete_profile(app: AppHandle, profile_id: String) -> Result<(), String> 
     apply_active_profile_to_settings(&store, &mut settings);
     store.save()?;
     save_settings(&settings)?;
-    crate::surfaces::apply_state(&app, &settings);
+    crate::surfaces::reconcile_persisted_state_async(app.clone());
     crate::tray_bridge::rebuild_tray_menu(&app);
     emit_changed(&app);
     Ok(())
@@ -239,7 +239,7 @@ pub fn update_profile(
         apply_active_profile_to_settings(&store, &mut settings);
         store.save()?;
         save_settings(&settings)?;
-        crate::surfaces::apply_state(&app, &settings);
+        crate::surfaces::reconcile_persisted_state_async(app.clone());
     } else {
         store.save()?;
     }

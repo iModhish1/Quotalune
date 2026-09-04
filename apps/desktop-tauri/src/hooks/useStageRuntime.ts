@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 
 import type { UsageDisplayConfig } from "../design-system/themes";
 import { useProviders } from "./useProviders";
-import { getSettingsSnapshot, refreshProvidersIfStale } from "../lib/tauri";
+import { getSettingsSnapshot } from "../lib/tauri";
 import {
   toStageProviders,
   usageConfigFromSnapshot,
@@ -52,11 +52,6 @@ export function useStageRuntime({
       void unlistenPromise.then((unlisten) => unlisten()).catch(() => {});
     };
   }, [enabled, reloadSettings]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    void refreshProvidersIfStale().catch(() => {});
-  }, [enabled]);
 
   const providers = useMemo(
     () => toStageProviders(live.providers ?? [], usageConfig),

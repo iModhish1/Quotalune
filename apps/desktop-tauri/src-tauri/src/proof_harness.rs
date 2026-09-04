@@ -266,6 +266,17 @@ pub fn seed_usage_json_active() -> bool {
     std::env::var_os(SEED_USAGE_ENV_VAR).is_some()
 }
 
+/// Whether the multi-provider proof bundle is configured for this run.
+pub fn seed_providers_json_active() -> bool {
+    std::env::var_os(SEED_PROVIDERS_ENV_VAR).is_some()
+}
+
+/// Keep either proof fixture stable across every passive refresh-if-stale
+/// request. Manual refreshes remain explicit and are never swallowed here.
+pub fn provider_seed_active() -> bool {
+    seed_usage_json_active() || seed_providers_json_active()
+}
+
 /// Read and validate the seed file referenced by `CODEXBAR_SEED_USAGE_JSON`.
 ///
 /// Returns `None` (with a warn, never a crash) when the variable is unset,
@@ -742,6 +753,9 @@ mod tests {
 #[cfg(test)]
 mod bundle_tests {
     use super::*;
+    use std::sync::{LazyLock, Mutex};
+
+    static BUNDLE_ENV_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
     const VALID: &str = r#"{
         "version": 1,
@@ -834,5 +848,24 @@ mod bundle_tests {
         assert!(!json.contains("cookie"));
         assert!(!json.contains("secret"));
         assert!(!json.contains("password"));
+    }
+
+    #[test]
+    fn multi_provider_bundle_marks_the_provider_cache_as_pinned() {
+        let _guard = BUNDLE_ENV_LOCK.lock().unwrap();
+        let previous = std::env::var_os(SEED_PROVIDERS_ENV_VAR);
+
+        // SAFETY: this test serializes access to the bundle environment
+        // variable and restores its previous value before releasing the lock.
+        unsafe { std::env::set_var(SEED_PROVIDERS_ENV_VAR, "proof-bundle.json") };
+        assert!(seed_providers_json_active());
+        assert!(provider_seed_active());
+
+        match previous {
+            // SAFETY: BUNDLE_ENV_LOCK is still held while restoring state.
+            Some(value) => unsafe { std::env::set_var(SEED_PROVIDERS_ENV_VAR, value) },
+            // SAFETY: BUNDLE_ENV_LOCK is still held while restoring state.
+            None => unsafe { std::env::remove_var(SEED_PROVIDERS_ENV_VAR) },
+        }
     }
 }

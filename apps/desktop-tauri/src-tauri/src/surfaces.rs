@@ -292,32 +292,26 @@ pub fn install(app: &tauri::AppHandle) {
         taskbar = settings.taskbar_arc_enabled,
         "restoring QuotaArc surfaces at startup"
     );
-    if settings.edge_arc_enabled
-        && let Err(error) = show_edge_arc(app)
-    {
-        tracing::warn!(%error, "failed to show Edge Arc at startup");
-    }
-    if settings.top_arc_enabled
-        && let Err(error) = show_top_arc(app)
-    {
-        tracing::warn!(%error, "failed to show Top Arc at startup");
-    }
-    if settings.taskbar_arc_enabled
-        && let Err(error) = show_taskbar_arc(app)
-    {
-        tracing::warn!(%error, "failed to show Taskbar Arc at startup");
-    }
+    // WebView2 window creation must happen after the synchronous Tauri setup
+    // callback returns. Building several windows inline here can leave a later
+    // surface (most often Top Arc) absent even though its setting is enabled.
+    reconcile_persisted_state_async(app.clone());
     spawn_fullscreen_watcher(app.clone());
 }
 
 /// Bring both surfaces in line with persisted settings (after a settings save).
-pub fn apply_state(app: &tauri::AppHandle, settings: &Settings) {
+pub fn apply_state(app: &tauri::AppHandle, settings: &Settings) -> Result<(), String> {
     let fullscreen_active = foreground_is_content_fullscreen();
+    let mut errors = Vec::new();
     let edge_open = app.get_webview_window(EDGE_ARC_LABEL).is_some();
     if settings.edge_arc_enabled && !edge_open {
-        let _show = show_edge_arc(app);
+        if let Err(error) = show_edge_arc(app) {
+            errors.push(format!("edge: {error}"));
+        }
     } else if !settings.edge_arc_enabled && edge_open {
-        let _hide = hide_edge_arc(app);
+        if let Err(error) = hide_edge_arc(app) {
+            errors.push(format!("edge: {error}"));
+        }
     } else if let Some(w) = app.get_webview_window(EDGE_ARC_LABEL) {
         apply_edge_arc_attrs(&w, settings);
         let side = codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
@@ -337,9 +331,13 @@ pub fn apply_state(app: &tauri::AppHandle, settings: &Settings) {
 
     let top_open = app.get_webview_window(TOP_ARC_LABEL).is_some();
     if settings.top_arc_enabled && !top_open {
-        let _show = show_top_arc(app);
+        if let Err(error) = show_top_arc(app) {
+            errors.push(format!("top: {error}"));
+        }
     } else if !settings.top_arc_enabled && top_open {
-        let _hide = hide_top_arc(app);
+        if let Err(error) = hide_top_arc(app) {
+            errors.push(format!("top: {error}"));
+        }
     } else if let Some(w) = app.get_webview_window(TOP_ARC_LABEL) {
         apply_top_arc_attrs(&w, settings);
         position_top_arc(&w);
@@ -358,9 +356,13 @@ pub fn apply_state(app: &tauri::AppHandle, settings: &Settings) {
 
     let taskbar_open = app.get_webview_window(TASKBAR_ARC_LABEL).is_some();
     if settings.taskbar_arc_enabled && !taskbar_open {
-        let _show = show_taskbar_arc(app);
+        if let Err(error) = show_taskbar_arc(app) {
+            errors.push(format!("taskbar: {error}"));
+        }
     } else if !settings.taskbar_arc_enabled && taskbar_open {
-        let _hide = hide_taskbar_arc(app);
+        if let Err(error) = hide_taskbar_arc(app) {
+            errors.push(format!("taskbar: {error}"));
+        }
     } else if let Some(w) = app.get_webview_window(TASKBAR_ARC_LABEL) {
         apply_taskbar_arc_attrs(&w, settings);
         position_taskbar_arc(&w);
@@ -376,6 +378,25 @@ pub fn apply_state(app: &tauri::AppHandle, settings: &Settings) {
             ),
         );
     }
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(errors.join("; "))
+    }
+}
+
+/// Reconcile persisted surfaces outside a synchronous Tauri command.
+///
+/// On Windows, dynamically building a WebView2 window from a synchronous IPC
+/// handler deadlocks. Profile commands must remain synchronous for tray-menu
+/// callers, so they schedule this bounded follow-up on Tauri's async runtime.
+pub fn reconcile_persisted_state_async(app: tauri::AppHandle) {
+    tauri::async_runtime::spawn(async move {
+        let settings = Settings::load();
+        if let Err(error) = apply_state(&app, &settings) {
+            tracing::warn!(%error, "failed to reconcile QuotaArc surfaces");
+        }
+    });
 }
 
 /// Handle window events for surface windows. Returns true when handled.
@@ -488,7 +509,7 @@ fn spawn_fullscreen_watcher(app: tauri::AppHandle) {
 // ── Tauri commands ───────────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn show_edge_arc_surface(app: tauri::AppHandle) -> Result<(), String> {
+pub async fn show_edge_arc_surface(app: tauri::AppHandle) -> Result<(), String> {
     show_edge_arc(&app)
 }
 
@@ -498,7 +519,7 @@ pub fn hide_edge_arc_surface(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn show_top_arc_surface(app: tauri::AppHandle) -> Result<(), String> {
+pub async fn show_top_arc_surface(app: tauri::AppHandle) -> Result<(), String> {
     show_top_arc(&app)
 }
 
@@ -517,7 +538,7 @@ pub fn resize_edge_arc_surface(
 }
 
 #[tauri::command]
-pub fn show_taskbar_arc_surface(app: tauri::AppHandle) -> Result<(), String> {
+pub async fn show_taskbar_arc_surface(app: tauri::AppHandle) -> Result<(), String> {
     show_taskbar_arc(&app)
 }
 
@@ -547,14 +568,14 @@ pub fn resize_top_arc_surface(
 /// Apply a QuotaArc surface settings patch (typed, from the Surfaces settings
 /// section) and reconcile window state.
 #[tauri::command]
-pub fn update_surface_settings(
+pub async fn update_surface_settings(
     app: tauri::AppHandle,
     patch: SurfaceSettingsPatch,
 ) -> Result<(), String> {
     let mut settings = Settings::load();
     patch.apply(&mut settings);
     settings.save().map_err(|e| e.to_string())?;
-    apply_state(&app, &settings);
+    apply_state(&app, &settings)?;
     // Surfaces read settings on their next config event too.
     use tauri::Emitter;
     let _ = app.emit("quotaarc:surfaces-changed", ());
@@ -678,6 +699,29 @@ impl SurfaceSettingsPatch {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::future::Future;
+
+    fn assert_async_show_command<F, Fut>(_command: F)
+    where
+        F: FnOnce(tauri::AppHandle) -> Fut,
+        Fut: Future<Output = Result<(), String>>,
+    {
+    }
+
+    fn assert_async_update_command<F, Fut>(_command: F)
+    where
+        F: FnOnce(tauri::AppHandle, SurfaceSettingsPatch) -> Fut,
+        Fut: Future<Output = Result<(), String>>,
+    {
+    }
+
+    #[test]
+    fn window_building_commands_remain_async_on_windows() {
+        assert_async_show_command(show_edge_arc_surface);
+        assert_async_show_command(show_top_arc_surface);
+        assert_async_show_command(show_taskbar_arc_surface);
+        assert_async_update_command(update_surface_settings);
+    }
 
     #[test]
     fn surface_patch_clamps_and_normalizes() {

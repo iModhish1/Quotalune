@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-09-04T00:59:29.7455391Z",
+  "runtime": "Windows DWM-composited native Tauri windows",
+  "executable": "target/debug/QuotaArcDev.exe",
+  "processId": 12424,
+  "display": {
+    "physicalWidth": 3200,
+    "physicalHeight": 2136,
+    "devicePixelRatio": 2.5
+  },
+  "theme": "10-celestial-ice",
+  "startupRestoredWithoutManualShow": true,
+  "windows": [
+    {
+      "id": "taskbar",
+      "title": "QuotaArc Taskbar Arc",
+      "pid": 12424,
+      "windowId": 2757988,
+      "onScreen": true,
+      "minimized": false,
+      "bounds": {
+        "height": 1350,
+        "width": 2050,
+        "x": 575,
+        "y": 665
+      },
+      "capture": "cua-taskbar-expanded.png",
+      "sha256": "6e5d539690f5dc3d26353274f4365328f546952245707d6f70188962c2030feb"
+    },
+    {
+      "id": "top",
+      "title": "QuotaArc Top Arc",
+      "pid": 12424,
+      "windowId": 18748034,
+      "onScreen": true,
+      "minimized": false,
+      "bounds": {
+        "height": 1075,
+        "width": 1900,
+        "x": 650,
+        "y": 25
+      },
+      "capture": "cua-top-expanded.png",
+      "sha256": "5c65b7e57071129427c879d3c3b7d50983485c23fbd02de43c113c4ed1da15c0"
+    },
+    {
+      "id": "edge",
+      "title": "QuotaArc Edge Arc",
+      "pid": 12424,
+      "windowId": 3740700,
+      "onScreen": true,
+      "minimized": false,
+      "bounds": {
+        "height": 1500,
+        "width": 1050,
+        "x": 2150,
+        "y": 318
+      },
+      "capture": "cua-edge-expanded.png",
+      "sha256": "2b1988df8285af708a6a0e77efbd4e52b041e4cffd6672b519ac8df9cc17da79"
+    }
+  ]
+}

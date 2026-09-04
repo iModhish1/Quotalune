@@ -69,10 +69,7 @@ export default function EdgeArc({ demo }: EdgeArcProps) {
       providers={providers}
       focusedIndex={focus}
       onFocusProvider={setFocus}
-      onToggleExpanded={demo ? undefined : () => {
-        setExpanded((value) => !value);
-        if (!expanded) runtime.refresh();
-      }}
+      onToggleExpanded={demo ? undefined : () => setExpanded((value) => !value)}
     />
   );
 }

@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-09-04T01:04:12.087Z",
+  "pid": 12424,
+  "executable": "target/debug/QuotaArcDev.exe",
+  "runtime": "fresh native Tauri WebView2 compositor",
+  "theme": "10-celestial-ice",
+  "configuration": {
+    "set_catalog_theme_taskbar": {
+      "status": "fulfilled",
+      "value": null
+    },
+    "set_catalog_theme_top": {
+      "status": "fulfilled",
+      "value": null
+    },
+    "set_catalog_theme_edge": {
+      "status": "fulfilled",
+      "value": null
+    },
+    "update_surface_settings": {
+      "status": "fulfilled",
+      "value": null
+    },
+    "show_taskbar_arc_surface": {
+      "status": "fulfilled",
+      "value": null
+    },
+    "show_top_arc_surface": {
+      "status": "fulfilled",
+      "value": null
+    },
+    "show_edge_arc_surface": {
+      "status": "fulfilled",
+      "value": null
+    },
+    "get_surface_settings": {
+      "status": "fulfilled",
+      "value": {
+        "edgeArcEnabled": true,
+        "edgeArcSide": "right",
+        "edgeArcOpacity": 100,
+        "edgeArcScale": 100,
+        "edgeArcClickThrough": false,
+        "edgeArcHideFullscreen": false,
+        "topArcEnabled": true,
+        "topArcOpacity": 100,
+        "topArcScale": 100,
+        "topArcClickThrough": false,
+        "topArcHideFullscreen": false,
+        "taskbarArcEnabled": true,
+        "taskbarArcOpacity": 100,
+        "taskbarArcClickThrough": false,
+        "taskbarArcHideFullscreen": false
+      }
+    }
+  },
+  "captures": [
+    {
+      "id": "taskbar",
+      "targetUrl": "http://tauri.localhost/index.html?window=taskbar-arc",
+      "file": "taskbar-10-celestial-ice.png",
+      "sha256": "0bbf0e2a32f6b2b0334a11660b088271562d7964ea63d1358145996bcb0c5863",
+      "physical": {
+        "width": 2050,
+        "height": 1350
+      },
+      "runtime": {
+        "width": 820,
+        "height": 540,
+        "dpr": 2.5,
+        "text": "27%\nClaude\n↻ 2h 48m\n79%\nCodex\n↻ 4h 12m\n–\nDeepSeek\n↻ —\n42%\nGemini\n↻ 6h 05m\nCLAUDE\n27%\nREMAINING\nResets 2h 48m\n✕\nClaude: 27 percent remaining, resets 2h 48m",
+        "theme": "10-celestial-ice",
+        "geometry": "ice",
+        "state": "expanded",
+        "motion": "frost"
+      }
+    },
+    {
+      "id": "top",
+      "targetUrl": "http://tauri.localhost/index.html?window=top-arc",
+      "file": "top-10-celestial-ice.png",
+      "sha256": "3cce94c98a59b0c3f3e0efd8e8783ecc6347ac12ff1e03a24b4e14ffb1f467e0",
+      "physical": {
+        "width": 1900,
+        "height": 1075
+      },
+      "runtime": {
+        "width": 760,
+        "height": 430,
+        "dpr": 2.5,
+        "text": "27%\nClaude\n79%\nCodex\n–\nDeepSeek\n42%\nGemini\nCLAUDE\n27%\nREMAINING\n↻ 2h 48m",
+        "theme": "10-celestial-ice",
+        "geometry": "ice",
+        "state": "expanded",
+        "motion": "frost"
+      }
+    },
+    {
+      "id": "edge",
+      "targetUrl": "http://tauri.localhost/index.html?window=edge-arc",
+      "file": "edge-10-celestial-ice.png",
+      "sha256": "0c123962d36ef51f6588f2a372dee07396b846f377762a95d8a56b2102d31345",
+      "physical": {
+        "width": 1050,
+        "height": 1500
+      },
+      "runtime": {
+        "width": 420,
+        "height": 600,
+        "dpr": 2.5,
+        "text": "Claude\n27%\n↻ 2h 48m\nCodex\n79%\n↻ 4h 12m\nDeepSeek\n–\n↻ —\nGemini\n42%\n↻ 6h 05m\nClaude\n27%\nREMAINING\n↻ 2h 48m",
+        "theme": "10-celestial-ice",
+        "geometry": "ice",
+        "state": "expanded",
+        "motion": "frost"
+      }
+    }
+  ]
+}
