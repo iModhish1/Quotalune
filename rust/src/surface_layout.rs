@@ -698,3 +698,66 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod golden_tests {
+    use super::*;
+
+    /// Generate the checked-in golden fixture bundle consumed by the
+    /// TypeScript contract test. Run with:
+    ///   cargo test --lib surface_layout -- --ignored --nocapture
+    fn build_golden_fixtures() -> serde_json::Map<String, serde_json::Value> {
+        let mut fixtures = serde_json::Map::new();
+        let surfaces = [
+            SurfaceKind::Taskbar,
+            SurfaceKind::Top,
+            SurfaceKind::Edge,
+            SurfaceKind::Hud,
+            SurfaceKind::QuickPanel,
+            SurfaceKind::Dashboard,
+            SurfaceKind::Settings,
+        ];
+        for surface in surfaces {
+            for state in [
+                SurfaceState::Compact,
+                SurfaceState::Hover,
+                SurfaceState::Expanded,
+            ] {
+                let layout = ResolvedSurfaceLayout::compute(LayoutInput::new(
+                    surface,
+                    state,
+                    (1280.0, 752.0),
+                    1.5,
+                    1.0,
+                    3,
+                    if surface == SurfaceKind::Edge {
+                        AnchorEdge::Right
+                    } else if surface == SurfaceKind::Taskbar {
+                        AnchorEdge::Bottom
+                    } else {
+                        AnchorEdge::None
+                    },
+                ));
+                let key = format!("{}:{}", surface.as_token(), state.as_token());
+                fixtures.insert(key, serde_json::to_value(&layout).unwrap());
+            }
+        }
+        fixtures
+    }
+
+    /// Serialization contract: the checked-in golden fixtures that the
+    /// TypeScript layer tests against MUST byte-match what this Rust
+    /// authority produces. If this test fails, Rust changed and the
+    /// frontend fixtures are stale — regenerate, never hand-edit.
+    #[test]
+    fn golden_fixtures_match_the_rust_authority_byte_for_byte() {
+        let fixtures = build_golden_fixtures();
+        let expected = serde_json::to_string_pretty(&fixtures).unwrap();
+        let checked_in = include_str!("../../docs/golden_surface_layouts.json");
+        assert_eq!(
+            expected,
+            checked_in.trim_end(),
+            "docs/golden_surface_layouts.json is stale; regenerate from Rust"
+        );
+    }
+}

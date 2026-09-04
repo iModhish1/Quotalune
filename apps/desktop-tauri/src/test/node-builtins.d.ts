@@ -14,3 +14,9 @@ declare module "node:fs" {
 interface ImportMeta {
   readonly dirname?: string;
 }
+
+declare module "node:path" {
+  export function resolve(...segments: string[]): string;
+}
+
+declare const process: { cwd(): string };
