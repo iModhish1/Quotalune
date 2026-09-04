@@ -1,0 +1,67 @@
+{
+  "auditDate": "2026-09-04",
+  "gitCommit": "99ca702c",
+  "gitBranch": "feature/v9-theme-runtime",
+  "gitDirty": false,
+  "monitor": { "physical": "1920x1200", "windowsScaling": "150%", "cssViewport": "1280x800" },
+  "surfaces": {
+    "taskbar": {
+      "rustWindow": { "compact": { "w": 320, "h": 40 }, "expanded": { "w": 620, "h": 500 } },
+      "cssActual": { "compact": { "w": 820, "h": 400 }, "expanded": { "w": 820, "h": 540 } },
+      "verdict": "Rust/CSS mismatch. Compact 820px is 64% of 1280px work area — massively over the 35% cap."
+    },
+    "top": {
+      "rustWindow": { "compact": { "w": 380, "h": 52 }, "expanded": { "w": 520, "h": 168 } },
+      "cssActual": { "compact": { "w": 380, "h": 48 }, "expanded": { "w": 348, "h": 280 } },
+      "verdict": "Height 48 is within the 72–110 target but width 380 is tight for 7 providers."
+    },
+    "edge": {
+      "rustWindow": { "compact": { "w": 76, "h": 420 }, "expanded": { "w": 240, "h": 260 } },
+      "cssActual": { "compact": { "w": 64, "h": 400 }, "expanded": { "w": 210, "h": 280 } },
+      "verdict": "Compact 76px is within the 72–110 target. Expanded 210px exceeds the 260×520 cap on height."
+    },
+    "hud": {
+      "cssActual": { "w": 420, "h": 300 },
+      "verdict": "Within the 300–360×320–400 envelope but close to the upper bound."
+    },
+    "quickPanel": {
+      "cssActual": { "w": 219, "h": 450 },
+      "verdict": "HORIZONTALLY CLIPPED. 219px is below the 320px minimum."
+    },
+    "dashboard": {
+      "cssActual": { "w": 420, "h": 680 },
+      "verdict": "680px height may exceed some work areas. Flex-shrink collapse risk."
+    },
+    "settings": {
+      "cssActual": { "w": 915, "h": 758 },
+      "verdict": "758px height exceeds the 752px CSS work area at 150% DPI. Internal scrolling required."
+    }
+  },
+  "hardcodedDimensions": {
+    "rustSurfacesRs": ["EDGE_ARC_DEFAULT_WIDTH=76", "EDGE_ARC_DEFAULT_HEIGHT=420", "TOP_ARC_DEFAULT_WIDTH=380", "TOP_ARC_DEFAULT_HEIGHT=52", "TASKBAR_ARC_DEFAULT_WIDTH=320", "TASKBAR_ARC_DEFAULT_HEIGHT=40"],
+    "catalogTaskbarTsx": ["W=820", "H=500(expanded)/400(compact)", "R=168/112", "inst=66/58"],
+    "taskbarArcTsx": ["TASKBAR_COMPACT_HEIGHT", "TASKBAR_EXPANDED_HEIGHT", "W=820", "H_EXPANDED=500", "H_COMPACT=400"],
+    "topArcTsx": ["IDLE_W=380", "IDLE_H=52", "PANEL_W=348", "PANEL_H=280"],
+    "edgeArcTsx": ["ROW_H=62", "PAD=18", "w=64(compact)/210(expanded)"]
+  },
+  "defects": [
+    "Taskbar uses settings.top_arc_scale instead of its own scale setting",
+    "Rust window size and CSS viewport diverge at 150% DPI",
+    "Dashboard hero can shrink to 1px via flex-shrink",
+    "Quick Panel clips horizontally at 219px",
+    "Multiple surfaces can be expanded simultaneously",
+    "No surface coordinator prevents overlap",
+    "Compact taskbar consumes 64% of work-area width (cap: 35%)",
+    "814MB WebView process tree with multiple surfaces open",
+    "Provider labels too small relative to decorative geometry",
+    "Themes are palette/ornament swaps, not structural variants on live surfaces"
+  ],
+  "performance": {
+    "startupCpu": "2.49% one core (settle period)",
+    "steadyStateCpu": "2.48% one core (30s post-settle)",
+    "mainProcessWs": "72.4MB",
+    "treeWs": "194.3MB",
+    "multiSurfacWs": "~814MB (reported)",
+    "rnnPolling": "adaptive refresh with backoff (inherited)"
+  }
+}
