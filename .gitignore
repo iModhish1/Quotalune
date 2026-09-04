@@ -84,6 +84,7 @@ nul
 !scripts/**/*.ps1
 !/scripts/capture-native-usage-proof.mjs
 !/scripts/capture-native-surface-proof.mjs
+!/scripts/capture-native-theme-matrix.mjs
 !/scripts/playwright/
 !/scripts/playwright/*.js
 !/scripts/macos-windows-cross-build.sh

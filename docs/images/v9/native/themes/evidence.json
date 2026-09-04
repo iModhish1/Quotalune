@@ -1,0 +1,313 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-09-04T01:07:45.416Z",
+  "pid": 12424,
+  "executable": "target/debug/QuotaArcDev.exe",
+  "runtime": "native Tauri Taskbar WebView2 at persisted surface scope",
+  "interaction": "set_catalog_theme IPC + settings-updated runtime reload",
+  "themeCount": 15,
+  "geometryCount": 14,
+  "motionCount": 15,
+  "captures": [
+    {
+      "slug": "01-obsidian-orbit",
+      "name": "Obsidian Orbit",
+      "file": "01-obsidian-orbit.png",
+      "sha256": "b64f949d3917aa8888eaec0afafc24a7ece9a6e0b1802873a200f88db5a3b35b",
+      "physical": {
+        "width": 2050,
+        "height": 1350
+      },
+      "runtime": {
+        "width": 820,
+        "height": 540,
+        "dpr": 2.5,
+        "theme": "01-obsidian-orbit",
+        "geometry": "orbit",
+        "state": "expanded",
+        "motion": "orbit",
+        "text": "27%\nClaude\n↻ 2h 48m\n79%\nCodex\n↻ 4h 12m\n–\nDeepSeek\n↻ —\n42%\nGemini\n↻ 6h 05m\nCLAUDE\n27%\nREMAINING\nResets 2h 48m\n✕\nClaude: 27 percent remaining, resets 2h 48m"
+      }
+    },
+    {
+      "slug": "02-aurora-bloom",
+      "name": "Aurora Bloom",
+      "file": "02-aurora-bloom.png",
+      "sha256": "9a071775d1e432cdb69c7205c11ac0368565e06f487cc1e6e0fa4bf1c4c9c990",
+      "physical": {
+        "width": 2050,
+        "height": 1350
+      },
+      "runtime": {
+        "width": 820,
+        "height": 540,
+        "dpr": 2.5,
+        "theme": "02-aurora-bloom",
+        "geometry": "petals",
+        "state": "expanded",
+        "motion": "bloom",
+        "text": "27%\nClaude\n↻ 2h 48m\n79%\nCodex\n↻ 4h 12m\n–\nDeepSeek\n↻ —\n42%\nGemini\n↻ 6h 05m\nCLAUDE\n27%\nREMAINING\nResets 2h 48m\n✕\nClaude: 27 percent remaining, resets 2h 48m"
+      }
+    },
+    {
+      "slug": "03-solar-ember",
+      "name": "Solar Ember",
+      "file": "03-solar-ember.png",
+      "sha256": "f31a20ccfa41075e9ff302e9572d833bba69fabc40a3f4d1bee1ea63822bacea",
+      "physical": {
+        "width": 2050,
+        "height": 1350
+      },
+      "runtime": {
+        "width": 820,
+        "height": 540,
+        "dpr": 2.5,
+        "theme": "03-solar-ember",
+        "geometry": "dial",
+        "state": "expanded",
+        "motion": "detent",
+        "text": "27%\nClaude\n↻ 2h 48m\n79%\nCodex\n↻ 4h 12m\n–\nDeepSeek\n↻ —\n42%\nGemini\n↻ 6h 05m\nCLAUDE\n27%\nREMAINING\nResets 2h 48m\n✕\nClaude: 27 percent remaining, resets 2h 48m"
+      }
+    },
+    {
+      "slug": "04-porcelain-halo",
+      "name": "Porcelain Halo",
+      "file": "04-porcelain-halo.png",
+      "sha256": "04e81ff1a75bec7f875c97dc52cba0abcdac079d7db6fcd42f9de76348ba7184",
+      "physical": {
+        "width": 2050,
+        "height": 1350
+      },
+      "runtime": {
+        "width": 820,
+        "height": 540,
+        "dpr": 2.5,
+        "theme": "04-porcelain-halo",
+        "geometry": "orbit",
+        "state": "expanded",
+        "motion": "float",
+        "text": "27%\nClaude\n↻ 2h 48m\n79%\nCodex\n↻ 4h 12m\n–\nDeepSeek\n↻ —\n42%\nGemini\n↻ 6h 05m\nCLAUDE\n27%\nREMAINING\nResets 2h 48m\n✕\nClaude: 27 percent remaining, resets 2h 48m"
+      }
+    },
+    {
+      "slug": "05-noir-constellation",
+      "name": "Noir Constellation",
+      "file": "05-noir-constellation.png",
+      "sha256": "4c641a5e860d00e5b3583d3ca4d5b25647fdf8ffdfad8de4517c36b59d808ad6",
+      "physical": {
+        "width": 2050,
+        "height": 1350
+      },
+      "runtime": {
+        "width": 820,
+        "height": 540,
+        "dpr": 2.5,
+        "theme": "05-noir-constellation",
+        "geometry": "constellation",
+        "state": "expanded",
+        "motion": "constellation",
+        "text": "27%\nClaude\n↻ 2h 48m\n79%\nCodex\n↻ 4h 12m\n–\nDeepSeek\n↻ —\n42%\nGemini\n↻ 6h 05m\nCLAUDE\n27%\nREMAINING\nResets 2h 48m\n✕\nClaude: 27 percent remaining, resets 2h 48m"
+      }
+    },
+    {
+      "slug": "06-halo-spine",
+      "name": "Halo Spine",
+      "file": "06-halo-spine.png",
+      "sha256": "616491d415a5bb14efbb74a777d1b81b6aa89b41fad59e702cbf03b27258210b",
+      "physical": {
+        "width": 2050,
+        "height": 1350
+      },
+      "runtime": {
+        "width": 820,
+        "height": 540,
+        "dpr": 2.5,
+        "theme": "06-halo-spine",
+        "geometry": "spine",
+        "state": "expanded",
+        "motion": "rail",
+        "text": "27%\nClaude\n↻ 2h 48m\n79%\nCodex\n↻ 4h 12m\n–\nDeepSeek\n↻ —\n42%\nGemini\n↻ 6h 05m\nCLAUDE\n27%\nREMAINING\nResets 2h 48m\n✕\nClaude: 27 percent remaining, resets 2h 48m"
+      }
+    },
+    {
+      "slug": "07-eclipse-dial",
+      "name": "Eclipse Dial",
+      "file": "07-eclipse-dial.png",
+      "sha256": "e48404307131a3419fd31b1e1360c6ff95255181abed99886db9f9134532b298",
+      "physical": {
+        "width": 2050,
+        "height": 1350
+      },
+      "runtime": {
+        "width": 820,
+        "height": 540,
+        "dpr": 2.5,
+        "theme": "07-eclipse-dial",
+        "geometry": "eclipse",
+        "state": "expanded",
+        "motion": "corona",
+        "text": "27%\nClaude\n↻ 2h 48m\n79%\nCodex\n↻ 4h 12m\n–\nDeepSeek\n↻ —\n42%\nGemini\n↻ 6h 05m\nCLAUDE\n27%\nREMAINING\nResets 2h 48m\n✕\nClaude: 27 percent remaining, resets 2h 48m"
+      }
+    },
+    {
+      "slug": "08-prism-zenith",
+      "name": "Prism Zenith",
+      "file": "08-prism-zenith.png",
+      "sha256": "4bfd2054f344e2eb1747fab701aea2234acd1089b3bab4d8f55335c103c68eb5",
+      "physical": {
+        "width": 2050,
+        "height": 1350
+      },
+      "runtime": {
+        "width": 820,
+        "height": 540,
+        "dpr": 2.5,
+        "theme": "08-prism-zenith",
+        "geometry": "facets",
+        "state": "expanded",
+        "motion": "facet",
+        "text": "27%\nClaude\n↻ 2h 48m\n79%\nCodex\n↻ 4h 12m\n–\nDeepSeek\n↻ —\n42%\nGemini\n↻ 6h 05m\nCLAUDE\n27%\nREMAINING\nResets 2h 48m\n✕\nClaude: 27 percent remaining, resets 2h 48m"
+      }
+    },
+    {
+      "slug": "09-quantum-orchid",
+      "name": "Quantum Orchid",
+      "file": "09-quantum-orchid.png",
+      "sha256": "6fe76d131daebe320a26861009c199f99f44f90075eeb9d633fceb15eed23b00",
+      "physical": {
+        "width": 2050,
+        "height": 1350
+      },
+      "runtime": {
+        "width": 820,
+        "height": 540,
+        "dpr": 2.5,
+        "theme": "09-quantum-orchid",
+        "geometry": "orchid",
+        "state": "expanded",
+        "motion": "orchid",
+        "text": "27%\nClaude\n↻ 2h 48m\n79%\nCodex\n↻ 4h 12m\n–\nDeepSeek\n↻ —\n42%\nGemini\n↻ 6h 05m\nCLAUDE\n27%\nREMAINING\nResets 2h 48m\n✕\nClaude: 27 percent remaining, resets 2h 48m"
+      }
+    },
+    {
+      "slug": "10-celestial-ice",
+      "name": "Celestial Ice",
+      "file": "10-celestial-ice.png",
+      "sha256": "0bbf0e2a32f6b2b0334a11660b088271562d7964ea63d1358145996bcb0c5863",
+      "physical": {
+        "width": 2050,
+        "height": 1350
+      },
+      "runtime": {
+        "width": 820,
+        "height": 540,
+        "dpr": 2.5,
+        "theme": "10-celestial-ice",
+        "geometry": "ice",
+        "state": "expanded",
+        "motion": "frost",
+        "text": "27%\nClaude\n↻ 2h 48m\n79%\nCodex\n↻ 4h 12m\n–\nDeepSeek\n↻ —\n42%\nGemini\n↻ 6h 05m\nCLAUDE\n27%\nREMAINING\nResets 2h 48m\n✕\nClaude: 27 percent remaining, resets 2h 48m"
+      }
+    },
+    {
+      "slug": "11-emerald-singularity",
+      "name": "Emerald Singularity",
+      "file": "11-emerald-singularity.png",
+      "sha256": "acbbd3fd83c9c1a0ec1bedee854e6c78fd4bcf43c933f1a7eb58c348a64145f8",
+      "physical": {
+        "width": 2050,
+        "height": 1350
+      },
+      "runtime": {
+        "width": 820,
+        "height": 540,
+        "dpr": 2.5,
+        "theme": "11-emerald-singularity",
+        "geometry": "lens",
+        "state": "expanded",
+        "motion": "gravity",
+        "text": "27%\nClaude\n↻ 2h 48m\n79%\nCodex\n↻ 4h 12m\n–\nDeepSeek\n↻ —\n42%\nGemini\n↻ 6h 05m\nCLAUDE\n27%\nREMAINING\nResets 2h 48m\n✕\nClaude: 27 percent remaining, resets 2h 48m"
+      }
+    },
+    {
+      "slug": "12-crimson-nova",
+      "name": "Crimson Nova",
+      "file": "12-crimson-nova.png",
+      "sha256": "a74f62312daf38731cf15f71d83424e8ef8755daca04c5e05faecacc2fb2e981",
+      "physical": {
+        "width": 2050,
+        "height": 1350
+      },
+      "runtime": {
+        "width": 820,
+        "height": 540,
+        "dpr": 2.5,
+        "theme": "12-crimson-nova",
+        "geometry": "nova",
+        "state": "expanded",
+        "motion": "nova",
+        "text": "27%\nClaude\n↻ 2h 48m\n79%\nCodex\n↻ 4h 12m\n–\nDeepSeek\n↻ —\n42%\nGemini\n↻ 6h 05m\nCLAUDE\n27%\nREMAINING\nResets 2h 48m\n✕\nClaude: 27 percent remaining, resets 2h 48m"
+      }
+    },
+    {
+      "slug": "13-lunar-titanium",
+      "name": "Lunar Titanium",
+      "file": "13-lunar-titanium.png",
+      "sha256": "5e9d0c9d129d28ea781f5ed6a689d596afccde512a60803a0ad45358df364320",
+      "physical": {
+        "width": 2050,
+        "height": 1350
+      },
+      "runtime": {
+        "width": 820,
+        "height": 540,
+        "dpr": 2.5,
+        "theme": "13-lunar-titanium",
+        "geometry": "aperture",
+        "state": "expanded",
+        "motion": "shutter",
+        "text": "27%\nClaude\n↻ 2h 48m\n79%\nCodex\n↻ 4h 12m\n–\nDeepSeek\n↻ —\n42%\nGemini\n↻ 6h 05m\nCLAUDE\n27%\nREMAINING\nResets 2h 48m\n✕\nClaude: 27 percent remaining, resets 2h 48m"
+      }
+    },
+    {
+      "slug": "14-sapphire-observatory",
+      "name": "Sapphire Observatory",
+      "file": "14-sapphire-observatory.png",
+      "sha256": "32564eb4e46eadf71b069018dfac011a310028745525ff3efd876eda25fcb8ef",
+      "physical": {
+        "width": 2050,
+        "height": 1350
+      },
+      "runtime": {
+        "width": 820,
+        "height": 540,
+        "dpr": 2.5,
+        "theme": "14-sapphire-observatory",
+        "geometry": "astrolabe",
+        "state": "expanded",
+        "motion": "reticle",
+        "text": "27%\nClaude\n↻ 2h 48m\n79%\nCodex\n↻ 4h 12m\n–\nDeepSeek\n↻ —\n42%\nGemini\n↻ 6h 05m\nCLAUDE\n27%\nREMAINING\nResets 2h 48m\n✕\nClaude: 27 percent remaining, resets 2h 48m"
+      }
+    },
+    {
+      "slug": "15-astral-dune",
+      "name": "Astral Dune",
+      "file": "15-astral-dune.png",
+      "sha256": "c78d43625554a27b966d6ab5660f38ea367582e0aba30097e704d66c82e7ae1e",
+      "physical": {
+        "width": 2050,
+        "height": 1350
+      },
+      "runtime": {
+        "width": 820,
+        "height": 540,
+        "dpr": 2.5,
+        "theme": "15-astral-dune",
+        "geometry": "dunes",
+        "state": "expanded",
+        "motion": "dune",
+        "text": "27%\nClaude\n↻ 2h 48m\n79%\nCodex\n↻ 4h 12m\n–\nDeepSeek\n↻ —\n42%\nGemini\n↻ 6h 05m\nCLAUDE\n27%\nREMAINING\nResets 2h 48m\n✕\nClaude: 27 percent remaining, resets 2h 48m"
+      }
+    }
+  ]
+}
