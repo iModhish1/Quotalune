@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-09-04T01:11:25.7576944Z",
+  "runtime": "Windows DWM-composited QuotaArc Settings window",
+  "executable": "target/debug/QuotaArcDev.exe",
+  "processId": 12424,
+  "windowId": 4593116,
+  "bounds": {
+    "height": 1888,
+    "width": 2282,
+    "x": 845,
+    "y": 8
+  },
+  "onScreen": true,
+  "selectedTab": "Themes",
+  "themeCardCount": 15,
+  "assignmentScopes": [
+    "Global",
+    "Current profile",
+    "Taskbar",
+    "Top",
+    "Edge",
+    "HUD",
+    "Quick panel",
+    "Dashboard"
+  ],
+  "activeGlobalTheme": "Solar Ember",
+  "usageModes": [
+    "Remaining",
+    "Used",
+    "Hybrid"
+  ],
+  "capture": {
+    "file": "theme-gallery.png",
+    "sha256": "36157904d46aef74024544ec72fa8d7db20bd51d295ec55fc7f6df5332092485",
+    "dimensions": {
+      "width": 1456,
+      "height": 1204
+    }
+  }
+}
