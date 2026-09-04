@@ -39,10 +39,160 @@
 
 .qa-taskbar-stage__ornament {
   mix-blend-mode: screen;
+  transform-box: fill-box;
+  transform-origin: center;
 }
 
 .qa-taskbar-stage[data-light="true"] .qa-taskbar-stage__ornament {
   mix-blend-mode: multiply;
+}
+
+/*
+ * Theme motion is deliberately transient: every character gets a distinct
+ * arrival gesture, while the settled surface has no perpetual animation loop.
+ */
+.qa-taskbar-stage[data-state="expanded"] .qa-taskbar-stage__ornament {
+  animation: qa-taskbar-expand-orbit var(--qa-theme-motion-duration) var(--qa-theme-motion-easing) both;
+}
+
+.qa-taskbar-stage[data-state="expanded"][data-motion="bloom"] .qa-taskbar-stage__ornament {
+  animation-name: qa-taskbar-expand-bloom;
+}
+
+.qa-taskbar-stage[data-state="expanded"][data-motion="detent"] .qa-taskbar-stage__ornament {
+  animation-name: qa-taskbar-expand-detent;
+}
+
+.qa-taskbar-stage[data-state="expanded"][data-motion="float"] .qa-taskbar-stage__ornament {
+  animation-name: qa-taskbar-expand-float;
+}
+
+.qa-taskbar-stage[data-state="expanded"][data-motion="constellation"] .qa-taskbar-stage__ornament {
+  animation-name: qa-taskbar-expand-constellation;
+}
+
+.qa-taskbar-stage[data-state="expanded"][data-motion="rail"] .qa-taskbar-stage__ornament {
+  animation-name: qa-taskbar-expand-rail;
+}
+
+.qa-taskbar-stage[data-state="expanded"][data-motion="corona"] .qa-taskbar-stage__ornament {
+  animation-name: qa-taskbar-expand-corona;
+}
+
+.qa-taskbar-stage[data-state="expanded"][data-motion="facet"] .qa-taskbar-stage__ornament {
+  animation-name: qa-taskbar-expand-facet;
+}
+
+.qa-taskbar-stage[data-state="expanded"][data-motion="orchid"] .qa-taskbar-stage__ornament {
+  animation-name: qa-taskbar-expand-orchid;
+}
+
+.qa-taskbar-stage[data-state="expanded"][data-motion="frost"] .qa-taskbar-stage__ornament {
+  animation-name: qa-taskbar-expand-frost;
+}
+
+.qa-taskbar-stage[data-state="expanded"][data-motion="gravity"] .qa-taskbar-stage__ornament {
+  animation-name: qa-taskbar-expand-gravity;
+}
+
+.qa-taskbar-stage[data-state="expanded"][data-motion="nova"] .qa-taskbar-stage__ornament {
+  animation-name: qa-taskbar-expand-nova;
+}
+
+.qa-taskbar-stage[data-state="expanded"][data-motion="shutter"] .qa-taskbar-stage__ornament {
+  animation-name: qa-taskbar-expand-shutter;
+}
+
+.qa-taskbar-stage[data-state="expanded"][data-motion="reticle"] .qa-taskbar-stage__ornament {
+  animation-name: qa-taskbar-expand-reticle;
+}
+
+.qa-taskbar-stage[data-state="expanded"][data-motion="dune"] .qa-taskbar-stage__ornament {
+  animation-name: qa-taskbar-expand-dune;
+}
+
+@keyframes qa-taskbar-expand-orbit {
+  from { opacity: 0.34; transform: rotate(-8deg) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes qa-taskbar-expand-bloom {
+  0% { opacity: 0.18; transform: scale(0.68); }
+  72% { opacity: 1; transform: scale(1.035); }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes qa-taskbar-expand-detent {
+  0% { opacity: 0.42; transform: rotate(-10deg) scale(0.97); }
+  58% { opacity: 1; transform: rotate(1.4deg); }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes qa-taskbar-expand-float {
+  from { opacity: 0.28; transform: translateY(14px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes qa-taskbar-expand-constellation {
+  0% { opacity: 0; transform: scale(0.88); filter: blur(3px); }
+  55% { opacity: 0.86; filter: blur(0); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+
+@keyframes qa-taskbar-expand-rail {
+  from { opacity: 0.26; transform: translateX(18px) scaleX(0.94); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes qa-taskbar-expand-corona {
+  0% { opacity: 0.12; transform: scale(0.74); }
+  76% { opacity: 1; transform: scale(1.025); }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes qa-taskbar-expand-facet {
+  from { opacity: 0.24; transform: rotate(8deg) skewX(-5deg) scale(0.84); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes qa-taskbar-expand-orchid {
+  0% { opacity: 0.12; transform: rotate(-14deg) scale(0.64); }
+  70% { opacity: 1; transform: rotate(2deg) scale(1.045); }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes qa-taskbar-expand-frost {
+  0% { opacity: 0; transform: translateY(-9px) scale(0.92); filter: blur(4px); }
+  60% { opacity: 0.92; filter: blur(0.4px); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+
+@keyframes qa-taskbar-expand-gravity {
+  0% { opacity: 0.16; transform: translateX(-12px) scale(1.12); filter: blur(2px); }
+  68% { opacity: 1; transform: translateX(2px) scale(0.985); filter: none; }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+
+@keyframes qa-taskbar-expand-nova {
+  0% { opacity: 0; transform: scale(0.42); filter: brightness(1.8); }
+  58% { opacity: 1; transform: scale(1.075); filter: brightness(1.22); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+
+@keyframes qa-taskbar-expand-shutter {
+  from { opacity: 0.32; transform: rotate(22deg) scale(0.86); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes qa-taskbar-expand-reticle {
+  0% { opacity: 0.12; transform: scale(1.18); }
+  64% { opacity: 1; transform: scale(0.975); }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes qa-taskbar-expand-dune {
+  from { opacity: 0.22; transform: translate(-14px, 6px) skewX(-5deg) scale(0.96); }
+  to { opacity: 1; transform: none; }
 }
 
 .qa-taskbar-node {
@@ -57,6 +207,9 @@
   transform: translate(-50%, -50%);
   cursor: pointer;
   outline: none;
+  transition:
+    left var(--qa-theme-motion-duration) var(--qa-theme-motion-easing),
+    top var(--qa-theme-motion-duration) var(--qa-theme-motion-easing);
   animation: qa-taskbar-node-arrive var(--qa-theme-motion-duration) var(--qa-theme-motion-easing) both;
   animation-delay: var(--qa-theme-motion-delay);
 }
@@ -186,6 +339,25 @@
     inset 0 0 0 7px rgba(0, 0, 0, 0.18);
   cursor: pointer;
   outline: none;
+  transition:
+    left var(--qa-theme-motion-duration) var(--qa-theme-motion-easing),
+    top var(--qa-theme-motion-duration) var(--qa-theme-motion-easing),
+    width var(--qa-theme-motion-duration) var(--qa-theme-motion-easing),
+    height var(--qa-theme-motion-duration) var(--qa-theme-motion-easing),
+    box-shadow 180ms ease;
+}
+
+.qa-taskbar-motion-proof {
+  position: relative;
+  width: 100%;
+}
+
+.qa-taskbar-motion-proof__stage {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transition: height var(--qa-theme-motion-duration) var(--qa-theme-motion-easing);
 }
 
 .qa-taskbar-stage[data-light="true"] .qa-taskbar-core {
@@ -265,7 +437,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .qa-taskbar-node,
-  .qa-taskbar-node__instrument {
+  .qa-taskbar-node__instrument,
+  .qa-taskbar-stage__ornament,
+  .qa-taskbar-core,
+  .qa-taskbar-motion-proof__stage {
     animation: none;
     transition: none;
   }
@@ -274,7 +449,13 @@
 [data-qa-motion="reduced"] .qa-taskbar-node,
 [data-qa-motion="off"] .qa-taskbar-node,
 [data-qa-motion="reduced"] .qa-taskbar-node__instrument,
-[data-qa-motion="off"] .qa-taskbar-node__instrument {
+[data-qa-motion="off"] .qa-taskbar-node__instrument,
+[data-qa-motion="reduced"] .qa-taskbar-stage__ornament,
+[data-qa-motion="off"] .qa-taskbar-stage__ornament,
+[data-qa-motion="reduced"] .qa-taskbar-core,
+[data-qa-motion="off"] .qa-taskbar-core,
+[data-qa-motion="reduced"] .qa-taskbar-motion-proof__stage,
+[data-qa-motion="off"] .qa-taskbar-motion-proof__stage {
   animation: none;
   transition: none;
 }

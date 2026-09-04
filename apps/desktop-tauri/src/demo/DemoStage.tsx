@@ -16,6 +16,7 @@ import { NotchSurfaceV4, SlabSurfaceV4, SpineSurfaceV4 } from "./V4Surfaces";
 import { TaskbarRadialV5, TopRadialV5, EdgeRadialV5, HudRadialV5 } from "./V5Surfaces";
 import CatalogSurface from "./CatalogSurface";
 import CatalogTaskbar, { CATALOG_TASKBAR_FIXTURE } from "./CatalogTaskbar";
+import TaskbarMotionProof from "./TaskbarMotionProof";
 import GeometrySurface from "./GeometrySurface";
 import {
   TASKBAR_COMPACT_HEIGHT,
@@ -39,6 +40,7 @@ import {
 import CatalogUsageHero from "../components/CatalogUsageHero";
 import FloatingHudStage from "../floatbar/FloatingHudStage";
 import "./demo.css";
+import { demoMotionSetting } from "./demoSettings";
 
 const LegacyTaskbarArc = lazy(() => import("../surfaces/taskbar-arc/TaskbarArc"));
 const LegacyTopArc = lazy(() => import("../surfaces/top-arc/TopArc"));
@@ -53,6 +55,7 @@ const v6 = params.get("v6");
 const usage = params.get("usage");
 const usageCustom = params.get("usageCustom");
 const focus = Number(params.get("focus") ?? "-1");
+const motionSetting = demoMotionSetting(params.get("motion"));
 const usageConfig: UsageDisplayConfig | undefined =
   usage || usageCustom
     ? {
@@ -71,7 +74,7 @@ export default function DemoStage() {
   const gen = params.get("gen") ?? "v3";
 
   const stage = (w: number, h: number, pos: CSSProperties, node: ReactNode) => (
-    <DesignSystemProvider theme={theme} motionSetting="off">
+    <DesignSystemProvider theme={theme} motionSetting={motionSetting}>
       <div
         className="demo-desktop"
         data-demo-theme={theme}
@@ -93,6 +96,27 @@ export default function DemoStage() {
 
   const catalogSlug = params.get("catalog");
   if (catalogSlug && params.get("gen") === "v8") {
+    if (surface === "taskbar" && params.get("proof") === "motion") {
+      const taskbarScale = Math.min(
+        1,
+        Math.max(0.32, (window.innerWidth - 24) / TASKBAR_STAGE_WIDTH),
+        Math.max(0.32, (window.innerHeight - 72) / TASKBAR_EXPANDED_HEIGHT),
+      );
+      return stage(
+        TASKBAR_STAGE_WIDTH,
+        TASKBAR_EXPANDED_HEIGHT,
+        {
+          left: "50%",
+          bottom: 48,
+          transform: `translateX(-50%) scale(${taskbarScale})`,
+          transformOrigin: "bottom center",
+        },
+        <TaskbarMotionProof
+          catalog={catalogSlug}
+          initialState={state === "expanded" ? "expanded" : "idle"}
+        />,
+      );
+    }
     if (surface === "hud") {
       const width = 460;
       const height = 500;

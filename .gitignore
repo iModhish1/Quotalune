@@ -57,6 +57,8 @@ tmpclaude-*
 node_modules/
 dist/
 nul
+/.playwright-cli/
+/output/playwright/
 
 # Local scripts and env files
 .env
@@ -81,6 +83,8 @@ nul
 !scripts/*.ps1
 !scripts/**/*.ps1
 !/scripts/capture-native-usage-proof.mjs
+!/scripts/playwright/
+!/scripts/playwright/*.js
 !/scripts/macos-windows-cross-build.sh
 !/scripts/run_vm_provider_proof.sh
 !/scripts/vm/provider_osclick_proof_unc.ps1
