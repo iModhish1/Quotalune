@@ -1,9 +1,14 @@
 /** The legacy top-window host for the single Quota Island composition. */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import type { StageProvider } from "../../components/orbit/stageTypes";
 import { useStageRuntime } from "../../hooks/useStageRuntime";
-import { resizeTopArc, type SurfaceWindowState } from "../../lib/surfaceBridge";
+import {
+  beginQuotaIslandDrag,
+  resizeTopArc,
+  type SurfaceWindowState,
+} from "../../lib/surfaceBridge";
 import QuotaIsland, { type QuotaIslandState } from "../quota-island/QuotaIsland";
 
 const DEMO_PROVIDERS: StageProvider[] = [
@@ -26,21 +31,30 @@ function initialState(demo: TopArcProps["demo"]): SurfaceWindowState {
   return "compact";
 }
 
-function islandState(state: SurfaceWindowState): QuotaIslandState {
-  return state;
+function nativeSizeState(state: QuotaIslandState): SurfaceWindowState {
+  return state === "expanded" || state === "pinned" ? "expanded" : "compact";
 }
 
 export default function TopArc({ demo }: TopArcProps) {
   const runtime = useStageRuntime({ enabled: !demo, surface: "top" });
-  const [surfaceState, setSurfaceState] = useState<SurfaceWindowState>(() => initialState(demo));
+  const [surfaceState, setSurfaceState] = useState<QuotaIslandState>(() => initialState(demo));
   const [focus, setFocus] = useState(0);
+  const nativeSizeRef = useRef<SurfaceWindowState | null>(null);
+  const resizeRevisionRef = useRef(0);
   const providers = demo ? DEMO_PROVIDERS : runtime.providers;
 
   useEffect(() => {
     if (demo) return;
-    // The webview sends state and density only. Rust remains the authority for
-    // the native size before this composition fills the resulting viewport.
-    void resizeTopArc(surfaceState, providers.length).catch(() => {});
+    // Hover is a CSS-only treatment and has the compact envelope. Native
+    // changes happen only at the compact↔expanded boundary and the latest
+    // intent wins if the user clicks/Escapes in quick succession.
+    const nextSize = nativeSizeState(surfaceState);
+    if (nativeSizeRef.current === nextSize) return;
+    nativeSizeRef.current = nextSize;
+    const revision = ++resizeRevisionRef.current;
+    void resizeTopArc(nextSize, providers.length).catch(() => {
+      if (revision === resizeRevisionRef.current) nativeSizeRef.current = null;
+    });
   }, [demo, providers.length, surfaceState]);
 
   useEffect(() => {
@@ -50,6 +64,16 @@ export default function TopArc({ demo }: TopArcProps) {
   const cycle = useCallback((direction: 1 | -1) => {
     setFocus((current) => providers.length === 0 ? 0 : (current + direction + providers.length) % providers.length);
   }, [providers.length]);
+
+  const startDrag = useCallback(() => {
+    if (demo) return;
+    // Persist the free-placement intent first. startDragging is deferred until
+    // that acknowledgement returns, so the Moved handler never recenters the
+    // island midway through a user gesture.
+    void beginQuotaIslandDrag()
+      .then(() => getCurrentWindow().startDragging())
+      .catch(() => {});
+  }, [demo]);
 
   useEffect(() => {
     if (demo) return;
@@ -70,11 +94,13 @@ export default function TopArc({ demo }: TopArcProps) {
     >
       <QuotaIsland
         catalog={runtime.catalog}
-        state={islandState(surfaceState)}
+        state={surfaceState}
         providers={providers}
         focusedIndex={focus}
         onFocusProvider={setFocus}
-        onToggleExpanded={() => setSurfaceState((state) => state === "expanded" ? "compact" : "expanded")}
+        onToggleExpanded={() => setSurfaceState((state) => state === "expanded" || state === "pinned" ? "compact" : "expanded")}
+        onTogglePinned={() => setSurfaceState((state) => state === "pinned" ? "expanded" : "pinned")}
+        onStartDrag={startDrag}
         onRequestCompact={() => setSurfaceState("compact")}
       />
     </div>

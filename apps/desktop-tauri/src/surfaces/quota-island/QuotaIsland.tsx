@@ -18,6 +18,8 @@ export interface QuotaIslandProps {
   focusedIndex?: number;
   onFocusProvider?: (index: number) => void;
   onToggleExpanded?: () => void;
+  onTogglePinned?: () => void;
+  onStartDrag?: () => void;
   onRequestCompact?: () => void;
 }
 
@@ -36,6 +38,8 @@ export default function QuotaIsland({
   focusedIndex = 0,
   onFocusProvider,
   onToggleExpanded,
+  onTogglePinned,
+  onStartDrag,
   onRequestCompact,
 }: QuotaIslandProps) {
   const theme = catalogBySlug(catalog) ?? CANONICAL_THEME;
@@ -63,34 +67,51 @@ export default function QuotaIsland({
       style={style}
       aria-label="QuotaArc quota island"
     >
-      <button
-        type="button"
+      <div
         className="quota-island__trigger"
-        aria-expanded={expanded}
-        aria-controls="quota-island-details"
-        aria-label={expanded ? "Collapse quota details" : "Expand quota details"}
-        onClick={onToggleExpanded}
       >
-        <span className="quota-island__brand" aria-hidden="true">Q</span>
-        <span className="quota-island__trigger-copy">
-          <span className="quota-island__provider-name">{focused?.name ?? "QuotaArc"}</span>
-          <span className="quota-island__provider-meta">
-            {focused ? `${focused.primaryLabel} · ${focused.reset}` : "No provider data"}
+        <button
+          type="button"
+          className="quota-island__summary"
+          aria-expanded={expanded}
+          aria-controls="quota-island-details"
+          aria-label={expanded ? "Collapse quota details" : "Expand quota details"}
+          onClick={onToggleExpanded}
+        >
+          <span className="quota-island__brand" aria-hidden="true">Q</span>
+          <span className="quota-island__trigger-copy">
+            <span className="quota-island__provider-name">{focused?.name ?? "QuotaArc"}</span>
+            <span className="quota-island__provider-meta">
+              {focused ? `${focused.primaryLabel} · ${focused.reset}` : "No provider data"}
+            </span>
           </span>
-        </span>
-        <span className="quota-island__trigger-gauge" aria-hidden="true">
-          <ArcGaugeV3
-            remaining={focused?.arcFraction ?? null}
-            size={30}
-            stroke={3.2}
-            colorOverride={focused ? providerColor(theme, focused.iconId) : theme.accent}
-            ariaLabel="Current quota arc"
-          />
-          {focused && <QaProviderIcon providerId={focused.iconId} size={12} />}
-        </span>
-        <span className="quota-island__trigger-value">{formatPercentage(focused?.primaryValue)}</span>
-        <span className="quota-island__chevron" aria-hidden="true">⌄</span>
-      </button>
+          <span className="quota-island__trigger-gauge" aria-hidden="true">
+            <ArcGaugeV3
+              remaining={focused?.arcFraction ?? null}
+              size={30}
+              stroke={3.2}
+              colorOverride={focused ? providerColor(theme, focused.iconId) : theme.accent}
+              ariaLabel="Current quota arc"
+            />
+            {focused && <QaProviderIcon providerId={focused.iconId} size={12} />}
+          </span>
+          <span className="quota-island__trigger-value">{formatPercentage(focused?.primaryValue)}</span>
+          <span className="quota-island__chevron" aria-hidden="true">⌄</span>
+        </button>
+        <button
+          type="button"
+          className="quota-island__drag"
+          aria-label="Move Quota Island"
+          title="Drag to move"
+          onMouseDown={(event) => {
+            if (event.button !== 0) return;
+            event.preventDefault();
+            onStartDrag?.();
+          }}
+        >
+          <span aria-hidden="true">⠿</span>
+        </button>
+      </div>
 
       {expanded && (
         <div id="quota-island-details" className="quota-island__details" role="dialog" aria-label="Quota details">
@@ -99,14 +120,26 @@ export default function QuotaIsland({
               <p>Quota overview</p>
               <strong>{focused?.name ?? "No provider selected"}</strong>
             </div>
-            <button
-              type="button"
-              className="quota-island__close"
-              onClick={onRequestCompact ?? onToggleExpanded}
-              aria-label="Collapse quota details"
-            >
-              ×
-            </button>
+            <span className="quota-island__detail-actions">
+              <button
+                type="button"
+                className="quota-island__pin"
+                onClick={onTogglePinned}
+                aria-pressed={state === "pinned"}
+                aria-label={state === "pinned" ? "Unpin quota details" : "Pin quota details"}
+                title={state === "pinned" ? "Unpin details" : "Keep details open"}
+              >
+                ⌖
+              </button>
+              <button
+                type="button"
+                className="quota-island__close"
+                onClick={onRequestCompact ?? onToggleExpanded}
+                aria-label="Collapse quota details"
+              >
+                ×
+              </button>
+            </span>
           </header>
 
           <div className="quota-island__focus">

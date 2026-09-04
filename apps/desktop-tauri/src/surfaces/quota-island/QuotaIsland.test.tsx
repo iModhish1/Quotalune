@@ -47,6 +47,25 @@ describe("QuotaIsland", () => {
     expect(onRequestCompact).toHaveBeenCalledOnce();
   });
 
+  it("exposes explicit move and pin controls without nesting interactive elements", () => {
+    const onStartDrag = vi.fn();
+    const onTogglePinned = vi.fn();
+    render(
+      <QuotaIsland
+        catalog="01-obsidian-orbit"
+        state="expanded"
+        providers={providers}
+        onStartDrag={onStartDrag}
+        onTogglePinned={onTogglePinned}
+      />,
+    );
+
+    fireEvent.mouseDown(screen.getByRole("button", { name: "Move Quota Island" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pin quota details" }));
+    expect(onStartDrag).toHaveBeenCalledOnce();
+    expect(onTogglePinned).toHaveBeenCalledOnce();
+  });
+
   it("falls back to the canonical theme for an archived slug", () => {
     const { container } = render(
       <QuotaIsland catalog="12-crimson-nova" state="compact" providers={providers} />,

@@ -13,6 +13,7 @@ export interface SurfaceSettingsPatch {
   topArcEnabled?: boolean;
   topArcOpacity?: number;
   topArcScale?: number;
+  topArcPlacement?: "top-left" | "top-center" | "top-right" | "free";
   topArcClickThrough?: boolean;
   topArcHideFullscreen?: boolean;
   taskbarArcEnabled?: boolean;
@@ -47,6 +48,16 @@ export function resizeTopArc(state: SurfaceWindowState, providerCount: number): 
   return invoke("resize_top_arc_surface", { state, providerCount });
 }
 
+/** Persist the intent to freely place the island before native dragging starts. */
+export function beginQuotaIslandDrag(): Promise<void> {
+  return invoke("begin_top_arc_drag");
+}
+
+/** Return the island to a predictable visible top-center position. */
+export function resetQuotaIslandPosition(): Promise<void> {
+  return invoke("reset_top_arc_position");
+}
+
 export function showTaskbarArc(): Promise<void> {
   return invoke("show_taskbar_arc_surface");
 }
@@ -76,6 +87,7 @@ export interface SurfaceSettings {
   topArcEnabled: boolean;
   topArcOpacity: number;
   topArcScale: number;
+  topArcPlacement: "top-left" | "top-center" | "top-right" | "free";
   topArcClickThrough: boolean;
   topArcHideFullscreen: boolean;
   taskbarArcEnabled: boolean;

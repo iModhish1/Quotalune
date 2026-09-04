@@ -5,6 +5,7 @@ import { Field, Toggle } from "../../../components/FormControls";
 import { useLocale } from "../../../hooks/useLocale";
 import {
   getSurfaceSettings,
+  resetQuotaIslandPosition,
   updateSurfaceSettings,
   type SurfaceSettings,
 } from "../../../lib/surfaceBridge";
@@ -92,6 +93,32 @@ export default function SurfacesTab() {
         </Field>
         <Field label="Display scale" description="Changes only the bounded island, never the rest of the desktop.">
           <RangeControl label="Scale" value={config.topArcScale} min={75} max={200} step={5} disabled={!config.topArcEnabled} onChange={(topArcScale) => patch({ topArcScale })} />
+        </Field>
+        <Field label="Position" description="Choose a safe edge position, or drag the grip on the island to place it freely.">
+          <select
+            value={config.topArcPlacement}
+            disabled={!config.topArcEnabled}
+            aria-label="Quota Island position"
+            onChange={(event) => patch({ topArcPlacement: event.target.value as SurfaceSettings["topArcPlacement"] })}
+          >
+            <option value="top-left">Top left</option>
+            <option value="top-center">Top center</option>
+            <option value="top-right">Top right</option>
+            <option value="free">Free placement</option>
+          </select>
+        </Field>
+        <Field label="Restore position" description="Returns the island to the visible top-center position.">
+          <button
+            type="button"
+            disabled={!config.topArcEnabled}
+            onClick={() => {
+              void resetQuotaIslandPosition().then(() =>
+                setConfig((current) => current ? { ...current, topArcPlacement: "top-center" } : current),
+              ).catch((cause: unknown) => setError(cause instanceof Error ? cause.message : String(cause)));
+            }}
+          >
+            Center island
+          </button>
         </Field>
         <Field label="Click-through" description="Mouse input passes through the compact island.">
           <Toggle checked={config.topArcClickThrough} ariaLabel="Quota Island click-through" disabled={!config.topArcEnabled} onChange={(topArcClickThrough) => patch({ topArcClickThrough })} />

@@ -315,6 +315,16 @@ fn float_bar_style_normalization_rejects_unknown_values() {
 }
 
 #[test]
+fn quota_island_placement_normalization_is_bounded() {
+    assert_eq!(normalize_top_arc_placement("top-left"), "top-left");
+    assert_eq!(normalize_top_arc_placement("top-center"), "top-center");
+    assert_eq!(normalize_top_arc_placement("top-right"), "top-right");
+    assert_eq!(normalize_top_arc_placement("free"), "free");
+    assert_eq!(normalize_top_arc_placement("bottom-center"), "top-center");
+    assert_eq!(normalize_top_arc_placement(""), "top-center");
+}
+
+#[test]
 fn archived_catalog_values_normalize_to_the_canonical_theme() {
     let s = Settings {
         catalog_theme: "03-solar-ember".to_string(),

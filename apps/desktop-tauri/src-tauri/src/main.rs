@@ -290,6 +290,8 @@ fn main() {
             surfaces::hide_top_arc_surface,
             surfaces::resize_edge_arc_surface,
             surfaces::resize_top_arc_surface,
+            surfaces::begin_top_arc_drag,
+            surfaces::reset_top_arc_position,
             surfaces::show_taskbar_arc_surface,
             surfaces::hide_taskbar_arc_surface,
             surfaces::resize_taskbar_arc_surface,

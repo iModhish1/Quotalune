@@ -348,6 +348,11 @@ pub struct Settings {
     #[serde(default = "default_surface_scale")]
     pub top_arc_scale: u8,
 
+    /// Quota Island placement: top-left, top-center, top-right, or free.
+    /// Free placement is chosen automatically when the user drags the island.
+    #[serde(default = "default_top_arc_placement")]
+    pub top_arc_placement: String,
+
     /// Top Arc full click-through (overlay) mode.
     #[serde(default)]
     pub top_arc_click_through: bool,
@@ -554,6 +559,10 @@ fn default_edge_arc_side() -> String {
     "right".to_string()
 }
 
+fn default_top_arc_placement() -> String {
+    "top-center".to_string()
+}
+
 fn default_surface_opacity() -> u8 {
     95
 }
@@ -577,6 +586,15 @@ pub fn normalize_edge_arc_side(value: &str) -> String {
     match value {
         "left" => "left".to_string(),
         _ => "right".to_string(),
+    }
+}
+
+/// Keep placement values bounded even when a settings file was hand-edited or
+/// produced by an older build. The island always has a safe top-center escape.
+pub fn normalize_top_arc_placement(value: &str) -> String {
+    match value {
+        "top-left" | "top-center" | "top-right" | "free" => value.to_string(),
+        _ => default_top_arc_placement(),
     }
 }
 
@@ -737,6 +755,7 @@ impl Default for Settings {
             top_arc_enabled: false,
             top_arc_opacity: default_surface_opacity(),
             top_arc_scale: default_surface_scale(),
+            top_arc_placement: default_top_arc_placement(),
             top_arc_click_through: false,
             top_arc_hide_fullscreen: true,
             taskbar_arc_enabled: false,
@@ -802,6 +821,7 @@ impl Settings {
             .and_then(canonical_catalog_theme);
         settings.surface_catalog_themes =
             normalize_surface_catalog_themes(std::mem::take(&mut settings.surface_catalog_themes));
+        settings.top_arc_placement = normalize_top_arc_placement(&settings.top_arc_placement);
 
         // V9 retires the competing edge and taskbar overlays. Preserve their
         // old configuration on disk until a normal save, but never restore a

@@ -179,6 +179,8 @@ pub(super) struct RawSettings {
     top_arc_opacity: u8,
     #[serde(default = "default_surface_scale")]
     top_arc_scale: u8,
+    #[serde(default = "default_top_arc_placement")]
+    top_arc_placement: String,
     #[serde(default)]
     top_arc_click_through: bool,
     #[serde(default = "default_true")]
@@ -326,6 +328,7 @@ impl Default for RawSettings {
             top_arc_enabled: s.top_arc_enabled,
             top_arc_opacity: s.top_arc_opacity,
             top_arc_scale: s.top_arc_scale,
+            top_arc_placement: s.top_arc_placement,
             top_arc_click_through: s.top_arc_click_through,
             top_arc_hide_fullscreen: s.top_arc_hide_fullscreen,
             privacy_mode: s.privacy_mode,
@@ -652,6 +655,7 @@ impl From<RawSettings> for Settings {
             top_arc_enabled: raw.top_arc_enabled,
             top_arc_opacity: clamp_surface_opacity(raw.top_arc_opacity),
             top_arc_scale: clamp_surface_scale(raw.top_arc_scale),
+            top_arc_placement: normalize_top_arc_placement(&raw.top_arc_placement),
             top_arc_click_through: raw.top_arc_click_through,
             top_arc_hide_fullscreen: raw.top_arc_hide_fullscreen,
             privacy_mode: raw.privacy_mode,

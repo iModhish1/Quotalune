@@ -13,6 +13,7 @@
 use codexbar::settings::Settings;
 use tauri::{LogicalPosition, Manager, WebviewUrl};
 
+use crate::geometry_store::{self, StoredGeometry};
 use crate::surface_kit::{
     EDGE_ARC_LABEL, TASKBAR_ARC_LABEL, TOP_ARC_LABEL, apply_always_on_top, apply_click_through,
     apply_no_activate, apply_opacity, foreground_is_content_fullscreen, monitor_work_area_logical,
@@ -21,6 +22,7 @@ use crate::surface_kit::{
 
 /// Edge margin for the Top Arc from the top of the work area, logical px.
 const TOP_ARC_MARGIN: f64 = 10.0;
+const TOP_ARC_FREE_POSITION_KEY: &str = TOP_ARC_LABEL;
 
 use codexbar::surface_layout::{
     AnchorEdge, LayoutInput, ResolvedSurfaceLayout, SurfaceKind, SurfaceState,
@@ -82,12 +84,7 @@ fn apply_surface_layout(
     let layout = resolved_layout(window, surface, state, provider_count);
     let (w, h) = layout.window_bounds_logical;
     let settings = Settings::load();
-    let click_through = match surface {
-        SurfaceKind::Edge => settings.edge_arc_click_through,
-        SurfaceKind::Top => settings.top_arc_click_through,
-        SurfaceKind::Taskbar => settings.taskbar_arc_click_through,
-        _ => false,
-    };
+    let click_through = effective_click_through(&settings, surface, state);
     let _ = resize_surface(window, w, h, click_through);
     match surface {
         SurfaceKind::Edge => {
@@ -97,6 +94,18 @@ fn apply_surface_layout(
         SurfaceKind::Top => position_top_arc(window),
         SurfaceKind::Taskbar => position_taskbar_arc(window),
         _ => {}
+    }
+}
+
+fn effective_click_through(settings: &Settings, surface: SurfaceKind, state: SurfaceState) -> bool {
+    match surface {
+        SurfaceKind::Edge => settings.edge_arc_click_through,
+        // An expanded/pinned island must always regain hit-testing so users
+        // can select a provider, drag it, or close it. Click-through is an
+        // intentionally locked compact-only presentation mode.
+        SurfaceKind::Top => settings.top_arc_click_through && state == SurfaceState::Compact,
+        SurfaceKind::Taskbar => settings.taskbar_arc_click_through,
+        _ => false,
     }
 }
 
@@ -185,26 +194,96 @@ pub fn resize_edge_arc(
 
 // ── Top Arc ──────────────────────────────────────────────────────────────
 
-fn position_top_arc(window: &tauri::WebviewWindow) {
-    let Ok(Some(monitor)) = window.current_monitor() else {
+/// A free placement is only restored when it remains on a connected display.
+/// This prevents an unplugged monitor from making the island impossible to
+/// find after restart.
+fn saved_top_arc_position_is_visible(window: &tauri::WebviewWindow, x: i32, y: i32) -> bool {
+    if x <= -10_000 || y <= -10_000 {
+        return false;
+    }
+    let Ok(monitors) = window.available_monitors() else {
+        return false;
+    };
+    monitors.iter().any(|monitor| {
+        let scale = monitor.scale_factor().max(0.01);
+        let work_area = monitor.work_area();
+        let left = work_area.position.x as f64 / scale;
+        let top = work_area.position.y as f64 / scale;
+        let right = left + work_area.size.width as f64 / scale;
+        let bottom = top + work_area.size.height as f64 / scale;
+        let x = x as f64;
+        let y = y as f64;
+        x >= left && x < right && y >= top && y < bottom
+    })
+}
+
+fn remember_top_arc_position(window: &tauri::WebviewWindow) {
+    let Ok(position) = window.outer_position() else {
         return;
     };
-    let Ok(scale) = window.scale_factor() else {
+    let scale = window.scale_factor().unwrap_or(1.0).max(0.01);
+    let x = (position.x as f64 / scale).round() as i32;
+    let y = (position.y as f64 / scale).round() as i32;
+    if !saved_top_arc_position_is_visible(window, x, y) {
+        return;
+    }
+    geometry_store::save_entry(
+        TOP_ARC_FREE_POSITION_KEY,
+        StoredGeometry {
+            x,
+            y,
+            width: None,
+            height: None,
+        },
+    );
+}
+
+fn clamp_top_arc_position_to_work_area(
+    position: (f64, f64),
+    size: (f64, f64),
+    work_area: (f64, f64, f64, f64),
+) -> (f64, f64) {
+    let (x, y) = position;
+    let (width, height) = size;
+    let (work_x, work_y, work_width, work_height) = work_area;
+    let max_x = (work_x + work_width - width).max(work_x);
+    let max_y = (work_y + work_height - height).max(work_y);
+    (x.clamp(work_x, max_x), y.clamp(work_y, max_y))
+}
+
+fn position_top_arc(window: &tauri::WebviewWindow) {
+    let settings = Settings::load();
+    if settings.top_arc_placement == "free"
+        && let Some(geometry) = geometry_store::load_entry(TOP_ARC_FREE_POSITION_KEY)
+        && saved_top_arc_position_is_visible(window, geometry.x, geometry.y)
+        && let (Some((work_x, work_y, work_w, work_h)), Ok(size)) =
+            (monitor_work_area_logical(window), window.outer_size())
+    {
+        let scale = window.scale_factor().unwrap_or(1.0).max(0.01);
+        let (x, y) = clamp_top_arc_position_to_work_area(
+            (geometry.x as f64, geometry.y as f64),
+            (size.width as f64 / scale, size.height as f64 / scale),
+            (work_x, work_y, work_w, work_h),
+        );
+        let _ = window.set_position(LogicalPosition::new(x.round(), y.round()));
+        return;
+    }
+    let Some((work_x, work_y, work_w, _work_h)) = monitor_work_area_logical(window) else {
         return;
     };
     let Ok(size) = window.outer_size() else {
         return;
     };
-    let mon = monitor.position();
-    let mon_size = monitor.size();
+    let scale = window.scale_factor().unwrap_or(1.0).max(0.01);
     let w = size.width as f64 / scale;
-    let mon_x = mon.x as f64 / scale;
-    let mon_y = mon.y as f64 / scale;
-    let mon_w = mon_size.width as f64 / scale;
-    let x = mon_x + ((mon_w - w) / 2.0).max(0.0);
+    let x = match settings.top_arc_placement.as_str() {
+        "top-left" => work_x + TOP_ARC_MARGIN,
+        "top-right" => work_x + (work_w - w - TOP_ARC_MARGIN).max(0.0),
+        _ => work_x + ((work_w - w) / 2.0).max(0.0),
+    };
     let _ = window.set_position(LogicalPosition::new(
         x.round(),
-        (mon_y + TOP_ARC_MARGIN).round(),
+        (work_y + TOP_ARC_MARGIN).round(),
     ));
 }
 
@@ -254,6 +333,29 @@ pub fn resize_top_arc(
     provider_count: u32,
 ) -> Result<(), String> {
     apply_surface_layout(window, SurfaceKind::Top, state, provider_count);
+    Ok(())
+}
+
+/// Mark the island as freely placed before the webview begins its native drag
+/// gesture. The subsequent Moved event records the final logical position.
+#[tauri::command]
+pub fn begin_top_arc_drag() -> Result<(), String> {
+    let mut settings = Settings::load();
+    settings.top_arc_placement = "free".to_string();
+    settings.save().map_err(|error| error.to_string())
+}
+
+/// Restore the safe default top-center placement and discard any remembered
+/// free-drag position.
+#[tauri::command]
+pub fn reset_top_arc_position(app: tauri::AppHandle) -> Result<(), String> {
+    geometry_store::remove_entry(TOP_ARC_FREE_POSITION_KEY);
+    let mut settings = Settings::load();
+    settings.top_arc_placement = "top-center".to_string();
+    settings.save().map_err(|error| error.to_string())?;
+    if let Some(window) = app.get_webview_window(TOP_ARC_LABEL) {
+        position_top_arc(&window);
+    }
     Ok(())
 }
 
@@ -461,7 +563,17 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) -
                     position_edge_arc(&webview, &side);
                     apply_edge_arc_attrs(&webview, &settings);
                 } else if label == TOP_ARC_LABEL {
-                    position_top_arc(&webview);
+                    // A freely dragged island owns its location. Re-anchor
+                    // only the deliberate preset placements; re-sizing is
+                    // caused by the webview state transition, not a request
+                    // to snap the user back to the top center.
+                    if matches!(event, tauri::WindowEvent::Moved(_)) {
+                        if settings.top_arc_placement == "free" {
+                            remember_top_arc_position(&webview);
+                        } else {
+                            position_top_arc(&webview);
+                        }
+                    }
                     apply_top_arc_attrs(&webview, &settings);
                 } else {
                     position_taskbar_arc(&webview);
@@ -633,6 +745,13 @@ pub async fn update_surface_settings(
 ) -> Result<(), String> {
     let mut settings = Settings::load();
     patch.apply(&mut settings);
+    if patch
+        .top_arc_placement
+        .as_deref()
+        .is_some_and(|value| value != "free")
+    {
+        geometry_store::remove_entry(TOP_ARC_FREE_POSITION_KEY);
+    }
     settings.save().map_err(|e| e.to_string())?;
     apply_state(&app, &settings)?;
     // Surfaces read settings on their next config event too.
@@ -654,6 +773,7 @@ pub struct SurfaceSettingsDto {
     pub top_arc_enabled: bool,
     pub top_arc_opacity: u8,
     pub top_arc_scale: u8,
+    pub top_arc_placement: String,
     pub top_arc_click_through: bool,
     pub top_arc_hide_fullscreen: bool,
     pub taskbar_arc_enabled: bool,
@@ -675,6 +795,7 @@ pub fn get_surface_settings() -> SurfaceSettingsDto {
         top_arc_enabled: s.top_arc_enabled,
         top_arc_opacity: s.top_arc_opacity,
         top_arc_scale: s.top_arc_scale,
+        top_arc_placement: s.top_arc_placement,
         top_arc_click_through: s.top_arc_click_through,
         top_arc_hide_fullscreen: s.top_arc_hide_fullscreen,
         taskbar_arc_enabled: s.taskbar_arc_enabled,
@@ -697,6 +818,7 @@ pub struct SurfaceSettingsPatch {
     pub top_arc_enabled: Option<bool>,
     pub top_arc_opacity: Option<u8>,
     pub top_arc_scale: Option<u8>,
+    pub top_arc_placement: Option<String>,
     pub top_arc_click_through: Option<bool>,
     pub top_arc_hide_fullscreen: Option<bool>,
     pub taskbar_arc_enabled: Option<bool>,
@@ -733,6 +855,9 @@ impl SurfaceSettingsPatch {
         }
         if let Some(v) = self.top_arc_scale {
             s.top_arc_scale = codexbar::settings::clamp_surface_scale(v);
+        }
+        if let Some(v) = &self.top_arc_placement {
+            s.top_arc_placement = codexbar::settings::normalize_top_arc_placement(v);
         }
         if let Some(v) = self.top_arc_click_through {
             s.top_arc_click_through = v;
@@ -792,6 +917,7 @@ mod tests {
             edge_arc_scale: Some(20),
             top_arc_opacity: Some(10),
             top_arc_scale: Some(250),
+            top_arc_placement: Some("bottom-right".into()),
             ..Default::default()
         };
         patch.apply(&mut s);
@@ -801,6 +927,7 @@ mod tests {
         assert_eq!(s.edge_arc_scale, 75);
         assert_eq!(s.top_arc_opacity, 30);
         assert_eq!(s.top_arc_scale, 200);
+        assert_eq!(s.top_arc_placement, "top-center");
     }
 
     #[test]
@@ -812,6 +939,58 @@ mod tests {
         }
         .apply(&mut s);
         assert_eq!(s.edge_arc_side, "left");
+    }
+
+    #[test]
+    fn quota_island_free_placement_is_preserved_by_surface_patch() {
+        let mut s = Settings::default();
+        SurfaceSettingsPatch {
+            top_arc_placement: Some("free".into()),
+            ..Default::default()
+        }
+        .apply(&mut s);
+        assert_eq!(s.top_arc_placement, "free");
+    }
+
+    #[test]
+    fn free_island_position_stays_inside_the_monitor_work_area() {
+        assert_eq!(
+            clamp_top_arc_position_to_work_area(
+                (-50.0, 2_000.0),
+                (320.0, 56.0),
+                (10.0, 40.0, 1_280.0, 720.0),
+            ),
+            (10.0, 704.0),
+        );
+        assert_eq!(
+            clamp_top_arc_position_to_work_area(
+                (1_000.0, 100.0),
+                (520.0, 338.0),
+                (10.0, 40.0, 1_280.0, 720.0),
+            ),
+            (770.0, 100.0),
+        );
+    }
+
+    #[test]
+    fn island_click_through_is_never_applied_to_expanded_details() {
+        let mut settings = Settings::default();
+        settings.top_arc_click_through = true;
+        assert!(effective_click_through(
+            &settings,
+            SurfaceKind::Top,
+            SurfaceState::Compact
+        ));
+        assert!(!effective_click_through(
+            &settings,
+            SurfaceKind::Top,
+            SurfaceState::Hover
+        ));
+        assert!(!effective_click_through(
+            &settings,
+            SurfaceKind::Top,
+            SurfaceState::Expanded
+        ));
     }
 
     #[test]

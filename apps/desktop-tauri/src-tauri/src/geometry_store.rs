@@ -154,6 +154,19 @@ pub fn save_entry(key: &str, geometry: StoredGeometry) {
     }
 }
 
+/// Forget an arbitrary remembered position. Used when the user chooses an
+/// anchored placement again, so an old free-drag location cannot reappear.
+pub fn remove_entry(key: &str) {
+    let mut file = load_file();
+    if file.entries.remove(key).is_none() {
+        return;
+    }
+    file.version = GEOMETRY_VERSION;
+    if let Err(err) = save_file(&file) {
+        tracing::warn!(target: "codexbar::geometry", %err, "failed to remove remembered geometry");
+    }
+}
+
 /// Legacy key the flyout size was stored under before it became a dedicated
 /// window: the old `SurfaceMode::TrayPanel` shared-window geometry entry.
 const LEGACY_FLYOUT_SIZE_KEY: &str = "trayPanel";

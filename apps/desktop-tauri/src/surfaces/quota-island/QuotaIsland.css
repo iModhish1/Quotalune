@@ -19,6 +19,7 @@
 }
 
 .quota-island__trigger,
+.quota-island__summary,
 .quota-island__details {
   border: 1px solid color-mix(in srgb, var(--qi-accent) 26%, rgba(255, 255, 255, 0.14));
   background:
@@ -30,19 +31,10 @@
 .quota-island__trigger {
   position: relative;
   z-index: 2;
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) 30px auto 16px;
-  align-items: center;
   width: 100%;
   min-height: 44px;
-  padding: 5px 12px 5px 8px;
-  gap: 8px;
-  overflow: hidden;
-  color: inherit;
   border-radius: 15px;
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+  overflow: hidden;
 }
 
 .quota-island__trigger::before {
@@ -55,18 +47,61 @@
 }
 
 .quota-island[data-state="hover"] .quota-island__trigger,
-.quota-island__trigger:hover,
-.quota-island__trigger:focus-visible {
+.quota-island__summary:hover,
+.quota-island__summary:focus-visible {
   border-color: color-mix(in srgb, var(--qi-accent) 68%, white 12%);
   box-shadow: 0 14px 38px rgba(0, 0, 0, 0.58), 0 0 18px color-mix(in srgb, var(--qi-accent) 18%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 .quota-island__trigger:focus-visible,
+.quota-island__summary:focus-visible,
 .quota-island__provider:focus-visible,
-.quota-island__close:focus-visible {
+.quota-island__close:focus-visible,
+.quota-island__pin:focus-visible,
+.quota-island__drag:focus-visible {
   outline: 2px solid var(--qi-accent);
   outline-offset: 2px;
 }
+
+.quota-island__summary {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 30px auto 16px;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 5px 38px 5px 8px;
+  gap: 8px;
+  color: inherit;
+  border: 0;
+  border-radius: 15px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+}
+
+.quota-island__drag {
+  position: absolute;
+  z-index: 3;
+  top: 7px;
+  right: 7px;
+  display: grid;
+  width: 24px;
+  height: 30px;
+  place-items: center;
+  padding: 0;
+  color: rgba(226, 232, 240, 0.46);
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  cursor: move;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.quota-island__drag:hover { color: var(--qi-accent); background: rgba(255, 255, 255, 0.07); }
 
 .quota-island__brand {
   position: relative;
@@ -129,8 +164,11 @@
 .quota-island__detail-header { display: flex; align-items: center; justify-content: space-between; min-height: 31px; }
 .quota-island__detail-header p { margin: 0 0 2px; color: rgba(226, 232, 240, 0.54); font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase; }
 .quota-island__detail-header strong { font-size: 13px; }
-.quota-island__close { width: 27px; height: 27px; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 9px; color: rgba(226, 232, 240, 0.72); background: rgba(255, 255, 255, 0.05); font-size: 20px; line-height: 1; cursor: pointer; }
+.quota-island__detail-actions { display: flex; gap: 6px; }
+.quota-island__close, .quota-island__pin { width: 27px; height: 27px; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 9px; color: rgba(226, 232, 240, 0.72); background: rgba(255, 255, 255, 0.05); font-size: 20px; line-height: 1; cursor: pointer; }
+.quota-island__pin { font-size: 15px; }
 .quota-island__close:hover { color: white; background: rgba(255, 255, 255, 0.1); }
+.quota-island__pin:hover, .quota-island__pin[aria-pressed="true"] { color: var(--qi-accent); background: color-mix(in srgb, var(--qi-accent) 13%, rgba(255, 255, 255, 0.05)); }
 
 .quota-island__focus { display: grid; grid-template-columns: 68px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px; border: 1px solid color-mix(in srgb, var(--qi-accent) 18%, transparent); border-radius: 14px; background: rgba(3, 8, 15, 0.38); }
 .quota-island__focus > div { display: grid; min-width: 0; }
