@@ -22,6 +22,7 @@ pub mod providers;
 pub mod secure_file;
 pub mod settings;
 pub mod surface_layout;
+pub mod surface_coordinator;
 pub mod sound;
 pub mod spend_contract;
 
