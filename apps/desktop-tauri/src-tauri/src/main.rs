@@ -113,6 +113,19 @@ fn should_suppress_blur_dismiss(launch: LaunchBehavior, proof_mode: bool) -> boo
     launch.suppress_blur_dismiss || proof_mode
 }
 
+/// Build provenance constants, embedded at compile time by build.rs.
+pub mod build_info {
+    pub const COMMIT: &str = env!("QA_BUILD_COMMIT");
+    pub const DIRTY: &str = env!("QA_BUILD_DIRTY");
+    pub const TIMESTAMP: &str = env!("QA_BUILD_TIMESTAMP");
+    pub const ARCH: &str = env!("QA_BUILD_ARCH");
+    pub const CHANNEL: &str = if cfg!(feature = "dev-channel") {
+        "dev"
+    } else {
+        "stable"
+    };
+}
+
 fn main() {
     // Per-process log file names: the shell writes codexbar-desktop.log so
     // its cached handle never blocks the CLI's rotation on Windows.
