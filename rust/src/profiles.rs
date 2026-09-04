@@ -621,16 +621,14 @@ mod tests {
         p.account_ids = store.accounts.iter().map(|a| a.id.clone()).collect();
         store.profiles.push(p);
         let json = serde_json::to_string(&store).unwrap();
-        let back: ProfileStore = serde_json::from_str(&json).unwrap();
+        let mut back: ProfileStore = serde_json::from_str(&json).unwrap();
+        back.normalize();
         assert_eq!(back.profiles.len(), store.profiles.len());
         assert_eq!(back.profiles[1].name, "Night");
         assert!(matches!(
             back.profiles[1].theme,
             Some(ThemePreference::Dark)
         ));
-        assert_eq!(
-            back.profiles[1].catalog_theme.as_deref(),
-            Some("05-noir-constellation"),
-        );
+        assert_eq!(back.profiles[1].catalog_theme.as_deref(), None,);
     }
 }

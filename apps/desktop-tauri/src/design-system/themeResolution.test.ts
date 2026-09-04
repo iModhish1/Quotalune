@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { resolveCatalogTheme } from "./themeResolution";
 
 describe("resolveCatalogTheme", () => {
-  it("resolves surface over profile over global over default", () => {
+  it("locks every legacy scope to the canonical foundation theme", () => {
     const settings = {
       catalogTheme: "03-solar-ember",
       activeProfileCatalogTheme: "02-aurora-bloom",
@@ -11,23 +11,20 @@ describe("resolveCatalogTheme", () => {
     };
 
     expect(resolveCatalogTheme(settings, "taskbar")).toEqual({
-      slug: "12-crimson-nova",
-      source: "surface",
+      slug: "01-obsidian-orbit",
+      source: "default",
     });
     expect(resolveCatalogTheme(settings, "top")).toEqual({
-      slug: "02-aurora-bloom",
-      source: "profile",
+      slug: "01-obsidian-orbit",
+      source: "default",
     });
-    expect(
-      resolveCatalogTheme({ ...settings, activeProfileCatalogTheme: null }, "top"),
-    ).toEqual({ slug: "03-solar-ember", source: "global" });
     expect(resolveCatalogTheme({}, "hud")).toEqual({
       slug: "01-obsidian-orbit",
       source: "default",
     });
   });
 
-  it("ignores corrupt values at every inherited level", () => {
+  it("does not allow corrupt or archived values to alter production surfaces", () => {
     expect(
       resolveCatalogTheme(
         {

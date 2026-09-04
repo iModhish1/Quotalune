@@ -58,13 +58,9 @@ pub enum Transition {
         collapse: OverlayKind,
     },
     /// Expand `expand`; nothing else is expanded.
-    Expand {
-        expand: OverlayKind,
-    },
+    Expand { expand: OverlayKind },
     /// Collapse `collapse` (it was the active overlay).
-    Collapse {
-        collapse: OverlayKind,
-    },
+    Collapse { collapse: OverlayKind },
 }
 
 /// The coordinator: `None` = no overlay is expanded.
@@ -236,7 +232,10 @@ mod tests {
     #[test]
     fn corrupt_tokens_fall_back_deterministically() {
         assert_eq!(OverlayKind::from_token("bogus"), OverlayKind::Taskbar);
-        assert_eq!(OverlayKind::from_token("quick-panel"), OverlayKind::QuickPanel);
+        assert_eq!(
+            OverlayKind::from_token("quick-panel"),
+            OverlayKind::QuickPanel
+        );
         assert_eq!(OverlayKind::from_token("settings"), OverlayKind::Taskbar);
     }
 

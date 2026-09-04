@@ -591,7 +591,7 @@ mod tests {
         let settings = Settings::default();
         let mut store = codexbar::profiles::migrate_from_legacy(&settings);
         store.profiles[0].theme = Some(ThemePreference::Light);
-        store.profiles[0].catalog_theme = Some("02-aurora-bloom".to_string());
+        store.profiles[0].catalog_theme = Some("01-obsidian-orbit".to_string());
         store.profiles[0].surfaces.top_arc = true;
         store.profiles[0].surfaces.taskbar_arc = true;
         let mut s2 = Settings::default();
@@ -599,37 +599,37 @@ mod tests {
         assert_eq!(s2.theme, ThemePreference::Light);
         assert_eq!(
             s2.active_profile_catalog_theme.as_deref(),
-            Some("02-aurora-bloom")
+            Some("01-obsidian-orbit")
         );
         assert!(s2.top_arc_enabled);
         assert!(s2.taskbar_arc_enabled);
     }
 
     #[test]
-    fn catalog_scope_precedence_storage_is_bounded_and_clearable() {
+    fn canonical_theme_scope_storage_is_bounded_and_clearable() {
         let mut settings = Settings::default();
         let mut store = ProfileStore::default();
 
         assert!(
-            !apply_catalog_theme_scope(&mut settings, &mut store, "global", "03-solar-ember",)
+            !apply_catalog_theme_scope(&mut settings, &mut store, "global", "01-obsidian-orbit",)
                 .unwrap()
         );
-        assert_eq!(settings.catalog_theme, "03-solar-ember");
+        assert_eq!(settings.catalog_theme, "01-obsidian-orbit");
 
         assert!(
-            apply_catalog_theme_scope(&mut settings, &mut store, "profile", "02-aurora-bloom",)
+            apply_catalog_theme_scope(&mut settings, &mut store, "profile", "01-obsidian-orbit",)
                 .unwrap()
         );
         assert_eq!(
             settings.active_profile_catalog_theme.as_deref(),
-            Some("02-aurora-bloom")
+            Some("01-obsidian-orbit")
         );
 
         apply_catalog_theme_scope(
             &mut settings,
             &mut store,
             "surface:taskbar",
-            "12-crimson-nova",
+            "01-obsidian-orbit",
         )
         .unwrap();
         assert_eq!(
@@ -637,20 +637,24 @@ mod tests {
                 .surface_catalog_themes
                 .get("taskbar")
                 .map(String::as_str),
-            Some("12-crimson-nova"),
+            Some("01-obsidian-orbit"),
         );
 
         apply_catalog_theme_scope(&mut settings, &mut store, "profile", "").unwrap();
         apply_catalog_theme_scope(&mut settings, &mut store, "surface:taskbar", "").unwrap();
         assert!(settings.active_profile_catalog_theme.is_none());
         assert!(!settings.surface_catalog_themes.contains_key("taskbar"));
+        assert!(
+            apply_catalog_theme_scope(&mut settings, &mut store, "global", "12-crimson-nova",)
+                .is_err()
+        );
     }
 
     #[test]
     fn deleted_active_profile_falls_back_without_stale_catalog_theme() {
         let mut store = ProfileStore::default();
         let mut second = QuotaArcProfile::new("Second");
-        second.catalog_theme = Some("12-crimson-nova".to_string());
+        second.catalog_theme = Some("01-obsidian-orbit".to_string());
         store.active_profile_id = second.id.clone();
         store.profiles.push(second.clone());
 
@@ -658,7 +662,7 @@ mod tests {
         apply_active_profile_to_settings(&store, &mut settings);
         assert_eq!(
             settings.active_profile_catalog_theme.as_deref(),
-            Some("12-crimson-nova"),
+            Some("01-obsidian-orbit"),
         );
 
         store.profiles.retain(|profile| profile.id != second.id);

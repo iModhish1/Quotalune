@@ -404,7 +404,15 @@ mod tests {
     use super::*;
 
     fn input(surface: SurfaceKind, state: SurfaceState) -> LayoutInput {
-        LayoutInput::new(surface, state, (1280.0, 752.0), 1.0, 1.0, 3, AnchorEdge::Bottom)
+        LayoutInput::new(
+            surface,
+            state,
+            (1280.0, 752.0),
+            1.0,
+            1.0,
+            3,
+            AnchorEdge::Bottom,
+        )
     }
 
     fn bounds(surface: SurfaceKind, state: SurfaceState) -> (f64, f64) {
@@ -453,13 +461,20 @@ mod tests {
     #[test]
     fn proportional_caps_hold_for_every_surface_and_state() {
         for surface in OVERLAYS.iter().copied().chain(APP_WINDOWS.iter().copied()) {
-            for state in [SurfaceState::Compact, SurfaceState::Hover, SurfaceState::Expanded] {
+            for state in [
+                SurfaceState::Compact,
+                SurfaceState::Hover,
+                SurfaceState::Expanded,
+            ] {
                 let env = surface.envelope();
                 let layout = ResolvedSurfaceLayout::compute(input(surface, state));
                 let (w, h) = layout.window_bounds_logical;
                 let wa = input(surface, state).work_area;
                 if env.fits_work_area {
-                    assert!(w <= wa.0 && h <= wa.1, "{surface:?} {state:?} {w}x{h} escapes work area");
+                    assert!(
+                        w <= wa.0 && h <= wa.1,
+                        "{surface:?} {state:?} {w}x{h} escapes work area"
+                    );
                     continue;
                 }
                 let (cap_w_frac, cap_h_frac) = if state == SurfaceState::Expanded {
@@ -550,7 +565,10 @@ mod tests {
             AnchorEdge::None,
         ));
         let (w, h) = layout.window_bounds_logical;
-        assert!(w <= 1024.0 && h <= 600.0, "settings {w}x{h} escapes work area");
+        assert!(
+            w <= 1024.0 && h <= 600.0,
+            "settings {w}x{h} escapes work area"
+        );
         assert_eq!(layout.clamped_by.as_deref(), Some("work-area-fit"));
     }
 
@@ -594,7 +612,10 @@ mod tests {
             AnchorEdge::Bottom,
         ))
         .window_bounds_logical;
-        assert!((360.0..=440.0).contains(&half.0), "scaled-down stays >= min");
+        assert!(
+            (360.0..=440.0).contains(&half.0),
+            "scaled-down stays >= min"
+        );
         let huge = ResolvedSurfaceLayout::compute(LayoutInput::new(
             SurfaceKind::Taskbar,
             SurfaceState::Expanded,
@@ -656,7 +677,10 @@ mod tests {
     #[test]
     fn corrupt_tokens_fall_back_deterministically() {
         assert_eq!(SurfaceKind::from_token("bogus"), SurfaceKind::Taskbar);
-        assert_eq!(SurfaceKind::from_token("quick-panel"), SurfaceKind::QuickPanel);
+        assert_eq!(
+            SurfaceKind::from_token("quick-panel"),
+            SurfaceKind::QuickPanel
+        );
         assert_eq!(SurfaceState::from_token("bogus"), SurfaceState::Compact);
         assert_eq!(SurfaceState::from_token("expanded"), SurfaceState::Expanded);
         assert_eq!(AnchorEdge::from_token("bogus"), AnchorEdge::Bottom);
@@ -664,7 +688,8 @@ mod tests {
 
     #[test]
     fn dto_serializes_with_stable_camel_case_contract() {
-        let layout = ResolvedSurfaceLayout::compute(input(SurfaceKind::Taskbar, SurfaceState::Compact));
+        let layout =
+            ResolvedSurfaceLayout::compute(input(SurfaceKind::Taskbar, SurfaceState::Compact));
         let json = serde_json::to_string(&layout).expect("serialize");
         assert!(json.contains("\"windowBoundsLogical\""), "{json}");
         assert!(json.contains("\"orbitRadius\""), "{json}");
@@ -686,7 +711,11 @@ mod tests {
     #[test]
     fn all_kinds_finite_integer_positive_in_every_state() {
         for surface in OVERLAYS.iter().copied().chain(APP_WINDOWS.iter().copied()) {
-            for state in [SurfaceState::Compact, SurfaceState::Hover, SurfaceState::Expanded] {
+            for state in [
+                SurfaceState::Compact,
+                SurfaceState::Hover,
+                SurfaceState::Expanded,
+            ] {
                 let layout = ResolvedSurfaceLayout::compute(input(surface, state));
                 let (w, h) = layout.window_bounds_logical;
                 assert!(w.is_finite() && h.is_finite() && w > 0.0 && h > 0.0);

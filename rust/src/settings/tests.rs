@@ -315,7 +315,7 @@ fn float_bar_style_normalization_rejects_unknown_values() {
 }
 
 #[test]
-fn catalog_theme_scope_fields_round_trip_and_reject_corrupt_entries() {
+fn archived_catalog_values_normalize_to_the_canonical_theme() {
     let s = Settings {
         catalog_theme: "03-solar-ember".to_string(),
         active_profile_catalog_theme: Some("02-aurora-bloom".to_string()),
@@ -334,15 +334,20 @@ fn catalog_theme_scope_fields_round_trip_and_reject_corrupt_entries() {
     assert_eq!(back.catalog_theme, "03-solar-ember");
     assert_eq!(
         back.active_profile_catalog_theme.as_deref(),
-        Some("02-aurora-bloom"),
-    );
-    assert_eq!(
-        back.surface_catalog_themes
-            .get("taskbar")
-            .map(String::as_str),
-        Some("12-crimson-nova"),
+        Some("02-aurora-bloom")
     );
     assert_eq!(back.surface_catalog_themes.len(), 1);
+    assert_eq!(
+        normalize_catalog_theme(&back.catalog_theme),
+        "01-obsidian-orbit"
+    );
+    assert_eq!(
+        back.active_profile_catalog_theme
+            .as_deref()
+            .and_then(canonical_catalog_theme),
+        None,
+    );
+    assert!(normalize_surface_catalog_themes(back.surface_catalog_themes).is_empty());
 }
 
 #[test]
@@ -1072,7 +1077,7 @@ fn catalog_theme_validation_falls_back_to_default() {
     );
     assert_eq!(
         crate::settings::normalize_catalog_theme("15-astral-dune"),
-        "15-astral-dune"
+        "01-obsidian-orbit"
     );
     // Invalid slugs (corrupt file, removed theme) fall back to default.
     assert_eq!(
@@ -1092,10 +1097,9 @@ fn taskbar_arc_scale_defaults_when_absent_and_migrates_old_settings() {
     assert_eq!(absent.taskbar_arc_scale, 100, "migration default is 100%");
     // Independence: a file carrying only a top_arc_scale must not move the
     // taskbar scale.
-    let top_only: Settings = serde_json::from_str(
-        r#"{ "enabled_providers": [], "top_arc_scale": 180 }"#,
-    )
-    .expect("top-only scale loads");
+    let top_only: Settings =
+        serde_json::from_str(r#"{ "enabled_providers": [], "top_arc_scale": 180 }"#)
+            .expect("top-only scale loads");
     assert_eq!(top_only.top_arc_scale, 180);
     assert_eq!(top_only.taskbar_arc_scale, 100);
 }

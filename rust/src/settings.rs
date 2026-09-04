@@ -528,26 +528,11 @@ pub fn normalize_catalog_theme(value: &str) -> String {
     canonical_catalog_theme(value).unwrap_or_else(default_catalog_theme)
 }
 
-/// Return a canonical catalog slug only when the input is a registered theme.
+/// Return a canonical slug only when the input is the active foundation theme.
+/// Older catalog entries remain archived in source control but are deliberately
+/// not selectable while the shared surface structure is being established.
 pub fn canonical_catalog_theme(value: &str) -> Option<String> {
-    const KNOWN: &[&str] = &[
-        "01-obsidian-orbit",
-        "02-aurora-bloom",
-        "03-solar-ember",
-        "04-porcelain-halo",
-        "05-noir-constellation",
-        "06-halo-spine",
-        "07-eclipse-dial",
-        "08-prism-zenith",
-        "09-quantum-orchid",
-        "10-celestial-ice",
-        "11-emerald-singularity",
-        "12-crimson-nova",
-        "13-lunar-titanium",
-        "14-sapphire-observatory",
-        "15-astral-dune",
-    ];
-    KNOWN.contains(&value).then(|| value.to_string())
+    (value == "01-obsidian-orbit").then(|| value.to_string())
 }
 
 pub fn normalize_surface_catalog_themes(
@@ -806,6 +791,17 @@ impl Settings {
             settings.start_at_login = Self::sync_start_at_login_registry();
             settings.apply_promote_tray_default_migration();
         }
+
+        // The canonical foundation intentionally ignores persisted selections
+        // for the archived themes. Keep this migration in-memory until a
+        // normal settings save so a read can never destroy user history.
+        settings.catalog_theme = normalize_catalog_theme(&settings.catalog_theme);
+        settings.active_profile_catalog_theme = settings
+            .active_profile_catalog_theme
+            .as_deref()
+            .and_then(canonical_catalog_theme);
+        settings.surface_catalog_themes =
+            normalize_surface_catalog_themes(std::mem::take(&mut settings.surface_catalog_themes));
 
         settings
     }

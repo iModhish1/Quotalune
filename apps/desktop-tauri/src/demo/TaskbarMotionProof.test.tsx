@@ -5,7 +5,7 @@ import TaskbarMotionProof from "./TaskbarMotionProof";
 
 describe("TaskbarMotionProof", () => {
   it("focuses a provider through the production stage", () => {
-    const { container } = render(<TaskbarMotionProof catalog="02-aurora-bloom" />);
+    const { container } = render(<TaskbarMotionProof catalog="01-obsidian-orbit" />);
 
     fireEvent.click(screen.getByRole("button", { name: /Claude:/i }));
 
@@ -17,7 +17,7 @@ describe("TaskbarMotionProof", () => {
   });
 
   it("expands and collapses through the production core control", () => {
-    const { container } = render(<TaskbarMotionProof catalog="12-crimson-nova" />);
+    const { container } = render(<TaskbarMotionProof catalog="01-obsidian-orbit" />);
 
     fireEvent.click(screen.getByRole("button", { name: "Expand quota instrument" }));
     expect(container.firstElementChild).toHaveAttribute("data-proof-state", "expanded");

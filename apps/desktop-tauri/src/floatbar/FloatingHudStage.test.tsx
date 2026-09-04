@@ -21,13 +21,13 @@ describe("FloatingHudStage", () => {
   it("renders seven live provider instruments in the selected catalog world", () => {
     render(
       <FloatingHudStage
-        catalog="02-aurora-bloom"
+        catalog="01-obsidian-orbit"
         providers={providers}
         selectedProviderId="provider-1"
       />,
     );
 
-    expect(screen.getByLabelText("Aurora Bloom floating HUD")).toBeTruthy();
+    expect(screen.getByLabelText("Obsidian Orbit floating HUD")).toBeTruthy();
     expect(screen.getAllByRole("button", { name: /Provider \d:/ })).toHaveLength(7);
     expect(screen.getAllByText("68%")).toHaveLength(2);
     expect(screen.getAllByText("Provider 2")).toHaveLength(2);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { THEME_CATALOG } from "./themeCatalog";
+import { CANONICAL_THEME, THEME_CATALOG } from "./themeCatalog";
 import { characterizeSurfaceNodes } from "./surfaceGeometry";
 
 const BASE = Array.from({ length: 7 }, (_, index) => {
@@ -9,7 +9,7 @@ const BASE = Array.from({ length: 7 }, (_, index) => {
 });
 
 describe("characterizeSurfaceNodes", () => {
-  it("gives every registered geometry a distinct deterministic signature", () => {
+  it("keeps the canonical geometry deterministic", () => {
     const signatures = THEME_CATALOG.map((theme) => {
       const first = characterizeSurfaceNodes(BASE, { x: 230, y: 241 }, theme.geometry);
       const second = characterizeSurfaceNodes(BASE, { x: 230, y: 241 }, theme.geometry);
@@ -17,9 +17,8 @@ describe("characterizeSurfaceNodes", () => {
       return JSON.stringify(first.map((node) => [Math.round(node.x), Math.round(node.y), node.scale]));
     });
 
-    // Porcelain Halo intentionally shares the precision-orbit geometry with
-    // Obsidian Orbit; every other registered geometry remains structurally unique.
-    expect(new Set(signatures)).toHaveLength(14);
+    expect(signatures).toHaveLength(1);
+    expect(THEME_CATALOG[0]).toBe(CANONICAL_THEME);
   });
 
   it("clamps every geometry to the supplied safe area", () => {

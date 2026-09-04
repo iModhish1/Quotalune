@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { THEME_CATALOG } from "./themeCatalog";
+import { CANONICAL_THEME, THEME_CATALOG } from "./themeCatalog";
 import { catalogMotion, catalogMotionStyle, motionDelay } from "./themeMotion";
 
 describe("catalogMotion", () => {
-  it("assigns a distinct named motion character to every catalog theme", () => {
+  it("assigns one bounded motion character to the canonical theme", () => {
     const characters = THEME_CATALOG.map((theme) => catalogMotion(theme).character);
 
-    expect(new Set(characters)).toHaveLength(THEME_CATALOG.length);
+    expect(characters).toEqual(["orbit"]);
   });
 
   it("keeps every profile bounded and tied to the catalog expansion duration", () => {
@@ -27,7 +27,7 @@ describe("catalogMotion", () => {
   });
 
   it("uses short deterministic stagger delays without exceeding the reveal budget", () => {
-    const profile = catalogMotion(THEME_CATALOG[1]);
+    const profile = catalogMotion(CANONICAL_THEME);
 
     expect(motionDelay(profile, 0)).toBe("0ms");
     expect(motionDelay(profile, 6)).toBe(`${profile.staggerMs * 6}ms`);

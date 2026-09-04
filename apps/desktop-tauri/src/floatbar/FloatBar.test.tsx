@@ -265,16 +265,16 @@ describe("FloatBar", () => {
       snapshot("codex", "Codex", 75),
     ]);
     tauriMocks.getSettingsSnapshot.mockResolvedValue(
-      settings({ floatBarStyle: "hud", catalogTheme: "02-aurora-bloom" }),
+      settings({ floatBarStyle: "hud", catalogTheme: "01-obsidian-orbit" }),
     );
 
     const { container } = renderFloatBar(
-      bootstrap({ floatBarStyle: "hud", catalogTheme: "02-aurora-bloom" }),
+      bootstrap({ floatBarStyle: "hud", catalogTheme: "01-obsidian-orbit" }),
     );
 
     await waitFor(() => {
       expect(container.querySelector(".qa-floating-hud")?.getAttribute("data-theme")).toBe(
-        "02-aurora-bloom",
+        "01-obsidian-orbit",
       );
     });
     expect(container.querySelectorAll(".floatbar__pill")).toHaveLength(0);

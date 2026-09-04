@@ -26,7 +26,7 @@ describe("TaskbarStage", () => {
     const onToggleExpanded = vi.fn();
     render(
       <TaskbarStage
-        catalog="02-aurora-bloom"
+        catalog="01-obsidian-orbit"
         state="idle"
         providers={CATALOG_TASKBAR_FIXTURE}
         focusedIndex={0}

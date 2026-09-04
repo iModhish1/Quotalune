@@ -59,7 +59,7 @@ describe("MenuSummary", () => {
       <LocaleProvider>
         <MenuSurface
           variant="tray"
-          catalogTheme="03-solar-ember"
+          catalogTheme="01-obsidian-orbit"
           onRefresh={vi.fn()}
           isRefreshing={false}
           actions={[]}
@@ -70,7 +70,7 @@ describe("MenuSummary", () => {
     );
 
     const surface = (await screen.findByText("content")).closest(".menu-surface");
-    expect(surface).toHaveAttribute("data-catalog-theme", "03-solar-ember");
-    expect(surface).toHaveStyle({ "--qa-menu-accent": "#f59e0b" });
+    expect(surface).toHaveAttribute("data-catalog-theme", "01-obsidian-orbit");
+    expect(surface).toHaveStyle({ "--qa-menu-accent": "#2dd4bf" });
   });
 });

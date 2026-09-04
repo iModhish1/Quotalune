@@ -8,7 +8,7 @@ Replace the active multi-theme orbital runtime with one compact, Windows-first c
 
 - Use the existing Rust-authoritative surface layout runtime as the sole owner of native bounds and frontend layout DTOs.
 - Treat all third-party Notchy/Notchi repositories as reference material only. No source code will be copied: the MIT projects are macOS/Xcode apps, and Notchi is GPL-3.0-only.
-- Make one canonical composition shared by Taskbar, Top, Edge, HUD, Quick Panel, Dashboard, and Settings previews; each surface adapts the composition through bounded layout data, not a second geometry system.
+- Make one top-center `QuotaIsland` overlay with compact, hover, expanded, and pinned states. Settings and Dashboard remain normal windows; legacy Taskbar, Edge, HUD, and Quick Panel overlays are retired from the production path.
 - Archive inactive theme catalog entries without deleting assets or history. Only Obsidian Orbit remains selectable at runtime during the foundation phase.
 
 ## Task List
@@ -25,9 +25,9 @@ Replace the active multi-theme orbital runtime with one compact, Windows-first c
 
 ### Phase 2: Canonical composition
 
-- [ ] Task 3: Build a shared information-first provider instrument and surface shell using Rust-resolved bounds.
-- [ ] Task 4: Migrate Taskbar, Top, and Edge to the shared canonical composition.
-- [ ] Task 5: Migrate HUD, Quick Panel, Dashboard, and Settings preview; repair clipping and flex collapse.
+- [ ] Task 3: Build `QuotaIsland`: a compact top-center status pill that expands downward into provider details.
+- [ ] Task 4: Retire legacy Taskbar, Edge, HUD, and Quick Panel overlays from the production path and preserve them only in Git history.
+- [ ] Task 5: Keep Dashboard and Settings as normal windows; repair clipping and flex collapse.
 
 ### Checkpoint: Live Windows usability
 

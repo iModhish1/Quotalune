@@ -8,7 +8,7 @@ describe("TopOrbitStage", () => {
   it("renders all seven providers in the expanded orbital notch", () => {
     const { container } = render(
       <TopOrbitStage
-        catalog="05-noir-constellation"
+        catalog="01-obsidian-orbit"
         state="expanded"
         providers={CATALOG_TASKBAR_FIXTURE}
       />,
@@ -26,7 +26,7 @@ describe("TopOrbitStage", () => {
     const onToggleExpanded = vi.fn();
     render(
       <TopOrbitStage
-        catalog="03-solar-ember"
+        catalog="01-obsidian-orbit"
         state="idle"
         providers={CATALOG_TASKBAR_FIXTURE}
         onFocusProvider={onFocusProvider}

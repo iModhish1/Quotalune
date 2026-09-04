@@ -24,7 +24,7 @@ describe("CatalogUsageHero", () => {
     render(
       <CatalogUsageHero
         variant="dashboard"
-        catalog="02-aurora-bloom"
+        catalog="01-obsidian-orbit"
         providers={CATALOG_TASKBAR_FIXTURE}
         selectedProviderId="claude"
         onSelectProvider={onSelectProvider}
@@ -34,9 +34,9 @@ describe("CatalogUsageHero", () => {
     expect(screen.getAllByRole("button")).toHaveLength(7);
     fireEvent.click(screen.getByRole("button", { name: "Gemini: 55% remaining" }));
     expect(onSelectProvider).toHaveBeenCalledWith("gemini");
-    expect(screen.getByLabelText("Aurora Bloom dashboard orbit")).toHaveAttribute(
+    expect(screen.getByLabelText("Obsidian Orbit dashboard orbit")).toHaveAttribute(
       "data-theme",
-      "02-aurora-bloom",
+      "01-obsidian-orbit",
     );
   });
 });

@@ -1,11 +1,11 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { THEME_CATALOG } from "../../design-system/themeCatalog";
+import { CANONICAL_THEME, THEME_CATALOG } from "../../design-system/themeCatalog";
 import OrbitTexture from "./OrbitTexture";
 
 describe("OrbitTexture", () => {
-  it("renders a bounded structural identity for every catalog theme", () => {
+  it("renders the bounded canonical structural identity", () => {
     for (const theme of THEME_CATALOG) {
       const { container, unmount } = render(
         <svg><OrbitTexture theme={theme} cx={200} cy={160} radiusX={150} radiusY={110} /></svg>,
@@ -19,7 +19,7 @@ describe("OrbitTexture", () => {
   });
 
   it("uses unique paint-server identifiers for concurrent surfaces", () => {
-    const theme = THEME_CATALOG[1];
+    const theme = CANONICAL_THEME;
     const { container } = render(
       <svg>
         <OrbitTexture theme={theme} cx={200} cy={160} radiusX={150} radiusY={110} />
