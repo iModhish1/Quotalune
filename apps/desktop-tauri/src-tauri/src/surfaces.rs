@@ -19,21 +19,86 @@ use crate::surface_kit::{
     resize_surface,
 };
 
-/// Default logical size of the Edge Arc before the webview requests its
-/// provider-driven size. Height grows with provider count via `resize`.
-pub const EDGE_ARC_DEFAULT_WIDTH: f64 = 76.0;
-pub const EDGE_ARC_DEFAULT_HEIGHT: f64 = 420.0;
-
-/// Default logical size of the Top Arc compact pill.
-pub const TOP_ARC_DEFAULT_WIDTH: f64 = 380.0;
-pub const TOP_ARC_DEFAULT_HEIGHT: f64 = 52.0;
-
-/// Default logical size of the Taskbar Arc strip.
-pub const TASKBAR_ARC_DEFAULT_WIDTH: f64 = 320.0;
-pub const TASKBAR_ARC_DEFAULT_HEIGHT: f64 = 40.0;
-
 /// Edge margin for the Top Arc from the top of the work area, logical px.
 const TOP_ARC_MARGIN: f64 = 10.0;
+
+use codexbar::surface_layout::{
+    AnchorEdge, LayoutInput, ResolvedSurfaceLayout, SurfaceKind, SurfaceState,
+};
+
+/// THE sizing path: resolve a surface layout through the authoritative
+/// `codexbar::surface_layout` runtime using THIS window's monitor work area
+/// and scale factor. The webview never computes window geometry; it only
+/// sends state and provider-count data.
+fn resolved_layout(
+    window: &tauri::WebviewWindow,
+    surface: SurfaceKind,
+    state: SurfaceState,
+    provider_count: u32,
+) -> ResolvedSurfaceLayout {
+    let settings = Settings::load();
+    let user_scale_percent = match surface {
+        SurfaceKind::Taskbar => settings.taskbar_arc_scale,
+        SurfaceKind::Top => settings.top_arc_scale,
+        SurfaceKind::Edge => settings.edge_arc_scale,
+        _ => 100,
+    };
+    let work_area = monitor_work_area_logical(window)
+        .map(|(_, _, w, h)| (w, h))
+        .unwrap_or((1280.0, 752.0));
+    let dpi = window.scale_factor().unwrap_or(1.0);
+    let placement = match surface {
+        SurfaceKind::Taskbar => AnchorEdge::Bottom,
+        SurfaceKind::Top => AnchorEdge::Top,
+        SurfaceKind::Edge => {
+            let side = codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
+            if side == "left" {
+                AnchorEdge::Left
+            } else {
+                AnchorEdge::Right
+            }
+        }
+        _ => AnchorEdge::None,
+    };
+    ResolvedSurfaceLayout::compute(LayoutInput::new(
+        surface,
+        state,
+        work_area,
+        dpi,
+        user_scale_percent as f64 / 100.0,
+        provider_count,
+        placement,
+    ))
+}
+
+/// Compute the authoritative layout and apply it to the native window
+/// (resize + snap positioning in one place).
+fn apply_surface_layout(
+    window: &tauri::WebviewWindow,
+    surface: SurfaceKind,
+    state: SurfaceState,
+    provider_count: u32,
+) {
+    let layout = resolved_layout(window, surface, state, provider_count);
+    let (w, h) = layout.window_bounds_logical;
+    let settings = Settings::load();
+    let click_through = match surface {
+        SurfaceKind::Edge => settings.edge_arc_click_through,
+        SurfaceKind::Top => settings.top_arc_click_through,
+        SurfaceKind::Taskbar => settings.taskbar_arc_click_through,
+        _ => false,
+    };
+    let _ = resize_surface(window, w, h, click_through);
+    match surface {
+        SurfaceKind::Edge => {
+            let side = codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
+            position_edge_arc(window, &side);
+        }
+        SurfaceKind::Top => position_top_arc(window),
+        SurfaceKind::Taskbar => position_taskbar_arc(window),
+        _ => {}
+    }
+}
 
 // ── Edge Arc ─────────────────────────────────────────────────────────────
 
@@ -70,7 +135,6 @@ fn position_edge_arc(window: &tauri::WebviewWindow, side: &str) {
 pub fn show_edge_arc(app: &tauri::AppHandle) -> Result<(), String> {
     let settings = Settings::load();
     let side = codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
-    let scale = codexbar::settings::clamp_surface_scale(settings.edge_arc_scale) as f64 / 100.0;
 
     if let Some(window) = app.get_webview_window(EDGE_ARC_LABEL) {
         apply_edge_arc_attrs(&window, &settings);
@@ -82,15 +146,13 @@ pub fn show_edge_arc(app: &tauri::AppHandle) -> Result<(), String> {
 
     let url = WebviewUrl::App("index.html?window=edge-arc".into());
     let builder = crate::surface_kit::base_builder(app, EDGE_ARC_LABEL, "QuotaArc Edge Arc", url)
-        .inner_size(
-            EDGE_ARC_DEFAULT_WIDTH * scale,
-            EDGE_ARC_DEFAULT_HEIGHT * scale,
-        )
+        // Provisional only: the authoritative layout is applied before show.
+        .inner_size(110.0, 480.0)
         .visible(false);
 
     let window = builder.build().map_err(|e| e.to_string())?;
     apply_edge_arc_attrs(&window, &settings);
-    position_edge_arc(&window, &side);
+    apply_surface_layout(&window, SurfaceKind::Edge, SurfaceState::Compact, 3);
     window.show().map_err(|e| e.to_string())?;
     apply_always_on_top(&window);
     Ok(())
@@ -114,13 +176,10 @@ pub fn hide_edge_arc(app: &tauri::AppHandle) -> Result<(), String> {
 /// the edge snap and interaction invariants.
 pub fn resize_edge_arc(
     window: &tauri::WebviewWindow,
-    width: f64,
-    height: f64,
+    state: SurfaceState,
+    provider_count: u32,
 ) -> Result<(), String> {
-    let settings = Settings::load();
-    resize_surface(window, width, height, settings.edge_arc_click_through)?;
-    let side = codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
-    position_edge_arc(window, &side);
+    apply_surface_layout(window, SurfaceKind::Edge, state, provider_count);
     Ok(())
 }
 
@@ -152,8 +211,6 @@ fn position_top_arc(window: &tauri::WebviewWindow) {
 /// Show (or reapply attributes to) the Top Arc window.
 pub fn show_top_arc(app: &tauri::AppHandle) -> Result<(), String> {
     let settings = Settings::load();
-    let scale = codexbar::settings::clamp_surface_scale(settings.top_arc_scale) as f64 / 100.0;
-
     if let Some(window) = app.get_webview_window(TOP_ARC_LABEL) {
         apply_top_arc_attrs(&window, &settings);
         let _ = window.show();
@@ -164,15 +221,13 @@ pub fn show_top_arc(app: &tauri::AppHandle) -> Result<(), String> {
 
     let url = WebviewUrl::App("index.html?window=top-arc".into());
     let builder = crate::surface_kit::base_builder(app, TOP_ARC_LABEL, "QuotaArc Top Arc", url)
-        .inner_size(
-            TOP_ARC_DEFAULT_WIDTH * scale,
-            TOP_ARC_DEFAULT_HEIGHT * scale,
-        )
+        // Provisional only: the authoritative layout is applied before show.
+        .inner_size(480.0, 110.0)
         .visible(false);
 
     let window = builder.build().map_err(|e| e.to_string())?;
     apply_top_arc_attrs(&window, &settings);
-    position_top_arc(&window);
+    apply_surface_layout(&window, SurfaceKind::Top, SurfaceState::Compact, 3);
     window.show().map_err(|e| e.to_string())?;
     apply_always_on_top(&window);
     Ok(())
@@ -195,12 +250,10 @@ pub fn hide_top_arc(app: &tauri::AppHandle) -> Result<(), String> {
 /// Resize the Top Arc (webview-driven morphs between compact/expanded).
 pub fn resize_top_arc(
     window: &tauri::WebviewWindow,
-    width: f64,
-    height: f64,
+    state: SurfaceState,
+    provider_count: u32,
 ) -> Result<(), String> {
-    let settings = Settings::load();
-    resize_surface(window, width, height, settings.top_arc_click_through)?;
-    position_top_arc(window);
+    apply_surface_layout(window, SurfaceKind::Top, state, provider_count);
     Ok(())
 }
 
@@ -230,8 +283,6 @@ fn position_taskbar_arc(window: &tauri::WebviewWindow) {
 /// Show (or reapply attributes to) the Taskbar Arc window.
 pub fn show_taskbar_arc(app: &tauri::AppHandle) -> Result<(), String> {
     let settings = Settings::load();
-    let scale = codexbar::settings::clamp_surface_scale(settings.top_arc_scale) as f64 / 100.0;
-
     if let Some(window) = app.get_webview_window(TASKBAR_ARC_LABEL) {
         apply_taskbar_arc_attrs(&window, &settings);
         let _ = window.show();
@@ -243,15 +294,13 @@ pub fn show_taskbar_arc(app: &tauri::AppHandle) -> Result<(), String> {
     let url = WebviewUrl::App("index.html?window=taskbar-arc".into());
     let builder =
         crate::surface_kit::base_builder(app, TASKBAR_ARC_LABEL, "QuotaArc Taskbar Arc", url)
-            .inner_size(
-                TASKBAR_ARC_DEFAULT_WIDTH * scale,
-                TASKBAR_ARC_DEFAULT_HEIGHT * scale,
-            )
+            // Provisional only: the authoritative layout is applied before show.
+            .inner_size(440.0, 140.0)
             .visible(false);
 
     let window = builder.build().map_err(|e| e.to_string())?;
     apply_taskbar_arc_attrs(&window, &settings);
-    position_taskbar_arc(&window);
+    apply_surface_layout(&window, SurfaceKind::Taskbar, SurfaceState::Compact, 3);
     window.show().map_err(|e| e.to_string())?;
     apply_always_on_top(&window);
     Ok(())
@@ -274,12 +323,10 @@ pub fn hide_taskbar_arc(app: &tauri::AppHandle) -> Result<(), String> {
 /// Resize the Taskbar Arc (webview-driven) keeping the bottom-center snap.
 pub fn resize_taskbar_arc(
     window: &tauri::WebviewWindow,
-    width: f64,
-    height: f64,
+    state: SurfaceState,
+    provider_count: u32,
 ) -> Result<(), String> {
-    let settings = Settings::load();
-    resize_surface(window, width, height, settings.taskbar_arc_click_through)?;
-    position_taskbar_arc(window);
+    apply_surface_layout(window, SurfaceKind::Taskbar, state, provider_count);
     Ok(())
 }
 
@@ -531,10 +578,14 @@ pub fn hide_top_arc_surface(app: tauri::AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub fn resize_edge_arc_surface(
     window: tauri::WebviewWindow,
-    width: f64,
-    height: f64,
+    state: String,
+    provider_count: Option<u32>,
 ) -> Result<(), String> {
-    resize_edge_arc(&window, width, height)
+    resize_edge_arc(
+        &window,
+        SurfaceState::from_token(&state),
+        provider_count.unwrap_or(3),
+    )
 }
 
 #[tauri::command]
@@ -550,19 +601,27 @@ pub fn hide_taskbar_arc_surface(app: tauri::AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub fn resize_taskbar_arc_surface(
     window: tauri::WebviewWindow,
-    width: f64,
-    height: f64,
+    state: String,
+    provider_count: Option<u32>,
 ) -> Result<(), String> {
-    resize_taskbar_arc(&window, width, height)
+    resize_taskbar_arc(
+        &window,
+        SurfaceState::from_token(&state),
+        provider_count.unwrap_or(3),
+    )
 }
 
 #[tauri::command]
 pub fn resize_top_arc_surface(
     window: tauri::WebviewWindow,
-    width: f64,
-    height: f64,
+    state: String,
+    provider_count: Option<u32>,
 ) -> Result<(), String> {
-    resize_top_arc(&window, width, height)
+    resize_top_arc(
+        &window,
+        SurfaceState::from_token(&state),
+        provider_count.unwrap_or(3),
+    )
 }
 
 /// Apply a QuotaArc surface settings patch (typed, from the Surfaces settings

@@ -37,12 +37,14 @@ export function hideTopArc(): Promise<void> {
   return invoke("hide_top_arc_surface");
 }
 
-export function resizeEdgeArc(width: number, height: number): Promise<void> {
-  return invoke("resize_edge_arc_surface", { width, height });
+export type SurfaceWindowState = "compact" | "hover" | "expanded";
+
+export function resizeEdgeArc(state: SurfaceWindowState, providerCount: number): Promise<void> {
+  return invoke("resize_edge_arc_surface", { state, providerCount });
 }
 
-export function resizeTopArc(width: number, height: number): Promise<void> {
-  return invoke("resize_top_arc_surface", { width, height });
+export function resizeTopArc(state: SurfaceWindowState, providerCount: number): Promise<void> {
+  return invoke("resize_top_arc_surface", { state, providerCount });
 }
 
 export function showTaskbarArc(): Promise<void> {
@@ -53,8 +55,11 @@ export function hideTaskbarArc(): Promise<void> {
   return invoke("hide_taskbar_arc_surface");
 }
 
-export function resizeTaskbarArc(width: number, height: number): Promise<void> {
-  return invoke("resize_taskbar_arc_surface", { width, height });
+export function resizeTaskbarArc(
+  state: SurfaceWindowState,
+  providerCount: number,
+): Promise<void> {
+  return invoke("resize_taskbar_arc_surface", { state, providerCount });
 }
 
 export function updateSurfaceSettings(patch: SurfaceSettingsPatch): Promise<void> {

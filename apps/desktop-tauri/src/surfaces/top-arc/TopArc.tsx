@@ -34,10 +34,8 @@ export default function TopArc({ demo }: TopArcProps) {
 
   useEffect(() => {
     if (demo) return;
-    void resizeTopArc(
-      expanded ? TOP_ORBIT_EXPANDED_WIDTH : TOP_ORBIT_COMPACT_WIDTH,
-      expanded ? TOP_ORBIT_EXPANDED_HEIGHT : TOP_ORBIT_COMPACT_HEIGHT,
-    ).catch(() => {});
+    // State data only — the Rust layout runtime computes the geometry.
+    void resizeTopArc(expanded ? "expanded" : "compact", providers.length).catch(() => {});
   }, [expanded, demo]);
 
   useEffect(() => {

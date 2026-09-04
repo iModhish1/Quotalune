@@ -34,8 +34,10 @@ export default function TaskbarArc({ demo }: TaskbarArcProps) {
   // Resize the native window with the stage.
   useEffect(() => {
     if (demo) return;
-    const h = expanded ? TASKBAR_EXPANDED_HEIGHT : TASKBAR_COMPACT_HEIGHT;
-    void resizeTaskbarArc(TASKBAR_STAGE_WIDTH, h).catch(() => {});
+    // State data only — the Rust layout runtime computes the geometry.
+    void resizeTaskbarArc(expanded ? "expanded" : "compact", stageProviders.length).catch(
+      () => {},
+    );
   }, [expanded, demo]);
 
   const cycle = useCallback(

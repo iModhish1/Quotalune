@@ -34,10 +34,8 @@ export default function EdgeArc({ demo }: EdgeArcProps) {
 
   useEffect(() => {
     if (demo) return;
-    void resizeEdgeArc(
-      expanded ? EDGE_ORBIT_EXPANDED_WIDTH : EDGE_ORBIT_COMPACT_WIDTH,
-      expanded ? EDGE_ORBIT_EXPANDED_HEIGHT : EDGE_ORBIT_COMPACT_HEIGHT,
-    ).catch(() => {});
+    // State data only — the Rust layout runtime computes the geometry.
+    void resizeEdgeArc(expanded ? "expanded" : "compact", providers.length).catch(() => {});
   }, [expanded, demo]);
 
   useEffect(() => {
