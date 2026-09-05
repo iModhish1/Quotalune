@@ -185,6 +185,8 @@ body:has(.flow-surface-host) #root {
 /* Orbital: a compact free-corner instrument, not a literal clock. */
 .flow-surface__reveal--orbital { border-radius: 50%; }
 .flow-surface__reveal--orbital .flow-surface__mark { width: 13px; height: 13px; }
+.flow-surface__reveal--lens { border-radius: 999px; }
+.flow-surface__reveal--lens .flow-surface__mark { width: 13px; height: 13px; }
 .flow-surface[data-form="orbital"] .flow-surface__core { width: var(--flow-orbital-size); height: var(--flow-orbital-size); flex-direction: column; gap: 5px; padding: 10px; border-radius: 48% 52% 46% 54% / 46% 49% 51% 54%; }
 .flow-surface[data-form="orbital"][data-empty="true"] .flow-surface__core { width: var(--flow-orbital-empty-size); height: var(--flow-orbital-empty-size); padding: 0; }
 .flow-surface[data-form="orbital"][data-empty="true"] .flow-surface__summary-copy { display: none; }
@@ -213,6 +215,34 @@ body:has(.flow-surface-host) #root {
 .flow-surface[data-form="orbital"][data-anchor="top"] .flow-surface__details { bottom: 0; left: 0; }
 .flow-surface[data-form="orbital"][data-anchor="bottom"] .flow-surface__core { bottom: 0; left: 50%; transform: translateX(-50%); }
 .flow-surface[data-form="orbital"][data-anchor="bottom"] .flow-surface__details { top: 0; left: 0; }
+
+/* Lens: a compact, edge-aware capsule. It carries the same provider data as
+   every other structure but keeps it on a single quiet visual axis. */
+.flow-surface[data-form="lens"] .flow-surface__core { width: var(--flow-lens-width); height: var(--flow-lens-height); padding: 10px 13px; gap: 9px; border-radius: 42px 28px 42px 28px / 34px 42px 34px 42px; }
+.flow-surface[data-form="lens"][data-empty="true"] .flow-surface__core { width: var(--flow-lens-empty-width); height: var(--flow-lens-empty-height); padding: 0; border-radius: 999px; }
+.flow-surface[data-form="lens"][data-empty="true"] .flow-surface__summary-copy, .flow-surface[data-form="lens"][data-empty="true"] .flow-surface__drag { display: none; }
+.flow-surface[data-form="lens"] .flow-surface__summary { flex: 1; }
+.flow-surface[data-form="lens"] .flow-surface__summary-copy { display: none; }
+.flow-surface[data-form="lens"] .flow-surface__quick-providers { align-self: flex-end; gap: 3px; }
+.flow-surface[data-form="lens"] .flow-surface__provider-value { display: none; }
+.flow-surface[data-form="lens"] .flow-surface__drag { top: 3px; right: 4px; }
+.flow-surface[data-form="lens"] .flow-surface__details { width: var(--flow-lens-details-width); height: var(--flow-lens-details-height); border-radius: 26px; }
+.flow-surface[data-form="lens"][data-anchor="bottom-right"] .flow-surface__core, .flow-surface[data-form="lens"][data-anchor="free"] .flow-surface__core { right: 0; bottom: 0; }
+.flow-surface[data-form="lens"][data-anchor="bottom-right"] .flow-surface__details, .flow-surface[data-form="lens"][data-anchor="free"] .flow-surface__details { top: 0; left: 0; }
+.flow-surface[data-form="lens"][data-anchor="bottom-left"] .flow-surface__core { left: 0; bottom: 0; }
+.flow-surface[data-form="lens"][data-anchor="bottom-left"] .flow-surface__details { top: 0; right: 0; }
+.flow-surface[data-form="lens"][data-anchor="top-right"] .flow-surface__core { top: 0; right: 0; }
+.flow-surface[data-form="lens"][data-anchor="top-right"] .flow-surface__details { bottom: 0; left: 0; }
+.flow-surface[data-form="lens"][data-anchor="top-left"] .flow-surface__core { top: 0; left: 0; }
+.flow-surface[data-form="lens"][data-anchor="top-left"] .flow-surface__details { right: 0; bottom: 0; }
+.flow-surface[data-form="lens"][data-anchor="right"] .flow-surface__core { top: 50%; right: 0; transform: translateY(-50%); }
+.flow-surface[data-form="lens"][data-anchor="right"] .flow-surface__details { top: 0; left: 0; }
+.flow-surface[data-form="lens"][data-anchor="left"] .flow-surface__core { top: 50%; left: 0; transform: translateY(-50%); }
+.flow-surface[data-form="lens"][data-anchor="left"] .flow-surface__details { top: 0; right: 0; }
+.flow-surface[data-form="lens"][data-anchor="top"] .flow-surface__core { top: 0; left: 50%; transform: translateX(-50%); }
+.flow-surface[data-form="lens"][data-anchor="top"] .flow-surface__details { bottom: 0; left: 0; }
+.flow-surface[data-form="lens"][data-anchor="bottom"] .flow-surface__core { bottom: 0; left: 50%; transform: translateX(-50%); }
+.flow-surface[data-form="lens"][data-anchor="bottom"] .flow-surface__details { top: 0; left: 0; }
 
 .flow-surface[data-state="hover"] .flow-surface__core,
 .flow-surface__core:hover { border-color: rgba(245, 247, 250, 0.46); box-shadow: 0 18px 46px rgba(0, 0, 0, 0.68), inset 0 1px 0 rgba(255, 255, 255, 0.18); }

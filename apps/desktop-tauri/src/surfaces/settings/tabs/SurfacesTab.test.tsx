@@ -83,4 +83,13 @@ describe("SurfacesTab", () => {
     expect(screen.getByRole("option", { name: "Right wall" })).toHaveValue("right");
     expect(position).toHaveValue("right");
   });
+
+  it("offers Lens as a bounded capsule structure with side-wall placement", async () => {
+    bridge.getSurfaceSettings.mockResolvedValue({ ...SETTINGS, topArcEnabled: true, topArcForm: "lens", topArcAnchor: "left" });
+    render(<SurfacesTab />);
+
+    expect(await screen.findByRole("button", { name: /Lens/ })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "QuotaArc surface position" })).toHaveValue("left");
+    expect(screen.getByRole("option", { name: "Left wall" })).toHaveValue("left");
+  });
 });

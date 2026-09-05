@@ -15,11 +15,12 @@ describe("QuickActionsSection", () => {
         onOpenDashboard={vi.fn()}
         onOpenStatusPage={vi.fn()}
         onBuyCredits={vi.fn()}
-        t={(key) => ({
-          QuickActions: "Quick actions",
-          ActionRefresh: "Refresh",
-          ActionSwitchAccount: "Sign in / switch account",
-        })[key] ?? key}
+        t={(key) => {
+          if (key === "QuickActions") return "Quick actions";
+          if (key === "ActionRefresh") return "Refresh";
+          if (key === "ActionSwitchAccount") return "Sign in / switch account";
+          return key;
+        }}
       />,
     );
 

@@ -135,6 +135,12 @@ export default function FlowSurface({
     "--flow-orbital-empty-size": scaled(64),
     "--flow-orbital-details-width": scaled(264),
     "--flow-orbital-details-height": scaled(166),
+    "--flow-lens-width": scaled(178),
+    "--flow-lens-height": scaled(76),
+    "--flow-lens-empty-width": scaled(76),
+    "--flow-lens-empty-height": scaled(56),
+    "--flow-lens-details-width": scaled(286),
+    "--flow-lens-details-height": scaled(168),
     "--flow-details-width": scaled(257),
     "--flow-horizon-details-height": scaled(150),
   } as CSSProperties;
@@ -190,7 +196,7 @@ export default function FlowSurface({
               index={index}
               active={index === focus}
               color={providerTone(index, theme.slug)}
-              gaugeSize={settings.form === "orbital" ? 25 : 31}
+              gaugeSize={settings.form === "orbital" || settings.form === "lens" ? 25 : 31}
               onFocus={onFocusProvider}
             />
           ))}
@@ -232,7 +238,7 @@ export default function FlowSurface({
                 index={index}
                 active={index === focus}
                 color={providerTone(index, theme.slug)}
-                gaugeSize={settings.form === "orbital" ? 25 : 31}
+                gaugeSize={settings.form === "orbital" || settings.form === "lens" ? 25 : 31}
                 onFocus={onFocusProvider}
               />
             ))}

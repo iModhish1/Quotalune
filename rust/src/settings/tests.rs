@@ -330,6 +330,7 @@ fn flow_surface_form_and_anchor_normalization_remain_bounded() {
     assert_eq!(normalize_flow_surface_form("horizon"), "horizon");
     assert_eq!(normalize_flow_surface_form("petal"), "petal");
     assert_eq!(normalize_flow_surface_form("orbital"), "orbital");
+    assert_eq!(normalize_flow_surface_form("lens"), "lens");
 
     assert_eq!(normalize_flow_surface_anchor("flowline", "left"), "left");
     assert_eq!(normalize_flow_surface_anchor("flowline", "bottom"), "right");
@@ -340,6 +341,8 @@ fn flow_surface_form_and_anchor_normalization_remain_bounded() {
     assert_eq!(normalize_flow_surface_anchor("petal", "free"), "free");
     assert_eq!(normalize_flow_surface_anchor("orbital", "top-right"), "top-right");
     assert_eq!(normalize_flow_surface_anchor("orbital", "left"), "left");
+    assert_eq!(normalize_flow_surface_anchor("lens", "bottom-left"), "bottom-left");
+    assert_eq!(normalize_flow_surface_anchor("lens", "free"), "free");
 }
 
 #[test]

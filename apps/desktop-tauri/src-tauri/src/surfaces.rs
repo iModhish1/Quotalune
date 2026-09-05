@@ -149,7 +149,7 @@ fn flow_surface_bounds(
     )
 }
 
-/// Pure sizing authority for the three Flow Surface structures. Keeping this
+/// Pure sizing authority for the bounded Flow Surface structures. Keeping this
 /// independent of Tauri makes the no-obstruction limits unit-testable.
 fn flow_surface_size(
     form: &str,
@@ -161,14 +161,14 @@ fn flow_surface_size(
     if state == SurfaceState::Hidden {
         return match form {
             "horizon" => (96.0, 14.0),
-            "petal" | "orbital" => (28.0, 28.0),
+            "petal" | "orbital" | "lens" => (28.0, 28.0),
             _ => (28.0, 58.0),
         };
     }
     if state == SurfaceState::Peek {
         return match form {
             "horizon" => (120.0, 16.0),
-            "petal" | "orbital" => (32.0, 32.0),
+            "petal" | "orbital" | "lens" => (32.0, 32.0),
             _ => (18.0, 72.0),
         };
     }
@@ -186,6 +186,9 @@ fn flow_surface_size(
         ("petal", true, _) => (300.0, 160.0),
         ("orbital", false, _) => (104.0, 104.0),
         ("orbital", true, _) => (288.0, 174.0),
+        ("lens", false, 0) => (76.0, 56.0),
+        ("lens", false, _) => (178.0, 76.0),
+        ("lens", true, _) => (310.0, 176.0),
         (_, true, _) => (330.0, 160.0),
         (_, false, _) => (56.0, 84.0),
     };
@@ -197,7 +200,7 @@ fn flow_surface_size(
                 work_width * 0.30,
                 work_height * if expanded { 0.30 } else { 0.10 },
             ),
-            "petal" => (
+            "petal" | "lens" => (
                 work_width * if expanded { 0.25 } else { 0.16 },
                 work_height * 0.22,
             ),
@@ -458,7 +461,7 @@ fn resolve_flow_surface_dock(
         "flowline" if near_right => Some("right"),
         "horizon" if near_top => Some("top"),
         "horizon" if near_bottom => Some("bottom"),
-        "petal" | "orbital" => {
+        "petal" | "orbital" | "lens" => {
             if near_top && near_left {
                 Some("top-left")
             } else if near_top && near_right {
@@ -538,7 +541,7 @@ fn position_top_arc(window: &tauri::WebviewWindow) {
             };
             (x, y)
         }
-        "petal" | "orbital" => match anchor.as_str() {
+        "petal" | "orbital" | "lens" => match anchor.as_str() {
             "top-left" => (work_x + TOP_ARC_MARGIN, work_y + TOP_ARC_MARGIN),
             "top-right" => (
                 work_x + (work_w - w - TOP_ARC_MARGIN).max(0.0),
@@ -1324,6 +1327,9 @@ mod tests {
         assert!(petal.0 <= 1366.0 * 0.16 && petal.1 <= 768.0 * 0.20);
         let orbital = flow_surface_size("orbital", SurfaceState::Compact, 100, work_area, 3);
         assert!(orbital.0 <= 1366.0 * 0.14 && orbital.1 <= 768.0 * 0.16);
+        let lens = flow_surface_size("lens", SurfaceState::Compact, 100, work_area, 3);
+        assert_eq!(lens, (178.0, 76.0));
+        assert!(lens.0 <= 1366.0 * 0.16 && lens.1 <= 768.0 * 0.20);
 
         // A provider registry with no resolved readings must not reserve the
         // three-provider rail. This is the native counterpart to the React
@@ -1373,6 +1379,10 @@ mod tests {
         assert_eq!(
             resolve_flow_surface_dock("orbital", (1_177.0, 260.0), (104.0, 104.0), work_area),
             Some("right")
+        );
+        assert_eq!(
+            resolve_flow_surface_dock("lens", (1_102.0, 645.0), (178.0, 75.0), work_area),
+            Some("bottom-right")
         );
         assert_eq!(
             resolve_flow_surface_dock("petal", (550.0, 320.0), (170.0, 118.0), work_area),

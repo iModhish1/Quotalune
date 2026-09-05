@@ -83,4 +83,10 @@ describe("Flow Surface contract", () => {
     expect(flowSurfaceEnvelope("orbital", "compact", 100, 0)).toEqual({ width: 64, height: 64 });
     expect(resolveDetailDirection("orbital", "bottom-right")).toBe("up-left");
   });
+
+  it("keeps the Lens structure compact and directs its detail card inward", () => {
+    expect(flowSurfaceEnvelope("lens", "compact", 100, 3)).toEqual({ width: 178, height: 76 });
+    expect(flowSurfaceEnvelope("lens", "compact", 100, 0)).toEqual({ width: 76, height: 56 });
+    expect(resolveDetailDirection("lens", "right")).toBe("left");
+  });
 });
