@@ -13,6 +13,69 @@ use crate::locale::{self, LocaleKey};
 use crate::settings::Settings;
 use crate::sound::{NotificationSoundEvent, play_alert};
 use chrono::{DateTime, Utc};
+use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
+
+/// The Tauri shell resolves the packaged brand asset during startup. Keeping
+/// the image path here lets the shared notification engine produce a branded
+/// toast without knowing Tauri's platform-specific resource directory.
+static TOAST_ICON_PATH: OnceLock<PathBuf> = OnceLock::new();
+
+/// Supply the packaged QuotaArc icon used by Windows notifications.
+///
+/// Calling this more than once is harmless: the first valid packaged path is
+/// retained for the life of the process.
+pub fn configure_toast_icon(path: PathBuf) {
+    if path.is_file() {
+        let _ = TOAST_ICON_PATH.set(path);
+    } else {
+        tracing::warn!(?path, "QuotaArc toast icon resource was not found");
+    }
+}
+
+fn toast_icon_path() -> Option<PathBuf> {
+    TOAST_ICON_PATH.get().cloned().or_else(|| {
+        let source_asset = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../assets/brand/icons/quotaarc-icon-64.png");
+        source_asset.is_file().then_some(source_asset)
+    })
+}
+
+fn file_uri(path: &Path) -> String {
+    let path = path.to_string_lossy().replace('\\', "/");
+    let escaped = path
+        .replace('%', "%25")
+        .replace(' ', "%20")
+        .replace('#', "%23")
+        .replace('?', "%3F");
+    format!("file:///{escaped}")
+}
+
+fn xml_escape(value: &str) -> String {
+    value
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&apos;")
+}
+
+/// Build the complete ToastGeneric payload. An explicit local app-logo image
+/// makes the notification recognizable even while Windows refreshes its AUMID
+/// cache after an upgrade.
+fn toast_template(title: &str, body: &str, icon: Option<&Path>) -> String {
+    let logo = icon.map_or_else(String::new, |path| {
+        format!(
+            "<image placement=\"appLogoOverride\" src=\"{}\" hint-crop=\"circle\" alt=\"QuotaArc\"/>",
+            file_uri(path)
+        )
+    });
+    format!(
+        "<toast><visual><binding template=\"ToastGeneric\"><text>{}</text><text>{}</text>{logo}</binding></visual><audio silent=\"true\"/></toast>",
+        xml_escape(title),
+        xml_escape(body),
+    )
+}
 
 /// Notification types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -506,17 +569,7 @@ impl NotificationManager {
         static AUMID_INIT: Once = Once::new();
         AUMID_INIT.call_once(ensure_aumid_registered);
 
-        // Escape for XML content to prevent injection
-        fn xml_escape(s: &str) -> String {
-            s.replace('&', "&amp;")
-                .replace('<', "&lt;")
-                .replace('>', "&gt;")
-                .replace('"', "&quot;")
-                .replace('\'', "&apos;")
-        }
-
-        let safe_title = xml_escape(title);
-        let safe_body = xml_escape(body);
+        let template = toast_template(title, body, toast_icon_path().as_deref());
 
         // Uses ToastGeneric (Win 10+) and wraps in try/catch so PowerShell exits
         // with code 1 on failure rather than swallowing the error silently.
@@ -527,19 +580,20 @@ impl NotificationManager {
     [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
     [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
     $template = @'
-<toast><visual><binding template="ToastGeneric"><text>{}</text><text>{}</text></binding></visual><audio silent="true"/></toast>
+{}
 '@
     $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
     $xml.LoadXml($template)
     $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
-    $notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('QuotaArc')
+    $notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{}')
     if ($null -eq $notifier) {{ throw "CreateToastNotifier returned null" }}
     $notifier.Show($toast)
 }} catch {{
     [System.Console]::Error.WriteLine("QuotaArc toast failed: $_")
     exit 1
 }}"#,
-            safe_title, safe_body
+            template,
+            crate::paths::TOAST_AUMID,
         );
 
         match Command::new("powershell")
@@ -617,17 +671,35 @@ fn ensure_aumid_registered() {
     use winreg::enums::*;
 
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    // Retire only our pre-QuotaArc AUMID. Windows will classify all future
-    // notifications under QuotaArc instead of preserving a second identity.
-    let _ = hkcu.delete_subkey_all(r"SOFTWARE\Classes\AppUserModelId\CodexBar");
+    // Retire only identities this product previously owned. Windows will
+    // classify future notifications under the same identifier as the Tauri
+    // package, so the Start menu, taskbar and Action Center agree on one app.
+    for legacy_aumid in ["CodexBar", "QuotaArc", "QuotaArc.Dev"] {
+        let _ = hkcu.delete_subkey_all(format!(r"SOFTWARE\Classes\AppUserModelId\{legacy_aumid}"));
+    }
     // HKCU\SOFTWARE\Classes\AppUserModelId\<AUMID> is the documented path for
     // registering Win32 desktop app AUMIDs without a COM server or Start Menu shortcut.
-    let result = hkcu
-        .create_subkey(r"SOFTWARE\Classes\AppUserModelId\QuotaArc")
-        .and_then(|(key, _)| key.set_value("DisplayName", &"QuotaArc"));
+    let aumid_key = format!(
+        r"SOFTWARE\Classes\AppUserModelId\{}",
+        crate::paths::TOAST_AUMID
+    );
+    let display_name = format!("QuotaArc{}", crate::paths::channel_suffix());
+    let icon_path = toast_icon_path();
+    let result = hkcu.create_subkey(aumid_key).and_then(|(key, _)| {
+        key.set_value("DisplayName", &display_name)?;
+        key.set_value("IconBackgroundColor", &"FF10141C")?;
+        if let Some(icon_path) = icon_path {
+            let icon_path = icon_path.to_string_lossy().into_owned();
+            key.set_value("IconUri", &icon_path)?;
+        }
+        Ok(())
+    });
 
     match result {
-        Ok(()) => tracing::debug!("QuotaArc AUMID registered for Windows toast notifications"),
+        Ok(()) => tracing::debug!(
+            aumid = crate::paths::TOAST_AUMID,
+            "QuotaArc AUMID registered for Windows notifications"
+        ),
         Err(e) => tracing::warn!("Failed to register QuotaArc AUMID: {}", e),
     }
 }
@@ -641,6 +713,22 @@ pub fn show_notification(title: &str, body: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn toast_payload_keeps_quota_arc_identity_and_escapes_text() {
+        let xml = toast_template(
+            "Usage < alert",
+            "Claude & OpenAI",
+            Some(Path::new(
+                r"C:\Program Files\QuotaArc\quotaarc-icon-64.png",
+            )),
+        );
+
+        assert!(xml.contains("Usage &lt; alert"));
+        assert!(xml.contains("Claude &amp; OpenAI"));
+        assert!(xml.contains("placement=\"appLogoOverride\""));
+        assert!(xml.contains("file:///C:/Program%20Files/QuotaArc/quotaarc-icon-64.png"));
+    }
     use crate::core::{PaceStage, RateWindow, UsagePace};
     use chrono::{DateTime, Duration, Utc};
 

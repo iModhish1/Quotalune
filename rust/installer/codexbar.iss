@@ -59,6 +59,13 @@ Source: "{#WebView2BootstrapperPath}"; Flags: dontcopy
 Name: "{autoprograms}\QuotaArc"; Filename: "{app}\codexbar.exe"; Parameters: "menubar"; WorkingDir: "{app}"; IconFilename: "{app}\icon.ico"
 Name: "{autodesktop}\QuotaArc"; Filename: "{app}\codexbar.exe"; Parameters: "menubar"; WorkingDir: "{app}"; Tasks: desktopicon; IconFilename: "{app}\icon.ico"
 
+[Registry]
+; Give legacy installer builds the same stable Windows notification identity as
+; the Tauri package. This prevents Windows from substituting the generic app glyph.
+Root: HKCU; Subkey: "Software\Classes\AppUserModelId\app.quotaarc.desktop"; ValueType: string; ValueName: "DisplayName"; ValueData: "QuotaArc"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\AppUserModelId\app.quotaarc.desktop"; ValueType: string; ValueName: "IconUri"; ValueData: "{app}\icon.ico"
+Root: HKCU; Subkey: "Software\Classes\AppUserModelId\app.quotaarc.desktop"; ValueType: string; ValueName: "IconBackgroundColor"; ValueData: "FF10141C"
+
 [Run]
 ; Interactive installs: optional checkbox on the finish page.
 Filename: "{app}\codexbar.exe"; Parameters: "menubar"; Description: "Launch QuotaArc"; Flags: nowait postinstall skipifsilent; Check: CanLaunchCodexBar

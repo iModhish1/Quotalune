@@ -23,7 +23,7 @@
         "decorations": false,
         "shadow": false,
         "visible": false,
-        "skipTaskbar": true,
+        "skipTaskbar": false,
         "alwaysOnTop": true,
         "theme": "Dark",
         "dragDropEnabled": false
@@ -35,6 +35,9 @@
   },
   "bundle": {
     "active": true,
+    "resources": {
+      "../../../assets/brand/icons/quotaarc-icon-64.png": "quotaarc-icon-64.png"
+    },
     "targets": [
       "nsis",
       "msi"

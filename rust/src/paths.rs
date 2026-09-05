@@ -41,9 +41,9 @@ pub const REGISTRY_RUN_VALUE: &str = if cfg!(feature = "dev-channel") {
 
 /// AppUserModelID registered for Windows toast notifications.
 pub const TOAST_AUMID: &str = if cfg!(feature = "dev-channel") {
-    "QuotaArc.Dev"
+    "app.quotaarc.desktop.dev"
 } else {
-    "QuotaArc"
+    "app.quotaarc.desktop"
 };
 
 /// HTTP user agent for update downloads and release metadata checks.
@@ -99,11 +99,11 @@ mod tests {
         if cfg!(feature = "dev-channel") {
             assert_eq!(APP_DIR_NAME, "QuotaArc-Dev");
             assert_eq!(REGISTRY_RUN_VALUE, "QuotaArc Dev");
-            assert_eq!(TOAST_AUMID, "QuotaArc.Dev");
+            assert_eq!(TOAST_AUMID, "app.quotaarc.desktop.dev");
         } else {
             assert_eq!(APP_DIR_NAME, "QuotaArc");
             assert_eq!(REGISTRY_RUN_VALUE, "QuotaArc");
-            assert_eq!(TOAST_AUMID, "QuotaArc");
+            assert_eq!(TOAST_AUMID, "app.quotaarc.desktop");
         }
     }
 

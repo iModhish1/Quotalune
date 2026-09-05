@@ -30,7 +30,7 @@ use std::sync::Mutex;
 use state::AppState;
 use surface::SurfaceMode;
 use surface_target::SurfaceTarget;
-use tauri::Manager;
+use tauri::{Manager, path::BaseDirectory};
 
 const PROOF_ACTIVATION_DELAY: Duration = Duration::from_millis(0);
 const VISIBLE_START_ACTIVATION_DELAY: Duration = Duration::from_millis(500);
@@ -322,6 +322,12 @@ fn main() {
             command_profiles::set_usage_settings,
         ])
         .setup(move |app| {
+            if let Ok(icon_path) = app
+                .path()
+                .resolve("quotaarc-icon-64.png", BaseDirectory::Resource)
+            {
+                codexbar::notifications::configure_toast_icon(icon_path);
+            }
             if let Some(window) = app.get_webview_window("main") {
                 shell::dwm::force_dark_caption(&window);
                 window.hide()?;
