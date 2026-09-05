@@ -3,11 +3,18 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_FLOW_SURFACE_SETTINGS,
   flowSurfaceEnvelope,
+  hasSurfaceQuotaValue,
   normalizeFlowSurfaceSettings,
   resolveDetailDirection,
 } from "./flowSurface";
 
 describe("Flow Surface contract", () => {
+  it("only treats finite resolved quota values as compact surface content", () => {
+    expect(hasSurfaceQuotaValue({ arcFraction: 0.73, primaryValue: 73 })).toBe(true);
+    expect(hasSurfaceQuotaValue({ arcFraction: null, primaryValue: null })).toBe(false);
+    expect(hasSurfaceQuotaValue({ arcFraction: Number.NaN, primaryValue: 73 })).toBe(false);
+  });
+
   it("uses the compact Flowline defaults when settings are missing or corrupt", () => {
     expect(normalizeFlowSurfaceSettings(undefined)).toEqual(DEFAULT_FLOW_SURFACE_SETTINGS);
     expect(normalizeFlowSurfaceSettings({
@@ -60,5 +67,13 @@ describe("Flow Surface contract", () => {
       width: 10,
       height: 56,
     });
+  });
+
+  it("shrinks a compact form when no provider has a truthful quota reading", () => {
+    expect(flowSurfaceEnvelope("flowline", "compact", 100, 0)).toEqual({
+      width: 56,
+      height: 84,
+    });
+    expect(flowSurfaceEnvelope("flowline", "compact", 100, 3).height).toBeLessThan(310);
   });
 });

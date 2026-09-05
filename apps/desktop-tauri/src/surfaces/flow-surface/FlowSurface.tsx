@@ -10,6 +10,7 @@ import type {
   FlowSurfaceSettings,
   FlowSurfaceState,
 } from "../../design-system/flowSurface";
+import { hasSurfaceQuotaValue } from "../../design-system/flowSurface";
 import { CANONICAL_THEME, catalogBySlug } from "../../design-system/themeCatalog";
 import "./FlowSurface.css";
 
@@ -108,10 +109,11 @@ export default function FlowSurface({
   onStartDrag,
 }: FlowSurfaceProps) {
   const theme = catalogBySlug(catalog) ?? CANONICAL_THEME;
-  const visible = providers.slice(0, 3);
+  const visible = providers.filter(hasSurfaceQuotaValue).slice(0, 3);
   const focus = visible.length === 0 ? -1 : Math.min(Math.max(focusedIndex, 0), visible.length - 1);
   const focused = visible[focus];
-  const expanded = state === "expanded" || state === "pinned";
+  const hasQuotaData = visible.length > 0;
+  const expanded = hasQuotaData && (state === "expanded" || state === "pinned");
   const style = {
     "--flow-accent": "#d8dde4",
     "--flow-accent-soft": "rgba(216, 221, 228, 0.22)",
@@ -135,7 +137,7 @@ export default function FlowSurface({
       data-form={settings.form}
       data-anchor={settings.anchor}
       data-state={state}
-      data-empty={visible.length === 0}
+      data-empty={!hasQuotaData}
       style={style}
       aria-label="QuotaArc compact quota surface"
     >
@@ -143,15 +145,18 @@ export default function FlowSurface({
         <button
           type="button"
           className="flow-surface__summary"
-          onClick={onToggleExpanded}
+          onClick={hasQuotaData ? onToggleExpanded : undefined}
+          disabled={!hasQuotaData}
           aria-expanded={expanded}
           aria-controls="quota-flow-details"
-          aria-label={`Expand ${focused?.name ?? "QuotaArc"} details`}
+          aria-label={hasQuotaData
+            ? `Expand ${focused?.name ?? "QuotaArc"} details`
+            : "QuotaArc is waiting for provider data"}
         >
           <span className="flow-surface__brand"><QuotaArcMark /></span>
           <span className="flow-surface__summary-copy">
             <strong>{focused?.name ?? "QuotaArc"}</strong>
-            <small>{focused ? `${formatPercentage(focused.primaryValue)} ${focused.primaryLabel}` : "No quota data"}</small>
+            <small>{focused ? `${formatPercentage(focused.primaryValue)} ${focused.primaryLabel}` : "Waiting for provider data"}</small>
           </span>
         </button>
         <div className="flow-surface__quick-providers" aria-label="Provider status">

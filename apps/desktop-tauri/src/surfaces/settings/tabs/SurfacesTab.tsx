@@ -1,7 +1,7 @@
 /** Settings for the single Quota Island overlay. */
-import { useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 
-import { Field, Toggle } from "../../../components/FormControls";
+import { Toggle } from "../../../components/FormControls";
 import { useLocale } from "../../../hooks/useLocale";
 import {
   getSurfaceSettings,
@@ -48,6 +48,26 @@ function defaultAnchor(form: SurfaceSettings["topArcForm"]): SurfaceSettings["to
   return "right";
 }
 
+function SurfaceControl({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="surface-control">
+      <div className="surface-control__copy">
+        <strong>{title}</strong>
+        {description && <small>{description}</small>}
+      </div>
+      <div className="surface-control__action">{children}</div>
+    </section>
+  );
+}
+
 export default function SurfacesTab() {
   const { t } = useLocale();
   const [config, setConfig] = useState<SurfaceSettings | null>(null);
@@ -80,42 +100,66 @@ export default function SurfacesTab() {
   }
 
   return (
-    <section className="settings-section">
-      <h3 className="settings-section__title">QuotaArc Surface</h3>
-      <p className="settings-section__description">
-        A small, transparent status surface that stays out of the way and opens only into available desktop space.
-      </p>
-      <div className="settings-section__group">
-        <Field label="Show QuotaArc Surface" description="Keeps a small quota control within reach without covering your work.">
+    <section className="settings-section surface-settings">
+      <header className="surface-settings__hero">
+        <div>
+          <span className="surface-settings__eyebrow">SURFACE STUDIO</span>
+          <h3 className="settings-section__title">A surface that respects your workspace</h3>
+          <p className="settings-section__description">
+            Compact when you are working. Detailed only when you ask for it. Every structure uses the same quota data.
+          </p>
+        </div>
+        <div className="surface-settings__preview" data-form={config.topArcForm} aria-label={`${config.topArcForm} structure preview`}>
+          <span className="surface-settings__preview-mark" />
+          <i /><i /><i />
+        </div>
+      </header>
+
+      <div className="surface-settings__grid">
+        <div className="surface-settings__column">
+          <SurfaceControl title="Show surface" description="Keep a compact quota control within reach without covering your work.">
           <Toggle
             checked={config.topArcEnabled}
             ariaLabel="Show QuotaArc Surface"
             disabled={false}
             onChange={(topArcEnabled) => patch({ topArcEnabled })}
           />
-        </Field>
-        <Field label="Opacity">
+          </SurfaceControl>
+          <SurfaceControl title="Opacity">
           <RangeControl label="Opacity" value={config.topArcOpacity} min={30} max={100} step={5} disabled={!config.topArcEnabled} onChange={(topArcOpacity) => patch({ topArcOpacity })} />
-        </Field>
-        <Field label="Display scale" description="Changes only this bounded surface, never the rest of the desktop.">
+          </SurfaceControl>
+          <SurfaceControl title="Scale" description="Affects only this surface, never your desktop or other panels.">
           <RangeControl label="Scale" value={config.topArcScale} min={75} max={125} step={5} disabled={!config.topArcEnabled} onChange={(topArcScale) => patch({ topArcScale })} />
-        </Field>
-        <Field label="Structure" description="Changes the silhouette and placement behavior, never the quota logic.">
-          <select
-            value={config.topArcForm}
-            disabled={!config.topArcEnabled}
-            aria-label="QuotaArc surface structure"
-            onChange={(event) => {
-              const topArcForm = event.target.value as SurfaceSettings["topArcForm"];
-              patch({ topArcForm, topArcAnchor: defaultAnchor(topArcForm) });
-            }}
-          >
-            <option value="flowline">Flowline — compact edge rail</option>
-            <option value="horizon">Horizon — compact top or bottom ribbon</option>
-            <option value="petal">Petal — compact corner control</option>
-          </select>
-        </Field>
-        <Field label="Position" description="Choose a safe anchor, or drag the grip to place it freely.">
+          </SurfaceControl>
+        </div>
+
+        <div className="surface-settings__column">
+          <fieldset className="surface-structure-picker" disabled={!config.topArcEnabled}>
+            <legend>Structure</legend>
+            <p>Changes the silhouette and placement behavior, never the quota logic.</p>
+            <div className="surface-structure-picker__choices">
+              {([
+                ["flowline", "Flowline", "Quiet vertical rail"],
+                ["horizon", "Horizon", "Low-profile edge ribbon"],
+                ["petal", "Petal", "Compact corner island"],
+              ] as const).map(([form, name, note]) => (
+                <button
+                  key={form}
+                  type="button"
+                  className="surface-structure-choice"
+                  data-form={form}
+                  data-selected={config.topArcForm === form}
+                  aria-pressed={config.topArcForm === form}
+                  onClick={() => patch({ topArcForm: form, topArcAnchor: defaultAnchor(form) })}
+                >
+                  <span className="surface-structure-choice__shape"><i /><i /><i /></span>
+                  <strong>{name}</strong>
+                  <small>{note}</small>
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          <SurfaceControl title="Position" description="Choose a safe anchor, or use the larger drag grip on the surface for free placement.">
           <select
             value={config.topArcAnchor}
             disabled={!config.topArcEnabled}
@@ -127,8 +171,8 @@ export default function SurfacesTab() {
             {config.topArcForm === "petal" && <><option value="bottom-right">Bottom right</option><option value="bottom-left">Bottom left</option><option value="top-right">Top right</option><option value="top-left">Top left</option></>}
             <option value="free">Free placement</option>
           </select>
-        </Field>
-        <Field label="Restore position" description="Returns the surface to its compact default anchor.">
+          </SurfaceControl>
+          <SurfaceControl title="Restore position" description="Returns this structure to its compact default anchor.">
           <button
             type="button"
             disabled={!config.topArcEnabled}
@@ -144,22 +188,26 @@ export default function SurfacesTab() {
           >
             Restore default position
           </button>
-        </Field>
-        <Field label="Auto-hide" description="Retracts to a small reachable tab after the pointer leaves.">
+          </SurfaceControl>
+        </div>
+
+        <div className="surface-settings__column surface-settings__column--behavior">
+          <SurfaceControl title="Auto-hide" description="Retracts to a small reachable tab after the pointer leaves.">
           <Toggle checked={config.topArcAutoHide} ariaLabel="Auto-hide QuotaArc surface" disabled={!config.topArcEnabled} onChange={(topArcAutoHide) => patch({ topArcAutoHide })} />
-        </Field>
-        <Field label="Auto-hide delay" description="How long the compact surface stays visible after the pointer leaves.">
+          </SurfaceControl>
+          <SurfaceControl title="Hide delay" description="How long the compact surface stays visible after the pointer leaves.">
           <RangeControl label="Auto-hide delay" value={config.topArcAutoHideDelayMs} min={300} max={3000} step={100} disabled={!config.topArcEnabled || !config.topArcAutoHide} onChange={(topArcAutoHideDelayMs) => patch({ topArcAutoHideDelayMs })} />
-        </Field>
-        <Field label="Click-through" description="Mouse input passes through the compact surface.">
+          </SurfaceControl>
+          <SurfaceControl title="Click-through" description="Mouse input passes through the compact surface.">
           <Toggle checked={config.topArcClickThrough} ariaLabel="QuotaArc compact click-through" disabled={!config.topArcEnabled} onChange={(topArcClickThrough) => patch({ topArcClickThrough })} />
-        </Field>
-        <Field label="Hide during fullscreen apps" description="Games and video can use the entire screen.">
+          </SurfaceControl>
+          <SurfaceControl title="Fullscreen privacy" description="Hide the surface while games and video use the whole screen.">
           <Toggle checked={config.topArcHideFullscreen} ariaLabel="Hide QuotaArc surface during fullscreen apps" disabled={!config.topArcEnabled} onChange={(topArcHideFullscreen) => patch({ topArcHideFullscreen })} />
-        </Field>
+          </SurfaceControl>
+        </div>
       </div>
       <p className="settings-section__hint">
-        The surface is always compact by default. It restores one small reveal tab instead of keeping a large overlay open.
+        The surface never expands on its own. It restores a small reveal tab instead of leaving a large overlay open.
       </p>
     </section>
   );

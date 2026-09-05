@@ -219,7 +219,7 @@ export default function UsageSpendTab(_props: TabProps) {
         return;
       }
       const stamp = new Date().toISOString().slice(0, 10);
-      downloadDataUrl(dataUrl, `codexbar-usage-spend-${stamp}.png`);
+      downloadDataUrl(dataUrl, `quotaarc-usage-spend-${stamp}.png`);
     } catch {
       setShareError(t("UsageSpendShareFailed"));
     }
@@ -247,7 +247,7 @@ export default function UsageSpendTab(_props: TabProps) {
     try {
       const stamp = new Date().toISOString().slice(0, 10);
       const path = await save({
-        defaultPath: `codexbar-usage-spend-${stamp}.json`,
+        defaultPath: `quotaarc-usage-spend-${stamp}.json`,
         filters: [{ name: "JSON", extensions: ["json"] }],
       });
       if (!path) return;

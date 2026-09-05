@@ -107,7 +107,7 @@ describe("AboutTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     tauriMocks.getAppInfo.mockResolvedValue({
-      name: "CodexBar",
+      name: "QuotaArc",
       version: "0.30.3",
       buildNumber: "dev",
       updateChannel: "stable",
@@ -120,8 +120,6 @@ describe("AboutTab", () => {
     render(<AboutTab settings={settings} set={vi.fn()} saving={false} />);
 
     fireEvent.click(await screen.findByRole("button", { name: "AboutLinkGitHub" }));
-    fireEvent.click(screen.getByRole("button", { name: "AboutLinkWebsite" }));
-    fireEvent.click(screen.getByRole("button", { name: "AboutLinkOriginalProject" }));
     fireEvent.click(screen.getByRole("button", { name: "SubmitIssue" }));
 
     expect(tauriMocks.openExternalUrl).toHaveBeenNthCalledWith(
@@ -130,14 +128,6 @@ describe("AboutTab", () => {
     );
     expect(tauriMocks.openExternalUrl).toHaveBeenNthCalledWith(
       2,
-      "https://codexbar.app",
-    );
-    expect(tauriMocks.openExternalUrl).toHaveBeenNthCalledWith(
-      3,
-      "https://github.com/steipete/CodexBar",
-    );
-    expect(tauriMocks.openExternalUrl).toHaveBeenNthCalledWith(
-      4,
       "https://github.com/quotaarc/quotaarc/issues/new?labels=bug&template=bug_report.yml",
     );
   });
@@ -147,7 +137,7 @@ describe("AboutTab", () => {
 
     render(<AboutTab settings={settings} set={vi.fn()} saving={false} />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "AboutLinkWebsite" }));
+    fireEvent.click(await screen.findByRole("button", { name: "AboutLinkGitHub" }));
 
     await waitFor(() => {
       expect(screen.getByText("ErrorPrefix no browser")).toBeInTheDocument();

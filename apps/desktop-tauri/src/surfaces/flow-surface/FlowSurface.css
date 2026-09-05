@@ -73,6 +73,7 @@ body:has(.flow-surface-host) #root {
   display: flex;
   align-items: center;
   overflow: hidden;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
 }
 .flow-surface__summary,
 .flow-surface__drag,
@@ -86,6 +87,7 @@ body:has(.flow-surface-host) #root {
 .flow-surface button:focus-visible { outline: 2px solid #f5f7fa; outline-offset: 2px; }
 
 .flow-surface__summary { display: inline-flex; min-width: 0; align-items: center; gap: 8px; padding: 0; text-align: left; }
+.flow-surface__summary:disabled { cursor: default; }
 .flow-surface__brand { display: grid; flex: 0 0 auto; width: 29px; height: 29px; place-items: center; color: #f4f6f9; border: 1px solid rgba(242, 245, 249, 0.42); border-radius: 50%; background: rgba(233, 238, 245, 0.10); box-shadow: 0 0 0 3px rgba(225, 230, 237, 0.055); }
 .flow-surface__brand .flow-surface__mark { width: 18px; height: 18px; }
 .flow-surface__summary-copy { display: grid; min-width: 0; }
@@ -98,7 +100,7 @@ body:has(.flow-surface-host) #root {
 .flow-surface__provider-icon { display: inline-flex; filter: grayscale(1) saturate(0) brightness(1.28); }
 .flow-surface__provider-value { font-size: 10px; font-weight: 720; letter-spacing: -0.02em; }
 .flow-surface__provider[data-active="true"] .flow-surface__provider-gauge { filter: saturate(0.58) brightness(1.05) drop-shadow(0 0 5px rgba(243, 246, 250, 0.26)); }
-.flow-surface__drag { position: absolute; display: grid; width: 20px; height: 25px; place-items: center; color: rgba(236, 240, 244, 0.42); font-size: 18px; line-height: 1; }
+.flow-surface__drag { position: absolute; display: grid; width: 32px; height: 34px; place-items: center; color: rgba(236, 240, 244, 0.48); font-size: 20px; line-height: 1; touch-action: none; }
 .flow-surface__drag:hover { color: #fff; }
 
 .flow-surface__details {
@@ -130,7 +132,7 @@ body:has(.flow-surface-host) #root {
 .flow-surface[data-form="flowline"] .flow-surface__summary { display: grid; width: 100%; justify-items: center; padding: 9px 0 4px; }
 .flow-surface[data-form="flowline"] .flow-surface__summary-copy { display: none; }
 .flow-surface[data-form="flowline"] .flow-surface__quick-providers { flex-direction: column; gap: 8px; padding: 7px 0; }
-.flow-surface[data-form="flowline"] .flow-surface__drag { bottom: 6px; left: 18px; }
+.flow-surface[data-form="flowline"] .flow-surface__drag { bottom: 4px; left: 12px; }
 .flow-surface[data-form="flowline"] .flow-surface__details { top: 3px; width: 257px; height: calc(100% - 6px); border-radius: 22px; --flow-enter-x: 8px; }
 .flow-surface[data-form="flowline"][data-anchor="right"] .flow-surface__details { left: 0; }
 .flow-surface[data-form="flowline"][data-anchor="left"] .flow-surface__details { right: 0; --flow-enter-x: -8px; }
@@ -139,6 +141,7 @@ body:has(.flow-surface-host) #root {
 .flow-surface[data-form="flowline"][data-empty="true"] .flow-surface__summary-copy { display: grid; justify-items: center; max-width: 52px; text-align: center; }
 .flow-surface[data-form="flowline"][data-empty="true"] .flow-surface__summary-copy strong { font-size: 9px; }
 .flow-surface[data-form="flowline"][data-empty="true"] .flow-surface__summary-copy small { font-size: 8px; line-height: 1.15; white-space: normal; }
+.flow-surface[data-form="flowline"][data-empty="true"] .flow-surface__drag { display: none; }
 
 /* Horizon: a compact black ribbon; detail folds down/up without covering work. */
 .flow-surface[data-form="horizon"] .flow-surface__core { right: 0; left: 0; height: 58px; padding: 0 10px; gap: 9px; border-radius: 0 0 25px 25px; }

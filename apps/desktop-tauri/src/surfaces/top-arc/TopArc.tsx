@@ -5,6 +5,7 @@ import { listen } from "@tauri-apps/api/event";
 import type { StageProvider } from "../../components/orbit/stageTypes";
 import {
   DEFAULT_FLOW_SURFACE_SETTINGS,
+  hasSurfaceQuotaValue,
   normalizeFlowSurfaceSettings,
   type FlowSurfaceSettings,
   type FlowSurfaceState,
@@ -56,7 +57,9 @@ export default function TopArc({ demo }: TopArcProps) {
   const [focus, setFocus] = useState(0);
   const autoHideTimer = useRef<number | null>(null);
   const nativeRevisionRef = useRef<string | null>(null);
-  const providers = demo ? DEMO_PROVIDERS : runtime.providers;
+  // A registered account is not a rendering entitlement. The compact host
+  // receives only resolved values, so it cannot grow into an empty rail.
+  const providers = (demo ? DEMO_PROVIDERS : runtime.providers).filter(hasSurfaceQuotaValue);
 
   const clearAutoHide = useCallback(() => {
     if (autoHideTimer.current != null) {

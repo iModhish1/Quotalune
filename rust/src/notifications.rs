@@ -532,7 +532,7 @@ impl NotificationManager {
     $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
     $xml.LoadXml($template)
     $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
-    $notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier(AUMID_PLACEHOLDER)
+    $notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('QuotaArc')
     if ($null -eq $notifier) {{ throw "CreateToastNotifier returned null" }}
     $notifier.Show($toast)
 }} catch {{
@@ -565,7 +565,7 @@ impl NotificationManager {
         // Try notify-send first (works on most Linux distros including WSL with WSLg)
         if let Ok(output) = Command::new("notify-send")
             .args([
-                "--app-name=CodexBar",
+                "--app-name=QuotaArc",
                 "--icon=dialog-information",
                 title,
                 body,
@@ -607,7 +607,7 @@ impl Default for NotificationManager {
     }
 }
 
-/// Register the CodexBar App User Model ID (AUMID) in the Windows registry so that
+/// Register the QuotaArc App User Model ID (AUMID) in the Windows registry so that
 /// `CreateToastNotifier(AUMID)` resolves to a valid notifier instead of returning
 /// null.  Must be called at least once before the first toast.  Safe to call multiple
 /// times (idempotent registry write).
@@ -617,15 +617,18 @@ fn ensure_aumid_registered() {
     use winreg::enums::*;
 
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    // Retire only our pre-QuotaArc AUMID. Windows will classify all future
+    // notifications under QuotaArc instead of preserving a second identity.
+    let _ = hkcu.delete_subkey_all(r"SOFTWARE\Classes\AppUserModelId\CodexBar");
     // HKCU\SOFTWARE\Classes\AppUserModelId\<AUMID> is the documented path for
     // registering Win32 desktop app AUMIDs without a COM server or Start Menu shortcut.
     let result = hkcu
-        .create_subkey(r"SOFTWARE\Classes\AppUserModelId\CodexBar")
+        .create_subkey(r"SOFTWARE\Classes\AppUserModelId\QuotaArc")
         .and_then(|(key, _)| key.set_value("DisplayName", &"QuotaArc"));
 
     match result {
         Ok(()) => tracing::debug!("QuotaArc AUMID registered for Windows toast notifications"),
-        Err(e) => tracing::warn!("Failed to register CodexBar AUMID: {}", e),
+        Err(e) => tracing::warn!("Failed to register QuotaArc AUMID: {}", e),
     }
 }
 

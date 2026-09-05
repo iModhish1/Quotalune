@@ -45,12 +45,28 @@ describe("FlowSurface", () => {
     expect(onToggleExpanded).toHaveBeenCalledOnce();
   });
 
-  it("keeps the compact surface informative when no provider data is available", () => {
+  it("keeps the compact surface quiet and honest when no provider data is available", () => {
     render(<FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={[]} />);
 
-    expect(screen.getByRole("button", { name: "Expand QuotaArc details" })).toBeInTheDocument();
-    expect(screen.getByText("No quota data")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "QuotaArc is waiting for provider data" })).toBeDisabled();
+    expect(screen.getByText("Waiting for provider data")).toBeInTheDocument();
     expect(screen.getByTestId("flow-surface")).toHaveAttribute("data-empty", "true");
+  });
+
+  it("does not turn unavailable provider placeholders into a tall empty bar", () => {
+    const unavailable = providers.map((provider) => ({
+      ...provider,
+      arcFraction: null,
+      primaryValue: null,
+      secondaryValue: null,
+      status: "offline" as const,
+    }));
+
+    render(<FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={unavailable} />);
+
+    expect(screen.getByTestId("flow-surface")).toHaveAttribute("data-empty", "true");
+    expect(screen.getByText("Waiting for provider data")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Gemini: –/ })).not.toBeInTheDocument();
   });
 
   it("reflows the same data through Horizon without changing quota semantics", () => {

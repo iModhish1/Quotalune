@@ -31,6 +31,23 @@ export interface FlowSurfaceEnvelope {
   height: number;
 }
 
+/** The minimum truthful payload required to earn space on a compact surface. */
+export interface SurfaceQuotaValue {
+  arcFraction: number | null;
+  primaryValue: number | null;
+}
+
+/**
+ * A provider registration is not a quota reading. Keep offline placeholders
+ * out of the compact surface until the runtime has an actual resolved value.
+ */
+export function hasSurfaceQuotaValue(value: SurfaceQuotaValue): boolean {
+  return Number.isFinite(value.arcFraction)
+    && Number.isFinite(value.primaryValue)
+    && value.arcFraction !== null
+    && value.primaryValue !== null;
+}
+
 export const DEFAULT_FLOW_SURFACE_SETTINGS: Readonly<FlowSurfaceSettings> = {
   form: "flowline",
   anchor: "right",
@@ -102,6 +119,7 @@ export function flowSurfaceEnvelope(
   form: FlowSurfaceForm,
   state: FlowSurfaceState,
   scale: number,
+  providerCount = 3,
 ): FlowSurfaceEnvelope {
   if (state === "hidden") {
     if (form === "horizon") return { width: 72, height: 10 };
@@ -113,7 +131,18 @@ export function flowSurfaceEnvelope(
     if (form === "petal") return { width: 32, height: 32 };
     return { width: 18, height: 72 };
   }
-  const base = BASE_ENVELOPES[form][state === "expanded" || state === "pinned" ? "expanded" : "compact"];
+  const compact = state !== "expanded" && state !== "pinned";
+  const providers = Math.max(0, Math.min(3, Math.floor(providerCount)));
+  const emptyEnvelope: Record<FlowSurfaceForm, FlowSurfaceEnvelope> = {
+    flowline: { width: 56, height: 84 },
+    horizon: { width: 138, height: 52 },
+    petal: { width: 64, height: 64 },
+  };
+  const base = compact && providers === 0
+    ? emptyEnvelope[form]
+    : compact && form === "flowline"
+      ? { width: 56, height: 76 + providers * 50 }
+      : BASE_ENVELOPES[form][compact ? "compact" : "expanded"];
   const factor = clamp(scale, 75, 125) / 100;
   return {
     width: Math.round(base.width * factor),

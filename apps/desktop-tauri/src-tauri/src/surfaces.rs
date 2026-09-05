@@ -13,6 +13,7 @@
 use codexbar::settings::Settings;
 use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
+use std::time::Duration;
 use tauri::{Emitter, LogicalPosition, Manager, WebviewUrl};
 
 use crate::geometry_store::{self, StoredGeometry};
@@ -107,7 +108,7 @@ fn apply_surface_layout(
     }
     let settings = Settings::load();
     let (w, h) = if surface == SurfaceKind::Top {
-        flow_surface_bounds(window, &settings, state)
+        flow_surface_bounds(window, &settings, state, provider_count)
     } else {
         resolved_layout(window, surface, state, provider_count).window_bounds_logical
     };
@@ -134,6 +135,7 @@ fn flow_surface_bounds(
     window: &tauri::WebviewWindow,
     settings: &Settings,
     state: SurfaceState,
+    provider_count: u32,
 ) -> (f64, f64) {
     let work_area = monitor_work_area_logical(window).map(|(_, _, width, height)| (width, height));
     flow_surface_size(
@@ -141,6 +143,7 @@ fn flow_surface_bounds(
         state,
         settings.top_arc_scale,
         work_area,
+        provider_count,
     )
 }
 
@@ -151,6 +154,7 @@ fn flow_surface_size(
     state: SurfaceState,
     scale_percent: u8,
     work_area: Option<(f64, f64)>,
+    provider_count: u32,
 ) -> (f64, f64) {
     if state == SurfaceState::Hidden {
         return match form {
@@ -166,14 +170,19 @@ fn flow_surface_size(
             _ => (18.0, 72.0),
         };
     }
-    let expanded = state == SurfaceState::Expanded;
-    let base = match (form, expanded) {
-        ("horizon", false) => (350.0, 58.0),
-        ("horizon", true) => (350.0, 208.0),
-        ("petal", false) => (170.0, 118.0),
-        ("petal", true) => (300.0, 160.0),
-        (_, false) => (56.0, 310.0),
-        (_, true) => (330.0, 160.0),
+    let expanded = state == SurfaceState::Expanded && provider_count > 0;
+    let compact_providers = provider_count.min(3);
+    let base = match (form, expanded, compact_providers) {
+        ("flowline", false, 0) => (56.0, 84.0),
+        ("horizon", false, 0) => (138.0, 52.0),
+        ("petal", false, 0) => (64.0, 64.0),
+        ("flowline", false, providers) => (56.0, 76.0 + f64::from(providers) * 50.0),
+        ("horizon", false, _) => (350.0, 58.0),
+        ("horizon", true, _) => (350.0, 208.0),
+        ("petal", false, _) => (170.0, 118.0),
+        ("petal", true, _) => (300.0, 160.0),
+        (_, true, _) => (330.0, 160.0),
+        (_, false, _) => (56.0, 84.0),
     };
     let scale = f64::from(scale_percent.clamp(75, 125)) / 100.0;
     let (mut width, mut height) = (base.0 * scale, base.1 * scale);
@@ -318,25 +327,82 @@ fn saved_top_arc_position_is_visible(window: &tauri::WebviewWindow, x: i32, y: i
     })
 }
 
-fn remember_top_arc_position(window: &tauri::WebviewWindow) {
-    let Ok(position) = window.outer_position() else {
+#[derive(Clone, Copy)]
+struct PendingTopArcPosition {
+    revision: u64,
+    x: i32,
+    y: i32,
+}
+
+fn pending_top_arc_position() -> &'static Mutex<Option<PendingTopArcPosition>> {
+    static PENDING: OnceLock<Mutex<Option<PendingTopArcPosition>>> = OnceLock::new();
+    PENDING.get_or_init(|| Mutex::new(None))
+}
+
+/// Persist only after a drag settles. Writing settings/geometry for every
+/// Windows Moved event visibly fights the pointer on some WebView2 systems.
+fn queue_top_arc_position(position: (i32, i32)) {
+    let revision = {
+        let mut pending = match pending_top_arc_position().lock() {
+            Ok(pending) => pending,
+            Err(_) => return,
+        };
+        let revision = pending
+            .as_ref()
+            .map_or(1, |current| current.revision.wrapping_add(1));
+        *pending = Some(PendingTopArcPosition {
+            revision,
+            x: position.0,
+            y: position.1,
+        });
+        revision
+    };
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(Duration::from_millis(180)).await;
+        let position =
+            pending_top_arc_position()
+                .lock()
+                .ok()
+                .and_then(|mut pending| match *pending {
+                    Some(current) if current.revision == revision => pending.take(),
+                    _ => None,
+                });
+        if let Some(position) = position {
+            geometry_store::save_entry(
+                TOP_ARC_FREE_POSITION_KEY,
+                StoredGeometry {
+                    x: position.x,
+                    y: position.y,
+                    width: None,
+                    height: None,
+                },
+            );
+        }
+    });
+}
+
+/// Preserve a native free drag. We only correct a genuinely off-screen
+/// position; critically, we never snap the window back to its *previous*
+/// saved position during the gesture.
+fn retain_live_top_arc_position(window: &tauri::WebviewWindow) {
+    let (Ok(position), Ok(size), Some(work_area)) = (
+        window.outer_position(),
+        window.outer_size(),
+        monitor_work_area_logical(window),
+    ) else {
         return;
     };
     let scale = window.scale_factor().unwrap_or(1.0).max(0.01);
-    let x = (position.x as f64 / scale).round() as i32;
-    let y = (position.y as f64 / scale).round() as i32;
-    if !saved_top_arc_position_is_visible(window, x, y) {
-        return;
-    }
-    geometry_store::save_entry(
-        TOP_ARC_FREE_POSITION_KEY,
-        StoredGeometry {
-            x,
-            y,
-            width: None,
-            height: None,
-        },
+    let current = (position.x as f64 / scale, position.y as f64 / scale);
+    let bounded = clamp_top_arc_position_to_work_area(
+        current,
+        (size.width as f64 / scale, size.height as f64 / scale),
+        work_area,
     );
+    if (bounded.0 - current.0).abs() > 0.5 || (bounded.1 - current.1).abs() > 0.5 {
+        let _ = window.set_position(LogicalPosition::new(bounded.0.round(), bounded.1.round()));
+    }
+    queue_top_arc_position((bounded.0.round() as i32, bounded.1.round() as i32));
 }
 
 fn clamp_top_arc_position_to_work_area(
@@ -477,20 +543,13 @@ pub fn resize_top_arc(
 /// gesture. The subsequent Moved event records the final logical position.
 #[tauri::command]
 pub fn begin_top_arc_drag(window: tauri::WebviewWindow) -> Result<(), String> {
+    // Start the OS gesture first. Disk writes ahead of start_dragging made the
+    // island feel sticky and caused pointer movement to be lost.
+    window.start_dragging().map_err(|error| error.to_string())?;
     let mut settings = Settings::load();
-    let previous_placement = settings.top_arc_placement.clone();
-    let previous_anchor = settings.top_arc_anchor.clone();
     settings.top_arc_placement = "free".to_string();
     settings.top_arc_anchor = "free".to_string();
     settings.save().map_err(|error| error.to_string())?;
-    if let Err(error) = window.start_dragging() {
-        // Do not leave Settings claiming a successful free placement when the
-        // native gesture could not begin.
-        settings.top_arc_placement = previous_placement;
-        settings.top_arc_anchor = previous_anchor;
-        let _ = settings.save();
-        return Err(error.to_string());
-    }
     // The webview keeps its interaction model as React state. Notify it that
     // free placement is now authoritative as soon as the native drag starts.
     let _ = window.app_handle().emit("quotaarc:surfaces-changed", ());
@@ -723,11 +782,7 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) -
                     // to snap the user back to the top center.
                     if matches!(event, tauri::WindowEvent::Moved(_)) {
                         if settings.top_arc_anchor == "free" {
-                            // Clamp the live drag as well as the restored
-                            // position; an oversized expanded panel can never
-                            // be left mostly off-screen for this session.
-                            position_top_arc(&webview);
-                            remember_top_arc_position(&webview);
+                            retain_live_top_arc_position(&webview);
                         } else {
                             position_top_arc(&webview);
                         }
@@ -1154,23 +1209,31 @@ mod tests {
     fn flow_surface_envelopes_stay_small_and_the_hidden_tab_stays_reachable() {
         let work_area = Some((1366.0, 768.0));
         assert_eq!(
-            flow_surface_size("flowline", SurfaceState::Hidden, 100, work_area),
+            flow_surface_size("flowline", SurfaceState::Hidden, 100, work_area, 3),
             (10.0, 56.0),
         );
         assert_eq!(
-            flow_surface_size("horizon", SurfaceState::Hidden, 100, work_area),
+            flow_surface_size("horizon", SurfaceState::Hidden, 100, work_area, 3),
             (72.0, 10.0),
         );
         assert_eq!(
-            flow_surface_size("petal", SurfaceState::Hidden, 100, work_area),
+            flow_surface_size("petal", SurfaceState::Hidden, 100, work_area, 3),
             (18.0, 18.0),
         );
-        let flowline = flow_surface_size("flowline", SurfaceState::Compact, 100, work_area);
+        let flowline = flow_surface_size("flowline", SurfaceState::Compact, 100, work_area, 3);
         assert!(flowline.0 <= 1366.0 * 0.08 && flowline.1 <= 768.0 * 0.42);
-        let horizon = flow_surface_size("horizon", SurfaceState::Compact, 100, work_area);
+        let horizon = flow_surface_size("horizon", SurfaceState::Compact, 100, work_area, 3);
         assert!(horizon.0 <= 1366.0 * 0.30 && horizon.1 <= 768.0 * 0.10);
-        let petal = flow_surface_size("petal", SurfaceState::Compact, 100, work_area);
+        let petal = flow_surface_size("petal", SurfaceState::Compact, 100, work_area, 3);
         assert!(petal.0 <= 1366.0 * 0.16 && petal.1 <= 768.0 * 0.20);
+
+        // A provider registry with no resolved readings must not reserve the
+        // three-provider rail. This is the native counterpart to the React
+        // truthfulness filter.
+        assert_eq!(
+            flow_surface_size("flowline", SurfaceState::Compact, 100, work_area, 0),
+            (56.0, 84.0),
+        );
     }
 
     #[test]

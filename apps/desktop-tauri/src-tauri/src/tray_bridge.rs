@@ -785,7 +785,7 @@ fn build_tooltip(
         lines.push(status);
     }
 
-    format!("CodexBar\n{}", lines.join("\n"))
+    format!("QuotaArc\n{}", lines.join("\n"))
 }
 
 fn truncate_tooltip_text(text: &str, max_chars: usize) -> String {
@@ -1313,7 +1313,7 @@ mod tests {
 
         assert_eq!(
             tooltip,
-            "CodexBar\nClaude: 13% • Resets in 2h 05m\nCodex: 8% • Resets in 4h 10m"
+            "QuotaArc\nClaude: 13% • Resets in 2h 05m\nCodex: 8% • Resets in 4h 10m"
         );
     }
 
@@ -1329,7 +1329,7 @@ mod tests {
 
         let tooltip = build_tooltip(&[codex], codexbar::settings::Language::English);
 
-        assert_eq!(tooltip, "CodexBar\nCodex: 16% • Resets in 3d 17h");
+        assert_eq!(tooltip, "QuotaArc\nCodex: 16% • Resets in 3d 17h");
     }
 
     #[test]

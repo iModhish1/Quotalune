@@ -66,9 +66,7 @@ describe("SurfacesTab", () => {
     bridge.getSurfaceSettings.mockResolvedValue({ ...SETTINGS, topArcEnabled: true });
     render(<SurfacesTab />);
 
-    fireEvent.change(await screen.findByRole("combobox", { name: "QuotaArc surface structure" }), {
-      target: { value: "horizon" },
-    });
+    fireEvent.click(await screen.findByRole("button", { name: /Horizon/ }));
 
     await waitFor(() => expect(bridge.updateSurfaceSettings).toHaveBeenCalledWith({
       topArcForm: "horizon",

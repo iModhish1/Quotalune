@@ -16,14 +16,6 @@ const ABOUT_LINKS: ReadonlyArray<{ labelKey: LocaleKey; url: string }> = [
     labelKey: "AboutLinkGitHub",
     url: REPO_URL,
   },
-  {
-    labelKey: "AboutLinkWebsite",
-    url: "https://codexbar.app",
-  },
-  {
-    labelKey: "AboutLinkOriginalProject",
-    url: "https://github.com/steipete/CodexBar",
-  },
 ];
 
 export default function AboutTab({ settings, set, saving }: TabProps) {
@@ -218,7 +210,7 @@ export default function AboutTab({ settings, set, saving }: TabProps) {
         <button
           type="button"
           className="about-link about-link--inline"
-          onClick={() => openAboutLink("https://github.com/steipete/CodexBar")}
+          onClick={() => openAboutLink(REPO_URL)}
         >
           {t("AppName")}
         </button>
