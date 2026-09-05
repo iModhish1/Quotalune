@@ -5,7 +5,7 @@ interface Props {
   provider: ProviderDetail;
   busy: boolean;
   onRefresh: () => void;
-  onSwitchAccount: () => void;
+  onConnect: () => void;
   onOpenDashboard: () => void;
   onOpenStatusPage: () => void;
   onBuyCredits: () => void;
@@ -22,7 +22,7 @@ export function QuickActionsSection({
   provider,
   busy,
   onRefresh,
-  onSwitchAccount,
+  onConnect,
   onOpenDashboard,
   onOpenStatusPage,
   onBuyCredits,
@@ -40,12 +40,13 @@ export function QuickActionsSection({
         >
           {t("ActionRefresh")}
         </button>
-        {provider.dashboardUrl && (
+        {provider.canConnect && (
           <button
             type="button"
-            className="btn btn--ghost"
-            onClick={onSwitchAccount}
+            className="btn btn--primary"
+            onClick={onConnect}
             disabled={busy}
+            title={`Sign in to ${provider.displayName}`}
           >
             {t("ActionSwitchAccount")}
           </button>

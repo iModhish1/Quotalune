@@ -268,6 +268,17 @@ export function ProviderDetailPane({
         <ProviderIssueNotice detail={detail} t={t} />
       )}
 
+      <QuickActionsSection
+        provider={detail}
+        busy={busy}
+        onRefresh={handleRefresh}
+        onConnect={handleSwitchAccount}
+        onOpenDashboard={handleOpenDashboard}
+        onOpenStatusPage={handleOpenStatusPage}
+        onBuyCredits={handleBuyCredits}
+        t={t}
+      />
+
       <UsageSection
         provider={detail}
         resetTimeRelative={resetTimeRelative}
@@ -351,16 +362,6 @@ export function ProviderDetailPane({
         t={t}
       />
 
-      <QuickActionsSection
-        provider={detail}
-        busy={busy}
-        onRefresh={handleRefresh}
-        onSwitchAccount={handleSwitchAccount}
-        onOpenDashboard={handleOpenDashboard}
-        onOpenStatusPage={handleOpenStatusPage}
-        onBuyCredits={handleBuyCredits}
-        t={t}
-      />
     </div>
   );
 }

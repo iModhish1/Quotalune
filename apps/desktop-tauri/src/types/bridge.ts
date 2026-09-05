@@ -883,6 +883,8 @@ export interface ProviderDetail {
   dashboardUrl: string | null;
   statusPageUrl: string | null;
   buyCreditsUrl: string | null;
+  /** The desktop shell can start a browser, device, or supported CLI sign-in flow. */
+  canConnect?: boolean;
 
   hasSnapshot: boolean;
 

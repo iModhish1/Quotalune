@@ -38,6 +38,10 @@ pub struct ProviderDetail {
     pub dashboard_url: Option<String>,
     pub status_page_url: Option<String>,
     pub buy_credits_url: Option<String>,
+    /// Whether QuotaArc can initiate a sign-in or connection flow for this
+    /// provider. Kept separate from `dashboard_url`: Copilot and Kiro use
+    /// their own device/CLI flows.
+    pub can_connect: bool,
 
     // True if the shared backend has produced any snapshot yet.
     pub has_snapshot: bool,
@@ -70,6 +74,7 @@ pub(crate) fn build_provider_detail(provider_id: &str) -> Result<ProviderDetail,
     } else {
         metadata.dashboard_url.map(|s| s.to_string())
     };
+    let can_connect = provider_supports_connection(id, dashboard_url.is_some());
 
     Ok(ProviderDetail {
         id: id.cli_name().to_string(),
@@ -99,11 +104,16 @@ pub(crate) fn build_provider_detail(provider_id: &str) -> Result<ProviderDetail,
         } else {
             None
         },
+        can_connect,
         has_snapshot: false,
         usage_source: provider_usage_source_lookup(&settings, id.cli_name()),
         cookie_source: provider_cookie_source_lookup(&settings, id.cli_name()),
         region: provider_region_lookup(&settings, id.cli_name()),
     })
+}
+
+fn provider_supports_connection(id: ProviderId, has_dashboard: bool) -> bool {
+    has_dashboard || matches!(id, ProviderId::Copilot | ProviderId::Kiro)
 }
 
 #[tauri::command]
@@ -209,5 +219,18 @@ pub fn get_credential_storage_status() -> CredentialStorageStatusBridge {
         token_accounts: credential_file_status_label(secure_file::status(
             &TokenAccountStore::default_path(),
         )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn connection_capability_includes_browser_and_device_flows() {
+        assert!(provider_supports_connection(ProviderId::Codex, true));
+        assert!(provider_supports_connection(ProviderId::Copilot, false));
+        assert!(provider_supports_connection(ProviderId::Kiro, false));
+        assert!(!provider_supports_connection(ProviderId::Claude, false));
     }
 }
