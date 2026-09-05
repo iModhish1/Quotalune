@@ -36,7 +36,7 @@
   "bundle": {
     "active": true,
     "resources": {
-      "../../../assets/brand/icons/quotaarc-icon-64.png": "quotaarc-icon-64.png"
+      "../../../assets/brand/icons/quotaarc-icon-128.png": "quotaarc-icon-128.png"
     },
     "targets": [
       "nsis",

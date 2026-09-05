@@ -324,7 +324,7 @@ fn main() {
         .setup(move |app| {
             if let Ok(icon_path) = app
                 .path()
-                .resolve("quotaarc-icon-64.png", BaseDirectory::Resource)
+                .resolve("quotaarc-icon-128.png", BaseDirectory::Resource)
             {
                 codexbar::notifications::configure_toast_icon(icon_path);
             }

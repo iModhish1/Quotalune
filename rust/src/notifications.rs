@@ -36,7 +36,7 @@ pub fn configure_toast_icon(path: PathBuf) {
 fn toast_icon_path() -> Option<PathBuf> {
     TOAST_ICON_PATH.get().cloned().or_else(|| {
         let source_asset = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../assets/brand/icons/quotaarc-icon-64.png");
+            .join("../assets/brand/icons/quotaarc-icon-128.png");
         source_asset.is_file().then_some(source_asset)
     })
 }
@@ -66,7 +66,7 @@ fn xml_escape(value: &str) -> String {
 fn toast_template(title: &str, body: &str, icon: Option<&Path>) -> String {
     let logo = icon.map_or_else(String::new, |path| {
         format!(
-            "<image placement=\"appLogoOverride\" src=\"{}\" hint-crop=\"circle\" alt=\"QuotaArc\"/>",
+            "<image placement=\"appLogoOverride\" src=\"{}\" alt=\"QuotaArc\"/>",
             file_uri(path)
         )
     });
@@ -720,14 +720,15 @@ mod tests {
             "Usage < alert",
             "Claude & OpenAI",
             Some(Path::new(
-                r"C:\Program Files\QuotaArc\quotaarc-icon-64.png",
+                r"C:\Program Files\QuotaArc\quotaarc-icon-128.png",
             )),
         );
 
         assert!(xml.contains("Usage &lt; alert"));
         assert!(xml.contains("Claude &amp; OpenAI"));
         assert!(xml.contains("placement=\"appLogoOverride\""));
-        assert!(xml.contains("file:///C:/Program%20Files/QuotaArc/quotaarc-icon-64.png"));
+        assert!(xml.contains("file:///C:/Program%20Files/QuotaArc/quotaarc-icon-128.png"));
+        assert!(!xml.contains("hint-crop"));
     }
     use crate::core::{PaceStage, RateWindow, UsagePace};
     use chrono::{DateTime, Duration, Utc};
