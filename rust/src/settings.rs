@@ -650,7 +650,8 @@ pub fn normalize_flow_surface_anchor(form: &str, anchor: &str) -> String {
             _ => "top".to_string(),
         },
         "petal" | "orbital" => match anchor {
-            "top-left" | "top-right" | "bottom-left" | "bottom-right" => anchor.to_string(),
+            "left" | "right" | "top" | "bottom" | "top-left" | "top-right" | "bottom-left"
+            | "bottom-right" => anchor.to_string(),
             _ => "bottom-right".to_string(),
         },
         _ => match anchor {

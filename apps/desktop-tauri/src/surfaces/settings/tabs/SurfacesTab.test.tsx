@@ -74,4 +74,13 @@ describe("SurfacesTab", () => {
     }));
     expect(screen.getByRole("combobox", { name: "QuotaArc surface position" })).toHaveValue("top");
   });
+
+  it("offers true wall docking for compact orbital structures", async () => {
+    bridge.getSurfaceSettings.mockResolvedValue({ ...SETTINGS, topArcEnabled: true, topArcForm: "orbital", topArcAnchor: "right" });
+    render(<SurfacesTab />);
+
+    const position = await screen.findByRole("combobox", { name: "QuotaArc surface position" });
+    expect(screen.getByRole("option", { name: "Right wall" })).toHaveValue("right");
+    expect(position).toHaveValue("right");
+  });
 });

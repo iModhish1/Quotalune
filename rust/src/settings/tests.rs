@@ -336,9 +336,10 @@ fn flow_surface_form_and_anchor_normalization_remain_bounded() {
     assert_eq!(normalize_flow_surface_anchor("horizon", "bottom"), "bottom");
     assert_eq!(normalize_flow_surface_anchor("horizon", "left"), "top");
     assert_eq!(normalize_flow_surface_anchor("petal", "top-left"), "top-left");
-    assert_eq!(normalize_flow_surface_anchor("petal", "right"), "bottom-right");
+    assert_eq!(normalize_flow_surface_anchor("petal", "right"), "right");
     assert_eq!(normalize_flow_surface_anchor("petal", "free"), "free");
     assert_eq!(normalize_flow_surface_anchor("orbital", "top-right"), "top-right");
+    assert_eq!(normalize_flow_surface_anchor("orbital", "left"), "left");
 }
 
 #[test]

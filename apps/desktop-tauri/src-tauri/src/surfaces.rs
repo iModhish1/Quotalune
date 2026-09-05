@@ -25,6 +25,8 @@ use crate::surface_kit::{
 
 /// Edge margin for the Top Arc from the top of the work area, logical px.
 const TOP_ARC_MARGIN: f64 = 10.0;
+/// Logical px from an edge at which a free drag becomes a deliberate dock.
+const FLOW_SURFACE_DOCK_DISTANCE: f64 = 24.0;
 const TOP_ARC_FREE_POSITION_KEY: &str = TOP_ARC_LABEL;
 
 fn surface_states() -> &'static Mutex<HashMap<String, SurfaceState>> {
@@ -406,6 +408,16 @@ fn retain_live_top_arc_position(window: &tauri::WebviewWindow) {
         (size.width as f64 / scale, size.height as f64 / scale),
         work_area,
     );
+    let settings = Settings::load();
+    if let Some(anchor) = resolve_flow_surface_dock(
+        &settings.top_arc_form,
+        bounded,
+        (size.width as f64 / scale, size.height as f64 / scale),
+        work_area,
+    ) {
+        dock_top_arc_to_anchor(window, anchor);
+        return;
+    }
     if (bounded.0 - current.0).abs() > 0.5 || (bounded.1 - current.1).abs() > 0.5 {
         let _ = window.set_position(LogicalPosition::new(bounded.0.round(), bounded.1.round()));
     }
@@ -423,6 +435,67 @@ fn clamp_top_arc_position_to_work_area(
     let max_x = (work_x + work_width - width).max(work_x);
     let max_y = (work_y + work_height - height).max(work_y);
     (x.clamp(work_x, max_x), y.clamp(work_y, max_y))
+}
+
+/// Resolve a real dock from a free-drag position. A dock changes ownership of
+/// placement to the anchor path, rather than repeatedly fighting the drag.
+fn resolve_flow_surface_dock(
+    form: &str,
+    position: (f64, f64),
+    size: (f64, f64),
+    work_area: (f64, f64, f64, f64),
+) -> Option<&'static str> {
+    let (x, y) = position;
+    let (width, height) = size;
+    let (work_x, work_y, work_width, work_height) = work_area;
+    let near_left = (x - work_x).abs() <= FLOW_SURFACE_DOCK_DISTANCE;
+    let near_right = (x + width - (work_x + work_width)).abs() <= FLOW_SURFACE_DOCK_DISTANCE;
+    let near_top = (y - work_y).abs() <= FLOW_SURFACE_DOCK_DISTANCE;
+    let near_bottom = (y + height - (work_y + work_height)).abs() <= FLOW_SURFACE_DOCK_DISTANCE;
+
+    match form {
+        "flowline" if near_left => Some("left"),
+        "flowline" if near_right => Some("right"),
+        "horizon" if near_top => Some("top"),
+        "horizon" if near_bottom => Some("bottom"),
+        "petal" | "orbital" => {
+            if near_top && near_left {
+                Some("top-left")
+            } else if near_top && near_right {
+                Some("top-right")
+            } else if near_bottom && near_left {
+                Some("bottom-left")
+            } else if near_bottom && near_right {
+                Some("bottom-right")
+            } else if near_left {
+                Some("left")
+            } else if near_right {
+                Some("right")
+            } else if near_top {
+                Some("top")
+            } else if near_bottom {
+                Some("bottom")
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+fn dock_top_arc_to_anchor(window: &tauri::WebviewWindow, anchor: &str) {
+    let mut settings = Settings::load();
+    settings.top_arc_anchor =
+        codexbar::settings::normalize_flow_surface_anchor(&settings.top_arc_form, anchor);
+    // `top_arc_anchor` is the docking contract; the legacy placement stays
+    // free because a side dock is not a top-corner preset.
+    settings.top_arc_placement = "free".to_string();
+    if settings.save().is_err() {
+        return;
+    }
+    geometry_store::remove_entry(TOP_ARC_FREE_POSITION_KEY);
+    position_top_arc(window);
+    let _ = window.app_handle().emit("quotaarc:surfaces-changed", ());
 }
 
 fn position_top_arc(window: &tauri::WebviewWindow) {
@@ -474,6 +547,22 @@ fn position_top_arc(window: &tauri::WebviewWindow) {
             "bottom-left" => (
                 work_x + TOP_ARC_MARGIN,
                 work_y + (work_h - h - TOP_ARC_MARGIN).max(0.0),
+            ),
+            "top" => (
+                work_x + ((work_w - w) / 2.0).max(0.0),
+                work_y + TOP_ARC_MARGIN,
+            ),
+            "bottom" => (
+                work_x + ((work_w - w) / 2.0).max(0.0),
+                work_y + (work_h - h - TOP_ARC_MARGIN).max(0.0),
+            ),
+            "left" => (
+                work_x + TOP_ARC_MARGIN,
+                work_y + ((work_h - h) / 2.0).max(0.0),
+            ),
+            "right" => (
+                work_x + (work_w - w - TOP_ARC_MARGIN).max(0.0),
+                work_y + ((work_h - h) / 2.0).max(0.0),
             ),
             _ => (
                 work_x + (work_w - w - TOP_ARC_MARGIN).max(0.0),
@@ -1262,6 +1351,32 @@ mod tests {
                 (10.0, 40.0, 1_280.0, 720.0),
             ),
             (770.0, 100.0),
+        );
+    }
+
+    #[test]
+    fn free_flow_surface_drag_docks_to_the_nearest_compatible_wall() {
+        let work_area = (0.0, 0.0, 1_280.0, 720.0);
+
+        assert_eq!(
+            resolve_flow_surface_dock("flowline", (1.0, 250.0), (56.0, 210.0), work_area),
+            Some("left")
+        );
+        assert_eq!(
+            resolve_flow_surface_dock("horizon", (450.0, 662.0), (350.0, 58.0), work_area),
+            Some("bottom")
+        );
+        assert_eq!(
+            resolve_flow_surface_dock("orbital", (1_176.0, 1.0), (104.0, 104.0), work_area),
+            Some("top-right")
+        );
+        assert_eq!(
+            resolve_flow_surface_dock("orbital", (1_177.0, 260.0), (104.0, 104.0), work_area),
+            Some("right")
+        );
+        assert_eq!(
+            resolve_flow_surface_dock("petal", (550.0, 320.0), (170.0, 118.0), work_area),
+            None
         );
     }
 

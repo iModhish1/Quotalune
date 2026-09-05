@@ -173,6 +173,14 @@ body:has(.flow-surface-host) #root {
 .flow-surface[data-form="petal"][data-anchor="top-right"] .flow-surface__details { bottom: 0; left: 0; }
 .flow-surface[data-form="petal"][data-anchor="top-left"] .flow-surface__core { top: 0; left: 0; }
 .flow-surface[data-form="petal"][data-anchor="top-left"] .flow-surface__details { right: 0; bottom: 0; }
+.flow-surface[data-form="petal"][data-anchor="right"] .flow-surface__core { top: 50%; right: 0; transform: translateY(-50%); }
+.flow-surface[data-form="petal"][data-anchor="right"] .flow-surface__details { top: 0; left: 0; }
+.flow-surface[data-form="petal"][data-anchor="left"] .flow-surface__core { top: 50%; left: 0; transform: translateY(-50%); }
+.flow-surface[data-form="petal"][data-anchor="left"] .flow-surface__details { top: 0; right: 0; }
+.flow-surface[data-form="petal"][data-anchor="top"] .flow-surface__core { top: 0; left: 50%; transform: translateX(-50%); }
+.flow-surface[data-form="petal"][data-anchor="top"] .flow-surface__details { bottom: 0; left: 0; }
+.flow-surface[data-form="petal"][data-anchor="bottom"] .flow-surface__core { bottom: 0; left: 50%; transform: translateX(-50%); }
+.flow-surface[data-form="petal"][data-anchor="bottom"] .flow-surface__details { top: 0; left: 0; }
 
 /* Orbital: a compact free-corner instrument, not a literal clock. */
 .flow-surface__reveal--orbital { border-radius: 50%; }
@@ -197,6 +205,14 @@ body:has(.flow-surface-host) #root {
 .flow-surface[data-form="orbital"][data-anchor="top-right"] .flow-surface__details { bottom: 0; left: 0; }
 .flow-surface[data-form="orbital"][data-anchor="top-left"] .flow-surface__core { top: 0; left: 0; }
 .flow-surface[data-form="orbital"][data-anchor="top-left"] .flow-surface__details { right: 0; bottom: 0; }
+.flow-surface[data-form="orbital"][data-anchor="right"] .flow-surface__core { top: 50%; right: 0; transform: translateY(-50%); }
+.flow-surface[data-form="orbital"][data-anchor="right"] .flow-surface__details { top: 0; left: 0; }
+.flow-surface[data-form="orbital"][data-anchor="left"] .flow-surface__core { top: 50%; left: 0; transform: translateY(-50%); }
+.flow-surface[data-form="orbital"][data-anchor="left"] .flow-surface__details { top: 0; right: 0; }
+.flow-surface[data-form="orbital"][data-anchor="top"] .flow-surface__core { top: 0; left: 50%; transform: translateX(-50%); }
+.flow-surface[data-form="orbital"][data-anchor="top"] .flow-surface__details { bottom: 0; left: 0; }
+.flow-surface[data-form="orbital"][data-anchor="bottom"] .flow-surface__core { bottom: 0; left: 50%; transform: translateX(-50%); }
+.flow-surface[data-form="orbital"][data-anchor="bottom"] .flow-surface__details { top: 0; left: 0; }
 
 .flow-surface[data-state="hover"] .flow-surface__core,
 .flow-surface__core:hover { border-color: rgba(245, 247, 250, 0.46); box-shadow: 0 18px 46px rgba(0, 0, 0, 0.68), inset 0 1px 0 rgba(255, 255, 255, 0.18); }

@@ -169,7 +169,7 @@ export default function SurfacesTab() {
           >
             {config.topArcForm === "flowline" && <><option value="right">Right edge</option><option value="left">Left edge</option></>}
             {config.topArcForm === "horizon" && <><option value="top">Top edge</option><option value="bottom">Bottom edge</option></>}
-            {(config.topArcForm === "petal" || config.topArcForm === "orbital") && <><option value="bottom-right">Bottom right</option><option value="bottom-left">Bottom left</option><option value="top-right">Top right</option><option value="top-left">Top left</option></>}
+            {(config.topArcForm === "petal" || config.topArcForm === "orbital") && <><option value="right">Right wall</option><option value="left">Left wall</option><option value="top">Top wall</option><option value="bottom">Bottom wall</option><option value="bottom-right">Bottom right</option><option value="bottom-left">Bottom left</option><option value="top-right">Top right</option><option value="top-left">Top left</option></>}
             <option value="free">Free placement</option>
           </select>
           </SurfaceControl>
