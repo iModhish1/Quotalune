@@ -13,6 +13,7 @@ import type {
 import { hasSurfaceQuotaValue } from "../../design-system/flowSurface";
 import { CANONICAL_THEME, catalogBySlug } from "../../design-system/themeCatalog";
 import "./FlowSurface.css";
+import ReelSurface from "../reel/ReelSurface";
 
 export interface FlowSurfaceProps {
   catalog: string;
@@ -26,6 +27,7 @@ export interface FlowSurfaceProps {
   onTogglePinned?: () => void;
   onRequestCompact?: () => void;
   onStartDrag?: () => void;
+  demoMode?: boolean;
 }
 
 function QuotaArcMark() {
@@ -109,7 +111,9 @@ export default function FlowSurface({
   onTogglePinned,
   onRequestCompact,
   onStartDrag,
+  demoMode,
 }: FlowSurfaceProps) {
+  if (settings.form === "reel") return <ReelSurface {...{catalog, settings, state, providers, focusedIndex, onFocusProvider, onReveal, onToggleExpanded, onTogglePinned, onRequestCompact, onStartDrag, demoMode}} />;
   const theme = catalogBySlug(catalog) ?? CANONICAL_THEME;
   const visible = providers.filter(hasSurfaceQuotaValue).slice(0, 3);
   const focus = visible.length === 0 ? -1 : Math.min(Math.max(focusedIndex, 0), visible.length - 1);
@@ -171,6 +175,7 @@ export default function FlowSurface({
       aria-label="QuotaArc compact quota surface"
     >
       <div className="flow-surface__core">
+        {demoMode && <span className="flow-surface__demo" title="Synthetic data — not connected accounts">DEMO</span>}
         <button
           type="button"
           className="flow-surface__summary"

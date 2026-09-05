@@ -306,6 +306,8 @@ fn main() {
             surfaces::resize_taskbar_arc_surface,
             surfaces::update_surface_settings,
             surfaces::get_surface_settings,
+            surfaces::demo::get_surface_demo_mode,
+            surfaces::demo::set_surface_demo_mode,
             command_profiles::get_profile_store,
             command_profiles::switch_profile,
             command_profiles::create_profile,

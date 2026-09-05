@@ -3,6 +3,7 @@ import { type ReactNode, useCallback, useEffect, useState } from "react";
 
 import { Toggle } from "../../../components/FormControls";
 import { useLocale } from "../../../hooks/useLocale";
+import { useSurfaceDemo } from "../../../hooks/useSurfaceDemo";
 import {
   FLOW_SURFACE_FORM_CATALOG,
   flowSurfaceAnchorLabel,
@@ -69,6 +70,7 @@ function SurfaceControl({
 }
 
 export default function SurfacesTab() {
+  const demo = useSurfaceDemo();
   const { t } = useLocale();
   const [config, setConfig] = useState<SurfaceSettings | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -116,6 +118,14 @@ export default function SurfacesTab() {
       </header>
 
       <div className="surface-settings__grid">
+        <SurfaceControl title="Temporary demo" description="Six synthetic providers. No accounts, credentials or history are changed. Turns off when the app exits.">
+          <Toggle checked={demo.enabled} ariaLabel="Use six demo providers" disabled={false} onChange={value => { void demo.toggle(value); }} />
+          <button type="button" onClick={() => {
+            patch({ topArcEnabled: true, topArcForm: "reel", topArcAnchor: "right" });
+            void demo.toggle(true);
+          }}>Try Orbit Reel</button>
+          {demo.error && <p role="alert">{demo.error}</p>}
+        </SurfaceControl>
         <div className="surface-settings__column">
           <SurfaceControl title="Show surface" description="Keep a compact quota control within reach without covering your work.">
           <Toggle

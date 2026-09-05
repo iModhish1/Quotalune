@@ -95,7 +95,7 @@ describe("Flow Surface contract", () => {
 
   it("defines each structure's label, default anchor, and safe anchors in one catalog", () => {
     expect(FLOW_SURFACE_FORM_CATALOG.map((form) => form.id)).toEqual([
-      "flowline", "horizon", "petal", "orbital", "lens",
+      "flowline", "reel", "horizon", "petal", "orbital", "lens",
     ]);
     expect(flowSurfaceDefaultAnchor("lens")).toBe("bottom-right");
     expect(flowSurfaceAnchorOptions("flowline")).toEqual(["right", "left", "free"]);

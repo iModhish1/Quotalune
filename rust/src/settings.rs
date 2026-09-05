@@ -631,6 +631,7 @@ pub fn normalize_top_arc_placement(value: &str) -> String {
 /// Unknown legacy tokens resolve to the compact Flowline default.
 pub fn normalize_flow_surface_form(value: &str) -> String {
     match value {
+        "reel" => "reel".to_string(),
         "horizon" => "horizon".to_string(),
         "petal" => "petal".to_string(),
         "orbital" => "orbital".to_string(),
@@ -650,7 +651,7 @@ pub fn normalize_flow_surface_anchor(form: &str, anchor: &str) -> String {
             "bottom" => "bottom".to_string(),
             _ => "top".to_string(),
         },
-        "petal" | "orbital" | "lens" => match anchor {
+        "petal" | "orbital" | "lens" | "reel" => match anchor {
             "left" | "right" | "top" | "bottom" | "top-left" | "top-right" | "bottom-left"
             | "bottom-right" => anchor.to_string(),
             _ => "bottom-right".to_string(),

@@ -4,7 +4,7 @@
  * A form changes its compact silhouette and the direction that details open;
  * it never changes quota semantics or creates a second native window.
  */
-export type FlowSurfaceForm = "flowline" | "horizon" | "petal" | "orbital" | "lens";
+export type FlowSurfaceForm = "flowline" | "horizon" | "petal" | "orbital" | "lens" | "reel";
 export type FlowSurfaceAnchor =
   | "left"
   | "right"
@@ -45,6 +45,13 @@ export const FLOW_SURFACE_FORM_CATALOG = [
     description: "Quiet vertical rail",
     defaultAnchor: "right",
     anchors: ["right", "left", "free"],
+  },
+  {
+    id: "reel",
+    name: "Orbit Reel",
+    description: "Curved provider carousel",
+    defaultAnchor: "right",
+    anchors: ["right", "left", "top", "bottom", "bottom-right", "bottom-left", "top-right", "top-left", "free"],
   },
   {
     id: "horizon",
@@ -149,6 +156,10 @@ const VALID_ANCHORS = new Set<FlowSurfaceAnchor>([
 ]);
 
 const BASE_ENVELOPES: Record<FlowSurfaceForm, Record<Exclude<FlowSurfaceState, "hidden" | "peek" | "hover" | "pinned">, FlowSurfaceEnvelope>> = {
+  reel: {
+    compact: { width: 112, height: 208 },
+    expanded: { width: 320, height: 224 },
+  },
   flowline: {
     compact: { width: 56, height: 310 },
     expanded: { width: 330, height: 160 },
@@ -229,6 +240,7 @@ export function flowSurfaceEnvelope(
   const compact = state !== "expanded" && state !== "pinned";
   const providers = Math.max(0, Math.min(3, Math.floor(providerCount)));
   const emptyEnvelope: Record<FlowSurfaceForm, FlowSurfaceEnvelope> = {
+    reel: { width: 112, height: 208 },
     flowline: { width: 56, height: 84 },
     horizon: { width: 138, height: 52 },
     petal: { width: 64, height: 64 },

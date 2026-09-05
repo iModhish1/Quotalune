@@ -18,6 +18,7 @@ import CatalogSurface from "./CatalogSurface";
 import CatalogTaskbar, { CATALOG_TASKBAR_FIXTURE } from "./CatalogTaskbar";
 import TaskbarMotionProof from "./TaskbarMotionProof";
 import GeometrySurface from "./GeometrySurface";
+import ReelPreview from "./ReelPreview";
 import {
   TASKBAR_COMPACT_HEIGHT,
   TASKBAR_EXPANDED_HEIGHT,
@@ -71,6 +72,7 @@ const usageConfig: UsageDisplayConfig | undefined =
 (window as unknown as { __qaDemoProfiles?: number }).__qaDemoProfiles = profileCount;
 
 export default function DemoStage() {
+  if (params.get("gen") === "reel") return <ReelPreview />;
   const gen = params.get("gen") ?? "v3";
 
   const stage = (w: number, h: number, pos: CSSProperties, node: ReactNode) => (

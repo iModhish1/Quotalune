@@ -19,6 +19,8 @@ import {
   type SurfaceWindowState,
 } from "../../lib/surfaceBridge";
 import FlowSurface from "../flow-surface/FlowSurface";
+import { useSurfaceDemo } from "../../hooks/useSurfaceDemo";
+import { SURFACE_DEMO_PROVIDERS } from "../../lib/surfaceDemo";
 
 const DEMO_PROVIDERS: StageProvider[] = [
   { id: "codex", name: "OpenAI", iconId: "openai", resolvedMode: "remaining", arcFraction: 0.74, primaryValue: 74, secondaryValue: 26, primaryLabel: "remaining", reset: "3h 40m", status: "ok" },
@@ -51,6 +53,7 @@ function nativeState(state: FlowSurfaceState): SurfaceWindowState {
 }
 
 export default function TopArc({ demo }: TopArcProps) {
+  const surfaceDemo = useSurfaceDemo();
   const runtime = useStageRuntime({ enabled: !demo, surface: "top" });
   const [surfaceState, setSurfaceState] = useState<FlowSurfaceState>(() => demo ? demoState(demo) : "hidden");
   const [flowSettings, setFlowSettings] = useState<FlowSurfaceSettings>(DEFAULT_FLOW_SURFACE_SETTINGS);
@@ -62,7 +65,7 @@ export default function TopArc({ demo }: TopArcProps) {
   const nativeRevisionRef = useRef<string | null>(null);
   // A registered account is not a rendering entitlement. The compact host
   // receives only resolved values, so it cannot grow into an empty rail.
-  const providers = (demo ? DEMO_PROVIDERS : runtime.providers).filter(hasSurfaceQuotaValue);
+  const providers = (surfaceDemo.enabled ? SURFACE_DEMO_PROVIDERS : demo ? DEMO_PROVIDERS : runtime.providers).filter(hasSurfaceQuotaValue);
 
   const clearAutoHide = useCallback(() => {
     if (autoHideTimer.current != null) {
@@ -89,13 +92,13 @@ export default function TopArc({ demo }: TopArcProps) {
   useEffect(() => {
     if (demo || dragging) return;
     const intended = nativeState(surfaceState);
-    const revision = `${intended}:${providers.length}:${flowSettings.form}:${flowSettings.scale}`;
+    const revision = `${intended}:${providers.length}:${flowSettings.form}:${flowSettings.scale}:${flowSettings.anchor}`;
     if (nativeRevisionRef.current === revision) return;
     nativeRevisionRef.current = revision;
     void resizeTopArc(intended, providers.length).catch(() => {
       if (nativeRevisionRef.current === revision) nativeRevisionRef.current = null;
     });
-  }, [demo, dragging, flowSettings.form, flowSettings.scale, providers.length, surfaceState]);
+  }, [demo, dragging, flowSettings.form, flowSettings.scale, flowSettings.anchor, providers.length, surfaceState]);
 
   useEffect(() => {
     if (focus >= providers.length) setFocus(0);
@@ -141,6 +144,7 @@ export default function TopArc({ demo }: TopArcProps) {
         settings={flowSettings}
         state={surfaceState}
         providers={providers}
+        demoMode={surfaceDemo.enabled}
         focusedIndex={focus}
         onFocusProvider={setFocus}
         onReveal={() => setSurfaceState("compact")}

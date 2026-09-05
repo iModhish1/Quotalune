@@ -15,6 +15,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
 
+pub mod demo;
 mod native_drag;
 use tauri::{Emitter, LogicalPosition, Manager, WebviewUrl};
 
@@ -144,6 +145,15 @@ fn flow_surface_bounds(
     provider_count: u32,
 ) -> (f64, f64) {
     let work_area = monitor_work_area_logical(window).map(|(_, _, width, height)| (width, height));
+    if settings.top_arc_form == "reel" {
+        return reel_surface_size(
+            state,
+            settings.top_arc_scale,
+            work_area,
+            provider_count,
+            &settings.top_arc_anchor,
+        );
+    }
     flow_surface_size(
         &settings.top_arc_form,
         state,
@@ -221,6 +231,40 @@ fn flow_surface_size(
         height = height.min(height_cap.max(56.0));
     }
     (width.round(), height.round())
+}
+
+/// Orbit Reel stays the same size for one or many providers. Fit uniformly so
+/// native caps cannot crop the CSS stage on small/high-DPI work areas.
+fn reel_surface_size(
+    state: SurfaceState,
+    scale: u8,
+    work_area: Option<(f64, f64)>,
+    count: u32,
+    anchor: &str,
+) -> (f64, f64) {
+    let horizontal = matches!(anchor, "top" | "bottom");
+    if matches!(state, SurfaceState::Hidden | SurfaceState::Peek) {
+        return if horizontal {
+            (58.0, 28.0)
+        } else {
+            (28.0, 58.0)
+        };
+    }
+    let expanded = state == SurfaceState::Expanded && count > 0;
+    let base = match (horizontal, expanded) {
+        (false, false) => (112.0, 208.0),
+        (false, true) => (320.0, 224.0),
+        (true, false) => (208.0, 112.0),
+        (true, true) => (288.0, 280.0),
+    };
+    let mut factor = f64::from(scale.clamp(75, 125)) / 100.0;
+    if let Some((w, h)) = work_area {
+        factor = factor.min(w * 0.35 / base.0).min(h * 0.40 / base.1);
+    }
+    (
+        (base.0 * factor).round().max(1.0),
+        (base.1 * factor).round().max(1.0),
+    )
 }
 
 fn effective_click_through(settings: &Settings, surface: SurfaceKind, state: SurfaceState) -> bool {
@@ -426,7 +470,7 @@ fn free_top_arc_resize_position(
 ) -> (f64, f64) {
     // Match the core's CSS attachment point, not the transparent window origin.
     let (ax, ay) = match form {
-        "flowline" => (1.0, 0.5),
+        "flowline" | "reel" => (1.0, 0.5),
         "horizon" => (0.5, 0.0),
         _ => (1.0, 1.0),
     };
@@ -481,7 +525,7 @@ fn resolve_flow_surface_dock(
         "flowline" if near_right => Some("right"),
         "horizon" if near_top => Some("top"),
         "horizon" if near_bottom => Some("bottom"),
-        "petal" | "orbital" | "lens" => {
+        "petal" | "orbital" | "lens" | "reel" => {
             if near_top && near_left {
                 Some("top-left")
             } else if near_top && near_right {
@@ -564,7 +608,7 @@ fn position_top_arc_after_drag(window: &tauri::WebviewWindow) {
     let effective_anchor = if anchor == "free" {
         match settings.top_arc_form.as_str() {
             "horizon" => "top",
-            "flowline" => "right",
+            "flowline" | "reel" => "right",
             _ => "bottom-right",
         }
     } else {
@@ -679,7 +723,7 @@ pub fn reset_top_arc_position(app: tauri::AppHandle) -> Result<(), String> {
     settings.top_arc_placement = "top-center".to_string();
     settings.top_arc_anchor = match settings.top_arc_form.as_str() {
         "horizon" => "top",
-        "flowline" => "right",
+        "flowline" | "reel" => "right",
         _ => "bottom-right",
     }
     .to_string();
@@ -1425,6 +1469,35 @@ mod tests {
                 expected
             );
         }
+    }
+
+    #[test]
+    fn reel_has_fixed_density_and_fits_both_orientations() {
+        for anchor in ["left", "right", "top", "bottom", "free", "bottom-right"] {
+            for state in [SurfaceState::Compact, SurfaceState::Expanded] {
+                let one = reel_surface_size(state, 100, Some((1280.0, 720.0)), 1, anchor);
+                assert_eq!(
+                    one,
+                    reel_surface_size(state, 100, Some((1280.0, 720.0)), 6, anchor)
+                );
+                for scale in [75, 100, 125] {
+                    let (w, h) = reel_surface_size(state, scale, Some((800.0, 600.0)), 6, anchor);
+                    assert!(w <= 280.0 && h <= 240.0);
+                }
+            }
+        }
+        assert_eq!(
+            reel_surface_size(SurfaceState::Compact, 100, None, 6, "right"),
+            (112.0, 208.0)
+        );
+        assert_eq!(
+            reel_surface_size(SurfaceState::Compact, 100, None, 6, "top"),
+            (208.0, 112.0)
+        );
+        assert_eq!(
+            reel_surface_size(SurfaceState::Hidden, 100, None, 6, "top"),
+            (58.0, 28.0)
+        );
     }
 
     #[test]
