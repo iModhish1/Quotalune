@@ -4,6 +4,12 @@ import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Toggle } from "../../../components/FormControls";
 import { useLocale } from "../../../hooks/useLocale";
 import {
+  FLOW_SURFACE_FORM_CATALOG,
+  flowSurfaceAnchorLabel,
+  flowSurfaceAnchorOptions,
+  flowSurfaceDefaultAnchor,
+} from "../../../design-system/flowSurface";
+import {
   getSurfaceSettings,
   resetQuotaIslandPosition,
   updateSurfaceSettings,
@@ -40,12 +46,6 @@ function RangeControl({
       style={{ width: "100%" }}
     />
   );
-}
-
-function defaultAnchor(form: SurfaceSettings["topArcForm"]): SurfaceSettings["topArcAnchor"] {
-  if (form === "horizon") return "top";
-  if (form === "petal" || form === "orbital" || form === "lens") return "bottom-right";
-  return "right";
 }
 
 function SurfaceControl({
@@ -138,13 +138,7 @@ export default function SurfacesTab() {
             <legend>Structure</legend>
             <p>Changes the silhouette and placement behavior, never the quota logic.</p>
             <div className="surface-structure-picker__choices">
-              {([
-                ["flowline", "Flowline", "Quiet vertical rail"],
-                ["horizon", "Horizon", "Low-profile edge ribbon"],
-                ["petal", "Petal", "Compact corner island"],
-                ["orbital", "Orbital", "Soft floating instrument"],
-                ["lens", "Lens", "Low-profile responsive capsule"],
-              ] as const).map(([form, name, note]) => (
+              {FLOW_SURFACE_FORM_CATALOG.map(({ id: form, name, description: note }) => (
                 <button
                   key={form}
                   type="button"
@@ -152,7 +146,7 @@ export default function SurfacesTab() {
                   data-form={form}
                   data-selected={config.topArcForm === form}
                   aria-pressed={config.topArcForm === form}
-                  onClick={() => patch({ topArcForm: form, topArcAnchor: defaultAnchor(form) })}
+                  onClick={() => patch({ topArcForm: form, topArcAnchor: flowSurfaceDefaultAnchor(form) })}
                 >
                   <span className="surface-structure-choice__shape"><i /><i /><i /></span>
                   <strong>{name}</strong>
@@ -168,10 +162,9 @@ export default function SurfacesTab() {
             aria-label="QuotaArc surface position"
             onChange={(event) => patch({ topArcAnchor: event.target.value as SurfaceSettings["topArcAnchor"] })}
           >
-            {config.topArcForm === "flowline" && <><option value="right">Right edge</option><option value="left">Left edge</option></>}
-            {config.topArcForm === "horizon" && <><option value="top">Top edge</option><option value="bottom">Bottom edge</option></>}
-            {(config.topArcForm === "petal" || config.topArcForm === "orbital" || config.topArcForm === "lens") && <><option value="right">Right wall</option><option value="left">Left wall</option><option value="top">Top wall</option><option value="bottom">Bottom wall</option><option value="bottom-right">Bottom right</option><option value="bottom-left">Bottom left</option><option value="top-right">Top right</option><option value="top-left">Top left</option></>}
-            <option value="free">Free placement</option>
+            {flowSurfaceAnchorOptions(config.topArcForm).map((anchor) => (
+              <option key={anchor} value={anchor}>{flowSurfaceAnchorLabel(config.topArcForm, anchor)}</option>
+            ))}
           </select>
           </SurfaceControl>
           <SurfaceControl title="Restore position" description="Returns this structure to its compact default anchor.">
@@ -182,7 +175,7 @@ export default function SurfacesTab() {
               void resetQuotaIslandPosition().then(() =>
                 setConfig((current) => current ? {
                   ...current,
-                  topArcAnchor: defaultAnchor(current.topArcForm),
+                  topArcAnchor: flowSurfaceDefaultAnchor(current.topArcForm),
                   topArcPlacement: "top-center",
                 } : current),
               ).catch((cause: unknown) => setError(cause instanceof Error ? cause.message : String(cause)));

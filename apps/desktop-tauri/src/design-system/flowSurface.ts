@@ -26,6 +26,93 @@ export interface FlowSurfaceSettings {
   autoHideDelayMs: number;
 }
 
+/**
+ * The structure catalog is presentation-only. Each entry declares the small
+ * set of anchors where its geometry remains readable and unobtrusive.
+ */
+export interface FlowSurfaceFormDefinition {
+  id: FlowSurfaceForm;
+  name: string;
+  description: string;
+  defaultAnchor: FlowSurfaceAnchor;
+  anchors: readonly FlowSurfaceAnchor[];
+}
+
+export const FLOW_SURFACE_FORM_CATALOG = [
+  {
+    id: "flowline",
+    name: "Flowline",
+    description: "Quiet vertical rail",
+    defaultAnchor: "right",
+    anchors: ["right", "left", "free"],
+  },
+  {
+    id: "horizon",
+    name: "Horizon",
+    description: "Low-profile edge ribbon",
+    defaultAnchor: "top",
+    anchors: ["top", "bottom", "free"],
+  },
+  {
+    id: "petal",
+    name: "Petal",
+    description: "Compact corner island",
+    defaultAnchor: "bottom-right",
+    anchors: ["right", "left", "top", "bottom", "bottom-right", "bottom-left", "top-right", "top-left", "free"],
+  },
+  {
+    id: "orbital",
+    name: "Orbital",
+    description: "Soft floating instrument",
+    defaultAnchor: "bottom-right",
+    anchors: ["right", "left", "top", "bottom", "bottom-right", "bottom-left", "top-right", "top-left", "free"],
+  },
+  {
+    id: "lens",
+    name: "Lens",
+    description: "Low-profile responsive capsule",
+    defaultAnchor: "bottom-right",
+    anchors: ["right", "left", "top", "bottom", "bottom-right", "bottom-left", "top-right", "top-left", "free"],
+  },
+] as const satisfies readonly FlowSurfaceFormDefinition[];
+
+const FLOW_SURFACE_FORM_BY_ID = new Map(
+  FLOW_SURFACE_FORM_CATALOG.map((form) => [form.id, form] as const),
+);
+
+const FLOW_SURFACE_ANCHOR_LABELS: Readonly<Record<FlowSurfaceAnchor, string>> = {
+  left: "Left wall",
+  right: "Right wall",
+  top: "Top wall",
+  bottom: "Bottom wall",
+  "bottom-right": "Bottom right",
+  "bottom-left": "Bottom left",
+  "top-right": "Top right",
+  "top-left": "Top left",
+  free: "Free placement",
+};
+
+export function flowSurfaceFormDefinition(form: FlowSurfaceForm): FlowSurfaceFormDefinition {
+  return FLOW_SURFACE_FORM_BY_ID.get(form) ?? FLOW_SURFACE_FORM_CATALOG[0];
+}
+
+export function flowSurfaceDefaultAnchor(form: FlowSurfaceForm): FlowSurfaceAnchor {
+  return flowSurfaceFormDefinition(form).defaultAnchor;
+}
+
+export function flowSurfaceAnchorOptions(form: FlowSurfaceForm): readonly FlowSurfaceAnchor[] {
+  return flowSurfaceFormDefinition(form).anchors;
+}
+
+export function flowSurfaceAnchorLabel(form: FlowSurfaceForm, anchor: FlowSurfaceAnchor): string {
+  if (form === "flowline" && anchor === "right") return "Right edge";
+  if (form === "flowline" && anchor === "left") return "Left edge";
+  if (form === "horizon" && anchor === "top") return "Top edge";
+  if (form === "horizon" && anchor === "bottom") return "Bottom edge";
+
+  return FLOW_SURFACE_ANCHOR_LABELS[anchor];
+}
+
 export interface FlowSurfaceEnvelope {
   width: number;
   height: number;
@@ -56,7 +143,7 @@ export const DEFAULT_FLOW_SURFACE_SETTINGS: Readonly<FlowSurfaceSettings> = {
   autoHideDelayMs: 900,
 };
 
-const VALID_FORMS = new Set<FlowSurfaceForm>(["flowline", "horizon", "petal", "orbital", "lens"]);
+const VALID_FORMS = new Set<FlowSurfaceForm>(FLOW_SURFACE_FORM_CATALOG.map((form) => form.id));
 const VALID_ANCHORS = new Set<FlowSurfaceAnchor>([
   "left", "right", "top", "bottom", "top-left", "top-right", "bottom-left", "bottom-right", "free",
 ]);

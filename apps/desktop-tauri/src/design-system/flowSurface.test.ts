@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_FLOW_SURFACE_SETTINGS,
+  FLOW_SURFACE_FORM_CATALOG,
+  flowSurfaceAnchorOptions,
+  flowSurfaceDefaultAnchor,
   flowSurfaceEnvelope,
   hasSurfaceQuotaValue,
   normalizeFlowSurfaceSettings,
@@ -88,5 +91,14 @@ describe("Flow Surface contract", () => {
     expect(flowSurfaceEnvelope("lens", "compact", 100, 3)).toEqual({ width: 178, height: 76 });
     expect(flowSurfaceEnvelope("lens", "compact", 100, 0)).toEqual({ width: 76, height: 56 });
     expect(resolveDetailDirection("lens", "right")).toBe("left");
+  });
+
+  it("defines each structure's label, default anchor, and safe anchors in one catalog", () => {
+    expect(FLOW_SURFACE_FORM_CATALOG.map((form) => form.id)).toEqual([
+      "flowline", "horizon", "petal", "orbital", "lens",
+    ]);
+    expect(flowSurfaceDefaultAnchor("lens")).toBe("bottom-right");
+    expect(flowSurfaceAnchorOptions("flowline")).toEqual(["right", "left", "free"]);
+    expect(flowSurfaceAnchorOptions("horizon")).toEqual(["top", "bottom", "free"]);
   });
 });
