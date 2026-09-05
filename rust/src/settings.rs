@@ -633,6 +633,7 @@ pub fn normalize_flow_surface_form(value: &str) -> String {
     match value {
         "horizon" => "horizon".to_string(),
         "petal" => "petal".to_string(),
+        "orbital" => "orbital".to_string(),
         _ => default_flow_surface_form(),
     }
 }
@@ -648,7 +649,7 @@ pub fn normalize_flow_surface_anchor(form: &str, anchor: &str) -> String {
             "bottom" => "bottom".to_string(),
             _ => "top".to_string(),
         },
-        "petal" => match anchor {
+        "petal" | "orbital" => match anchor {
             "top-left" | "top-right" | "bottom-left" | "bottom-right" => anchor.to_string(),
             _ => "bottom-right".to_string(),
         },

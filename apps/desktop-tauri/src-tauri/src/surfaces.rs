@@ -159,14 +159,14 @@ fn flow_surface_size(
     if state == SurfaceState::Hidden {
         return match form {
             "horizon" => (72.0, 10.0),
-            "petal" => (18.0, 18.0),
+            "petal" | "orbital" => (18.0, 18.0),
             _ => (10.0, 56.0),
         };
     }
     if state == SurfaceState::Peek {
         return match form {
             "horizon" => (120.0, 16.0),
-            "petal" => (32.0, 32.0),
+            "petal" | "orbital" => (32.0, 32.0),
             _ => (18.0, 72.0),
         };
     }
@@ -176,11 +176,14 @@ fn flow_surface_size(
         ("flowline", false, 0) => (56.0, 84.0),
         ("horizon", false, 0) => (138.0, 52.0),
         ("petal", false, 0) => (64.0, 64.0),
+        ("orbital", false, 0) => (64.0, 64.0),
         ("flowline", false, providers) => (56.0, 76.0 + f64::from(providers) * 50.0),
         ("horizon", false, _) => (350.0, 58.0),
         ("horizon", true, _) => (350.0, 208.0),
         ("petal", false, _) => (170.0, 118.0),
         ("petal", true, _) => (300.0, 160.0),
+        ("orbital", false, _) => (112.0, 112.0),
+        ("orbital", true, _) => (300.0, 180.0),
         (_, true, _) => (330.0, 160.0),
         (_, false, _) => (56.0, 84.0),
     };
@@ -195,6 +198,10 @@ fn flow_surface_size(
             "petal" => (
                 work_width * if expanded { 0.25 } else { 0.16 },
                 work_height * 0.22,
+            ),
+            "orbital" => (
+                work_width * if expanded { 0.25 } else { 0.14 },
+                work_height * if expanded { 0.25 } else { 0.16 },
             ),
             _ => (
                 work_width * if expanded { 0.28 } else { 0.08 },
@@ -458,7 +465,7 @@ fn position_top_arc(window: &tauri::WebviewWindow) {
             };
             (x, y)
         }
-        "petal" => match anchor.as_str() {
+        "petal" | "orbital" => match anchor.as_str() {
             "top-left" => (work_x + TOP_ARC_MARGIN, work_y + TOP_ARC_MARGIN),
             "top-right" => (
                 work_x + (work_w - w - TOP_ARC_MARGIN).max(0.0),
@@ -1226,6 +1233,8 @@ mod tests {
         assert!(horizon.0 <= 1366.0 * 0.30 && horizon.1 <= 768.0 * 0.10);
         let petal = flow_surface_size("petal", SurfaceState::Compact, 100, work_area, 3);
         assert!(petal.0 <= 1366.0 * 0.16 && petal.1 <= 768.0 * 0.20);
+        let orbital = flow_surface_size("orbital", SurfaceState::Compact, 100, work_area, 3);
+        assert!(orbital.0 <= 1366.0 * 0.14 && orbital.1 <= 768.0 * 0.16);
 
         // A provider registry with no resolved readings must not reserve the
         // three-provider rail. This is the native counterpart to the React

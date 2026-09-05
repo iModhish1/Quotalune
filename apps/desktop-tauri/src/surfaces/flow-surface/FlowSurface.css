@@ -170,6 +170,15 @@ body:has(.flow-surface-host) #root {
 .flow-surface[data-form="petal"][data-anchor="top-left"] .flow-surface__core { top: 0; left: 0; }
 .flow-surface[data-form="petal"][data-anchor="top-left"] .flow-surface__details { right: 0; bottom: 0; }
 
+/* Orbital: a compact free-corner instrument, not a literal clock. */
+.flow-surface__reveal--orbital { border-radius: 50%; }
+.flow-surface__reveal--orbital .flow-surface__mark { width: 13px; height: 13px; }
+.flow-surface[data-form="orbital"] .flow-surface__core { width: 112px; height: 112px; flex-direction: column; gap: 5px; padding: 11px; border-radius: 38px; }
+.flow-surface[data-form="orbital"][data-empty="true"] .flow-surface__core { width: 64px; height: 64px; padding: 0; }.flow-surface[data-form="orbital"][data-empty="true"] .flow-surface__summary-copy { display: none; }.flow-surface[data-form="orbital"][data-empty="true"] .flow-surface__drag { display: none; }
+.flow-surface[data-form="orbital"] .flow-surface__summary { flex: 1; justify-content: center; }.flow-surface[data-form="orbital"] .flow-surface__summary-copy { display: none; }
+.flow-surface[data-form="orbital"] .flow-surface__quick-providers { justify-content: center; gap: 4px; }.flow-surface[data-form="orbital"] .flow-surface__provider-value { display: none; }.flow-surface[data-form="orbital"] .flow-surface__drag { top: 3px; right: 3px; }
+.flow-surface[data-form="orbital"] .flow-surface__details { width: 276px; height: 174px; border-radius: 26px; }.flow-surface[data-form="orbital"][data-anchor="bottom-right"] .flow-surface__core { right: 0; bottom: 0; }.flow-surface[data-form="orbital"][data-anchor="bottom-right"] .flow-surface__details { top: 0; left: 0; }.flow-surface[data-form="orbital"][data-anchor="bottom-left"] .flow-surface__core { left: 0; bottom: 0; }.flow-surface[data-form="orbital"][data-anchor="bottom-left"] .flow-surface__details { top: 0; right: 0; }.flow-surface[data-form="orbital"][data-anchor="top-right"] .flow-surface__core { top: 0; right: 0; }.flow-surface[data-form="orbital"][data-anchor="top-right"] .flow-surface__details { bottom: 0; left: 0; }.flow-surface[data-form="orbital"][data-anchor="top-left"] .flow-surface__core { top: 0; left: 0; }.flow-surface[data-form="orbital"][data-anchor="top-left"] .flow-surface__details { right: 0; bottom: 0; }
+
 .flow-surface[data-state="hover"] .flow-surface__core,
 .flow-surface__core:hover { border-color: rgba(245, 247, 250, 0.46); box-shadow: 0 18px 46px rgba(0, 0, 0, 0.68), inset 0 1px 0 rgba(255, 255, 255, 0.18); }
 @media (prefers-reduced-motion: reduce) { .flow-surface__details { animation: none; } }

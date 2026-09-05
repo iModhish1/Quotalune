@@ -44,7 +44,7 @@ function RangeControl({
 
 function defaultAnchor(form: SurfaceSettings["topArcForm"]): SurfaceSettings["topArcAnchor"] {
   if (form === "horizon") return "top";
-  if (form === "petal") return "bottom-right";
+  if (form === "petal" || form === "orbital") return "bottom-right";
   return "right";
 }
 
@@ -142,6 +142,7 @@ export default function SurfacesTab() {
                 ["flowline", "Flowline", "Quiet vertical rail"],
                 ["horizon", "Horizon", "Low-profile edge ribbon"],
                 ["petal", "Petal", "Compact corner island"],
+                ["orbital", "Orbital", "Soft floating instrument"],
               ] as const).map(([form, name, note]) => (
                 <button
                   key={form}
@@ -168,7 +169,7 @@ export default function SurfacesTab() {
           >
             {config.topArcForm === "flowline" && <><option value="right">Right edge</option><option value="left">Left edge</option></>}
             {config.topArcForm === "horizon" && <><option value="top">Top edge</option><option value="bottom">Bottom edge</option></>}
-            {config.topArcForm === "petal" && <><option value="bottom-right">Bottom right</option><option value="bottom-left">Bottom left</option><option value="top-right">Top right</option><option value="top-left">Top left</option></>}
+            {(config.topArcForm === "petal" || config.topArcForm === "orbital") && <><option value="bottom-right">Bottom right</option><option value="bottom-left">Bottom left</option><option value="top-right">Top right</option><option value="top-left">Top left</option></>}
             <option value="free">Free placement</option>
           </select>
           </SurfaceControl>

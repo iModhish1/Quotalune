@@ -76,4 +76,10 @@ describe("Flow Surface contract", () => {
     });
     expect(flowSurfaceEnvelope("flowline", "compact", 100, 3).height).toBeLessThan(310);
   });
+
+  it("keeps the orbital structure bounded and opens inward from its corner", () => {
+    expect(flowSurfaceEnvelope("orbital", "compact", 100, 3)).toEqual({ width: 112, height: 112 });
+    expect(flowSurfaceEnvelope("orbital", "compact", 100, 0)).toEqual({ width: 64, height: 64 });
+    expect(resolveDetailDirection("orbital", "bottom-right")).toBe("up-left");
+  });
 });

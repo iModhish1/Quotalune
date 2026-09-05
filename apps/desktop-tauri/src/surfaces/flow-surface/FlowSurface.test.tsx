@@ -83,4 +83,18 @@ describe("FlowSurface", () => {
     expect(screen.getAllByText("79%").length).toBeGreaterThan(0);
     expect(screen.getByTestId("flow-surface")).toHaveAttribute("data-form", "horizon");
   });
+
+  it("reflows provider data through the bounded Orbital structure", () => {
+    render(
+      <FlowSurface
+        catalog="01-obsidian-orbit"
+        settings={{ ...settings, form: "orbital", anchor: "bottom-right" }}
+        state="compact"
+        providers={providers}
+      />,
+    );
+
+    expect(screen.getByTestId("flow-surface")).toHaveAttribute("data-form", "orbital");
+    expect(screen.getByRole("button", { name: "OpenAI: 79% remaining" })).toBeInTheDocument();
+  });
 });

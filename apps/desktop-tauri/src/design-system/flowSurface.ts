@@ -4,7 +4,7 @@
  * A form changes its compact silhouette and the direction that details open;
  * it never changes quota semantics or creates a second native window.
  */
-export type FlowSurfaceForm = "flowline" | "horizon" | "petal";
+export type FlowSurfaceForm = "flowline" | "horizon" | "petal" | "orbital";
 export type FlowSurfaceAnchor =
   | "left"
   | "right"
@@ -56,7 +56,7 @@ export const DEFAULT_FLOW_SURFACE_SETTINGS: Readonly<FlowSurfaceSettings> = {
   autoHideDelayMs: 900,
 };
 
-const VALID_FORMS = new Set<FlowSurfaceForm>(["flowline", "horizon", "petal"]);
+const VALID_FORMS = new Set<FlowSurfaceForm>(["flowline", "horizon", "petal", "orbital"]);
 const VALID_ANCHORS = new Set<FlowSurfaceAnchor>([
   "left", "right", "top", "bottom", "top-left", "top-right", "bottom-left", "bottom-right", "free",
 ]);
@@ -73,6 +73,10 @@ const BASE_ENVELOPES: Record<FlowSurfaceForm, Record<Exclude<FlowSurfaceState, "
   petal: {
     compact: { width: 170, height: 118 },
     expanded: { width: 300, height: 160 },
+  },
+  orbital: {
+    compact: { width: 112, height: 112 },
+    expanded: { width: 300, height: 180 },
   },
 };
 
@@ -123,12 +127,12 @@ export function flowSurfaceEnvelope(
 ): FlowSurfaceEnvelope {
   if (state === "hidden") {
     if (form === "horizon") return { width: 72, height: 10 };
-    if (form === "petal") return { width: 18, height: 18 };
+    if (form === "petal" || form === "orbital") return { width: 18, height: 18 };
     return { width: 10, height: 56 };
   }
   if (state === "peek") {
     if (form === "horizon") return { width: 120, height: 16 };
-    if (form === "petal") return { width: 32, height: 32 };
+    if (form === "petal" || form === "orbital") return { width: 32, height: 32 };
     return { width: 18, height: 72 };
   }
   const compact = state !== "expanded" && state !== "pinned";
@@ -137,6 +141,7 @@ export function flowSurfaceEnvelope(
     flowline: { width: 56, height: 84 },
     horizon: { width: 138, height: 52 },
     petal: { width: 64, height: 64 },
+    orbital: { width: 64, height: 64 },
   };
   const base = compact && providers === 0
     ? emptyEnvelope[form]
@@ -154,6 +159,12 @@ export function flowSurfaceEnvelope(
 export function resolveDetailDirection(form: FlowSurfaceForm, anchor: FlowSurfaceAnchor): DetailDirection {
   if (form === "flowline") return anchor === "left" ? "right" : "left";
   if (form === "horizon") return anchor === "bottom" ? "up" : "down";
+  if (form === "orbital") {
+    if (anchor === "bottom-left") return "up-right";
+    if (anchor === "top-right") return "left";
+    if (anchor === "top-left") return "right";
+    return "up-left";
+  }
   if (anchor === "bottom-left") return "up-right";
   if (anchor === "bottom-right") return "up-left";
   if (anchor === "top-left") return "right";
