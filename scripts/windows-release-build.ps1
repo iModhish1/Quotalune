@@ -344,7 +344,7 @@ try {
     } else {
         Join-Path $DesktopCargoTargetDir "release"
     }
-    $sourceExe = Join-Path $releaseBinDir "codexbar-desktop-tauri.exe"
+    $sourceExe = Join-Path $releaseBinDir "QuotaArc.exe"
     if ($null -eq $process.ExitCode) {
         if (Test-Path $sourceExe) {
             Write-Host "Warning: Tauri build did not report an exit code, but produced $sourceExe."

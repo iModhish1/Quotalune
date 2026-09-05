@@ -621,11 +621,11 @@ fn api_key_display_mask_is_utf8_safe() {
 
 #[test]
 fn test_start_at_login_command_uses_only_the_executable_path() {
-    let path = std::path::PathBuf::from(r"C:\Program Files\CodexBar\codexbar-desktop-tauri.exe");
+    let path = std::path::PathBuf::from(r"C:\Program Files\QuotaArc\QuotaArc.exe");
     let command = Settings::start_at_login_command(&path);
     assert_eq!(
         command,
-        "\"C:\\Program Files\\CodexBar\\codexbar-desktop-tauri.exe\""
+        "\"C:\\Program Files\\QuotaArc\\QuotaArc.exe\""
     );
     assert!(!command.contains("menubar"));
 }

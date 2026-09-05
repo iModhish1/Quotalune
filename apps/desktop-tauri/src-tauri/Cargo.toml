@@ -4,6 +4,14 @@ version = "0.9.0"
 edition = "2024"
 publish = false
 
+# Keep the executable identity aligned with the product in every profile.
+# Without this explicit target, Cargo emits the package name in debug builds
+# while Tauri emits QuotaArc only when bundling. That allowed an older
+# target\\debug\\QuotaArc.exe to be launched after a newer build completed.
+[[bin]]
+name = "QuotaArc"
+path = "src/main.rs"
+
 [features]
 default = []
 dev-channel = ["codexbar/dev-channel"]
@@ -27,4 +35,3 @@ uuid = { version = "1", features = ["v4"] }
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.55"
-
