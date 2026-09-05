@@ -1,14 +1,14 @@
-# Quota Island Foundation Reset Tasks
+# Flow Surface Foundation Tasks
 
-## Task 0: Approve the visual foundation
+## Task 0: Freeze the approved surface family
 
-**Description:** Freeze one compact/expanded island design and its motion rules
-before changing application code again.
+**Description:** Use the approved Flowline, Horizon Fold and Corner Petal
+references as the structural contract before changing runtime code.
 
 **Acceptance criteria:**
-- [ ] The approved board shows compact, expanded, and moved states at restrained scale.
-- [ ] The approved board contains no orbital, giant, or full-screen composition.
-- [ ] The approved motion storyboard uses only bounded state transitions.
+- [x] The approved references show three compact forms and inward details.
+- [x] The approved references contain no orbital, giant, or full-screen composition.
+- [x] The approved interaction is hidden/hover/expand/pin rather than permanent UI.
 
 **Verification:**
 - [ ] Human visual approval of the generated boards and
@@ -16,64 +16,63 @@ before changing application code again.
 
 **Dependencies:** None
 
-## Task 1: Canonical composition slice
+## Task 1: Presentation contract slice
 
-**Description:** Replace the current island renderer with the approved semantic
-compact/expanded composition and token-only theme contract.
+**Description:** Add normalized form, anchor, scale and auto-hide settings plus
+pure tested native envelope resolution.
 
 **Acceptance criteria:**
-- [ ] Compact defaults to 264 × 44 logical px and expanded to 368 × 300.
-- [ ] Provider data is rendered as a concise vertical list with linear progress.
-- [ ] No legacy orbital renderer is reachable from the production surface.
+- [ ] Invalid settings fall back to Flowline/right/100%/900 ms.
+- [ ] Every compact and detail envelope is bounded within the work area.
+- [ ] Only one native overlay is eligible to show.
 
 **Verification:**
-- [ ] Focused component and bounds tests pass.
+- [ ] Rust unit tests and TypeScript contract tests pass.
 - [ ] Frontend type check and production build pass.
-- [ ] Capture fixture matches the approved board at 1366×768 and 1920×1080.
 
 **Dependencies:** Task 0
 
-## Task 2: Native placement slice
+## Task 2: Flowline vertical slice
 
-**Description:** Make the single canonical island movable, monitor-safe,
-recoverable, and exclusive when expanded.
+**Description:** Render the compact Flowline and its inward detail bubble from
+real provider data; add hide, peek, hover, expanded and pinned states.
 
 **Acceptance criteria:**
-- [ ] Dragging and anchor placement persist across restart and DPI changes.
-- [ ] An island cannot be saved off-screen or become unreachable.
-- [ ] Only one expanded island state exists.
+- [ ] Compact Flowline is ≤56 logical px wide and auto-hides by default.
+- [ ] Detail bubble opens into free work area and is keyboard reachable.
+- [ ] Clicking/dragging never loses the surface outside the monitor work area.
 
 **Verification:**
-- [ ] Rust placement and coordinator tests pass.
-- [ ] Fresh native Windows capture proves drag, clamp, pin, and recovery.
+- [ ] Focused React and native coordinator tests pass.
+- [ ] Fresh native Windows capture proves Flowline states and drag recovery.
 
 **Dependencies:** Task 1
 
-## Task 3: Motion and accessibility slice
+## Task 3: Form reflow and settings slice
 
-**Description:** Add the approved transition, focus, keyboard, and
-reduced-motion behaviours without a continuous animation loop.
+**Description:** Add Horizon Fold and Corner Petal over the shared atom, then
+expose form, position and auto-hide controls in Settings.
 
 **Acceptance criteria:**
-- [ ] Open/close is 120–160 ms and hover never resizes the native window.
-- [ ] Keyboard and focus restoration work in compact and expanded states.
-- [ ] Reduced motion removes travel.
+- [ ] Form change reuses one native window and immediately clamps bounds.
+- [ ] Settings persist and live-update form, anchor, scale and delay.
+- [ ] Reduced motion removes travel and hover never causes a resize.
 
 **Verification:**
 - [ ] Interaction tests pass.
-- [ ] Native six-frame capture matches the approved storyboard.
+- [ ] Native captures prove all three forms at 100% and 150% DPI.
 
 **Dependencies:** Task 2
 
-## Task 4: Performance and visual proof slice
+## Task 4: Final proof slice
 
-**Description:** Produce release-build evidence for the completed canonical
-surface before any additional theme work.
+**Description:** Verify that the overlay remains light, non-interruptive and
+recoverable before enabling future themes.
 
 **Acceptance criteria:**
-- [ ] Hidden, compact, and expanded settled measurements are recorded.
-- [ ] Native captures cover 1080p and scaled-DPI contexts.
-- [ ] A token-only theme fixture proves the structure cannot diverge.
+- [ ] Hidden, compact, hover and expanded settled measurements are recorded.
+- [ ] Full test/build gates and native captures are attached to the exact build.
+- [ ] The first non-default theme remains blocked until this proof passes.
 
 **Verification:**
 - [ ] Full test/build gates pass.

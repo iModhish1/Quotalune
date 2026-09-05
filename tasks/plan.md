@@ -1,79 +1,63 @@
-# Implementation Plan: Quota Island Foundation Reset
+# Implementation Plan: Flow Surface Foundation
 
 ## Overview
 
-Replace the active multi-theme orbital runtime with one compact, Windows-first
-canonical surface foundation. This plan is subordinate to
-`docs/FOUNDATION_UI_BLUEPRINT.md`: the visual acceptance gate must be approved
-before any new UI implementation begins. The existing catalog remains preserved
-as inactive source material; future themes vary tokens only, never layout,
-interaction, or provider semantics.
+Build the approved Flowline, Horizon Fold and Corner Petal forms through one
+native Windows overlay and one shared provider renderer. This plan is
+subordinate to `docs/FLOW_SURFACE_SPEC.md`. The existing catalog remains
+archived; future themes vary material tokens only.
 
 ## Architecture Decisions
 
-- Use one small movable `QuotaIsland`, not an orbital chart, as the sole live
-  overlay.
-- Use Rust as the sole owner of native bounds, monitor recovery, placement, and
-  one-expanded-window coordination.
+- Use one selectable Flow Surface form at a time: Flowline, Horizon Fold or
+  Corner Petal. Never create multiple overlay windows.
+- Use Rust as the sole owner of native bounds, monitor recovery, placement,
+  resize acknowledgement and one-expanded-window coordination.
 - Treat all third-party Notchy/Notchi repositories as reference material only. No source code will be copied: the MIT projects are macOS/Xcode apps, and Notchi is GPL-3.0-only.
-- Make one `QuotaIsland` overlay with compact, hover, expanded, pinned, and
-  dragging states. Settings and Dashboard remain normal windows; legacy
-  Taskbar, Edge, HUD, and Quick Panel overlays remain retired from production.
+- Use `hidden → peek → compact → hover → expanded ↔ pinned` states. Settings
+  and Dashboard remain normal windows; all legacy orbital overlays stay retired.
 - Archive inactive theme catalog entries without deleting assets or history. Only Obsidian Orbit remains selectable at runtime during the foundation phase.
 
 ## Task List
 
-### Phase 0: Visual foundation gate
+### Phase 1: Contract and native layout
 
-- [ ] Task 0: Approve the canonical compact/expanded composition and motion
-  storyboard in `docs/FOUNDATION_UI_BLUEPRINT.md`.
+- [ ] Task 1: Add normalized presentation settings and pure compact/expanded
+  envelope resolution with tests.
+- [ ] Task 2: Wire one native surface window to form/anchor settings and remove
+  dependence on retired Edge/Taskbar overlays.
 
-### Checkpoint: Visual contract
-
-- [ ] Human confirms the design boards are the desired direction.
-- [ ] No implementation proceeds while the visual contract is ambiguous.
-
-### Phase 1: Canonical runtime inventory and archival boundary
-
-- [x] Task 1: Map every active catalog/geometry/motion runtime import and define the archive boundary.
-- [x] Task 2: Preserve inactive catalog data under an explicit archive namespace and expose one canonical theme contract.
-
-### Checkpoint: Runtime boundary
+### Checkpoint: Native boundary
 
 - [ ] Build and focused tests pass.
-- [ ] Only the canonical theme is selectable in production Settings and live surfaces.
+- [ ] Exactly one overlay can be opened and all bounds are work-area safe.
 
-### Phase 2: Canonical composition
+### Phase 2: Shared composition
 
-- [ ] Task 3: Rebuild `QuotaIsland` from the approved compact/expanded
-  composition, replacing the current failed visual implementation.
-- [x] Task 4: Retire legacy Taskbar and Edge overlays from the production path and preserve them only in Git history. HUD and Quick Panel retirement remains part of Task 5.
-- [ ] Task 5: Keep Dashboard and Settings as normal windows; repair clipping and flex collapse.
+- [ ] Task 3: Build a shared Flow Surface provider atom and the Flowline form.
+- [ ] Task 4: Add Horizon Fold and Corner Petal as form-only reflows.
+- [ ] Task 5: Implement hidden/peek/auto-hide/pin motion and accessible focus.
 
 ### Checkpoint: Live Windows usability
 
-- [ ] Fresh Dev binary shows compact overlays without desktop obstruction.
-- [ ] One overlay expands at a time through the native coordinator.
+- [ ] Fresh Dev binary shows all forms without desktop obstruction.
+- [ ] Compact, detail, pin and auto-hide state changes stay responsive.
 
-### Phase 3: Placement and interaction
+### Phase 3: Presentation controls and proof
 
-- [ ] Task 6: Implement canonical placement persistence, monitor-safe clamping,
-  anchor presets, free drag, and recovery actions.
-- [ ] Task 7: Implement exclusive expanded state, keyboard behaviour, and
-  reduced motion.
+- [ ] Task 6: Add Settings controls for form, anchor, scale, auto-hide, delay,
+  opacity/fullscreen and restore.
+- [ ] Task 7: Capture live Windows evidence and test 100%/150% DPI bounds.
 
 ### Checkpoint: Interaction candidate
 
 - [ ] Fresh Dev build proves compact, expanded, pinned, moved, and recovered
   states on Windows.
 
-### Phase 4: Quality, accessibility, and proof
+### Phase 4: Theme protocol
 
-- [ ] Task 8: Add canonical-theme interaction, reduced-motion, bounds, and
-  visual-regression tests.
-- [ ] Task 9: Capture native Windows evidence and measure settled resource use.
-- [ ] Task 10: Enable one token-only theme variant only after the foundation
-  passes the native proof gate.
+- [ ] Task 8: Add the first additional material-only theme only after the
+  default Obsidian Pulse forms have passed native proof.
 
 ### Checkpoint: Review candidate
 
