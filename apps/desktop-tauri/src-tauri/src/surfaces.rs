@@ -17,6 +17,7 @@ use std::sync::{Mutex, OnceLock};
 
 pub mod demo;
 mod native_drag;
+mod notch;
 use tauri::{Emitter, LogicalPosition, Manager, WebviewUrl};
 
 use crate::geometry_store::{self, StoredGeometry};
@@ -145,6 +146,16 @@ fn flow_surface_bounds(
     provider_count: u32,
 ) -> (f64, f64) {
     let work_area = monitor_work_area_logical(window).map(|(_, _, width, height)| (width, height));
+    if notch::contains(&settings.top_arc_form) {
+        return notch::size(
+            &settings.top_arc_form,
+            state,
+            settings.top_arc_scale,
+            work_area,
+            provider_count,
+            &settings.top_arc_anchor,
+        );
+    }
     if settings.top_arc_form == "reel" {
         return reel_surface_size(
             state,
@@ -470,7 +481,8 @@ fn free_top_arc_resize_position(
 ) -> (f64, f64) {
     // Match the core's CSS attachment point, not the transparent window origin.
     let (ax, ay) = match form {
-        "flowline" | "reel" => (1.0, 0.5),
+        "flowline" | "reel" | "seam" | "deck" | "satellite" => (1.0, 0.5),
+        "ribbon" => (0.5, 0.0),
         "horizon" => (0.5, 0.0),
         _ => (1.0, 1.0),
     };
@@ -521,11 +533,15 @@ fn resolve_flow_surface_dock(
     let near_bottom = (y + height - (work_y + work_height)).abs() <= FLOW_SURFACE_DOCK_DISTANCE;
 
     match form {
-        "flowline" if near_left => Some("left"),
-        "flowline" if near_right => Some("right"),
-        "horizon" if near_top => Some("top"),
-        "horizon" if near_bottom => Some("bottom"),
-        "petal" | "orbital" | "lens" | "reel" => {
+        "flowline" | "seam" | "satellite" if near_left => Some("left"),
+        "flowline" | "seam" | "satellite" if near_right => Some("right"),
+        "horizon" | "ribbon" if near_top => Some("top"),
+        "horizon" | "ribbon" if near_bottom => Some("bottom"),
+        "cradle" if near_top && near_left => Some("top-left"),
+        "cradle" if near_top && near_right => Some("top-right"),
+        "cradle" if near_bottom && near_left => Some("bottom-left"),
+        "cradle" if near_bottom && near_right => Some("bottom-right"),
+        "petal" | "orbital" | "lens" | "reel" | "deck" => {
             if near_top && near_left {
                 Some("top-left")
             } else if near_top && near_right {
@@ -608,7 +624,8 @@ fn position_top_arc_after_drag(window: &tauri::WebviewWindow) {
     let effective_anchor = if anchor == "free" {
         match settings.top_arc_form.as_str() {
             "horizon" => "top",
-            "flowline" | "reel" => "right",
+            "flowline" | "reel" | "seam" | "deck" | "satellite" => "right",
+            "ribbon" => "top",
             _ => "bottom-right",
         }
     } else {
@@ -723,7 +740,8 @@ pub fn reset_top_arc_position(app: tauri::AppHandle) -> Result<(), String> {
     settings.top_arc_placement = "top-center".to_string();
     settings.top_arc_anchor = match settings.top_arc_form.as_str() {
         "horizon" => "top",
-        "flowline" | "reel" => "right",
+        "flowline" | "reel" | "seam" | "deck" | "satellite" => "right",
+        "ribbon" => "top",
         _ => "bottom-right",
     }
     .to_string();

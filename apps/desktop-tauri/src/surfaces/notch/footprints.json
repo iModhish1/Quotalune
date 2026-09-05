@@ -1,0 +1,7 @@
+{
+  "seam": {"width":64,"height":244},
+  "ribbon": {"width":244,"height":72},
+  "cradle": {"width":144,"height":144},
+  "deck": {"width":168,"height":88},
+  "satellite": {"width":108,"height":172}
+}

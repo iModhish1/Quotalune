@@ -14,7 +14,7 @@ export interface SurfaceSettingsPatch {
   topArcOpacity?: number;
   topArcScale?: number;
   topArcPlacement?: "top-left" | "top-center" | "top-right" | "free";
-  topArcForm?: "flowline" | "horizon" | "petal" | "orbital" | "lens" | "reel";
+  topArcForm?: import("../design-system/flowSurface").FlowSurfaceForm;
   topArcAnchor?: "left" | "right" | "top" | "bottom" | "top-left" | "top-right" | "bottom-left" | "bottom-right" | "free";
   topArcAutoHide?: boolean;
   topArcAutoHideDelayMs?: number;
@@ -92,7 +92,7 @@ export interface SurfaceSettings {
   topArcOpacity: number;
   topArcScale: number;
   topArcPlacement: "top-left" | "top-center" | "top-right" | "free";
-  topArcForm: "flowline" | "horizon" | "petal" | "orbital" | "lens" | "reel";
+  topArcForm: import("../design-system/flowSurface").FlowSurfaceForm;
   topArcAnchor: "left" | "right" | "top" | "bottom" | "top-left" | "top-right" | "bottom-left" | "bottom-right" | "free";
   topArcAutoHide: boolean;
   topArcAutoHideDelayMs: number;

@@ -4,7 +4,8 @@
  * A form changes its compact silhouette and the direction that details open;
  * it never changes quota semantics or creates a second native window.
  */
-export type FlowSurfaceForm = "flowline" | "horizon" | "petal" | "orbital" | "lens" | "reel";
+import { isNotchForm, notchLayout, type NotchForm } from "../surfaces/notch/notchGeometry";
+export type FlowSurfaceForm = "flowline" | "horizon" | "petal" | "orbital" | "lens" | "reel" | NotchForm;
 export type FlowSurfaceAnchor =
   | "left"
   | "right"
@@ -39,6 +40,12 @@ export interface FlowSurfaceFormDefinition {
 }
 
 export const FLOW_SURFACE_FORM_CATALOG = [
+  ...(["seam", "ribbon", "cradle", "deck", "satellite"] as const).map((id,index) => ({
+    id, name: ["Seam", "Ribbon", "Cradle", "Deck", "Satellite"][index],
+    description: ["Sculpted edge notch", "Three-instrument ribbon", "Corner-hugging curve", "Stacked provider switcher", "Compact curved orbit"][index],
+    defaultAnchor: (id === "ribbon" ? "top" : id === "cradle" ? "bottom-right" : "right") as FlowSurfaceAnchor,
+    anchors: (id === "seam" || id === "satellite" ? ["right","left","free"] : id === "ribbon" ? ["top","bottom","free"] : id === "cradle" ? ["top-left","top-right","bottom-left","bottom-right","free"] : ["right","left","top","bottom","top-left","top-right","bottom-left","bottom-right","free"]) as FlowSurfaceAnchor[],
+  })),
   {
     id: "flowline",
     name: "Flowline",
@@ -100,7 +107,7 @@ const FLOW_SURFACE_ANCHOR_LABELS: Readonly<Record<FlowSurfaceAnchor, string>> = 
 };
 
 export function flowSurfaceFormDefinition(form: FlowSurfaceForm): FlowSurfaceFormDefinition {
-  return FLOW_SURFACE_FORM_BY_ID.get(form) ?? FLOW_SURFACE_FORM_CATALOG[0];
+  return FLOW_SURFACE_FORM_BY_ID.get(form) ?? FLOW_SURFACE_FORM_CATALOG.find(entry => entry.id === "flowline")!;
 }
 
 export function flowSurfaceDefaultAnchor(form: FlowSurfaceForm): FlowSurfaceAnchor {
@@ -155,7 +162,7 @@ const VALID_ANCHORS = new Set<FlowSurfaceAnchor>([
   "left", "right", "top", "bottom", "top-left", "top-right", "bottom-left", "bottom-right", "free",
 ]);
 
-const BASE_ENVELOPES: Record<FlowSurfaceForm, Record<Exclude<FlowSurfaceState, "hidden" | "peek" | "hover" | "pinned">, FlowSurfaceEnvelope>> = {
+const BASE_ENVELOPES: Record<Exclude<FlowSurfaceForm,NotchForm>, Record<Exclude<FlowSurfaceState, "hidden" | "peek" | "hover" | "pinned">, FlowSurfaceEnvelope>> = {
   reel: {
     compact: { width: 112, height: 208 },
     expanded: { width: 320, height: 224 },
@@ -227,6 +234,11 @@ export function flowSurfaceEnvelope(
   scale: number,
   providerCount = 3,
 ): FlowSurfaceEnvelope {
+  if (isNotchForm(form)) {
+    const size=notchLayout(form,state,flowSurfaceDefaultAnchor(form),providerCount);
+    const factor=state === "hidden" || state === "peek" ? 1 : clamp(scale,75,125)/100;
+    return {width:Math.round(size.width*factor),height:Math.round(size.height*factor)};
+  }
   if (state === "hidden") {
     if (form === "horizon") return { width: 96, height: 14 };
     if (form === "petal" || form === "orbital" || form === "lens") return { width: 28, height: 28 };
@@ -239,7 +251,7 @@ export function flowSurfaceEnvelope(
   }
   const compact = state !== "expanded" && state !== "pinned";
   const providers = Math.max(0, Math.min(3, Math.floor(providerCount)));
-  const emptyEnvelope: Record<FlowSurfaceForm, FlowSurfaceEnvelope> = {
+  const emptyEnvelope: Record<Exclude<FlowSurfaceForm,NotchForm>, FlowSurfaceEnvelope> = {
     reel: { width: 112, height: 208 },
     flowline: { width: 56, height: 84 },
     horizon: { width: 138, height: 52 },

@@ -632,6 +632,7 @@ pub fn normalize_top_arc_placement(value: &str) -> String {
 pub fn normalize_flow_surface_form(value: &str) -> String {
     match value {
         "reel" => "reel".to_string(),
+        "seam" | "ribbon" | "cradle" | "deck" | "satellite" => value.to_string(),
         "horizon" => "horizon".to_string(),
         "petal" => "petal".to_string(),
         "orbital" => "orbital".to_string(),
@@ -647,11 +648,13 @@ pub fn normalize_flow_surface_anchor(form: &str, anchor: &str) -> String {
         return "free".to_string();
     }
     match normalize_flow_surface_form(form).as_str() {
-        "horizon" => match anchor {
+        "horizon" | "ribbon" => match anchor {
             "bottom" => "bottom".to_string(),
             _ => "top".to_string(),
         },
-        "petal" | "orbital" | "lens" | "reel" => match anchor {
+        "seam" | "satellite" => match anchor { "left" => "left".to_string(), _ => "right".to_string() },
+        "cradle" => match anchor { "top-left" | "top-right" | "bottom-left" | "bottom-right" => anchor.to_string(), _ => "bottom-right".to_string() },
+        "petal" | "orbital" | "lens" | "reel" | "deck" => match anchor {
             "left" | "right" | "top" | "bottom" | "top-left" | "top-right" | "bottom-left"
             | "bottom-right" => anchor.to_string(),
             _ => "bottom-right".to_string(),

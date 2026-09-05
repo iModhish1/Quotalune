@@ -4,6 +4,9 @@ import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Toggle } from "../../../components/FormControls";
 import { useLocale } from "../../../hooks/useLocale";
 import { useSurfaceDemo } from "../../../hooks/useSurfaceDemo";
+import { NotchBody } from "../../notch/NotchBody";
+import { isNotchForm, notchLayout } from "../../notch/notchGeometry";
+import "../../notch/NotchSurface.css";
 import {
   FLOW_SURFACE_FORM_CATALOG,
   flowSurfaceAnchorLabel,
@@ -47,6 +50,14 @@ function RangeControl({
       style={{ width: "100%" }}
     />
   );
+}
+
+function StructureSilhouette({form}:{form:string}) {
+  if (!isNotchForm(form)) return <><i/><i/><i/></>;
+  const {core}=notchLayout(form,"compact","right",3);
+  return <span style={{position:"relative",display:"block",width:58,height:38,background:"#adb2b8",borderRadius:5}}>
+    <NotchBody form={form} width={core.width} height={core.height} mirror={false}/>
+  </span>;
 }
 
 function SurfaceControl({
@@ -112,8 +123,7 @@ export default function SurfacesTab() {
           </p>
         </div>
         <div className="surface-settings__preview" data-form={config.topArcForm} aria-label={`${config.topArcForm} structure preview`}>
-          <span className="surface-settings__preview-mark" />
-          <i /><i /><i />
+          {isNotchForm(config.topArcForm) ? <StructureSilhouette form={config.topArcForm}/> : <><span className="surface-settings__preview-mark" /><i/><i/><i/></>}
         </div>
       </header>
 
@@ -121,9 +131,9 @@ export default function SurfacesTab() {
         <SurfaceControl title="Temporary demo" description="Six synthetic providers. No accounts, credentials or history are changed. Turns off when the app exits.">
           <Toggle checked={demo.enabled} ariaLabel="Use six demo providers" disabled={false} onChange={value => { void demo.toggle(value); }} />
           <button type="button" onClick={() => {
-            patch({ topArcEnabled: true, topArcForm: "reel", topArcAnchor: "right" });
+            patch({ topArcEnabled: true, topArcForm: "seam", topArcAnchor: "right" });
             void demo.toggle(true);
-          }}>Try Orbit Reel</button>
+          }}>Try Seam · six providers</button>
           {demo.error && <p role="alert">{demo.error}</p>}
         </SurfaceControl>
         <div className="surface-settings__column">
@@ -158,7 +168,7 @@ export default function SurfacesTab() {
                   aria-pressed={config.topArcForm === form}
                   onClick={() => patch({ topArcForm: form, topArcAnchor: flowSurfaceDefaultAnchor(form) })}
                 >
-                  <span className="surface-structure-choice__shape"><i /><i /><i /></span>
+                  <span className="surface-structure-choice__shape"><StructureSilhouette form={form}/></span>
                   <strong>{name}</strong>
                   <small>{note}</small>
                 </button>
@@ -212,7 +222,7 @@ export default function SurfacesTab() {
         </div>
       </div>
       <p className="settings-section__hint">
-        The surface never expands on its own. It restores a small reveal tab instead of leaving a large overlay open.
+        Notch structures reveal details after a short hover or a click. Move away to collapse, or pin details to keep them open. Auto-hide restores a small reveal tab.
       </p>
     </section>
   );

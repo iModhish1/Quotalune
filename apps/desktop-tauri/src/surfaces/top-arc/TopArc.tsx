@@ -115,6 +115,11 @@ export default function TopArc({ demo }: TopArcProps) {
   }, [providers.length]);
 
   useEffect(() => {
+    if (!pointerInsideRef.current && (surfaceState === "compact" || surfaceState === "hover")) scheduleAutoHide();
+    return clearAutoHide;
+  }, [surfaceState, scheduleAutoHide, clearAutoHide]);
+
+  useEffect(() => {
     if (demo) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "ArrowRight" || event.key === "ArrowDown") cycle(1);

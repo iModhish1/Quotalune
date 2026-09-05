@@ -14,6 +14,8 @@ import { hasSurfaceQuotaValue } from "../../design-system/flowSurface";
 import { CANONICAL_THEME, catalogBySlug } from "../../design-system/themeCatalog";
 import "./FlowSurface.css";
 import ReelSurface from "../reel/ReelSurface";
+import NotchSurface from "../notch/NotchSurface";
+import { isNotchForm } from "../notch/notchGeometry";
 
 export interface FlowSurfaceProps {
   catalog: string;
@@ -113,6 +115,7 @@ export default function FlowSurface({
   onStartDrag,
   demoMode,
 }: FlowSurfaceProps) {
+  if (isNotchForm(settings.form)) return <NotchSurface key={`${settings.form}:${settings.anchor}`} form={settings.form} {...{catalog, settings, state, providers, focusedIndex, onFocusProvider, onReveal, onToggleExpanded, onTogglePinned, onRequestCompact, onStartDrag, demoMode}} />;
   if (settings.form === "reel") return <ReelSurface {...{catalog, settings, state, providers, focusedIndex, onFocusProvider, onReveal, onToggleExpanded, onTogglePinned, onRequestCompact, onStartDrag, demoMode}} />;
   const theme = catalogBySlug(catalog) ?? CANONICAL_THEME;
   const visible = providers.filter(hasSurfaceQuotaValue).slice(0, 3);
