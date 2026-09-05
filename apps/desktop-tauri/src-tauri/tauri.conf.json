@@ -49,6 +49,9 @@
       },
       "nsis": {
         "installMode": "currentUser",
+        "installerIcon": "../../../rust/icons/icon.ico",
+        "headerImage": "../../../rust/installer/assets/void-header.bmp",
+        "sidebarImage": "../../../rust/installer/assets/void-sidebar.bmp",
         "languages": [
           "English",
           "SimpChinese",
