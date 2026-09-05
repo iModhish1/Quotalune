@@ -12,8 +12,10 @@
 
 use codexbar::settings::Settings;
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
-use std::time::{Duration, Instant};
+
+mod native_drag;
 use tauri::{Emitter, LogicalPosition, Manager, WebviewUrl};
 
 use crate::geometry_store::{self, StoredGeometry};
@@ -23,16 +25,10 @@ use crate::surface_kit::{
     monitor_work_area_logical, resize_surface,
 };
 
-/// Edge margin for the Top Arc from the top of the work area, logical px.
-const TOP_ARC_MARGIN: f64 = 10.0;
-/// Logical px from an edge at which a free drag becomes a deliberate dock.
+/// Logical px from an edge at which a released drag becomes a dock.
 const FLOW_SURFACE_DOCK_DISTANCE: f64 = 24.0;
-/// A drag that begins on a wall must leave this radius before it may attach
-/// again. Without this release zone, Windows emits a Moved event while the
-/// pointer is still on the original wall and makes the island feel stuck.
-const FLOW_SURFACE_DOCK_RELEASE_DISTANCE: f64 = 32.0;
-const FLOW_SURFACE_DRAG_TRACKING_TIMEOUT: Duration = Duration::from_secs(5);
 const TOP_ARC_FREE_POSITION_KEY: &str = TOP_ARC_LABEL;
+static TOP_ARC_DRAGGING: AtomicBool = AtomicBool::new(false);
 
 fn surface_states() -> &'static Mutex<HashMap<String, SurfaceState>> {
     static STATES: OnceLock<Mutex<HashMap<String, SurfaceState>>> = OnceLock::new();
@@ -110,6 +106,9 @@ fn apply_surface_layout(
     state: SurfaceState,
     provider_count: u32,
 ) {
+    if surface == SurfaceKind::Top && TOP_ARC_DRAGGING.load(Ordering::SeqCst) {
+        return;
+    }
     if surface == SurfaceKind::Top {
         set_surface_state(TOP_ARC_LABEL, state);
     }
@@ -344,152 +343,108 @@ fn saved_top_arc_position_is_visible(window: &tauri::WebviewWindow, x: i32, y: i
     })
 }
 
-#[derive(Clone, Copy)]
-struct PendingTopArcPosition {
-    revision: u64,
-    x: i32,
-    y: i32,
-}
-
-fn pending_top_arc_position() -> &'static Mutex<Option<PendingTopArcPosition>> {
-    static PENDING: OnceLock<Mutex<Option<PendingTopArcPosition>>> = OnceLock::new();
-    PENDING.get_or_init(|| Mutex::new(None))
-}
-
-#[derive(Clone, Copy)]
-struct PendingTopArcDrag {
-    origin: (f64, f64),
-    must_clear_initial_dock: bool,
-    last_move: Instant,
-}
-
-fn pending_top_arc_drag() -> &'static Mutex<Option<PendingTopArcDrag>> {
-    static PENDING: OnceLock<Mutex<Option<PendingTopArcDrag>>> = OnceLock::new();
-    PENDING.get_or_init(|| Mutex::new(None))
-}
-
-fn begin_top_arc_drag_tracking(origin: (f64, f64), started_docked: bool) {
-    if let Ok(mut pending) = pending_top_arc_drag().lock() {
-        *pending = Some(PendingTopArcDrag {
-            origin,
-            must_clear_initial_dock: started_docked,
-            last_move: Instant::now(),
-        });
-    }
-}
-
-fn clear_top_arc_drag_tracking() {
-    if let Ok(mut pending) = pending_top_arc_drag().lock() {
-        *pending = None;
-    }
-}
-
-fn flow_surface_drag_has_cleared_initial_dock(origin: (f64, f64), position: (f64, f64)) -> bool {
-    let dx = position.0 - origin.0;
-    let dy = position.1 - origin.1;
-    dx * dx + dy * dy >= FLOW_SURFACE_DOCK_RELEASE_DISTANCE.powi(2)
-}
-
-/// Only an active user drag can create a new dock. This prevents unrelated
-/// resize/reconcile events from stealing a freely placed surface.
-fn flow_surface_drag_allows_dock(position: (f64, f64)) -> bool {
-    let Ok(mut pending) = pending_top_arc_drag().lock() else {
-        return false;
-    };
-    let Some(drag) = pending.as_mut() else {
-        return false;
-    };
-    let now = Instant::now();
-    if now.duration_since(drag.last_move) > FLOW_SURFACE_DRAG_TRACKING_TIMEOUT {
-        *pending = None;
-        return false;
-    }
-    drag.last_move = now;
-    if drag.must_clear_initial_dock {
-        if !flow_surface_drag_has_cleared_initial_dock(drag.origin, position) {
-            return false;
-        }
-        drag.must_clear_initial_dock = false;
-    }
-    true
-}
-
-/// Persist only after a drag settles. Writing settings/geometry for every
-/// Windows Moved event visibly fights the pointer on some WebView2 systems.
-fn queue_top_arc_position(position: (i32, i32)) {
-    let revision = {
-        let mut pending = match pending_top_arc_position().lock() {
-            Ok(pending) => pending,
-            Err(_) => return,
-        };
-        let revision = pending
-            .as_ref()
-            .map_or(1, |current| current.revision.wrapping_add(1));
-        *pending = Some(PendingTopArcPosition {
-            revision,
-            x: position.0,
-            y: position.1,
-        });
-        revision
-    };
-    tauri::async_runtime::spawn(async move {
-        tokio::time::sleep(Duration::from_millis(180)).await;
-        let position =
-            pending_top_arc_position()
-                .lock()
-                .ok()
-                .and_then(|mut pending| match *pending {
-                    Some(current) if current.revision == revision => pending.take(),
-                    _ => None,
-                });
-        if let Some(position) = position {
-            geometry_store::save_entry(
-                TOP_ARC_FREE_POSITION_KEY,
-                StoredGeometry {
-                    x: position.x,
-                    y: position.y,
-                    width: None,
-                    height: None,
-                },
-            );
-        }
-    });
-}
-
-/// Preserve a native free drag. We only correct a genuinely off-screen
-/// position; critically, we never snap the window back to its *previous*
-/// saved position during the gesture.
-fn retain_live_top_arc_position(window: &tauri::WebviewWindow) {
-    let (Ok(position), Ok(size), Some(work_area)) = (
-        window.outer_position(),
-        window.outer_size(),
-        monitor_work_area_logical(window),
-    ) else {
-        return;
-    };
+/// Called once after Windows has completed the move loop, never per Moved event.
+fn finish_top_arc_drag(window: &tauri::WebviewWindow) -> Result<(), String> {
+    let position = window.outer_position().map_err(|error| error.to_string())?;
+    let size = window.outer_size().map_err(|error| error.to_string())?;
+    let work_area = monitor_work_area_logical(window).ok_or("Cannot resolve drag monitor")?;
     let scale = window.scale_factor().unwrap_or(1.0).max(0.01);
-    let current = (position.x as f64 / scale, position.y as f64 / scale);
+    let size = (size.width as f64 / scale, size.height as f64 / scale);
     let bounded = clamp_top_arc_position_to_work_area(
-        current,
-        (size.width as f64 / scale, size.height as f64 / scale),
+        (position.x as f64 / scale, position.y as f64 / scale),
+        size,
         work_area,
     );
-    let settings = Settings::load();
-    if flow_surface_drag_allows_dock(bounded) {
-        if let Some(anchor) = resolve_flow_surface_dock(
-            &settings.top_arc_form,
-            bounded,
-            (size.width as f64 / scale, size.height as f64 / scale),
-            work_area,
-        ) {
-            dock_top_arc_to_anchor(window, anchor);
-            return;
-        }
+    let mut settings = Settings::load();
+    let anchor = resolve_flow_surface_dock(&settings.top_arc_form, bounded, size, work_area);
+    settings.top_arc_anchor = anchor.unwrap_or("free").to_string();
+    settings.top_arc_placement = "free".to_string();
+    settings.save().map_err(|error| error.to_string())?;
+    if let Some(anchor) = anchor {
+        // Store the drop centre relative to this work area. Expanding the
+        // surface keeps this point fixed, instead of jumping to edge centre.
+        let centre = (
+            (bounded.0 + size.0 / 2.0 - work_area.0) / work_area.2.max(1.0),
+            (bounded.1 + size.1 / 2.0 - work_area.1) / work_area.3.max(1.0),
+        );
+        geometry_store::save_entry(
+            &format!("top-arc-dock-{anchor}"),
+            StoredGeometry {
+                x: (centre.0 * 1_000_000.0).round() as i32,
+                y: (centre.1 * 1_000_000.0).round() as i32,
+                width: None,
+                height: None,
+            },
+        );
+    } else {
+        geometry_store::save_entry(
+            TOP_ARC_FREE_POSITION_KEY,
+            StoredGeometry {
+                x: bounded.0.round() as i32,
+                y: bounded.1.round() as i32,
+                width: Some(size.0.round() as u32),
+                height: Some(size.1.round() as u32),
+            },
+        );
     }
-    if (bounded.0 - current.0).abs() > 0.5 || (bounded.1 - current.1).abs() > 0.5 {
-        let _ = window.set_position(LogicalPosition::new(bounded.0.round(), bounded.1.round()));
+    position_top_arc_after_drag(window);
+    let _ = window.app_handle().emit("quotaarc:surfaces-changed", ());
+    Ok(())
+}
+
+/// Flush attachment with a stable along-edge drop centre; clamp only at corners.
+fn anchored_top_arc_position(
+    anchor: &str,
+    size: (f64, f64),
+    area: (f64, f64, f64, f64),
+    centre: (f64, f64),
+) -> (f64, f64) {
+    let (wx, wy, ww, wh) = area;
+    let (w, h) = size;
+    let x = if anchor.contains("left") {
+        wx
+    } else if anchor.contains("right") {
+        wx + ww - w
+    } else {
+        wx + ww * centre.0.clamp(0.0, 1.0) - w / 2.0
+    };
+    let y = if anchor.contains("top") {
+        wy
+    } else if anchor.contains("bottom") {
+        wy + wh - h
+    } else {
+        wy + wh * centre.1.clamp(0.0, 1.0) - h / 2.0
+    };
+    clamp_top_arc_position_to_work_area((x, y), size, area)
+}
+
+fn free_top_arc_resize_position(
+    form: &str,
+    position: (f64, f64),
+    old_size: (f64, f64),
+    size: (f64, f64),
+) -> (f64, f64) {
+    // Match the core's CSS attachment point, not the transparent window origin.
+    let (ax, ay) = match form {
+        "flowline" => (1.0, 0.5),
+        "horizon" => (0.5, 0.0),
+        _ => (1.0, 1.0),
+    };
+    (
+        position.0 + (old_size.0 - size.0) * ax,
+        position.1 + (old_size.1 - size.1) * ay,
+    )
+}
+
+fn set_top_arc_position(window: &tauri::WebviewWindow, position: (f64, f64)) {
+    let scale = window.scale_factor().unwrap_or(1.0).max(0.01);
+    let target = tauri::PhysicalPosition::new(
+        (position.0 * scale).round() as i32,
+        (position.1 * scale).round() as i32,
+    );
+    if window.outer_position().ok() != Some(target) {
+        let _ = window.set_position(target);
     }
-    queue_top_arc_position((bounded.0.round() as i32, bounded.1.round() as i32));
 }
 
 fn clamp_top_arc_position_to_work_area(
@@ -551,23 +506,14 @@ fn resolve_flow_surface_dock(
     }
 }
 
-fn dock_top_arc_to_anchor(window: &tauri::WebviewWindow, anchor: &str) {
-    let mut settings = Settings::load();
-    settings.top_arc_anchor =
-        codexbar::settings::normalize_flow_surface_anchor(&settings.top_arc_form, anchor);
-    // `top_arc_anchor` is the docking contract; the legacy placement stays
-    // free because a side dock is not a top-corner preset.
-    settings.top_arc_placement = "free".to_string();
-    if settings.save().is_err() {
+fn position_top_arc(window: &tauri::WebviewWindow) {
+    if TOP_ARC_DRAGGING.load(Ordering::SeqCst) {
         return;
     }
-    geometry_store::remove_entry(TOP_ARC_FREE_POSITION_KEY);
-    clear_top_arc_drag_tracking();
-    position_top_arc(window);
-    let _ = window.app_handle().emit("quotaarc:surfaces-changed", ());
+    position_top_arc_after_drag(window);
 }
 
-fn position_top_arc(window: &tauri::WebviewWindow) {
+fn position_top_arc_after_drag(window: &tauri::WebviewWindow) {
     let settings = Settings::load();
     if settings.top_arc_anchor == "free"
         && let Some(geometry) = geometry_store::load_entry(TOP_ARC_FREE_POSITION_KEY)
@@ -577,11 +523,25 @@ fn position_top_arc(window: &tauri::WebviewWindow) {
     {
         let scale = window.scale_factor().unwrap_or(1.0).max(0.01);
         let (x, y) = clamp_top_arc_position_to_work_area(
-            (geometry.x as f64, geometry.y as f64),
+            free_top_arc_resize_position(
+                &settings.top_arc_form,
+                (geometry.x as f64, geometry.y as f64),
+                (
+                    geometry
+                        .width
+                        .map(f64::from)
+                        .unwrap_or(size.width as f64 / scale),
+                    geometry
+                        .height
+                        .map(f64::from)
+                        .unwrap_or(size.height as f64 / scale),
+                ),
+                (size.width as f64 / scale, size.height as f64 / scale),
+            ),
             (size.width as f64 / scale, size.height as f64 / scale),
             (work_x, work_y, work_w, work_h),
         );
-        let _ = window.set_position(LogicalPosition::new(x.round(), y.round()));
+        set_top_arc_position(window, (x, y));
         return;
     }
     let Some((work_x, work_y, work_w, work_h)) = monitor_work_area_logical(window) else {
@@ -597,62 +557,33 @@ fn position_top_arc(window: &tauri::WebviewWindow) {
         &settings.top_arc_form,
         &settings.top_arc_anchor,
     );
-    let (x, y) = match settings.top_arc_form.as_str() {
-        "horizon" => {
-            let x = work_x + ((work_w - w) / 2.0).max(0.0);
-            let y = if anchor == "bottom" {
-                work_y + (work_h - h - TOP_ARC_MARGIN).max(0.0)
-            } else {
-                work_y + TOP_ARC_MARGIN
-            };
-            (x, y)
+    let stored = geometry_store::load_entry(&format!("top-arc-dock-{anchor}"));
+    let centre = stored
+        .map(|entry| (entry.x as f64 / 1_000_000.0, entry.y as f64 / 1_000_000.0))
+        .unwrap_or((0.5, 0.5));
+    let effective_anchor = if anchor == "free" {
+        match settings.top_arc_form.as_str() {
+            "horizon" => "top",
+            "flowline" => "right",
+            _ => "bottom-right",
         }
-        "petal" | "orbital" | "lens" => match anchor.as_str() {
-            "top-left" => (work_x + TOP_ARC_MARGIN, work_y + TOP_ARC_MARGIN),
-            "top-right" => (
-                work_x + (work_w - w - TOP_ARC_MARGIN).max(0.0),
-                work_y + TOP_ARC_MARGIN,
-            ),
-            "bottom-left" => (
-                work_x + TOP_ARC_MARGIN,
-                work_y + (work_h - h - TOP_ARC_MARGIN).max(0.0),
-            ),
-            "top" => (
-                work_x + ((work_w - w) / 2.0).max(0.0),
-                work_y + TOP_ARC_MARGIN,
-            ),
-            "bottom" => (
-                work_x + ((work_w - w) / 2.0).max(0.0),
-                work_y + (work_h - h - TOP_ARC_MARGIN).max(0.0),
-            ),
-            "left" => (
-                work_x + TOP_ARC_MARGIN,
-                work_y + ((work_h - h) / 2.0).max(0.0),
-            ),
-            "right" => (
-                work_x + (work_w - w - TOP_ARC_MARGIN).max(0.0),
-                work_y + ((work_h - h) / 2.0).max(0.0),
-            ),
-            _ => (
-                work_x + (work_w - w - TOP_ARC_MARGIN).max(0.0),
-                work_y + (work_h - h - TOP_ARC_MARGIN).max(0.0),
-            ),
-        },
-        _ => {
-            let x = if anchor == "left" {
-                work_x + TOP_ARC_MARGIN
-            } else {
-                work_x + (work_w - w - TOP_ARC_MARGIN).max(0.0)
-            };
-            let y = work_y + ((work_h - h) / 2.0).max(0.0);
-            (x, y)
-        }
+    } else {
+        anchor.as_str()
     };
-    let _ = window.set_position(LogicalPosition::new(x.round(), y.round()));
+    let position = anchored_top_arc_position(
+        effective_anchor,
+        (w, h),
+        (work_x, work_y, work_w, work_h),
+        centre,
+    );
+    set_top_arc_position(window, position);
 }
 
 /// Show (or reapply attributes to) the Top Arc window.
 pub fn show_top_arc(app: &tauri::AppHandle) -> Result<(), String> {
+    if TOP_ARC_DRAGGING.load(Ordering::SeqCst) {
+        return Ok(());
+    }
     let settings = Settings::load();
     if let Some(window) = app.get_webview_window(TOP_ARC_LABEL) {
         apply_top_arc_attrs(&window, &settings, current_surface_state(TOP_ARC_LABEL));
@@ -678,6 +609,9 @@ pub fn show_top_arc(app: &tauri::AppHandle) -> Result<(), String> {
 }
 
 fn apply_top_arc_attrs(window: &tauri::WebviewWindow, settings: &Settings, state: SurfaceState) {
+    if TOP_ARC_DRAGGING.load(Ordering::SeqCst) {
+        return;
+    }
     apply_opacity(window, settings.top_arc_opacity);
     apply_click_through(
         window,
@@ -688,6 +622,9 @@ fn apply_top_arc_attrs(window: &tauri::WebviewWindow, settings: &Settings, state
 
 /// Hide (destroy) the Top Arc.
 pub fn hide_top_arc(app: &tauri::AppHandle) -> Result<(), String> {
+    if TOP_ARC_DRAGGING.load(Ordering::SeqCst) {
+        return Ok(());
+    }
     if let Some(window) = app.get_webview_window(TOP_ARC_LABEL) {
         window.close().map_err(|e| e.to_string())?;
     }
@@ -700,51 +637,58 @@ pub fn resize_top_arc(
     state: SurfaceState,
     provider_count: u32,
 ) -> Result<(), String> {
+    if TOP_ARC_DRAGGING.load(Ordering::SeqCst) {
+        return Err("Surface layout deferred until drag completes".into());
+    }
     apply_surface_layout(window, SurfaceKind::Top, state, provider_count);
     Ok(())
 }
 
-/// Mark the island as freely placed before the webview begins its native drag
-/// gesture. The subsequent Moved event records the final logical position.
+/// Freeze layout until the native move loop returns, then commit one drop.
 #[tauri::command]
-pub fn begin_top_arc_drag(window: tauri::WebviewWindow) -> Result<(), String> {
-    // Capture the old dock before starting the OS gesture, but do not write
-    // settings ahead of it: disk writes here previously made the island feel
-    // sticky and caused pointer movement to be lost.
-    let settings = Settings::load();
-    let scale = window.scale_factor().unwrap_or(1.0).max(0.01);
-    let origin = window
-        .outer_position()
-        .ok()
-        .map(|position| (position.x as f64 / scale, position.y as f64 / scale));
-    window.start_dragging().map_err(|error| error.to_string())?;
-    if let Some(origin) = origin {
-        begin_top_arc_drag_tracking(origin, settings.top_arc_anchor != "free");
+pub async fn begin_top_arc_drag(window: tauri::WebviewWindow) -> Result<(), String> {
+    if TOP_ARC_DRAGGING.swap(true, Ordering::SeqCst) {
+        return Err("A surface drag is already active".into());
     }
-    let mut settings = settings;
-    settings.top_arc_placement = "free".to_string();
-    settings.top_arc_anchor = "free".to_string();
-    settings.save().map_err(|error| error.to_string())?;
-    // The webview keeps its interaction model as React state. Notify it that
-    // free placement is now authoritative as soon as the native drag starts.
-    let _ = window.app_handle().emit("quotaarc:surfaces-changed", ());
-    Ok(())
+    let origin = window.outer_position().ok();
+    let result = native_drag::run(&window).await;
+    // Keep event-driven reconciliation suppressed through final placement.
+    let result = result.and_then(|()| {
+        if window.outer_position().ok() == origin {
+            // Click without movement, or Escape cancellation: keep the dock.
+            Ok(())
+        } else {
+            finish_top_arc_drag(&window)
+        }
+    });
+    TOP_ARC_DRAGGING.store(false, Ordering::SeqCst);
+    // Replay any settings/fullscreen reconciliation deferred by the gesture.
+    let reconciled = apply_state(window.app_handle(), &Settings::load());
+    result.and(reconciled)
 }
 
-/// Restore the safe default top-center placement and discard any remembered
+/// Restore the form's default placement and discard any remembered
 /// free-drag position.
 #[tauri::command]
 pub fn reset_top_arc_position(app: tauri::AppHandle) -> Result<(), String> {
-    clear_top_arc_drag_tracking();
+    if TOP_ARC_DRAGGING.load(Ordering::SeqCst) {
+        return Err("Finish dragging before resetting placement".into());
+    }
     geometry_store::remove_entry(TOP_ARC_FREE_POSITION_KEY);
     let mut settings = Settings::load();
     settings.top_arc_placement = "top-center".to_string();
-    settings.top_arc_anchor =
-        codexbar::settings::normalize_flow_surface_anchor(&settings.top_arc_form, "right");
+    settings.top_arc_anchor = match settings.top_arc_form.as_str() {
+        "horizon" => "top",
+        "flowline" => "right",
+        _ => "bottom-right",
+    }
+    .to_string();
+    geometry_store::remove_entry(&format!("top-arc-dock-{}", settings.top_arc_anchor));
     settings.save().map_err(|error| error.to_string())?;
     if let Some(window) = app.get_webview_window(TOP_ARC_LABEL) {
         position_top_arc(&window);
     }
+    let _ = app.emit("quotaarc:surfaces-changed", ());
     Ok(())
 }
 
@@ -943,6 +887,16 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) -
     if label != EDGE_ARC_LABEL && label != TOP_ARC_LABEL && label != TASKBAR_ARC_LABEL {
         return false;
     }
+    // Native movement is owned by Windows. Positioning and persistence happen
+    // only at explicit layout/drag boundaries, not recursively on WM_MOVE.
+    if label == TOP_ARC_LABEL
+        && matches!(
+            event,
+            tauri::WindowEvent::Moved(_) | tauri::WindowEvent::Resized(_)
+        )
+    {
+        return true;
+    }
     match event {
         tauri::WindowEvent::Moved(_) | tauri::WindowEvent::Resized(_) => {
             if let Some(webview) = window.app_handle().get_webview_window(label) {
@@ -951,19 +905,6 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) -
                     let side = codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
                     position_edge_arc(&webview, &side);
                     apply_edge_arc_attrs(&webview, &settings);
-                } else if label == TOP_ARC_LABEL {
-                    // A freely dragged island owns its location. Re-anchor
-                    // only the deliberate preset placements; re-sizing is
-                    // caused by the webview state transition, not a request
-                    // to snap the user back to the top center.
-                    if matches!(event, tauri::WindowEvent::Moved(_)) {
-                        if settings.top_arc_anchor == "free" {
-                            retain_live_top_arc_position(&webview);
-                        } else {
-                            position_top_arc(&webview);
-                        }
-                    }
-                    apply_top_arc_attrs(&webview, &settings, current_surface_state(TOP_ARC_LABEL));
                 } else {
                     position_taskbar_arc(&webview);
                     apply_taskbar_arc_attrs(&webview, &settings);
@@ -994,6 +935,9 @@ fn surface_should_be_visible(
 }
 
 fn reconcile_surface_visibility(window: &tauri::WebviewWindow, should_be_visible: bool) {
+    if window.label() == TOP_ARC_LABEL && TOP_ARC_DRAGGING.load(Ordering::SeqCst) {
+        return;
+    }
     let is_visible = window.is_visible().unwrap_or(false);
     if should_be_visible && !is_visible {
         let _ = window.show();
@@ -1468,16 +1412,60 @@ mod tests {
     }
 
     #[test]
-    fn drag_must_clear_its_starting_wall_before_it_can_dock_again() {
-        let origin = (1_176.0, 260.0);
-        assert!(
-            !flow_surface_drag_has_cleared_initial_dock(origin, (1_168.0, 264.0)),
-            "the first move event is still within the magnetic wall zone"
-        );
-        assert!(
-            flow_surface_drag_has_cleared_initial_dock(origin, (1_132.0, 260.0)),
-            "a deliberate inward drag releases the former wall"
-        );
+    fn docks_are_flush_at_all_corners_including_negative_monitor_origins() {
+        let area = (-1920.0, -200.0, 1920.0, 1040.0);
+        for (anchor, expected) in [
+            ("top-left", (-1920.0, -200.0)),
+            ("top-right", (-104.0, -200.0)),
+            ("bottom-left", (-1920.0, 736.0)),
+            ("bottom-right", (-104.0, 736.0)),
+        ] {
+            assert_eq!(
+                anchored_top_arc_position(anchor, (104.0, 104.0), area, (0.2, 0.3)),
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn edge_drop_keeps_its_centre_when_expanded_or_hidden() {
+        let area = (0.0, 0.0, 1280.0, 720.0);
+        for size in [(28.0, 28.0), (104.0, 104.0), (288.0, 174.0)] {
+            let p = anchored_top_arc_position("right", size, area, (0.9, 0.3));
+            assert_eq!(p.0 + size.0, 1280.0);
+            assert!((p.1 + size.1 / 2.0 - 216.0).abs() < 0.001);
+        }
+    }
+
+    #[test]
+    fn edge_expansion_near_corner_remains_inside_work_area() {
+        let area = (0.0, 40.0, 1280.0, 680.0);
+        for anchor in ["left", "right", "top", "bottom"] {
+            for centre in [(0.0, 0.0), (1.0, 1.0)] {
+                let p = anchored_top_arc_position(anchor, (310.0, 176.0), area, centre);
+                assert!(p.0 >= 0.0 && p.0 + 310.0 <= 1280.0);
+                assert!(p.1 >= 40.0 && p.1 + 176.0 <= 720.0);
+            }
+        }
+    }
+
+    #[test]
+    fn free_resize_preserves_the_visible_core_attachment() {
+        for (form, anchor) in [
+            ("orbital", (1.0, 1.0)),
+            ("lens", (1.0, 1.0)),
+            ("petal", (1.0, 1.0)),
+            ("flowline", (1.0, 0.5)),
+            ("horizon", (0.5, 0.0)),
+        ] {
+            let origin = (400.0, 300.0);
+            let old = (104.0, 104.0);
+            let new = (288.0, 174.0);
+            let p = free_top_arc_resize_position(form, origin, old, new);
+            assert_eq!(p.0 + new.0 * anchor.0, origin.0 + old.0 * anchor.0);
+            assert_eq!(p.1 + new.1 * anchor.1, origin.1 + old.1 * anchor.1);
+            assert_eq!(free_top_arc_resize_position(form, p, new, old), origin);
+        }
     }
 
     #[test]

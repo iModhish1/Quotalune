@@ -55,6 +55,9 @@ export default function TopArc({ demo }: TopArcProps) {
   const [surfaceState, setSurfaceState] = useState<FlowSurfaceState>(() => demo ? demoState(demo) : "hidden");
   const [flowSettings, setFlowSettings] = useState<FlowSurfaceSettings>(DEFAULT_FLOW_SURFACE_SETTINGS);
   const [focus, setFocus] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const draggingRef = useRef(false);
+  const pointerInsideRef = useRef(false);
   const autoHideTimer = useRef<number | null>(null);
   const nativeRevisionRef = useRef<string | null>(null);
   // A registered account is not a rendering entitlement. The compact host
@@ -84,7 +87,7 @@ export default function TopArc({ demo }: TopArcProps) {
   }, [clearAutoHide, demo, loadFlowSettings]);
 
   useEffect(() => {
-    if (demo) return;
+    if (demo || dragging) return;
     const intended = nativeState(surfaceState);
     const revision = `${intended}:${providers.length}:${flowSettings.form}:${flowSettings.scale}`;
     if (nativeRevisionRef.current === revision) return;
@@ -92,7 +95,7 @@ export default function TopArc({ demo }: TopArcProps) {
     void resizeTopArc(intended, providers.length).catch(() => {
       if (nativeRevisionRef.current === revision) nativeRevisionRef.current = null;
     });
-  }, [demo, flowSettings.form, flowSettings.scale, providers.length, surfaceState]);
+  }, [demo, dragging, flowSettings.form, flowSettings.scale, providers.length, surfaceState]);
 
   useEffect(() => {
     if (focus >= providers.length) setFocus(0);
@@ -100,7 +103,7 @@ export default function TopArc({ demo }: TopArcProps) {
 
   const scheduleAutoHide = useCallback(() => {
     clearAutoHide();
-    if (!flowSettings.autoHide || surfaceState === "expanded" || surfaceState === "pinned") return;
+    if (draggingRef.current || !flowSettings.autoHide || surfaceState === "expanded" || surfaceState === "pinned") return;
     autoHideTimer.current = window.setTimeout(() => setSurfaceState("hidden"), flowSettings.autoHideDelayMs);
   }, [clearAutoHide, flowSettings.autoHide, flowSettings.autoHideDelayMs, surfaceState]);
 
@@ -123,10 +126,15 @@ export default function TopArc({ demo }: TopArcProps) {
     <div
       className="flow-surface-host"
       onMouseEnter={() => {
+        pointerInsideRef.current = true;
         clearAutoHide();
+        if (draggingRef.current) return;
         setSurfaceState((state) => state === "hidden" || state === "peek" || state === "compact" ? "hover" : state);
       }}
-      onMouseLeave={scheduleAutoHide}
+      onMouseLeave={() => {
+        pointerInsideRef.current = false;
+        scheduleAutoHide();
+      }}
     >
       <FlowSurface
         catalog={runtime.catalog}
@@ -143,8 +151,16 @@ export default function TopArc({ demo }: TopArcProps) {
         onTogglePinned={() => setSurfaceState((state) => state === "pinned" ? "expanded" : "pinned")}
         onRequestCompact={() => setSurfaceState("compact")}
         onStartDrag={() => {
+          if (draggingRef.current) return;
           clearAutoHide();
-          void beginQuotaIslandDrag().catch(() => {});
+          draggingRef.current = true;
+          setDragging(true);
+          void beginQuotaIslandDrag().catch(() => {}).finally(() => {
+            draggingRef.current = false;
+            setDragging(false);
+            void loadFlowSettings();
+            if (!pointerInsideRef.current) scheduleAutoHide();
+          });
         }}
       />
     </div>

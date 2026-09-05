@@ -131,14 +131,16 @@ body:has(.flow-surface-host) #root {
 
 /* Flowline: a narrow passive rail; its card opens into free desktop space. */
 .flow-surface[data-form="flowline"] .flow-surface__core { top: 0; bottom: 0; width: var(--flow-flowline-width); flex-direction: column; border-radius: var(--flow-flowline-radius); }
-.flow-surface[data-form="flowline"][data-anchor="right"] .flow-surface__core { right: 0; }
+.flow-surface[data-form="flowline"][data-anchor="right"] .flow-surface__core,
+.flow-surface[data-form="flowline"][data-anchor="free"] .flow-surface__core { right: 0; }
 .flow-surface[data-form="flowline"][data-anchor="left"] .flow-surface__core { left: 0; }
 .flow-surface[data-form="flowline"] .flow-surface__summary { display: grid; width: 100%; justify-items: center; padding: 9px 0 4px; }
 .flow-surface[data-form="flowline"] .flow-surface__summary-copy { display: none; }
 .flow-surface[data-form="flowline"] .flow-surface__quick-providers { flex-direction: column; gap: 8px; padding: 7px 0; }
 .flow-surface[data-form="flowline"] .flow-surface__drag { bottom: 4px; left: 12px; }
 .flow-surface[data-form="flowline"] .flow-surface__details { top: 3px; width: var(--flow-details-width); height: calc(100% - 6px); border-radius: 22px; --flow-enter-x: 8px; }
-.flow-surface[data-form="flowline"][data-anchor="right"] .flow-surface__details { left: 0; }
+.flow-surface[data-form="flowline"][data-anchor="right"] .flow-surface__details,
+.flow-surface[data-form="flowline"][data-anchor="free"] .flow-surface__details { left: 0; }
 .flow-surface[data-form="flowline"][data-anchor="left"] .flow-surface__details { right: 0; --flow-enter-x: -8px; }
 .flow-surface[data-form="flowline"][data-empty="true"] .flow-surface__core { justify-content: center; gap: 8px; }
 .flow-surface[data-form="flowline"][data-empty="true"] .flow-surface__summary { gap: 5px; }
@@ -155,7 +157,8 @@ body:has(.flow-surface-host) #root {
 .flow-surface[data-form="horizon"] .flow-surface__provider-value { display: none; }
 .flow-surface[data-form="horizon"] .flow-surface__drag { right: 6px; top: 16px; }
 .flow-surface[data-form="horizon"] .flow-surface__details { right: 0; left: 0; height: var(--flow-horizon-details-height); border-radius: 22px; --flow-enter-y: -7px; }
-.flow-surface[data-form="horizon"][data-anchor="top"] .flow-surface__details { bottom: 0; }
+.flow-surface[data-form="horizon"][data-anchor="top"] .flow-surface__details,
+.flow-surface[data-form="horizon"][data-anchor="free"] .flow-surface__details { bottom: 0; }
 .flow-surface[data-form="horizon"][data-anchor="bottom"] .flow-surface__details { top: 0; --flow-enter-y: 7px; }
 
 /* Petal: a small free-corner control that unfurls a short inward card. */
@@ -165,8 +168,10 @@ body:has(.flow-surface-host) #root {
 .flow-surface[data-form="petal"] .flow-surface__provider-value { display: none; }
 .flow-surface[data-form="petal"] .flow-surface__drag { right: 5px; top: 4px; }
 .flow-surface[data-form="petal"] .flow-surface__details { width: var(--flow-petal-details-width); height: var(--flow-petal-details-height); border-radius: 24px; }
-.flow-surface[data-form="petal"][data-anchor="bottom-right"] .flow-surface__core { right: 0; bottom: 0; }
-.flow-surface[data-form="petal"][data-anchor="bottom-right"] .flow-surface__details { top: 0; left: 0; }
+.flow-surface[data-form="petal"][data-anchor="bottom-right"] .flow-surface__core,
+.flow-surface[data-form="petal"][data-anchor="free"] .flow-surface__core { right: 0; bottom: 0; }
+.flow-surface[data-form="petal"][data-anchor="bottom-right"] .flow-surface__details,
+.flow-surface[data-form="petal"][data-anchor="free"] .flow-surface__details { top: 0; left: 0; }
 .flow-surface[data-form="petal"][data-anchor="bottom-left"] .flow-surface__core { left: 0; bottom: 0; }
 .flow-surface[data-form="petal"][data-anchor="bottom-left"] .flow-surface__details { top: 0; right: 0; }
 .flow-surface[data-form="petal"][data-anchor="top-right"] .flow-surface__core { top: 0; right: 0; }

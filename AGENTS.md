@@ -1,16 +1,9 @@
 # Repository Guidelines
 
-<!-- TAWAJUD-CODEX-PROJECT-ROUTING:BEGIN v3.2 -->
+<!-- TAWAJUD-CODEX-TRI-LANE:BEGIN v5.1 -->
 ## Tawajud project routing inheritance
-
-- Inherit the global Tawajud Sol/Terra/Luna routing policy and existing safety constitution.
-- Route independent task packets, not the entire repository.
-- Project and directory rules may raise a packet from Luna to Terra or Sol; they may not lower a global mandatory Sol trigger.
-- Terra is the normal implementation lane. Luna is allowed only for explicit bounded low-risk work. Sol is mandatory for architecture, orchestration, difficult root cause, security/auth/identity/payment/privacy, production-impact, migration/rollback, destructive, cross-repository, or critical-review work.
-- Preserve accepted behavior and existing project instructions. Make the smallest reversible coherent change and verify the real artifact.
-- Do not use deprecated modules, libraries, APIs, models, configuration forms, or commands unless Dr. Ibrahim Modhish explicitly approves after a warning.
-- High-risk authored work requires a fresh read-only Sol review plus deterministic evidence; human authority remains the release gate.
-<!-- TAWAJUD-CODEX-PROJECT-ROUTING:END -->
+Follow the active Codex home's policies/Tawajud-Router-Current.md for routing; use global v5.1+ guidance when a file is unavailable. Preserve project-specific instructions and explicit user model/effort. Route each packet, retain objective quality checks, coordinate independent workers, and store only relevant verified project lessons. Older Tawajud routing-only blocks are superseded. No conversation activation or background model work.
+<!-- TAWAJUD-CODEX-TRI-LANE:END -->
 
 ## Project Overview
 
