@@ -1,17 +1,37 @@
-# Implementation Plan: Canonical Surface Foundation
+# Implementation Plan: Quota Island Foundation Reset
 
 ## Overview
 
-Replace the active multi-theme orbital runtime with one compact, Windows-first canonical surface foundation. Obsidian Orbit is the single active visual system. The existing catalog remains preserved as inactive source material so future themes can vary tokens and material without changing layout, interaction, or provider semantics.
+Replace the active multi-theme orbital runtime with one compact, Windows-first
+canonical surface foundation. This plan is subordinate to
+`docs/FOUNDATION_UI_BLUEPRINT.md`: the visual acceptance gate must be approved
+before any new UI implementation begins. The existing catalog remains preserved
+as inactive source material; future themes vary tokens only, never layout,
+interaction, or provider semantics.
 
 ## Architecture Decisions
 
-- Use the existing Rust-authoritative surface layout runtime as the sole owner of native bounds and frontend layout DTOs.
+- Use one small movable `QuotaIsland`, not an orbital chart, as the sole live
+  overlay.
+- Use Rust as the sole owner of native bounds, monitor recovery, placement, and
+  one-expanded-window coordination.
 - Treat all third-party Notchy/Notchi repositories as reference material only. No source code will be copied: the MIT projects are macOS/Xcode apps, and Notchi is GPL-3.0-only.
-- Make one top-center `QuotaIsland` overlay with compact, hover, expanded, and pinned states. Settings and Dashboard remain normal windows; legacy Taskbar, Edge, HUD, and Quick Panel overlays are retired from the production path.
+- Make one `QuotaIsland` overlay with compact, hover, expanded, pinned, and
+  dragging states. Settings and Dashboard remain normal windows; legacy
+  Taskbar, Edge, HUD, and Quick Panel overlays remain retired from production.
 - Archive inactive theme catalog entries without deleting assets or history. Only Obsidian Orbit remains selectable at runtime during the foundation phase.
 
 ## Task List
+
+### Phase 0: Visual foundation gate
+
+- [ ] Task 0: Approve the canonical compact/expanded composition and motion
+  storyboard in `docs/FOUNDATION_UI_BLUEPRINT.md`.
+
+### Checkpoint: Visual contract
+
+- [ ] Human confirms the design boards are the desired direction.
+- [ ] No implementation proceeds while the visual contract is ambiguous.
 
 ### Phase 1: Canonical runtime inventory and archival boundary
 
@@ -25,7 +45,8 @@ Replace the active multi-theme orbital runtime with one compact, Windows-first c
 
 ### Phase 2: Canonical composition
 
-- [x] Task 3: Build `QuotaIsland`: a compact top-center status pill that expands downward into provider details.
+- [ ] Task 3: Rebuild `QuotaIsland` from the approved compact/expanded
+  composition, replacing the current failed visual implementation.
 - [x] Task 4: Retire legacy Taskbar and Edge overlays from the production path and preserve them only in Git history. HUD and Quick Panel retirement remains part of Task 5.
 - [ ] Task 5: Keep Dashboard and Settings as normal windows; repair clipping and flex collapse.
 
@@ -34,11 +55,25 @@ Replace the active multi-theme orbital runtime with one compact, Windows-first c
 - [ ] Fresh Dev binary shows compact overlays without desktop obstruction.
 - [ ] One overlay expands at a time through the native coordinator.
 
-### Phase 3: Quality, accessibility, and proof
+### Phase 3: Placement and interaction
 
-- [ ] Task 6: Add canonical-theme interaction, reduced-motion, and bounds tests.
-- [ ] Task 7: Capture native Windows evidence and measure settled resource use.
-- [ ] Task 8: Archive audit and future-theme token contract documentation.
+- [ ] Task 6: Implement canonical placement persistence, monitor-safe clamping,
+  anchor presets, free drag, and recovery actions.
+- [ ] Task 7: Implement exclusive expanded state, keyboard behaviour, and
+  reduced motion.
+
+### Checkpoint: Interaction candidate
+
+- [ ] Fresh Dev build proves compact, expanded, pinned, moved, and recovered
+  states on Windows.
+
+### Phase 4: Quality, accessibility, and proof
+
+- [ ] Task 8: Add canonical-theme interaction, reduced-motion, bounds, and
+  visual-regression tests.
+- [ ] Task 9: Capture native Windows evidence and measure settled resource use.
+- [ ] Task 10: Enable one token-only theme variant only after the foundation
+  passes the native proof gate.
 
 ### Checkpoint: Review candidate
 
