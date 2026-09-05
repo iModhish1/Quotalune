@@ -257,34 +257,48 @@ pub async fn trigger_provider_login(
     let id = parse_provider_arg(&provider_id)?;
     let provider_id = id.cli_name().to_string();
 
-    if id == ProviderId::Copilot {
-        return run_copilot_device_login(&app).await;
+    match provider_login_transport(id) {
+        ProviderLoginTransport::Device => run_copilot_device_login(&app).await,
+        ProviderLoginTransport::Cli => run_cli_provider_login(&app, id, 120).await,
+        ProviderLoginTransport::Dashboard => {
+            let url = dashboard_url_for_provider(&provider_id).ok_or_else(|| {
+                format!("Login flow for '{provider_id}' is not yet wired through the Tauri shell")
+            })?;
+            open_url_in_browser(&url)
+        }
     }
-
-    if id == ProviderId::Kiro {
-        return run_cli_provider_login(&app, &provider_id, "kiro", 120).await;
-    }
-
-    // For other providers, surface the dashboard URL as the login flow
-    // is not yet wired through the Tauri shell.
-    if let Some(url) = dashboard_url_for_provider(&provider_id) {
-        return open_url_in_browser(&url);
-    }
-    Err(format!(
-        "Login flow for '{provider_id}' is not yet wired through the Tauri shell"
-    ))
 }
 
-/// Run a CLI-based provider login (e.g. Kiro) and emit phase events.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ProviderLoginTransport {
+    Cli,
+    Device,
+    Dashboard,
+}
+
+/// Prefer a provider-owned CLI OAuth flow over a generic usage dashboard.
+/// Providers without a safely supported interactive flow still get the
+/// metadata-owned dashboard route rather than an invented auth integration.
+fn provider_login_transport(id: ProviderId) -> ProviderLoginTransport {
+    match id {
+        ProviderId::Codex | ProviderId::Claude | ProviderId::Gemini | ProviderId::Kiro => {
+            ProviderLoginTransport::Cli
+        }
+        ProviderId::Copilot => ProviderLoginTransport::Device,
+        _ => ProviderLoginTransport::Dashboard,
+    }
+}
+
+/// Run a provider-owned CLI OAuth flow and emit phase events.
 async fn run_cli_provider_login(
     app: &tauri::AppHandle,
-    provider_id: &str,
-    display_name: &str,
+    id: ProviderId,
     timeout_secs: u64,
 ) -> Result<(), String> {
     let app_handle = app.clone();
-    let provider_id_owned = provider_id.to_string();
-    let result = login::run_kiro_login(timeout_secs, move |phase| {
+    let provider_id_owned = id.cli_name().to_string();
+    let display_name = id.display_name();
+    let emit_phase = move |phase| {
         let phase_str = match phase {
             LoginPhase::Idle => "idle",
             LoginPhase::Requesting => "requesting",
@@ -292,8 +306,18 @@ async fn run_cli_provider_login(
             LoginPhase::Complete => "complete",
         };
         events::emit_login_phase(&app_handle, &provider_id_owned, phase_str, None);
-    })
-    .await;
+    };
+    let result = match id {
+        ProviderId::Codex => login::run_codex_login(timeout_secs, emit_phase).await,
+        ProviderId::Claude => login::run_claude_login(timeout_secs, emit_phase).await,
+        ProviderId::Gemini => login::run_gemini_login(timeout_secs, emit_phase).await,
+        ProviderId::Kiro => login::run_kiro_login(timeout_secs, emit_phase).await,
+        _ => {
+            return Err(format!(
+                "No CLI login flow is registered for {display_name}"
+            ));
+        }
+    };
 
     match result.outcome {
         LoginOutcome::Success => Ok(()),
@@ -379,6 +403,30 @@ mod tests {
         assert_eq!(
             dashboard_url_for_provider("codex").as_deref(),
             Some("https://chatgpt.com/codex/settings/usage")
+        );
+    }
+
+    #[test]
+    fn sign_in_uses_the_provider_cli_when_a_real_oauth_flow_exists() {
+        assert_eq!(
+            provider_login_transport(ProviderId::Codex),
+            ProviderLoginTransport::Cli
+        );
+        assert_eq!(
+            provider_login_transport(ProviderId::Claude),
+            ProviderLoginTransport::Cli
+        );
+        assert_eq!(
+            provider_login_transport(ProviderId::Gemini),
+            ProviderLoginTransport::Cli
+        );
+        assert_eq!(
+            provider_login_transport(ProviderId::Copilot),
+            ProviderLoginTransport::Device
+        );
+        assert_eq!(
+            provider_login_transport(ProviderId::Mistral),
+            ProviderLoginTransport::Dashboard
         );
     }
 }
