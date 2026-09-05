@@ -56,12 +56,14 @@ function SurfaceProvider({
   active,
   index,
   color,
+  gaugeSize = 31,
   onFocus,
 }: {
   provider: StageProvider;
   active: boolean;
   index: number;
   color: string;
+  gaugeSize?: number;
   onFocus?: (index: number) => void;
 }) {
   return (
@@ -69,7 +71,7 @@ function SurfaceProvider({
       type="button"
       className="flow-surface__provider"
       data-active={active}
-      style={{ "--flow-provider": color } as CSSProperties}
+      style={{ "--flow-provider": color, "--flow-gauge-size": `${gaugeSize}px` } as CSSProperties}
       onClick={() => onFocus?.(index)}
       aria-pressed={active}
       aria-label={`${provider.name}: ${formatPercentage(provider.primaryValue)} ${provider.primaryLabel}`}
@@ -77,13 +79,13 @@ function SurfaceProvider({
       <span className="flow-surface__provider-gauge" aria-hidden="true">
         <ArcGaugeV3
           remaining={provider.arcFraction}
-          size={31}
-          stroke={3.1}
+          size={gaugeSize}
+          stroke={Math.max(2.5, gaugeSize * 0.1)}
           colorOverride={color}
           ariaLabel={`${provider.name} quota`}
         />
         <span className="flow-surface__provider-icon">
-          <QaProviderIcon providerId={provider.iconId} size={12} />
+          <QaProviderIcon providerId={provider.iconId} size={Math.max(10, Math.round(gaugeSize * 0.42))} />
         </span>
       </span>
       <span className="flow-surface__provider-value">{formatPercentage(provider.primaryValue)}</span>
@@ -114,17 +116,38 @@ export default function FlowSurface({
   const focused = visible[focus];
   const hasQuotaData = visible.length > 0;
   const expanded = hasQuotaData && (state === "expanded" || state === "pinned");
+  const scaleFactor = Math.min(1.25, Math.max(0.75, settings.scale / 100));
+  const scaled = (pixels: number) => `${Math.round(pixels * scaleFactor)}px`;
   const style = {
     "--flow-accent": "#d8dde4",
     "--flow-accent-soft": "rgba(216, 221, 228, 0.22)",
     "--flow-void": "rgba(4, 5, 8, 0.88)",
     "--flow-void-strong": "rgba(1, 2, 4, 0.96)",
     "--flow-hairline": "rgba(221, 227, 235, 0.18)",
+    "--flow-flowline-width": scaled(56),
+    "--flow-flowline-radius": scaled(28),
+    "--flow-horizon-height": scaled(58),
+    "--flow-petal-width": scaled(170),
+    "--flow-petal-height": scaled(118),
+    "--flow-petal-details-width": scaled(222),
+    "--flow-petal-details-height": scaled(154),
+    "--flow-orbital-size": scaled(104),
+    "--flow-orbital-empty-size": scaled(64),
+    "--flow-orbital-details-width": scaled(264),
+    "--flow-orbital-details-height": scaled(166),
+    "--flow-details-width": scaled(257),
+    "--flow-horizon-details-height": scaled(150),
   } as CSSProperties;
 
   if (state === "hidden") {
     return (
-      <button type="button" className={`flow-surface__reveal flow-surface__reveal--${settings.form}`} onClick={onReveal} aria-label="Reveal QuotaArc">
+      <button
+        type="button"
+        className={`flow-surface__reveal flow-surface__reveal--${settings.form} flow-surface__reveal--${settings.anchor}`}
+        style={style}
+        onClick={onReveal}
+        aria-label="Reveal QuotaArc"
+      >
         <QuotaArcMark />
       </button>
     );
@@ -167,6 +190,7 @@ export default function FlowSurface({
               index={index}
               active={index === focus}
               color={providerTone(index, theme.slug)}
+              gaugeSize={settings.form === "orbital" ? 25 : 31}
               onFocus={onFocusProvider}
             />
           ))}
@@ -208,6 +232,7 @@ export default function FlowSurface({
                 index={index}
                 active={index === focus}
                 color={providerTone(index, theme.slug)}
+                gaugeSize={settings.form === "orbital" ? 25 : 31}
                 onFocus={onFocusProvider}
               />
             ))}

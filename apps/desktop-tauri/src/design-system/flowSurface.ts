@@ -75,8 +75,8 @@ const BASE_ENVELOPES: Record<FlowSurfaceForm, Record<Exclude<FlowSurfaceState, "
     expanded: { width: 300, height: 160 },
   },
   orbital: {
-    compact: { width: 112, height: 112 },
-    expanded: { width: 300, height: 180 },
+    compact: { width: 104, height: 104 },
+    expanded: { width: 288, height: 174 },
   },
 };
 
@@ -126,9 +126,9 @@ export function flowSurfaceEnvelope(
   providerCount = 3,
 ): FlowSurfaceEnvelope {
   if (state === "hidden") {
-    if (form === "horizon") return { width: 72, height: 10 };
-    if (form === "petal" || form === "orbital") return { width: 18, height: 18 };
-    return { width: 10, height: 56 };
+    if (form === "horizon") return { width: 96, height: 14 };
+    if (form === "petal" || form === "orbital") return { width: 28, height: 28 };
+    return { width: 28, height: 58 };
   }
   if (state === "peek") {
     if (form === "horizon") return { width: 120, height: 16 };

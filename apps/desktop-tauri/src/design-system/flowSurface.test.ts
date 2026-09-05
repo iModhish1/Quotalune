@@ -64,9 +64,10 @@ describe("Flow Surface contract", () => {
 
   it("reserves an interactive reveal tab even in hidden state", () => {
     expect(flowSurfaceEnvelope("flowline", "hidden", 100)).toEqual({
-      width: 10,
-      height: 56,
+      width: 28,
+      height: 58,
     });
+    expect(flowSurfaceEnvelope("orbital", "hidden", 100)).toEqual({ width: 28, height: 28 });
   });
 
   it("shrinks a compact form when no provider has a truthful quota reading", () => {
@@ -78,7 +79,7 @@ describe("Flow Surface contract", () => {
   });
 
   it("keeps the orbital structure bounded and opens inward from its corner", () => {
-    expect(flowSurfaceEnvelope("orbital", "compact", 100, 3)).toEqual({ width: 112, height: 112 });
+    expect(flowSurfaceEnvelope("orbital", "compact", 100, 3)).toEqual({ width: 104, height: 104 });
     expect(flowSurfaceEnvelope("orbital", "compact", 100, 0)).toEqual({ width: 64, height: 64 });
     expect(resolveDetailDirection("orbital", "bottom-right")).toBe("up-left");
   });

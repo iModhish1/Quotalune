@@ -158,9 +158,9 @@ fn flow_surface_size(
 ) -> (f64, f64) {
     if state == SurfaceState::Hidden {
         return match form {
-            "horizon" => (72.0, 10.0),
-            "petal" | "orbital" => (18.0, 18.0),
-            _ => (10.0, 56.0),
+            "horizon" => (96.0, 14.0),
+            "petal" | "orbital" => (28.0, 28.0),
+            _ => (28.0, 58.0),
         };
     }
     if state == SurfaceState::Peek {
@@ -182,8 +182,8 @@ fn flow_surface_size(
         ("horizon", true, _) => (350.0, 208.0),
         ("petal", false, _) => (170.0, 118.0),
         ("petal", true, _) => (300.0, 160.0),
-        ("orbital", false, _) => (112.0, 112.0),
-        ("orbital", true, _) => (300.0, 180.0),
+        ("orbital", false, _) => (104.0, 104.0),
+        ("orbital", true, _) => (288.0, 174.0),
         (_, true, _) => (330.0, 160.0),
         (_, false, _) => (56.0, 84.0),
     };
@@ -1217,15 +1217,15 @@ mod tests {
         let work_area = Some((1366.0, 768.0));
         assert_eq!(
             flow_surface_size("flowline", SurfaceState::Hidden, 100, work_area, 3),
-            (10.0, 56.0),
+            (28.0, 58.0),
         );
         assert_eq!(
             flow_surface_size("horizon", SurfaceState::Hidden, 100, work_area, 3),
-            (72.0, 10.0),
+            (96.0, 14.0),
         );
         assert_eq!(
             flow_surface_size("petal", SurfaceState::Hidden, 100, work_area, 3),
-            (18.0, 18.0),
+            (28.0, 28.0),
         );
         let flowline = flow_surface_size("flowline", SurfaceState::Compact, 100, work_area, 3);
         assert!(flowline.0 <= 1366.0 * 0.08 && flowline.1 <= 768.0 * 0.42);

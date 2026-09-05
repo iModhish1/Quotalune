@@ -88,13 +88,14 @@ describe("FlowSurface", () => {
     render(
       <FlowSurface
         catalog="01-obsidian-orbit"
-        settings={{ ...settings, form: "orbital", anchor: "bottom-right" }}
+        settings={{ ...settings, form: "orbital", anchor: "bottom-right", scale: 125 }}
         state="compact"
         providers={providers}
       />,
     );
 
     expect(screen.getByTestId("flow-surface")).toHaveAttribute("data-form", "orbital");
+    expect(screen.getByTestId("flow-surface")).toHaveStyle({ "--flow-orbital-size": "130px" });
     expect(screen.getByRole("button", { name: "OpenAI: 79% remaining" })).toBeInTheDocument();
   });
 });
