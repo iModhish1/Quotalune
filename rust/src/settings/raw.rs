@@ -181,6 +181,14 @@ pub(super) struct RawSettings {
     top_arc_scale: u8,
     #[serde(default = "default_top_arc_placement")]
     top_arc_placement: String,
+    #[serde(default = "default_flow_surface_form")]
+    top_arc_form: String,
+    #[serde(default = "default_flow_surface_anchor")]
+    top_arc_anchor: String,
+    #[serde(default = "default_true")]
+    top_arc_auto_hide: bool,
+    #[serde(default = "default_flow_surface_auto_hide_delay")]
+    top_arc_auto_hide_delay_ms: u16,
     #[serde(default)]
     top_arc_click_through: bool,
     #[serde(default = "default_true")]
@@ -329,6 +337,10 @@ impl Default for RawSettings {
             top_arc_opacity: s.top_arc_opacity,
             top_arc_scale: s.top_arc_scale,
             top_arc_placement: s.top_arc_placement,
+            top_arc_form: s.top_arc_form,
+            top_arc_anchor: s.top_arc_anchor,
+            top_arc_auto_hide: s.top_arc_auto_hide,
+            top_arc_auto_hide_delay_ms: s.top_arc_auto_hide_delay_ms,
             top_arc_click_through: s.top_arc_click_through,
             top_arc_hide_fullscreen: s.top_arc_hide_fullscreen,
             privacy_mode: s.privacy_mode,
@@ -656,6 +668,10 @@ impl From<RawSettings> for Settings {
             top_arc_opacity: clamp_surface_opacity(raw.top_arc_opacity),
             top_arc_scale: clamp_surface_scale(raw.top_arc_scale),
             top_arc_placement: normalize_top_arc_placement(&raw.top_arc_placement),
+            top_arc_form: normalize_flow_surface_form(&raw.top_arc_form),
+            top_arc_anchor: normalize_flow_surface_anchor(&raw.top_arc_form, &raw.top_arc_anchor),
+            top_arc_auto_hide: raw.top_arc_auto_hide,
+            top_arc_auto_hide_delay_ms: clamp_flow_surface_auto_hide_delay(raw.top_arc_auto_hide_delay_ms),
             top_arc_click_through: raw.top_arc_click_through,
             top_arc_hide_fullscreen: raw.top_arc_hide_fullscreen,
             privacy_mode: raw.privacy_mode,

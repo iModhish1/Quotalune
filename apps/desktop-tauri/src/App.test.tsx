@@ -48,6 +48,9 @@ vi.mock("./surfaces/Settings", () => ({
 vi.mock("./floatbar/FloatBar", () => ({
   default: () => <div data-testid="surface-float-bar" />,
 }));
+vi.mock("./surfaces/top-arc/TopArc", () => ({
+  default: () => <div data-testid="surface-top-arc" />,
+}));
 
 vi.mock("./hooks/useSurfaceSnapshot", () => ({
   useSurfaceSnapshot: () => ({
@@ -143,6 +146,7 @@ describe("App window-label routing", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     webviewWindowMocks.label = "main";
+    window.history.replaceState({}, "", "/");
     tauriMocks.getBootstrapState.mockResolvedValue(bootstrap());
     tauriMocks.getSettingsSnapshot.mockResolvedValue(settings());
     tauriMocks.checkForUpdates.mockResolvedValue({
@@ -194,6 +198,18 @@ describe("App window-label routing", () => {
 
     await waitFor(() => {
       expect(queryByTestId("surface-float-bar")).not.toBeNull();
+    });
+    expect(queryByTestId("surface-tray-panel")).toBeNull();
+  });
+
+  it("routes the dedicated Top Arc by its URL when WebView2 has not supplied its label yet", async () => {
+    webviewWindowMocks.label = "main";
+    window.history.replaceState({}, "", "/?window=top-arc");
+
+    const { queryByTestId } = render(<App />);
+
+    await waitFor(() => {
+      expect(queryByTestId("surface-top-arc")).not.toBeNull();
     });
     expect(queryByTestId("surface-tray-panel")).toBeNull();
   });

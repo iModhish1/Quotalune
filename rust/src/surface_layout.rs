@@ -148,6 +148,8 @@ impl SurfaceKind {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum SurfaceState {
+    Hidden,
+    Peek,
     Compact,
     Hover,
     Expanded,
@@ -157,6 +159,8 @@ impl SurfaceState {
     /// Deterministic fallback for corrupt external strings.
     pub fn from_token(token: &str) -> Self {
         match token {
+            "hidden" => SurfaceState::Hidden,
+            "peek" => SurfaceState::Peek,
             "hover" => SurfaceState::Hover,
             "expanded" => SurfaceState::Expanded,
             _ => SurfaceState::Compact,
@@ -165,6 +169,8 @@ impl SurfaceState {
 
     pub fn as_token(self) -> &'static str {
         match self {
+            SurfaceState::Hidden => "hidden",
+            SurfaceState::Peek => "peek",
             SurfaceState::Compact => "compact",
             SurfaceState::Hover => "hover",
             SurfaceState::Expanded => "expanded",

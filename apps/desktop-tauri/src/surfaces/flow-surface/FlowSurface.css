@@ -1,0 +1,172 @@
+.flow-surface,
+.flow-surface__reveal {
+  box-sizing: border-box;
+  color: #f4f6f8;
+  font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.flow-surface-host {
+  width: 100%;
+  height: 100%;
+}
+
+/* Tauri only composites a transparent auxiliary window when every ancestor
+   is transparent. Keep the black material on the rounded core itself — never
+   on the rectangular WebView viewport. */
+html:has(.flow-surface-host),
+body:has(.flow-surface-host),
+body:has(.flow-surface-host) #root {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+
+.flow-surface {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+}
+
+.flow-surface__reveal {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  padding: 0;
+  color: #e7ebf0;
+  border: 1px solid rgba(231, 235, 240, 0.24);
+  border-radius: 10px;
+  background: radial-gradient(circle at 50% 44%, rgba(255, 255, 255, 0.10), transparent 60%), rgba(3, 4, 7, 0.88);
+  box-shadow: 0 7px 20px rgba(0, 0, 0, 0.42);
+  cursor: pointer;
+}
+.flow-surface__reveal--horizon { border-radius: 0 0 9px 9px; }
+.flow-surface__reveal--horizon .flow-surface__mark { width: 13px; height: 13px; }
+.flow-surface__reveal--petal { border-radius: 50%; }
+.flow-surface__reveal--petal .flow-surface__mark { width: 13px; height: 13px; }
+
+.flow-surface__mark {
+  width: 23px;
+  height: 23px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
+}
+.flow-surface__mark circle { fill: currentColor; stroke: none; }
+
+.flow-surface__core,
+.flow-surface__details {
+  border: 1px solid rgba(232, 236, 242, 0.28);
+  background:
+    radial-gradient(ellipse at 34% -25%, rgba(235, 239, 245, 0.16), transparent 48%),
+    linear-gradient(145deg, rgba(38, 42, 49, 0.88), rgba(5, 7, 10, 0.97) 72%);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.64), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(18px) saturate(0.72);
+}
+
+.flow-surface__core {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+.flow-surface__summary,
+.flow-surface__drag,
+.flow-surface__provider,
+.flow-surface__detail-header button {
+  color: inherit;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.flow-surface button:focus-visible { outline: 2px solid #f5f7fa; outline-offset: 2px; }
+
+.flow-surface__summary { display: inline-flex; min-width: 0; align-items: center; gap: 8px; padding: 0; text-align: left; }
+.flow-surface__brand { display: grid; flex: 0 0 auto; width: 29px; height: 29px; place-items: center; color: #f4f6f9; border: 1px solid rgba(242, 245, 249, 0.42); border-radius: 50%; background: rgba(233, 238, 245, 0.10); box-shadow: 0 0 0 3px rgba(225, 230, 237, 0.055); }
+.flow-surface__brand .flow-surface__mark { width: 18px; height: 18px; }
+.flow-surface__summary-copy { display: grid; min-width: 0; }
+.flow-surface__summary-copy strong { overflow: hidden; font-size: 11px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.flow-surface__summary-copy small { overflow: hidden; margin-top: 1px; color: rgba(235, 239, 245, 0.56); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.flow-surface__quick-providers { display: flex; }
+.flow-surface__provider { display: grid; min-width: 0; place-items: center; padding: 0; color: rgba(241, 244, 247, 0.82); }
+.flow-surface__provider-gauge { position: relative; display: grid; width: 31px; height: 31px; place-items: center; filter: saturate(0.58) brightness(0.92); }
+.flow-surface__provider-gauge > :last-child { position: absolute; }
+.flow-surface__provider-icon { display: inline-flex; filter: grayscale(1) saturate(0) brightness(1.28); }
+.flow-surface__provider-value { font-size: 10px; font-weight: 720; letter-spacing: -0.02em; }
+.flow-surface__provider[data-active="true"] .flow-surface__provider-gauge { filter: saturate(0.58) brightness(1.05) drop-shadow(0 0 5px rgba(243, 246, 250, 0.26)); }
+.flow-surface__drag { position: absolute; display: grid; width: 20px; height: 25px; place-items: center; color: rgba(236, 240, 244, 0.42); font-size: 18px; line-height: 1; }
+.flow-surface__drag:hover { color: #fff; }
+
+.flow-surface__details {
+  position: absolute;
+  display: grid;
+  gap: 8px;
+  padding: 10px 11px;
+  overflow: hidden;
+  animation: flow-surface-in 180ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+@keyframes flow-surface-in { from { opacity: 0; transform: translate3d(var(--flow-enter-x, 0), var(--flow-enter-y, 6px), 0) scale(0.98); } to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } }
+.flow-surface__detail-header { display: flex; align-items: center; justify-content: space-between; min-height: 21px; }
+.flow-surface__detail-header > span:last-child { display: flex; gap: 2px; }
+.flow-surface__detail-header button { display: grid; width: 21px; height: 21px; place-items: center; border-radius: 7px; color: rgba(243, 246, 249, 0.66); font-size: 16px; line-height: 1; }
+.flow-surface__detail-header button:hover, .flow-surface__detail-header button[aria-pressed="true"] { color: white; background: rgba(255, 255, 255, 0.10); }
+.flow-surface__detail-title { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; }
+.flow-surface__detail-title .flow-surface__mark { width: 15px; height: 15px; color: rgba(244, 247, 250, 0.80); }
+.flow-surface__metric { display: grid; grid-template-columns: auto 1fr; align-items: baseline; column-gap: 7px; }
+.flow-surface__metric strong { font-size: 27px; line-height: 0.95; letter-spacing: -0.06em; }
+.flow-surface__metric span { color: rgba(237, 241, 245, 0.62); font-size: 10px; }
+.flow-surface__metric small { grid-column: 1 / -1; margin-top: 3px; color: rgba(237, 241, 245, 0.44); font-size: 9px; }
+.flow-surface__detail-providers { display: flex; align-items: center; gap: 8px; }
+.flow-surface__detail-providers .flow-surface__provider { grid-template-columns: 31px auto; gap: 3px; }
+
+/* Flowline: a narrow passive rail; its card opens into free desktop space. */
+.flow-surface[data-form="flowline"] .flow-surface__core { top: 0; bottom: 0; width: 56px; flex-direction: column; border-radius: 28px; }
+.flow-surface[data-form="flowline"][data-anchor="right"] .flow-surface__core { right: 0; }
+.flow-surface[data-form="flowline"][data-anchor="left"] .flow-surface__core { left: 0; }
+.flow-surface[data-form="flowline"] .flow-surface__summary { display: grid; width: 100%; justify-items: center; padding: 9px 0 4px; }
+.flow-surface[data-form="flowline"] .flow-surface__summary-copy { display: none; }
+.flow-surface[data-form="flowline"] .flow-surface__quick-providers { flex-direction: column; gap: 8px; padding: 7px 0; }
+.flow-surface[data-form="flowline"] .flow-surface__drag { bottom: 6px; left: 18px; }
+.flow-surface[data-form="flowline"] .flow-surface__details { top: 3px; width: 257px; height: calc(100% - 6px); border-radius: 22px; --flow-enter-x: 8px; }
+.flow-surface[data-form="flowline"][data-anchor="right"] .flow-surface__details { left: 0; }
+.flow-surface[data-form="flowline"][data-anchor="left"] .flow-surface__details { right: 0; --flow-enter-x: -8px; }
+.flow-surface[data-form="flowline"][data-empty="true"] .flow-surface__core { justify-content: center; gap: 8px; }
+.flow-surface[data-form="flowline"][data-empty="true"] .flow-surface__summary { gap: 5px; }
+.flow-surface[data-form="flowline"][data-empty="true"] .flow-surface__summary-copy { display: grid; justify-items: center; max-width: 52px; text-align: center; }
+.flow-surface[data-form="flowline"][data-empty="true"] .flow-surface__summary-copy strong { font-size: 9px; }
+.flow-surface[data-form="flowline"][data-empty="true"] .flow-surface__summary-copy small { font-size: 8px; line-height: 1.15; white-space: normal; }
+
+/* Horizon: a compact black ribbon; detail folds down/up without covering work. */
+.flow-surface[data-form="horizon"] .flow-surface__core { right: 0; left: 0; height: 58px; padding: 0 10px; gap: 9px; border-radius: 0 0 25px 25px; }
+.flow-surface[data-form="horizon"][data-anchor="bottom"] .flow-surface__core { top: auto; bottom: 0; border-radius: 25px 25px 0 0; }
+.flow-surface[data-form="horizon"] .flow-surface__summary { flex: 1; }
+.flow-surface[data-form="horizon"] .flow-surface__quick-providers { gap: 6px; }
+.flow-surface[data-form="horizon"] .flow-surface__provider-value { display: none; }
+.flow-surface[data-form="horizon"] .flow-surface__drag { right: 6px; top: 16px; }
+.flow-surface[data-form="horizon"] .flow-surface__details { right: 0; left: 0; height: 150px; border-radius: 22px; --flow-enter-y: -7px; }
+.flow-surface[data-form="horizon"][data-anchor="top"] .flow-surface__details { bottom: 0; }
+.flow-surface[data-form="horizon"][data-anchor="bottom"] .flow-surface__details { top: 0; --flow-enter-y: 7px; }
+
+/* Petal: a small free-corner control that unfurls a short inward card. */
+.flow-surface[data-form="petal"] .flow-surface__core { width: 170px; height: 118px; padding: 12px; gap: 9px; border-radius: 31px 16px 31px 16px; }
+.flow-surface[data-form="petal"] .flow-surface__summary { flex: 1; }
+.flow-surface[data-form="petal"] .flow-surface__quick-providers { align-self: flex-end; gap: 5px; }
+.flow-surface[data-form="petal"] .flow-surface__provider-value { display: none; }
+.flow-surface[data-form="petal"] .flow-surface__drag { right: 5px; top: 4px; }
+.flow-surface[data-form="petal"] .flow-surface__details { width: 222px; height: 154px; border-radius: 24px; }
+.flow-surface[data-form="petal"][data-anchor="bottom-right"] .flow-surface__core { right: 0; bottom: 0; }
+.flow-surface[data-form="petal"][data-anchor="bottom-right"] .flow-surface__details { top: 0; left: 0; }
+.flow-surface[data-form="petal"][data-anchor="bottom-left"] .flow-surface__core { left: 0; bottom: 0; }
+.flow-surface[data-form="petal"][data-anchor="bottom-left"] .flow-surface__details { top: 0; right: 0; }
+.flow-surface[data-form="petal"][data-anchor="top-right"] .flow-surface__core { top: 0; right: 0; }
+.flow-surface[data-form="petal"][data-anchor="top-right"] .flow-surface__details { bottom: 0; left: 0; }
+.flow-surface[data-form="petal"][data-anchor="top-left"] .flow-surface__core { top: 0; left: 0; }
+.flow-surface[data-form="petal"][data-anchor="top-left"] .flow-surface__details { right: 0; bottom: 0; }
+
+.flow-surface[data-state="hover"] .flow-surface__core,
+.flow-surface__core:hover { border-color: rgba(245, 247, 250, 0.46); box-shadow: 0 18px 46px rgba(0, 0, 0, 0.68), inset 0 1px 0 rgba(255, 255, 255, 0.18); }
+@media (prefers-reduced-motion: reduce) { .flow-surface__details { animation: none; } }

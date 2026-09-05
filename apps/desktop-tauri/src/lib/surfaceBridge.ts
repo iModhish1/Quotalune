@@ -14,6 +14,10 @@ export interface SurfaceSettingsPatch {
   topArcOpacity?: number;
   topArcScale?: number;
   topArcPlacement?: "top-left" | "top-center" | "top-right" | "free";
+  topArcForm?: "flowline" | "horizon" | "petal";
+  topArcAnchor?: "left" | "right" | "top" | "bottom" | "top-left" | "top-right" | "bottom-left" | "bottom-right" | "free";
+  topArcAutoHide?: boolean;
+  topArcAutoHideDelayMs?: number;
   topArcClickThrough?: boolean;
   topArcHideFullscreen?: boolean;
   taskbarArcEnabled?: boolean;
@@ -38,7 +42,7 @@ export function hideTopArc(): Promise<void> {
   return invoke("hide_top_arc_surface");
 }
 
-export type SurfaceWindowState = "compact" | "hover" | "expanded";
+export type SurfaceWindowState = "hidden" | "peek" | "compact" | "hover" | "expanded";
 
 export function resizeEdgeArc(state: SurfaceWindowState, providerCount: number): Promise<void> {
   return invoke("resize_edge_arc_surface", { state, providerCount });
@@ -88,6 +92,10 @@ export interface SurfaceSettings {
   topArcOpacity: number;
   topArcScale: number;
   topArcPlacement: "top-left" | "top-center" | "top-right" | "free";
+  topArcForm: "flowline" | "horizon" | "petal";
+  topArcAnchor: "left" | "right" | "top" | "bottom" | "top-left" | "top-right" | "bottom-left" | "bottom-right" | "free";
+  topArcAutoHide: boolean;
+  topArcAutoHideDelayMs: number;
   topArcClickThrough: boolean;
   topArcHideFullscreen: boolean;
   taskbarArcEnabled: boolean;

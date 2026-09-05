@@ -15,6 +15,6 @@ describe("Settings window geometry", () => {
   });
 
   it("keeps a 16px safe area on smaller displays", () => {
-    expect(fitSettingsWindowSize(800, 600)).toEqual({ width: 784, height: 584 });
+    expect(fitSettingsWindowSize(800, 600)).toEqual({ width: 720, height: 584 });
   });
 });

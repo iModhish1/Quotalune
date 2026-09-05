@@ -36,18 +36,28 @@ vi.mock("../hooks/useStageRuntime", () => ({
 vi.mock("../lib/surfaceBridge", () => ({
   resizeEdgeArc: vi.fn().mockResolvedValue(undefined),
   resizeTopArc: vi.fn().mockResolvedValue(undefined),
+  getSurfaceSettings: vi.fn().mockResolvedValue({
+    topArcForm: "flowline",
+    topArcAnchor: "right",
+    topArcScale: 100,
+    topArcAutoHide: true,
+    topArcAutoHideDelayMs: 900,
+  }),
+  beginQuotaIslandDrag: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe("live orbital surface expansion", () => {
   beforeEach(() => runtime.refresh.mockClear());
 
   it.each([
-    ["Quota Island", TopArc, "Expand quota details"],
+    ["Quota Island", TopArc, "Expand Codex details"],
     ["Edge", EdgeArc, "Expand right edge orbit"],
-  ])("does not turn %s expansion into a forced provider refresh", (_name, Surface, label) => {
+  ])("does not turn %s expansion into a forced provider refresh", async (_name, Surface, label) => {
     render(<Surface />);
 
-    fireEvent.click(screen.getByRole("button", { name: label }));
+    const reveal = screen.queryByRole("button", { name: "Reveal QuotaArc" });
+    if (reveal) fireEvent.click(reveal);
+    fireEvent.click(await screen.findByRole("button", { name: label }));
 
     expect(runtime.refresh).not.toHaveBeenCalled();
   });

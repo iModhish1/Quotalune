@@ -1,76 +1,109 @@
-/** The legacy top-window host for the single Quota Island composition. */
+/** The native window host for QuotaArc's one adaptive Flow Surface. */
 import { useCallback, useEffect, useRef, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 
 import type { StageProvider } from "../../components/orbit/stageTypes";
+import {
+  DEFAULT_FLOW_SURFACE_SETTINGS,
+  normalizeFlowSurfaceSettings,
+  type FlowSurfaceSettings,
+  type FlowSurfaceState,
+} from "../../design-system/flowSurface";
 import { useStageRuntime } from "../../hooks/useStageRuntime";
 import {
   beginQuotaIslandDrag,
+  getSurfaceSettings,
   resizeTopArc,
+  type SurfaceSettings,
   type SurfaceWindowState,
 } from "../../lib/surfaceBridge";
-import QuotaIsland, { type QuotaIslandState } from "../quota-island/QuotaIsland";
+import FlowSurface from "../flow-surface/FlowSurface";
 
 const DEMO_PROVIDERS: StageProvider[] = [
   { id: "codex", name: "OpenAI", iconId: "openai", resolvedMode: "remaining", arcFraction: 0.74, primaryValue: 74, secondaryValue: 26, primaryLabel: "remaining", reset: "3h 40m", status: "ok" },
   { id: "claude", name: "Claude", iconId: "claude", resolvedMode: "remaining", arcFraction: 0.68, primaryValue: 68, secondaryValue: 32, primaryLabel: "remaining", reset: "26h", status: "ok" },
   { id: "gemini", name: "Gemini", iconId: "gemini", resolvedMode: "remaining", arcFraction: 0.55, primaryValue: 55, secondaryValue: 45, primaryLabel: "remaining", reset: "22h", status: "ok" },
-  { id: "llama", name: "Meta", iconId: "llama", resolvedMode: "remaining", arcFraction: 0.6, primaryValue: 60, secondaryValue: 40, primaryLabel: "remaining", reset: "5d", status: "ok" },
-  { id: "mistral", name: "Mistral", iconId: "mistral", resolvedMode: "remaining", arcFraction: 0.45, primaryValue: 45, secondaryValue: 55, primaryLabel: "remaining", reset: "1d", status: "attention" },
-  { id: "deepseek", name: "DeepSeek", iconId: "deepseek", resolvedMode: "remaining", arcFraction: 0.7, primaryValue: 70, secondaryValue: 30, primaryLabel: "remaining", reset: "19h", status: "ok" },
-  { id: "perplexity", name: "Perplexity", iconId: "perplexity", resolvedMode: "remaining", arcFraction: 0.5, primaryValue: 50, secondaryValue: 50, primaryLabel: "remaining", reset: "3d", status: "ok" },
 ];
 
 interface TopArcProps {
   demo?: { state: "idle" | "hover" | "expanded" };
 }
 
-function initialState(demo: TopArcProps["demo"]): SurfaceWindowState {
+function demoState(demo: TopArcProps["demo"]): FlowSurfaceState {
   if (demo?.state === "expanded") return "expanded";
   if (demo?.state === "hover") return "hover";
   return "compact";
 }
 
-function nativeSizeState(state: QuotaIslandState): SurfaceWindowState {
-  return state === "expanded" || state === "pinned" ? "expanded" : "compact";
+function settingsToFlow(settings: SurfaceSettings): FlowSurfaceSettings {
+  return normalizeFlowSurfaceSettings({
+    form: settings.topArcForm,
+    anchor: settings.topArcAnchor,
+    scale: settings.topArcScale,
+    autoHide: settings.topArcAutoHide,
+    autoHideDelayMs: settings.topArcAutoHideDelayMs,
+  });
+}
+
+function nativeState(state: FlowSurfaceState): SurfaceWindowState {
+  return state === "pinned" ? "expanded" : state;
 }
 
 export default function TopArc({ demo }: TopArcProps) {
   const runtime = useStageRuntime({ enabled: !demo, surface: "top" });
-  const [surfaceState, setSurfaceState] = useState<QuotaIslandState>(() => initialState(demo));
+  const [surfaceState, setSurfaceState] = useState<FlowSurfaceState>(() => demo ? demoState(demo) : "hidden");
+  const [flowSettings, setFlowSettings] = useState<FlowSurfaceSettings>(DEFAULT_FLOW_SURFACE_SETTINGS);
   const [focus, setFocus] = useState(0);
-  const nativeSizeRef = useRef<SurfaceWindowState | null>(null);
-  const resizeRevisionRef = useRef(0);
+  const autoHideTimer = useRef<number | null>(null);
+  const nativeRevisionRef = useRef<string | null>(null);
   const providers = demo ? DEMO_PROVIDERS : runtime.providers;
+
+  const clearAutoHide = useCallback(() => {
+    if (autoHideTimer.current != null) {
+      window.clearTimeout(autoHideTimer.current);
+      autoHideTimer.current = null;
+    }
+  }, []);
+
+  const loadFlowSettings = useCallback(() => {
+    if (demo) return Promise.resolve();
+    return getSurfaceSettings().then((settings) => setFlowSettings(settingsToFlow(settings))).catch(() => {});
+  }, [demo]);
+
+  useEffect(() => {
+    void loadFlowSettings();
+    if (demo) return undefined;
+    const unlisten = listen("quotaarc:surfaces-changed", loadFlowSettings);
+    return () => {
+      clearAutoHide();
+      void unlisten.then((dispose) => dispose()).catch(() => {});
+    };
+  }, [clearAutoHide, demo, loadFlowSettings]);
 
   useEffect(() => {
     if (demo) return;
-    // Hover is a CSS-only treatment and has the compact envelope. Native
-    // changes happen only at the compact↔expanded boundary and the latest
-    // intent wins if the user clicks/Escapes in quick succession.
-    const nextSize = nativeSizeState(surfaceState);
-    if (nativeSizeRef.current === nextSize) return;
-    nativeSizeRef.current = nextSize;
-    const revision = ++resizeRevisionRef.current;
-    void resizeTopArc(nextSize, providers.length).catch(() => {
-      if (revision === resizeRevisionRef.current) nativeSizeRef.current = null;
+    const intended = nativeState(surfaceState);
+    const revision = `${intended}:${providers.length}:${flowSettings.form}:${flowSettings.scale}`;
+    if (nativeRevisionRef.current === revision) return;
+    nativeRevisionRef.current = revision;
+    void resizeTopArc(intended, providers.length).catch(() => {
+      if (nativeRevisionRef.current === revision) nativeRevisionRef.current = null;
     });
-  }, [demo, providers.length, surfaceState]);
+  }, [demo, flowSettings.form, flowSettings.scale, providers.length, surfaceState]);
 
   useEffect(() => {
     if (focus >= providers.length) setFocus(0);
   }, [focus, providers.length]);
 
+  const scheduleAutoHide = useCallback(() => {
+    clearAutoHide();
+    if (!flowSettings.autoHide || surfaceState === "expanded" || surfaceState === "pinned") return;
+    autoHideTimer.current = window.setTimeout(() => setSurfaceState("hidden"), flowSettings.autoHideDelayMs);
+  }, [clearAutoHide, flowSettings.autoHide, flowSettings.autoHideDelayMs, surfaceState]);
+
   const cycle = useCallback((direction: 1 | -1) => {
     setFocus((current) => providers.length === 0 ? 0 : (current + direction + providers.length) % providers.length);
   }, [providers.length]);
-
-  const startDrag = useCallback(() => {
-    if (demo) return;
-    // One native command changes the placement intent and begins the Windows
-    // drag gesture together. This avoids losing a short drag behind a
-    // round-trip through the WebView.
-    void beginQuotaIslandDrag().catch(() => {});
-  }, [demo]);
 
   useEffect(() => {
     if (demo) return;
@@ -85,20 +118,31 @@ export default function TopArc({ demo }: TopArcProps) {
 
   return (
     <div
-      className="quota-island-host"
-      onMouseEnter={() => setSurfaceState((state) => state === "compact" ? "hover" : state)}
-      onMouseLeave={() => setSurfaceState((state) => state === "hover" ? "compact" : state)}
+      className="flow-surface-host"
+      onMouseEnter={() => {
+        clearAutoHide();
+        setSurfaceState((state) => state === "hidden" || state === "peek" || state === "compact" ? "hover" : state);
+      }}
+      onMouseLeave={scheduleAutoHide}
     >
-      <QuotaIsland
+      <FlowSurface
         catalog={runtime.catalog}
+        settings={flowSettings}
         state={surfaceState}
         providers={providers}
         focusedIndex={focus}
         onFocusProvider={setFocus}
-        onToggleExpanded={() => setSurfaceState((state) => state === "expanded" || state === "pinned" ? "compact" : "expanded")}
+        onReveal={() => setSurfaceState("compact")}
+        onToggleExpanded={() => {
+          clearAutoHide();
+          setSurfaceState((state) => state === "expanded" || state === "pinned" ? "compact" : "expanded");
+        }}
         onTogglePinned={() => setSurfaceState((state) => state === "pinned" ? "expanded" : "pinned")}
-        onStartDrag={startDrag}
         onRequestCompact={() => setSurfaceState("compact")}
+        onStartDrag={() => {
+          clearAutoHide();
+          void beginQuotaIslandDrag().catch(() => {});
+        }}
       />
     </div>
   );

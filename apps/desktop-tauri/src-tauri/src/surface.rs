@@ -3,10 +3,13 @@ use serde::{Deserialize, Serialize};
 /// Shared Settings-window geometry. Both the main-shell proof path and the
 /// detached production window use these values so the tab strip and theme
 /// gallery cannot regress to the legacy narrow layout on one path only.
-pub const SETTINGS_WINDOW_WIDTH: f64 = 900.0;
-pub const SETTINGS_WINDOW_HEIGHT: f64 = 720.0;
-pub const SETTINGS_WINDOW_MIN_WIDTH: f64 = 640.0;
-pub const SETTINGS_WINDOW_MIN_HEIGHT: f64 = 520.0;
+/// A Settings window should feel like a focused control room, not a dashboard
+/// that commandeers the monitor. Values are logical pixels and are mirrored
+/// by the frontend fitter.
+pub const SETTINGS_WINDOW_WIDTH: f64 = 720.0;
+pub const SETTINGS_WINDOW_HEIGHT: f64 = 660.0;
+pub const SETTINGS_WINDOW_MIN_WIDTH: f64 = 520.0;
+pub const SETTINGS_WINDOW_MIN_HEIGHT: f64 = 440.0;
 
 /// The four surfaces the desktop shell can present.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
@@ -296,10 +299,10 @@ mod tests {
     #[test]
     fn settings_properties() {
         let props = SurfaceMode::Settings.window_properties();
-        assert_eq!(props.width, 900.0);
-        assert_eq!(props.height, 720.0);
-        assert_eq!(props.min_width, Some(640.0));
-        assert_eq!(props.min_height, Some(520.0));
+        assert_eq!(props.width, 720.0);
+        assert_eq!(props.height, 660.0);
+        assert_eq!(props.min_width, Some(520.0));
+        assert_eq!(props.min_height, Some(440.0));
     }
 
     #[test]

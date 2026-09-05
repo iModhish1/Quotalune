@@ -23,12 +23,12 @@ AppId=QuotaArcDesktop
 AppName={#MyAppName}
 AppVersion={#AppVersion}
 AppVerName={#MyAppName} {#AppVersion}
-AppPublisher=QuotaArc Contributors
+AppPublisher=QuotaArc
 AppPublisherURL=https://github.com/quotaarc/quotaarc
 AppSupportURL=https://github.com/quotaarc/quotaarc/issues
 AppUpdatesURL=https://github.com/quotaarc/quotaarc/releases
 DefaultDirName={localappdata}\Programs\QuotaArc
-DefaultGroupName=CodexBar
+DefaultGroupName=QuotaArc
 DisableProgramGroupPage=yes
 DisableDirPage=auto
 PrivilegesRequired=lowest
@@ -56,12 +56,12 @@ Source: "{#VCRedistPath}"; Flags: dontcopy
 Source: "{#WebView2BootstrapperPath}"; Flags: dontcopy
 
 [Icons]
-Name: "{autoprograms}\CodexBar"; Filename: "{app}\codexbar.exe"; Parameters: "menubar"; WorkingDir: "{app}"; IconFilename: "{app}\icon.ico"
-Name: "{autodesktop}\CodexBar"; Filename: "{app}\codexbar.exe"; Parameters: "menubar"; WorkingDir: "{app}"; Tasks: desktopicon; IconFilename: "{app}\icon.ico"
+Name: "{autoprograms}\QuotaArc"; Filename: "{app}\codexbar.exe"; Parameters: "menubar"; WorkingDir: "{app}"; IconFilename: "{app}\icon.ico"
+Name: "{autodesktop}\QuotaArc"; Filename: "{app}\codexbar.exe"; Parameters: "menubar"; WorkingDir: "{app}"; Tasks: desktopicon; IconFilename: "{app}\icon.ico"
 
 [Run]
 ; Interactive installs: optional checkbox on the finish page.
-Filename: "{app}\codexbar.exe"; Parameters: "menubar"; Description: "Launch CodexBar"; Flags: nowait postinstall skipifsilent; Check: CanLaunchCodexBar
+Filename: "{app}\codexbar.exe"; Parameters: "menubar"; Description: "Launch QuotaArc"; Flags: nowait postinstall skipifsilent; Check: CanLaunchCodexBar
 ; Silent upgrades (winget / in-app updater): always relaunch so the tray icon
 ; returns after CloseApplications kills the previous process. Single-instance
 ; handles a second launch from the updater helper if both fire.

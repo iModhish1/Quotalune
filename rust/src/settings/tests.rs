@@ -325,6 +325,29 @@ fn quota_island_placement_normalization_is_bounded() {
 }
 
 #[test]
+fn flow_surface_form_and_anchor_normalization_remain_bounded() {
+    assert_eq!(normalize_flow_surface_form("flowline"), "flowline");
+    assert_eq!(normalize_flow_surface_form("horizon"), "horizon");
+    assert_eq!(normalize_flow_surface_form("petal"), "petal");
+    assert_eq!(normalize_flow_surface_form("orbital"), "flowline");
+
+    assert_eq!(normalize_flow_surface_anchor("flowline", "left"), "left");
+    assert_eq!(normalize_flow_surface_anchor("flowline", "bottom"), "right");
+    assert_eq!(normalize_flow_surface_anchor("horizon", "bottom"), "bottom");
+    assert_eq!(normalize_flow_surface_anchor("horizon", "left"), "top");
+    assert_eq!(normalize_flow_surface_anchor("petal", "top-left"), "top-left");
+    assert_eq!(normalize_flow_surface_anchor("petal", "right"), "bottom-right");
+    assert_eq!(normalize_flow_surface_anchor("petal", "free"), "free");
+}
+
+#[test]
+fn flow_surface_auto_hide_delay_stays_in_a_responsive_range() {
+    assert_eq!(clamp_flow_surface_auto_hide_delay(1), 300);
+    assert_eq!(clamp_flow_surface_auto_hide_delay(900), 900);
+    assert_eq!(clamp_flow_surface_auto_hide_delay(9_000), 3_000);
+}
+
+#[test]
 fn archived_catalog_values_normalize_to_the_canonical_theme() {
     let s = Settings {
         catalog_theme: "03-solar-ember".to_string(),

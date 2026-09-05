@@ -6,7 +6,7 @@ import { Field, Select, Toggle } from "../../../components/FormControls";
 import type { AppInfoBridge, UpdateChannel } from "../../../types/bridge";
 import type { LocaleKey } from "../../../i18n/keys";
 import type { TabProps } from "../settingsTabs";
-import quotaarcIcon from "../../../assets/quotaarc-icon.png";
+import quotaarcIcon from "../../../assets/quotaarc-void-mark.svg";
 
 const REPO_URL = "https://github.com/quotaarc/quotaarc";
 const SUBMIT_ISSUE_URL = `${REPO_URL}/issues/new?labels=bug&template=bug_report.yml`;

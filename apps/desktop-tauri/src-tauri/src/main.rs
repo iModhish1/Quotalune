@@ -92,7 +92,12 @@ where
     args.is_empty() || should_open_primary_window_from_args(&args)
 }
 
-fn launch_behavior<I, S>(force_visible: bool, start_minimized: bool, args: I) -> LaunchBehavior
+fn launch_behavior<I, S>(
+    force_visible: bool,
+    start_minimized: bool,
+    compact_surface_enabled: bool,
+    args: I,
+) -> LaunchBehavior
 where
     I: IntoIterator<Item = S>,
     S: AsRef<str>,
@@ -104,7 +109,10 @@ where
     LaunchBehavior {
         open_primary_window_at_start: force_visible
             || explicit_primary_launch
-            || (plain_desktop_launch && !start_minimized),
+            // A compact QuotaArc surface is itself the non-interrupting
+            // desktop launch. Do not also raise the old dashboard over the
+            // user's work; an explicit tray/menu launch still opens it.
+            || (plain_desktop_launch && !start_minimized && !compact_surface_enabled),
         suppress_blur_dismiss: force_visible,
     }
 }
@@ -141,6 +149,7 @@ fn main() {
     let launch = launch_behavior(
         force_start_visible,
         settings.start_minimized,
+        settings.top_arc_enabled,
         std::env::args().skip(1),
     );
 
@@ -497,7 +506,7 @@ mod tests {
             "usage", "-p", "claude"
         ]));
         assert_eq!(
-            launch_behavior(false, false, ["usage", "-p", "claude"]),
+            launch_behavior(false, false, false, ["usage", "-p", "claude"]),
             LaunchBehavior {
                 open_primary_window_at_start: false,
                 suppress_blur_dismiss: false,
@@ -508,28 +517,39 @@ mod tests {
     #[test]
     fn plain_desktop_launch_opens_unless_start_minimized() {
         assert_eq!(
-            launch_behavior(false, false, std::iter::empty::<&str>()),
+            launch_behavior(false, false, false, std::iter::empty::<&str>()),
             LaunchBehavior {
                 open_primary_window_at_start: true,
                 suppress_blur_dismiss: false,
             }
         );
         assert_eq!(
-            launch_behavior(false, false, [""]),
+            launch_behavior(false, false, false, [""]),
             LaunchBehavior {
                 open_primary_window_at_start: true,
                 suppress_blur_dismiss: false,
             }
         );
         assert_eq!(
-            launch_behavior(false, false, ["  "]),
+            launch_behavior(false, false, false, ["  "]),
             LaunchBehavior {
                 open_primary_window_at_start: true,
                 suppress_blur_dismiss: false,
             }
         );
         assert_eq!(
-            launch_behavior(false, true, std::iter::empty::<&str>()),
+            launch_behavior(false, true, false, std::iter::empty::<&str>()),
+            LaunchBehavior {
+                open_primary_window_at_start: false,
+                suppress_blur_dismiss: false,
+            }
+        );
+    }
+
+    #[test]
+    fn compact_surface_launch_stays_out_of_the_way() {
+        assert_eq!(
+            launch_behavior(false, false, true, std::iter::empty::<&str>()),
             LaunchBehavior {
                 open_primary_window_at_start: false,
                 suppress_blur_dismiss: false,
@@ -550,7 +570,7 @@ mod tests {
     #[test]
     fn menubar_launch_does_not_suppress_blur_dismiss() {
         assert_eq!(
-            launch_behavior(false, true, ["menubar"]),
+            launch_behavior(false, true, false, ["menubar"]),
             LaunchBehavior {
                 open_primary_window_at_start: true,
                 suppress_blur_dismiss: false,
@@ -560,7 +580,7 @@ mod tests {
 
     #[test]
     fn automation_launch_opens_and_suppresses_blur_dismiss() {
-        let launch = launch_behavior(true, true, std::iter::empty::<&str>());
+        let launch = launch_behavior(true, true, false, std::iter::empty::<&str>());
         assert_eq!(
             launch,
             LaunchBehavior {
@@ -573,7 +593,7 @@ mod tests {
 
     #[test]
     fn proof_mode_suppresses_blur_dismiss() {
-        let launch = launch_behavior(false, true, std::iter::empty::<&str>());
+        let launch = launch_behavior(false, true, false, std::iter::empty::<&str>());
         assert!(should_suppress_blur_dismiss(launch, true));
     }
 

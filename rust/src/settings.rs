@@ -353,6 +353,23 @@ pub struct Settings {
     #[serde(default = "default_top_arc_placement")]
     pub top_arc_placement: String,
 
+    /// Theme-neutral silhouette for the one live QuotaArc surface.
+    /// A form changes geometry only; visual material remains a theme concern.
+    #[serde(default = "default_flow_surface_form")]
+    pub top_arc_form: String,
+
+    /// Form-aware screen anchor. `free` uses the remembered drag position.
+    #[serde(default = "default_flow_surface_anchor")]
+    pub top_arc_anchor: String,
+
+    /// Retract to a small reachable reveal tab after the pointer leaves.
+    #[serde(default = "default_true")]
+    pub top_arc_auto_hide: bool,
+
+    /// Delay before the compact surface retracts, in milliseconds.
+    #[serde(default = "default_flow_surface_auto_hide_delay")]
+    pub top_arc_auto_hide_delay_ms: u16,
+
     /// Top Arc full click-through (overlay) mode.
     #[serde(default)]
     pub top_arc_click_through: bool,
@@ -563,6 +580,18 @@ fn default_top_arc_placement() -> String {
     "top-center".to_string()
 }
 
+fn default_flow_surface_form() -> String {
+    "flowline".to_string()
+}
+
+fn default_flow_surface_anchor() -> String {
+    "right".to_string()
+}
+
+fn default_flow_surface_auto_hide_delay() -> u16 {
+    900
+}
+
 fn default_surface_opacity() -> u8 {
     95
 }
@@ -596,6 +625,43 @@ pub fn normalize_top_arc_placement(value: &str) -> String {
         "top-left" | "top-center" | "top-right" | "free" => value.to_string(),
         _ => default_top_arc_placement(),
     }
+}
+
+/// The supported structural forms for the one live QuotaArc overlay.
+/// Unknown legacy tokens resolve to the compact Flowline default.
+pub fn normalize_flow_surface_form(value: &str) -> String {
+    match value {
+        "horizon" => "horizon".to_string(),
+        "petal" => "petal".to_string(),
+        _ => default_flow_surface_form(),
+    }
+}
+
+/// Keep an anchor valid for the selected structural form. `free` is always
+/// allowed and is separately protected by the visible-work-area restore path.
+pub fn normalize_flow_surface_anchor(form: &str, anchor: &str) -> String {
+    if anchor == "free" {
+        return "free".to_string();
+    }
+    match normalize_flow_surface_form(form).as_str() {
+        "horizon" => match anchor {
+            "bottom" => "bottom".to_string(),
+            _ => "top".to_string(),
+        },
+        "petal" => match anchor {
+            "top-left" | "top-right" | "bottom-left" | "bottom-right" => anchor.to_string(),
+            _ => "bottom-right".to_string(),
+        },
+        _ => match anchor {
+            "left" => "left".to_string(),
+            _ => default_flow_surface_anchor(),
+        },
+    }
+}
+
+/// Bounded hover retraction keeps the surface responsive but never flickery.
+pub fn clamp_flow_surface_auto_hide_delay(value: u16) -> u16 {
+    value.clamp(300, 3_000)
 }
 
 /// Normalize a floating-bar orientation string. Unknown values fall back to
@@ -756,6 +822,10 @@ impl Default for Settings {
             top_arc_opacity: default_surface_opacity(),
             top_arc_scale: default_surface_scale(),
             top_arc_placement: default_top_arc_placement(),
+            top_arc_form: default_flow_surface_form(),
+            top_arc_anchor: default_flow_surface_anchor(),
+            top_arc_auto_hide: true,
+            top_arc_auto_hide_delay_ms: default_flow_surface_auto_hide_delay(),
             top_arc_click_through: false,
             top_arc_hide_fullscreen: true,
             taskbar_arc_enabled: false,
@@ -822,6 +892,13 @@ impl Settings {
         settings.surface_catalog_themes =
             normalize_surface_catalog_themes(std::mem::take(&mut settings.surface_catalog_themes));
         settings.top_arc_placement = normalize_top_arc_placement(&settings.top_arc_placement);
+        settings.top_arc_form = normalize_flow_surface_form(&settings.top_arc_form);
+        settings.top_arc_anchor = normalize_flow_surface_anchor(
+            &settings.top_arc_form,
+            &settings.top_arc_anchor,
+        );
+        settings.top_arc_auto_hide_delay_ms =
+            clamp_flow_surface_auto_hide_delay(settings.top_arc_auto_hide_delay_ms);
 
         // V9 retires the competing edge and taskbar overlays. Preserve their
         // old configuration on disk until a normal save, but never restore a

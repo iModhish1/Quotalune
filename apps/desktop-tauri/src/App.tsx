@@ -50,7 +50,11 @@ function isFloatBarWindow(): boolean {
 
 /** True when running inside the detached Top Arc surface window. */
 function isTopArcWindow(): boolean {
-  return getCurrentWebviewWindow().label === "top-arc";
+  // The native label is authoritative. The URL fallback protects the
+  // dedicated transparent webview on older WebView2 builds that transiently
+  // report the shared `main` label while the window is being created.
+  return getCurrentWebviewWindow().label === "top-arc"
+    || new URLSearchParams(window.location.search).get("window") === "top-arc";
 }
 
 /** True when running inside the detached flyout ("Pop Out Dashboard") window. */
