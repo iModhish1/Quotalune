@@ -13,7 +13,7 @@
 use codexbar::settings::Settings;
 use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tauri::{Emitter, LogicalPosition, Manager, WebviewUrl};
 
 use crate::geometry_store::{self, StoredGeometry};
@@ -27,6 +27,11 @@ use crate::surface_kit::{
 const TOP_ARC_MARGIN: f64 = 10.0;
 /// Logical px from an edge at which a free drag becomes a deliberate dock.
 const FLOW_SURFACE_DOCK_DISTANCE: f64 = 24.0;
+/// A drag that begins on a wall must leave this radius before it may attach
+/// again. Without this release zone, Windows emits a Moved event while the
+/// pointer is still on the original wall and makes the island feel stuck.
+const FLOW_SURFACE_DOCK_RELEASE_DISTANCE: f64 = 32.0;
+const FLOW_SURFACE_DRAG_TRACKING_TIMEOUT: Duration = Duration::from_secs(5);
 const TOP_ARC_FREE_POSITION_KEY: &str = TOP_ARC_LABEL;
 
 fn surface_states() -> &'static Mutex<HashMap<String, SurfaceState>> {
@@ -351,6 +356,64 @@ fn pending_top_arc_position() -> &'static Mutex<Option<PendingTopArcPosition>> {
     PENDING.get_or_init(|| Mutex::new(None))
 }
 
+#[derive(Clone, Copy)]
+struct PendingTopArcDrag {
+    origin: (f64, f64),
+    must_clear_initial_dock: bool,
+    last_move: Instant,
+}
+
+fn pending_top_arc_drag() -> &'static Mutex<Option<PendingTopArcDrag>> {
+    static PENDING: OnceLock<Mutex<Option<PendingTopArcDrag>>> = OnceLock::new();
+    PENDING.get_or_init(|| Mutex::new(None))
+}
+
+fn begin_top_arc_drag_tracking(origin: (f64, f64), started_docked: bool) {
+    if let Ok(mut pending) = pending_top_arc_drag().lock() {
+        *pending = Some(PendingTopArcDrag {
+            origin,
+            must_clear_initial_dock: started_docked,
+            last_move: Instant::now(),
+        });
+    }
+}
+
+fn clear_top_arc_drag_tracking() {
+    if let Ok(mut pending) = pending_top_arc_drag().lock() {
+        *pending = None;
+    }
+}
+
+fn flow_surface_drag_has_cleared_initial_dock(origin: (f64, f64), position: (f64, f64)) -> bool {
+    let dx = position.0 - origin.0;
+    let dy = position.1 - origin.1;
+    dx * dx + dy * dy >= FLOW_SURFACE_DOCK_RELEASE_DISTANCE.powi(2)
+}
+
+/// Only an active user drag can create a new dock. This prevents unrelated
+/// resize/reconcile events from stealing a freely placed surface.
+fn flow_surface_drag_allows_dock(position: (f64, f64)) -> bool {
+    let Ok(mut pending) = pending_top_arc_drag().lock() else {
+        return false;
+    };
+    let Some(drag) = pending.as_mut() else {
+        return false;
+    };
+    let now = Instant::now();
+    if now.duration_since(drag.last_move) > FLOW_SURFACE_DRAG_TRACKING_TIMEOUT {
+        *pending = None;
+        return false;
+    }
+    drag.last_move = now;
+    if drag.must_clear_initial_dock {
+        if !flow_surface_drag_has_cleared_initial_dock(drag.origin, position) {
+            return false;
+        }
+        drag.must_clear_initial_dock = false;
+    }
+    true
+}
+
 /// Persist only after a drag settles. Writing settings/geometry for every
 /// Windows Moved event visibly fights the pointer on some WebView2 systems.
 fn queue_top_arc_position(position: (i32, i32)) {
@@ -412,14 +475,16 @@ fn retain_live_top_arc_position(window: &tauri::WebviewWindow) {
         work_area,
     );
     let settings = Settings::load();
-    if let Some(anchor) = resolve_flow_surface_dock(
-        &settings.top_arc_form,
-        bounded,
-        (size.width as f64 / scale, size.height as f64 / scale),
-        work_area,
-    ) {
-        dock_top_arc_to_anchor(window, anchor);
-        return;
+    if flow_surface_drag_allows_dock(bounded) {
+        if let Some(anchor) = resolve_flow_surface_dock(
+            &settings.top_arc_form,
+            bounded,
+            (size.width as f64 / scale, size.height as f64 / scale),
+            work_area,
+        ) {
+            dock_top_arc_to_anchor(window, anchor);
+            return;
+        }
     }
     if (bounded.0 - current.0).abs() > 0.5 || (bounded.1 - current.1).abs() > 0.5 {
         let _ = window.set_position(LogicalPosition::new(bounded.0.round(), bounded.1.round()));
@@ -497,6 +562,7 @@ fn dock_top_arc_to_anchor(window: &tauri::WebviewWindow, anchor: &str) {
         return;
     }
     geometry_store::remove_entry(TOP_ARC_FREE_POSITION_KEY);
+    clear_top_arc_drag_tracking();
     position_top_arc(window);
     let _ = window.app_handle().emit("quotaarc:surfaces-changed", ());
 }
@@ -642,10 +708,20 @@ pub fn resize_top_arc(
 /// gesture. The subsequent Moved event records the final logical position.
 #[tauri::command]
 pub fn begin_top_arc_drag(window: tauri::WebviewWindow) -> Result<(), String> {
-    // Start the OS gesture first. Disk writes ahead of start_dragging made the
-    // island feel sticky and caused pointer movement to be lost.
+    // Capture the old dock before starting the OS gesture, but do not write
+    // settings ahead of it: disk writes here previously made the island feel
+    // sticky and caused pointer movement to be lost.
+    let settings = Settings::load();
+    let scale = window.scale_factor().unwrap_or(1.0).max(0.01);
+    let origin = window
+        .outer_position()
+        .ok()
+        .map(|position| (position.x as f64 / scale, position.y as f64 / scale));
     window.start_dragging().map_err(|error| error.to_string())?;
-    let mut settings = Settings::load();
+    if let Some(origin) = origin {
+        begin_top_arc_drag_tracking(origin, settings.top_arc_anchor != "free");
+    }
+    let mut settings = settings;
     settings.top_arc_placement = "free".to_string();
     settings.top_arc_anchor = "free".to_string();
     settings.save().map_err(|error| error.to_string())?;
@@ -659,6 +735,7 @@ pub fn begin_top_arc_drag(window: tauri::WebviewWindow) -> Result<(), String> {
 /// free-drag position.
 #[tauri::command]
 pub fn reset_top_arc_position(app: tauri::AppHandle) -> Result<(), String> {
+    clear_top_arc_drag_tracking();
     geometry_store::remove_entry(TOP_ARC_FREE_POSITION_KEY);
     let mut settings = Settings::load();
     settings.top_arc_placement = "top-center".to_string();
@@ -1387,6 +1464,19 @@ mod tests {
         assert_eq!(
             resolve_flow_surface_dock("petal", (550.0, 320.0), (170.0, 118.0), work_area),
             None
+        );
+    }
+
+    #[test]
+    fn drag_must_clear_its_starting_wall_before_it_can_dock_again() {
+        let origin = (1_176.0, 260.0);
+        assert!(
+            !flow_surface_drag_has_cleared_initial_dock(origin, (1_168.0, 264.0)),
+            "the first move event is still within the magnetic wall zone"
+        );
+        assert!(
+            flow_surface_drag_has_cleared_initial_dock(origin, (1_132.0, 260.0)),
+            "a deliberate inward drag releases the former wall"
         );
     }
 
