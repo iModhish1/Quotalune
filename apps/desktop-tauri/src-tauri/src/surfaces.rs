@@ -171,6 +171,7 @@ fn flow_surface_bounds(
         settings.top_arc_scale,
         work_area,
         provider_count,
+        &settings.top_arc_anchor,
     )
 }
 
@@ -182,19 +183,32 @@ fn flow_surface_size(
     scale_percent: u8,
     work_area: Option<(f64, f64)>,
     provider_count: u32,
+    anchor: &str,
 ) -> (f64, f64) {
+    let rotate_flowline = form == "flowline" && matches!(anchor, "top" | "bottom");
+    let rotate_horizon = form == "horizon" && matches!(anchor, "left" | "right");
     if state == SurfaceState::Hidden {
-        return match form {
+        let size = match form {
             "horizon" => (96.0, 14.0),
             "petal" | "orbital" | "lens" => (28.0, 28.0),
             _ => (28.0, 58.0),
         };
+        return if rotate_flowline || rotate_horizon {
+            (size.1, size.0)
+        } else {
+            size
+        };
     }
     if state == SurfaceState::Peek {
-        return match form {
+        let size = match form {
             "horizon" => (120.0, 16.0),
             "petal" | "orbital" | "lens" => (32.0, 32.0),
             _ => (18.0, 72.0),
+        };
+        return if rotate_flowline || rotate_horizon {
+            (size.1, size.0)
+        } else {
+            size
         };
     }
     let expanded = state == SurfaceState::Expanded && provider_count > 0;
@@ -218,9 +232,19 @@ fn flow_surface_size(
         (_, false, _) => (56.0, 84.0),
     };
     let scale = f64::from(scale_percent.clamp(75, 125)) / 100.0;
-    let (mut width, mut height) = (base.0 * scale, base.1 * scale);
+    let oriented = if (rotate_flowline && !expanded) || rotate_horizon {
+        (base.1, base.0)
+    } else {
+        base
+    };
+    let (mut width, mut height) = (oriented.0 * scale, oriented.1 * scale);
     if let Some((work_width, work_height)) = work_area {
         let (width_cap, height_cap) = match form {
+            "flowline" if rotate_flowline => (
+                work_width * 0.42,
+                work_height * if expanded { 0.30 } else { 0.08 },
+            ),
+            "horizon" if rotate_horizon => (work_width * 0.10, work_height * 0.46),
             "horizon" => (
                 work_width * 0.30,
                 work_height * if expanded { 0.30 } else { 0.10 },
@@ -481,7 +505,7 @@ fn free_top_arc_resize_position(
 ) -> (f64, f64) {
     // Match the core's CSS attachment point, not the transparent window origin.
     let (ax, ay) = match form {
-        "flowline" | "reel" | "seam" | "deck" | "satellite" => (1.0, 0.5),
+        "flowline" | "reel" | "seam" | "deck" | "satellite" | "crescent" => (1.0, 0.5),
         "ribbon" => (0.5, 0.0),
         "horizon" => (0.5, 0.0),
         _ => (1.0, 1.0),
@@ -533,15 +557,8 @@ fn resolve_flow_surface_dock(
     let near_bottom = (y + height - (work_y + work_height)).abs() <= FLOW_SURFACE_DOCK_DISTANCE;
 
     match form {
-        "flowline" | "seam" | "satellite" if near_left => Some("left"),
-        "flowline" | "seam" | "satellite" if near_right => Some("right"),
-        "horizon" | "ribbon" if near_top => Some("top"),
-        "horizon" | "ribbon" if near_bottom => Some("bottom"),
-        "cradle" if near_top && near_left => Some("top-left"),
-        "cradle" if near_top && near_right => Some("top-right"),
-        "cradle" if near_bottom && near_left => Some("bottom-left"),
-        "cradle" if near_bottom && near_right => Some("bottom-right"),
-        "petal" | "orbital" | "lens" | "reel" | "deck" => {
+        "flowline" | "horizon" | "seam" | "satellite" | "ribbon" | "cradle" | "petal"
+        | "orbital" | "lens" | "reel" | "deck" | "pebble" | "fan" | "crescent" => {
             if near_top && near_left {
                 Some("top-left")
             } else if near_top && near_right {
@@ -624,7 +641,7 @@ fn position_top_arc_after_drag(window: &tauri::WebviewWindow) {
     let effective_anchor = if anchor == "free" {
         match settings.top_arc_form.as_str() {
             "horizon" => "top",
-            "flowline" | "reel" | "seam" | "deck" | "satellite" => "right",
+            "flowline" | "reel" | "seam" | "deck" | "satellite" | "crescent" => "right",
             "ribbon" => "top",
             _ => "bottom-right",
         }
@@ -740,7 +757,7 @@ pub fn reset_top_arc_position(app: tauri::AppHandle) -> Result<(), String> {
     settings.top_arc_placement = "top-center".to_string();
     settings.top_arc_anchor = match settings.top_arc_form.as_str() {
         "horizon" => "top",
-        "flowline" | "reel" | "seam" | "deck" | "satellite" => "right",
+        "flowline" | "reel" | "seam" | "deck" | "satellite" | "crescent" => "right",
         "ribbon" => "top",
         _ => "bottom-right",
     }
@@ -1163,6 +1180,7 @@ pub async fn update_surface_settings(
 #[derive(serde::Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SurfaceSettingsDto {
+    pub interactions: codexbar::settings::interactions::SurfaceInteractions,
     pub edge_arc_enabled: bool,
     pub edge_arc_side: String,
     pub edge_arc_opacity: u8,
@@ -1189,6 +1207,7 @@ pub struct SurfaceSettingsDto {
 pub fn get_surface_settings() -> SurfaceSettingsDto {
     let s = Settings::load();
     SurfaceSettingsDto {
+        interactions: s.surface_interactions,
         edge_arc_enabled: s.edge_arc_enabled,
         edge_arc_side: s.edge_arc_side,
         edge_arc_opacity: s.edge_arc_opacity,
@@ -1216,6 +1235,7 @@ pub fn get_surface_settings() -> SurfaceSettingsDto {
 #[derive(serde::Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase", default)]
 pub struct SurfaceSettingsPatch {
+    pub interactions: Option<codexbar::settings::interactions::SurfaceInteractions>,
     pub edge_arc_enabled: Option<bool>,
     pub edge_arc_side: Option<String>,
     pub edge_arc_opacity: Option<u8>,
@@ -1240,6 +1260,9 @@ pub struct SurfaceSettingsPatch {
 
 impl SurfaceSettingsPatch {
     fn apply(&self, s: &mut Settings) {
+        if let Some(v) = &self.interactions {
+            s.surface_interactions = v.clone().normalized();
+        }
         if let Some(v) = self.edge_arc_enabled {
             s.edge_arc_enabled = v;
         }
@@ -1361,7 +1384,7 @@ mod tests {
         assert_eq!(s.top_arc_scale, 200);
         assert_eq!(s.top_arc_placement, "top-center");
         assert_eq!(s.top_arc_form, "horizon");
-        assert_eq!(s.top_arc_anchor, "top");
+        assert_eq!(s.top_arc_anchor, "left");
         assert_eq!(s.top_arc_auto_hide_delay_ms, 3_000);
     }
 
@@ -1391,26 +1414,61 @@ mod tests {
     fn flow_surface_envelopes_stay_small_and_the_hidden_tab_stays_reachable() {
         let work_area = Some((1366.0, 768.0));
         assert_eq!(
-            flow_surface_size("flowline", SurfaceState::Hidden, 100, work_area, 3),
+            flow_surface_size("flowline", SurfaceState::Hidden, 100, work_area, 3, "right"),
             (28.0, 58.0),
         );
         assert_eq!(
-            flow_surface_size("horizon", SurfaceState::Hidden, 100, work_area, 3),
+            flow_surface_size("horizon", SurfaceState::Hidden, 100, work_area, 3, "top"),
             (96.0, 14.0),
         );
         assert_eq!(
-            flow_surface_size("petal", SurfaceState::Hidden, 100, work_area, 3),
+            flow_surface_size(
+                "petal",
+                SurfaceState::Hidden,
+                100,
+                work_area,
+                3,
+                "bottom-right"
+            ),
             (28.0, 28.0),
         );
-        let flowline = flow_surface_size("flowline", SurfaceState::Compact, 100, work_area, 3);
+        let flowline = flow_surface_size(
+            "flowline",
+            SurfaceState::Compact,
+            100,
+            work_area,
+            3,
+            "right",
+        );
         assert!(flowline.0 <= 1366.0 * 0.08 && flowline.1 <= 768.0 * 0.42);
-        let horizon = flow_surface_size("horizon", SurfaceState::Compact, 100, work_area, 3);
+        let horizon = flow_surface_size("horizon", SurfaceState::Compact, 100, work_area, 3, "top");
         assert!(horizon.0 <= 1366.0 * 0.30 && horizon.1 <= 768.0 * 0.10);
-        let petal = flow_surface_size("petal", SurfaceState::Compact, 100, work_area, 3);
+        let petal = flow_surface_size(
+            "petal",
+            SurfaceState::Compact,
+            100,
+            work_area,
+            3,
+            "bottom-right",
+        );
         assert!(petal.0 <= 1366.0 * 0.16 && petal.1 <= 768.0 * 0.20);
-        let orbital = flow_surface_size("orbital", SurfaceState::Compact, 100, work_area, 3);
+        let orbital = flow_surface_size(
+            "orbital",
+            SurfaceState::Compact,
+            100,
+            work_area,
+            3,
+            "bottom-right",
+        );
         assert!(orbital.0 <= 1366.0 * 0.14 && orbital.1 <= 768.0 * 0.16);
-        let lens = flow_surface_size("lens", SurfaceState::Compact, 100, work_area, 3);
+        let lens = flow_surface_size(
+            "lens",
+            SurfaceState::Compact,
+            100,
+            work_area,
+            3,
+            "bottom-right",
+        );
         assert_eq!(lens, (178.0, 76.0));
         assert!(lens.0 <= 1366.0 * 0.16 && lens.1 <= 768.0 * 0.20);
 
@@ -1418,8 +1476,23 @@ mod tests {
         // three-provider rail. This is the native counterpart to the React
         // truthfulness filter.
         assert_eq!(
-            flow_surface_size("flowline", SurfaceState::Compact, 100, work_area, 0),
+            flow_surface_size(
+                "flowline",
+                SurfaceState::Compact,
+                100,
+                work_area,
+                0,
+                "right"
+            ),
             (56.0, 84.0),
+        );
+        assert_eq!(
+            flow_surface_size("flowline", SurfaceState::Compact, 100, work_area, 3, "top"),
+            (226.0, 56.0),
+        );
+        assert_eq!(
+            flow_surface_size("horizon", SurfaceState::Compact, 100, work_area, 3, "left"),
+            (58.0, 350.0),
         );
     }
 
@@ -1444,7 +1517,7 @@ mod tests {
     }
 
     #[test]
-    fn free_flow_surface_drag_docks_to_the_nearest_compatible_wall() {
+    fn free_flow_surface_drag_docks_every_structure_to_walls_and_corners() {
         let work_area = (0.0, 0.0, 1_280.0, 720.0);
 
         assert_eq!(
@@ -1454,6 +1527,18 @@ mod tests {
         assert_eq!(
             resolve_flow_surface_dock("horizon", (450.0, 662.0), (350.0, 58.0), work_area),
             Some("bottom")
+        );
+        assert_eq!(
+            resolve_flow_surface_dock("flowline", (400.0, 1.0), (226.0, 56.0), work_area),
+            Some("top")
+        );
+        assert_eq!(
+            resolve_flow_surface_dock("horizon", (1.0, 170.0), (58.0, 350.0), work_area),
+            Some("left")
+        );
+        assert_eq!(
+            resolve_flow_surface_dock("flowline", (1.0, 1.0), (56.0, 226.0), work_area),
+            Some("top-left")
         );
         assert_eq!(
             resolve_flow_surface_dock("orbital", (1_176.0, 1.0), (104.0, 104.0), work_area),
@@ -1561,8 +1646,10 @@ mod tests {
 
     #[test]
     fn island_click_through_is_never_applied_to_expanded_details() {
-        let mut settings = Settings::default();
-        settings.top_arc_click_through = true;
+        let settings = Settings {
+            top_arc_click_through: true,
+            ..Settings::default()
+        };
         assert!(effective_click_through(
             &settings,
             SurfaceKind::Top,

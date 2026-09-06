@@ -18,6 +18,122 @@ use std::path::PathBuf;
 use crate::core::ProviderId;
 
 mod api_keys;
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct LimitPresentation {
+    pub shape: String,
+    pub content: String,
+    pub direction: String,
+    #[serde(default = "default_provider_presentation_identity")]
+    pub identity: String,
+}
+
+impl Default for LimitPresentation {
+    fn default() -> Self {
+        Self {
+            shape: "horizontal".to_string(),
+            content: "both".to_string(),
+            direction: "forward".to_string(),
+            identity: default_provider_presentation_identity(),
+        }
+    }
+}
+
+fn default_provider_presentation_identity() -> String {
+    "adaptive".to_string()
+}
+
+impl LimitPresentation {
+    pub fn is_valid(&self) -> bool {
+        matches!(self.shape.as_str(), "ring" | "horizontal" | "vertical")
+            && matches!(self.content.as_str(), "bar" | "both" | "value")
+            && matches!(self.direction.as_str(), "forward" | "reverse")
+            && matches!(
+                self.identity.as_str(),
+                "adaptive"
+                    | "precision"
+                    | "glass"
+                    | "pearl"
+                    | "prism"
+                    | "mono"
+                    | "signal"
+                    | "luxe"
+                    | "frost"
+                    | "ember"
+                    | "jade"
+                    | "rose"
+                    | "cobalt"
+                    | "bronze"
+                    | "paper"
+                    | "ultraviolet"
+                    | "midnight"
+                    | "aerogel"
+                    | "porcelain"
+                    | "champagne"
+                    | "terracotta"
+                    | "cyberlime"
+                    | "graphite"
+                    | "royal"
+            )
+    }
+}
+
+#[cfg(test)]
+mod limit_presentation_tests {
+    use super::LimitPresentation;
+
+    #[test]
+    fn accepts_every_provider_presentation_identity() {
+        let identities = [
+            "adaptive",
+            "precision",
+            "glass",
+            "pearl",
+            "prism",
+            "mono",
+            "signal",
+            "luxe",
+            "frost",
+            "ember",
+            "jade",
+            "rose",
+            "cobalt",
+            "bronze",
+            "paper",
+            "ultraviolet",
+            "midnight",
+            "aerogel",
+            "porcelain",
+            "champagne",
+            "terracotta",
+            "cyberlime",
+            "graphite",
+            "royal",
+        ];
+        for identity in identities {
+            assert!(
+                LimitPresentation {
+                    identity: identity.to_string(),
+                    ..LimitPresentation::default()
+                }
+                .is_valid(),
+                "identity {identity} must round-trip through persisted settings"
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_unknown_provider_presentation_identity() {
+        assert!(
+            !LimitPresentation {
+                identity: "unregistered".to_string(),
+                ..LimitPresentation::default()
+            }
+            .is_valid()
+        );
+    }
+}
+pub mod collections;
+pub mod interactions;
 mod manual_cookies;
 mod provider_workspace;
 mod raw;
@@ -102,6 +218,15 @@ pub struct Settings {
     /// Whether to show notifications
     pub show_notifications: bool,
 
+    /// Individual alert categories; the global switch remains the master gate.
+    #[serde(default)]
+    pub notification_events: NotificationEventPreferences,
+
+    /// Optional local-time interval that suppresses delivery without pausing
+    /// refresh, state tracking, or dedupe advancement.
+    #[serde(default)]
+    pub notification_quiet_hours: NotificationQuietHours,
+
     /// Whether to play sound effects for threshold alerts
     pub sound_enabled: bool,
 
@@ -118,6 +243,10 @@ pub struct Settings {
 
     /// Critical usage threshold for alerts (percentage)
     pub critical_usage_threshold: f64,
+
+    /// Optional usage milestone interval (1..=100). `None` disables step alerts.
+    #[serde(default)]
+    pub usage_step_notification_percent: Option<u8>,
 
     pub provider_usage_thresholds: HashMap<String, UsageThresholdOverride>,
 
@@ -248,6 +377,15 @@ pub struct Settings {
     #[serde(default)]
     pub theme: ThemePreference,
 
+    /// Finish applied to the single official QuotaArc mark in web surfaces
+    /// and the generated tray/application identity.
+    #[serde(default = "default_logo_variant")]
+    pub logo_variant: String,
+
+    /// Visual prominence of the QuotaArc mark, in the inclusive range 90..=125.
+    #[serde(default = "default_logo_scale_percent")]
+    pub logo_scale_percent: u16,
+
     /// Main PopOut window display scale, in the inclusive range 100..=250.
     /// 100 % is normal size; higher values enlarge the window content.
     #[serde(default = "default_window_scale_percent")]
@@ -357,6 +495,10 @@ pub struct Settings {
     /// A form changes geometry only; visual material remains a theme concern.
     #[serde(default = "default_flow_surface_form")]
     pub top_arc_form: String,
+    #[serde(default)]
+    pub collection_layout: collections::CollectionLayout,
+    #[serde(default)]
+    pub surface_interactions: interactions::SurfaceInteractions,
 
     /// Form-aware screen anchor. `free` uses the remembered drag position.
     #[serde(default = "default_flow_surface_anchor")]
@@ -408,6 +550,17 @@ pub struct Settings {
     /// Per-provider usage mode overrides keyed by provider CLI name.
     #[serde(default)]
     pub provider_usage_overrides: std::collections::HashMap<String, String>,
+    /// Detail-window visibility, independent of the selected primary metric.
+    #[serde(default)]
+    pub provider_detail_windows: std::collections::HashMap<String, String>,
+    /// Explicit ordered source-limit IDs. Empty means hidden; absent follows legacy/default.
+    #[serde(default)]
+    pub provider_limit_order: std::collections::HashMap<String, Vec<String>>,
+    #[serde(default)]
+    pub provider_limit_presentation: std::collections::HashMap<String, LimitPresentation>,
+    /// Shared presentation inherited by providers without an explicit override.
+    #[serde(default)]
+    pub global_limit_presentation: LimitPresentation,
 
     /// Orbital theme catalog selection (themeCatalog slug, e.g.
     /// "01-obsidian-orbit"). Invalid or missing slugs fall back to the
@@ -483,6 +636,25 @@ fn default_window_scale_percent() -> u16 {
     100
 }
 
+fn default_logo_variant() -> String {
+    "silver".to_string()
+}
+
+fn default_logo_scale_percent() -> u16 {
+    116
+}
+
+pub fn normalize_logo_variant(value: &str) -> String {
+    match value {
+        "silver" | "arctic" | "aurora" | "ember" | "violet" => value.to_string(),
+        _ => default_logo_variant(),
+    }
+}
+
+pub fn clamp_logo_scale_percent(value: u16) -> u16 {
+    value.clamp(90, 125)
+}
+
 fn default_alibaba_token_plan_region() -> String {
     "cn".to_string()
 }
@@ -550,11 +722,36 @@ pub fn normalize_catalog_theme(value: &str) -> String {
     canonical_catalog_theme(value).unwrap_or_else(default_catalog_theme)
 }
 
-/// Return a canonical slug only when the input is the active foundation theme.
-/// Older catalog entries remain archived in source control but are deliberately
-/// not selectable while the shared surface structure is being established.
+/// Selectable token-only materials. Earlier geometry experiments stay archived.
 pub fn canonical_catalog_theme(value: &str) -> Option<String> {
-    (value == "01-obsidian-orbit").then(|| value.to_string())
+    matches!(
+        value,
+        "01-obsidian-orbit"
+            | "smoked-silver"
+            | "tidal-glass"
+            | "ember-alloy"
+            | "aurora-bloom-material"
+            | "solar-ember-material"
+            | "ceramic-pearl-material"
+            | "sapphire-observatory"
+            | "eclipse-ember"
+            | "02-graphite-precision"
+            | "03-midnight-glass"
+            | "05-stealth-mono"
+            | "06-aurora-prism"
+            | "07-solar-pearl"
+            | "08-oceanic-glass"
+            | "09-rose-quartz"
+            | "10-verdant-halo"
+            | "11-copper-ember"
+            | "12-arctic-spectrum"
+            | "13-lavender-mist"
+            | "14-sapphire-circuit"
+            | "15-crimson-atelier"
+            | "17-jade-pavilion"
+            | "33-ink-and-gold"
+    )
+    .then(|| value.to_string())
 }
 
 pub fn normalize_surface_catalog_themes(
@@ -632,7 +829,9 @@ pub fn normalize_top_arc_placement(value: &str) -> String {
 pub fn normalize_flow_surface_form(value: &str) -> String {
     match value {
         "reel" => "reel".to_string(),
-        "seam" | "ribbon" | "cradle" | "deck" | "satellite" => value.to_string(),
+        "seam" | "ribbon" | "cradle" | "deck" | "satellite" | "pebble" | "fan" | "crescent" => {
+            value.to_string()
+        }
         "horizon" => "horizon".to_string(),
         "petal" => "petal".to_string(),
         "orbital" => "orbital".to_string(),
@@ -647,14 +846,49 @@ pub fn normalize_flow_surface_anchor(form: &str, anchor: &str) -> String {
     if anchor == "free" {
         return "free".to_string();
     }
+    if matches!(
+        normalize_flow_surface_form(form).as_str(),
+        "flowline"
+            | "horizon"
+            | "seam"
+            | "ribbon"
+            | "satellite"
+            | "cradle"
+            | "crescent"
+            | "petal"
+            | "orbital"
+            | "lens"
+            | "reel"
+            | "deck"
+            | "pebble"
+            | "fan"
+    ) && matches!(
+        anchor,
+        "left"
+            | "right"
+            | "top"
+            | "bottom"
+            | "top-left"
+            | "top-right"
+            | "bottom-left"
+            | "bottom-right"
+    ) {
+        return anchor.to_string();
+    }
     match normalize_flow_surface_form(form).as_str() {
         "horizon" | "ribbon" => match anchor {
             "bottom" => "bottom".to_string(),
             _ => "top".to_string(),
         },
-        "seam" | "satellite" => match anchor { "left" => "left".to_string(), _ => "right".to_string() },
-        "cradle" => match anchor { "top-left" | "top-right" | "bottom-left" | "bottom-right" => anchor.to_string(), _ => "bottom-right".to_string() },
-        "petal" | "orbital" | "lens" | "reel" | "deck" => match anchor {
+        "seam" | "satellite" | "crescent" => match anchor {
+            "left" => "left".to_string(),
+            _ => "right".to_string(),
+        },
+        "cradle" => match anchor {
+            "top-left" | "top-right" | "bottom-left" | "bottom-right" => anchor.to_string(),
+            _ => "bottom-right".to_string(),
+        },
+        "petal" | "orbital" | "lens" | "reel" | "deck" | "pebble" | "fan" => match anchor {
             "left" | "right" | "top" | "bottom" | "top-left" | "top-right" | "bottom-left"
             | "bottom-right" => anchor.to_string(),
             _ => "bottom-right".to_string(),
@@ -768,11 +1002,14 @@ impl Default for Settings {
             start_minimized: false,
             start_at_login: false,
             show_notifications: true,
+            notification_events: NotificationEventPreferences::default(),
+            notification_quiet_hours: NotificationQuietHours::default(),
             sound_enabled: true,
             notification_sound_paths: NotificationSoundPaths::default(),
             notification_sound_theme: NotificationSoundTheme::default(),
             high_usage_threshold: 70.0,
             critical_usage_threshold: 90.0,
+            usage_step_notification_percent: None,
             provider_usage_thresholds: HashMap::new(),
             merge_tray_icons: false, // Show single provider by default
             tray_icon_mode: TrayIconMode::default(), // Single icon by default
@@ -806,6 +1043,8 @@ impl Default for Settings {
             install_updates_on_quit: false, // Don't auto-install on quit by default
             ui_language: Language::default(), // English by default
             theme: ThemePreference::default(), // Auto (follows prefers-color-scheme)
+            logo_variant: default_logo_variant(),
+            logo_scale_percent: default_logo_scale_percent(),
             window_scale_percent: default_window_scale_percent(),
             tray_scale_percent: default_tray_scale_percent(),
             powertoys_status_pipe_enabled: false,
@@ -830,6 +1069,8 @@ impl Default for Settings {
             top_arc_scale: default_surface_scale(),
             top_arc_placement: default_top_arc_placement(),
             top_arc_form: default_flow_surface_form(),
+            collection_layout: collections::CollectionLayout::default(),
+            surface_interactions: interactions::SurfaceInteractions::default(),
             top_arc_anchor: default_flow_surface_anchor(),
             top_arc_auto_hide: true,
             top_arc_auto_hide_delay_ms: default_flow_surface_auto_hide_delay(),
@@ -842,6 +1083,10 @@ impl Default for Settings {
             taskbar_arc_hide_fullscreen: true,
             usage_display_mode: None,
             provider_usage_overrides: std::collections::HashMap::new(),
+            provider_detail_windows: std::collections::HashMap::new(),
+            provider_limit_order: std::collections::HashMap::new(),
+            provider_limit_presentation: std::collections::HashMap::new(),
+            global_limit_presentation: LimitPresentation::default(),
             catalog_theme: default_catalog_theme(),
             active_profile_catalog_theme: None,
             surface_catalog_themes: std::collections::HashMap::new(),
@@ -900,10 +1145,8 @@ impl Settings {
             normalize_surface_catalog_themes(std::mem::take(&mut settings.surface_catalog_themes));
         settings.top_arc_placement = normalize_top_arc_placement(&settings.top_arc_placement);
         settings.top_arc_form = normalize_flow_surface_form(&settings.top_arc_form);
-        settings.top_arc_anchor = normalize_flow_surface_anchor(
-            &settings.top_arc_form,
-            &settings.top_arc_anchor,
-        );
+        settings.top_arc_anchor =
+            normalize_flow_surface_anchor(&settings.top_arc_form, &settings.top_arc_anchor);
         settings.top_arc_auto_hide_delay_ms =
             clamp_flow_surface_auto_hide_delay(settings.top_arc_auto_hide_delay_ms);
 

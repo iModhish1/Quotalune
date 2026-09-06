@@ -18,6 +18,19 @@ fn test_locale_key_english() {
 }
 
 #[test]
+fn test_locale_key_arabic() {
+    assert_eq!(get_text(Language::Arabic, LocaleKey::TabGeneral), "عام");
+    assert_eq!(
+        get_text(Language::Arabic, LocaleKey::InterfaceLanguage),
+        "لغة الواجهة"
+    );
+    assert_eq!(
+        get_text(Language::Arabic, LocaleKey::TabNotifications),
+        "الإشعارات"
+    );
+}
+
+#[test]
 fn test_locale_key_chinese() {
     assert_eq!(get_text(Language::Chinese, LocaleKey::TabGeneral), "通用");
     assert_eq!(get_text(Language::Chinese, LocaleKey::TabCookies), "Cookie");

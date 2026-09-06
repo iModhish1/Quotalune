@@ -12,7 +12,8 @@ use super::transition::{
     monitor_for_preserved_visible_position, reclamp_preserved_visible_position,
     recovery_snapshot_for_failed_transition, resolve_transition_position,
     resolve_transition_request, restore_recovery_surface, restore_surface_snapshot,
-    should_force_tray_panel_reveal, should_synthesize_default_position,
+    should_force_tray_panel_reveal, should_show_same_mode_retarget,
+    should_synthesize_default_position,
 };
 use super::window::{logical_size_from_geometry, prepare_hide_to_tray_if_current};
 
@@ -20,6 +21,31 @@ use crate::state::AppState;
 use crate::surface::{SurfaceMode, SurfaceTransition};
 use crate::surface_target::SurfaceTarget;
 use crate::window_positioner::{self, Rect};
+
+#[test]
+fn tab_navigation_never_repositions_user_sized_windows() {
+    use super::transition::should_reposition_target_update;
+    for (maximized, fullscreen) in [(false, false), (true, false), (false, true)] {
+        assert!(!should_reposition_target_update(
+            None, maximized, fullscreen
+        ));
+    }
+    assert!(!should_reposition_target_update(
+        Some((12, 20)),
+        true,
+        false
+    ));
+    assert!(!should_reposition_target_update(
+        Some((12, 20)),
+        false,
+        true
+    ));
+    assert!(should_reposition_target_update(
+        Some((12, 20)),
+        false,
+        false
+    ));
+}
 
 #[test]
 fn hide_to_tray_resets_hidden_target_to_summary() {
@@ -253,6 +279,12 @@ fn same_mode_retarget_skips_default_position_synthesis() {
         !fallback_called,
         "same-mode retarget should not request a default position"
     );
+}
+
+#[test]
+fn visible_same_mode_retarget_never_reopens_the_native_window() {
+    assert!(!should_show_same_mode_retarget(true));
+    assert!(should_show_same_mode_retarget(false));
 }
 
 #[test]

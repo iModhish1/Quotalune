@@ -4,6 +4,7 @@ use std::time::Duration;
 
 mod auto_refresh;
 mod coding_activity;
+mod collection_settings;
 mod command_profiles;
 mod commands;
 mod events;
@@ -154,6 +155,8 @@ fn main() {
     );
 
     let mut initial_state = AppState::new();
+    initial_state.notification_manager =
+        codexbar::notifications::NotificationManager::load_persisted();
     initial_state.proof_config = proof_config;
     // Proof-harness seed: CODEXBAR_SEED_USAGE_JSON plants one synthetic Codex
     // ProviderUsageSnapshot before the event loop and any WebView read. The
@@ -306,6 +309,8 @@ fn main() {
             surfaces::resize_taskbar_arc_surface,
             surfaces::update_surface_settings,
             surfaces::get_surface_settings,
+            collection_settings::get_collection_layout,
+            collection_settings::set_collection_layout,
             surfaces::demo::get_surface_demo_mode,
             surfaces::demo::set_surface_demo_mode,
             command_profiles::get_profile_store,
@@ -322,6 +327,10 @@ fn main() {
             command_profiles::set_privacy_mode,
             command_profiles::set_catalog_theme,
             command_profiles::set_usage_settings,
+            command_profiles::set_provider_detail_window,
+            command_profiles::set_provider_limit_order,
+            command_profiles::set_provider_limit_presentation,
+            command_profiles::set_global_limit_presentation,
         ])
         .setup(move |app| {
             if let Ok(icon_path) = app
@@ -451,6 +460,18 @@ fn main() {
                     }
                 }
                 tauri::WindowEvent::Moved(_) | tauri::WindowEvent::Resized(_) => {
+                    let settings_visible = window
+                        .app_handle()
+                        .try_state::<Mutex<AppState>>()
+                        .is_some_and(|state| {
+                            state.lock().unwrap().surface_machine.current() == SurfaceMode::Settings
+                        });
+                    if settings_visible
+                        && let Some(webview) =
+                            window.app_handle().get_webview_window(window.label())
+                    {
+                        shell::settings_window::enforce_minimum_content_size(&webview);
+                    }
                     // Capture geometry for surfaces eligible for persistence.
                     // The helper is a no-op when the current surface is not eligible.
                     shell::remember_current_geometry_if_eligible(window);

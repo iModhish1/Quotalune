@@ -16,11 +16,14 @@ pub struct SettingsUpdate {
     pub start_at_login: Option<bool>,
     pub start_minimized: Option<bool>,
     pub show_notifications: Option<bool>,
+    pub notification_events: Option<codexbar::settings::NotificationEventPreferences>,
+    pub notification_quiet_hours: Option<codexbar::settings::NotificationQuietHours>,
     pub sound_enabled: Option<bool>,
     pub notification_sound_theme: Option<codexbar::settings::NotificationSoundTheme>,
     pub notification_sound_paths: Option<codexbar::settings::NotificationSoundPaths>,
     pub high_usage_threshold: Option<f64>,
     pub critical_usage_threshold: Option<f64>,
+    pub usage_step_notification_percent: Option<u8>,
     pub provider_usage_thresholds:
         Option<std::collections::HashMap<String, codexbar::settings::UsageThresholdOverride>>,
     pub predictive_pace_warning_enabled: Option<bool>,
@@ -50,6 +53,8 @@ pub struct SettingsUpdate {
     pub http_proxy_password: Option<String>,
     pub ui_language: Option<String>,
     pub theme: Option<String>,
+    pub logo_variant: Option<String>,
+    pub logo_scale_percent: Option<u16>,
     pub window_scale_percent: Option<u16>,
     pub tray_scale_percent: Option<u16>,
     pub powertoys_status_pipe_enabled: Option<bool>,
@@ -96,6 +101,7 @@ impl SettingsUpdate {
             || self.codex_custom_sessions_dirs.is_some()
             || self.high_usage_threshold.is_some()
             || self.critical_usage_threshold.is_some()
+            || self.usage_step_notification_percent.is_some()
             || self.provider_usage_thresholds.is_some()
             || self.show_as_used.is_some()
             || self.reset_time_relative.is_some()
@@ -122,6 +128,8 @@ impl SettingsUpdate {
             || self.codex_spark_usage_visible.is_some()
             || self.enabled_providers.is_some()
             || self.ui_language.is_some()
+            || self.logo_variant.is_some()
+            || self.logo_scale_percent.is_some()
     }
 
     fn validate_shortcut_change(
@@ -202,6 +210,12 @@ impl SettingsUpdate {
         if let Some(v) = self.theme.as_deref().and_then(parse_theme) {
             settings.theme = v;
         }
+        if let Some(v) = self.logo_variant.as_deref() {
+            settings.logo_variant = codexbar::settings::normalize_logo_variant(v);
+        }
+        if let Some(v) = self.logo_scale_percent {
+            settings.logo_scale_percent = codexbar::settings::clamp_logo_scale_percent(v);
+        }
         Ok(self)
     }
 
@@ -246,6 +260,14 @@ impl SettingsUpdate {
         if let Some(v) = self.show_notifications {
             settings.show_notifications = v;
         }
+        if let Some(v) = self.notification_events {
+            settings.notification_events = v;
+        }
+        if let Some(mut v) = self.notification_quiet_hours {
+            v.start_minute = v.start_minute.min(24 * 60 - 1);
+            v.end_minute = v.end_minute.min(24 * 60 - 1);
+            settings.notification_quiet_hours = v;
+        }
         if let Some(v) = self.sound_enabled {
             settings.sound_enabled = v;
         }
@@ -265,6 +287,9 @@ impl SettingsUpdate {
         }
         if let Some(v) = self.critical_usage_threshold {
             settings.critical_usage_threshold = v.clamp(0.0, 100.0);
+        }
+        if let Some(v) = self.usage_step_notification_percent {
+            settings.usage_step_notification_percent = (v > 0).then_some(v.min(100));
         }
         if let Some(values) = self.provider_usage_thresholds.clone() {
             settings.provider_usage_thresholds =
@@ -592,6 +617,21 @@ mod tests {
     }
 
     #[test]
+    fn logo_appearance_is_normalized_and_refreshes_the_tray() {
+        let patch = SettingsUpdate {
+            logo_variant: Some("aurora".to_string()),
+            logo_scale_percent: Some(999),
+            ..Default::default()
+        };
+        assert!(patch.refreshes_tray_presentation());
+
+        let mut settings = Settings::default();
+        patch.apply_general_settings(&mut settings).unwrap();
+        assert_eq!(settings.logo_variant, "aurora");
+        assert_eq!(settings.logo_scale_percent, 125);
+    }
+
+    #[test]
     fn apply_display_settings_clamps_window_scale_percent() {
         let mut settings = Settings::default();
 
@@ -644,6 +684,26 @@ mod tests {
             settings.notification_sound_theme,
             codexbar::settings::NotificationSoundTheme::CodexBar
         );
+    }
+
+    #[test]
+    fn apply_notification_settings_clamps_quiet_hours_minutes() {
+        let mut settings = Settings::default();
+
+        SettingsUpdate {
+            notification_quiet_hours: Some(codexbar::settings::NotificationQuietHours {
+                enabled: true,
+                start_minute: 1_500,
+                end_minute: 1_440,
+            }),
+            ..Default::default()
+        }
+        .apply_notification_settings(&mut settings)
+        .expect("apply quiet hours");
+
+        assert!(settings.notification_quiet_hours.enabled);
+        assert_eq!(settings.notification_quiet_hours.start_minute, 1_439);
+        assert_eq!(settings.notification_quiet_hours.end_minute, 1_439);
     }
 
     #[test]

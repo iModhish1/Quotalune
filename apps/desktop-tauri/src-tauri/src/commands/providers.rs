@@ -731,14 +731,20 @@ fn notify_usage_thresholds(
                     .and_then(ProviderAccountData::active_account)
                     .map(|account| account.id);
                 let account = quota_notification_account_identity(snapshot, token_account_id);
+                let observed_at = chrono::DateTime::parse_from_rfc3339(&snapshot.updated_at)
+                    .ok()
+                    .map(|value| value.with_timezone(&chrono::Utc));
                 // Skip session notifications for synthetic/no-session placeholders
                 // (e.g. Claude web five_hour: null → informational 5h 0%).
                 if !snapshot.primary.is_informational {
-                    guard.notification_manager.check_and_notify(
+                    let primary_window = notification_window_key(&snapshot.primary);
+                    notify_threshold_window(
+                        &mut guard.notification_manager,
                         provider,
                         &account,
-                        "session",
-                        snapshot.primary.used_percent,
+                        &primary_window,
+                        &snapshot.primary,
+                        observed_at,
                         settings,
                     );
                     guard.notification_manager.check_session_transition(
@@ -747,30 +753,77 @@ fn notify_usage_thresholds(
                         snapshot.primary.used_percent,
                         settings,
                     );
-                    dispatch_quota_hooks(
-                        settings,
-                        provider,
-                        &account,
-                        "session",
-                        snapshot.primary.used_percent,
-                    );
                 }
                 if let Some(weekly) = &snapshot.secondary
                     && !weekly.is_informational
                 {
-                    guard.notification_manager.check_and_notify(
+                    let secondary_window = notification_window_key(weekly);
+                    notify_threshold_window(
+                        &mut guard.notification_manager,
                         provider,
                         &account,
-                        "weekly",
-                        weekly.used_percent,
+                        &secondary_window,
+                        weekly,
+                        observed_at,
                         settings,
                     );
-                    dispatch_quota_hooks(
-                        settings,
+                }
+                if let Some(model) = &snapshot.model_specific
+                    && !model.is_informational
+                {
+                    notify_threshold_window(
+                        &mut guard.notification_manager,
                         provider,
                         &account,
-                        "weekly",
-                        weekly.used_percent,
+                        "modelSpecific",
+                        model,
+                        observed_at,
+                        settings,
+                    );
+                }
+                if let Some(tertiary) = &snapshot.tertiary
+                    && !tertiary.is_informational
+                {
+                    notify_threshold_window(
+                        &mut guard.notification_manager,
+                        provider,
+                        &account,
+                        "tertiary",
+                        tertiary,
+                        observed_at,
+                        settings,
+                    );
+                }
+                if provider == ProviderId::Codex {
+                    let available_count = snapshot
+                        .extra_rate_windows
+                        .iter()
+                        .find(|named| named.id == "reset-credits")
+                        .and_then(|named| reset_credit_count(&named.window))
+                        .unwrap_or(0);
+                    guard.notification_manager.check_banked_reset_credits(
+                        provider,
+                        &account,
+                        available_count,
+                        settings,
+                    );
+                }
+                for (index, named) in snapshot.extra_rate_windows.iter().enumerate() {
+                    if named.id == "reset-credits" {
+                        continue;
+                    }
+                    if named.window.is_informational {
+                        continue;
+                    }
+                    let key = named_notification_window_key(&named.id, index);
+                    notify_threshold_window(
+                        &mut guard.notification_manager,
+                        provider,
+                        &account,
+                        &key,
+                        &named.window,
+                        observed_at,
+                        settings,
                     );
                 }
                 notify_predictive_pace(
@@ -782,7 +835,70 @@ fn notify_usage_thresholds(
                 );
             }
         }
+        if let Err(error) = guard.notification_manager.persist() {
+            tracing::warn!(%error, "failed to persist notification dedupe state");
+        }
     }
+}
+
+fn notify_threshold_window(
+    manager: &mut codexbar::notifications::NotificationManager,
+    provider: ProviderId,
+    account: &str,
+    window_key: &str,
+    window: &RateWindowSnapshot,
+    observed_at: Option<chrono::DateTime<chrono::Utc>>,
+    settings: &Settings,
+) {
+    if let Some(observed_at) = observed_at {
+        manager.check_reset_transition(
+            provider,
+            account,
+            window_key,
+            window.used_percent,
+            window
+                .resets_at
+                .as_deref()
+                .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok())
+                .map(|value| value.with_timezone(&chrono::Utc)),
+            observed_at,
+            settings,
+        );
+    }
+    manager.check_and_notify(provider, account, window_key, window.used_percent, settings);
+    dispatch_quota_hooks(settings, provider, account, window_key, window.used_percent);
+}
+
+fn notification_window_key(window: &RateWindowSnapshot) -> String {
+    match window.window_minutes {
+        Some(300) => "fiveHour".into(),
+        Some(10_080) => "weekly".into(),
+        Some(minutes) => format!("window{minutes}Minutes"),
+        None => "session".into(),
+    }
+}
+
+fn named_notification_window_key(id: &str, index: usize) -> String {
+    let safe_id: String = id
+        .bytes()
+        .filter(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+        .take(48)
+        .map(char::from)
+        .collect();
+    if safe_id.is_empty() {
+        format!("extraWindow{}", index + 1)
+    } else {
+        format!("extra-{safe_id}")
+    }
+}
+
+fn reset_credit_count(window: &RateWindowSnapshot) -> Option<u32> {
+    let description = window.reset_description.as_deref()?.trim();
+    let normalized = description.to_ascii_lowercase();
+    if !normalized.contains("reset credit") || !normalized.ends_with("available") {
+        return None;
+    }
+    description.split_whitespace().next()?.parse().ok()
 }
 
 fn dispatch_quota_hooks(
@@ -1101,6 +1217,36 @@ mod predictive_warning_tests {
 
         snapshot.plan_name = None;
         assert_eq!(quota_notification_account_identity(&snapshot, None), "");
+    }
+
+    #[test]
+    fn notification_window_key_keeps_five_hour_distinct_from_session() {
+        let mut window = empty_snapshot().primary;
+        window.window_minutes = Some(300);
+        assert_eq!(notification_window_key(&window), "fiveHour");
+        window.window_minutes = Some(10_080);
+        assert_eq!(notification_window_key(&window), "weekly");
+        window.window_minutes = Some(180);
+        assert_eq!(notification_window_key(&window), "window180Minutes");
+        window.window_minutes = None;
+        assert_eq!(notification_window_key(&window), "session");
+        assert_eq!(
+            named_notification_window_key("sonnet-4.5", 0),
+            "extra-sonnet-45"
+        );
+        assert_eq!(named_notification_window_key("  ", 1), "extraWindow2");
+    }
+
+    #[test]
+    fn reset_credit_count_accepts_only_the_structured_codex_description() {
+        let mut window = empty_snapshot().primary;
+        window.reset_description = Some("2 reset credits available".to_string());
+        assert_eq!(reset_credit_count(&window), Some(2));
+
+        window.reset_description = Some("credits may be available".to_string());
+        assert_eq!(reset_credit_count(&window), None);
+        window.reset_description = Some("many reset credits available".to_string());
+        assert_eq!(reset_credit_count(&window), None);
     }
 
     /// The forecast scope key and the notification identity must never disagree.

@@ -22,11 +22,33 @@ fn test_settings_default() {
     assert!(!settings.float_bar_show_cost);
     assert!(settings.promote_tray_icon);
     assert!(settings.claude_daily_routines_usage_visible);
+    assert_eq!(settings.logo_variant, "silver");
+    assert_eq!(settings.logo_scale_percent, 116);
     assert!(!settings.claude_allow_reading_claude_code_credentials);
     assert_eq!(
         settings.low_power_mode_preference,
         LowPowerModePreference::Off
     );
+}
+
+#[test]
+fn logo_appearance_is_backward_compatible_and_normalized() {
+    let legacy: Settings = serde_json::from_str(r#"{ "enabled_providers": [] }"#)
+        .expect("settings without logo appearance");
+    assert_eq!(legacy.logo_variant, "silver");
+    assert_eq!(legacy.logo_scale_percent, 116);
+
+    let invalid: Settings = serde_json::from_str(
+        r#"{ "enabled_providers": [], "logo_variant": "neon", "logo_scale_percent": 800 }"#,
+    )
+    .expect("invalid logo appearance is repaired");
+    assert_eq!(invalid.logo_variant, "silver");
+    assert_eq!(invalid.logo_scale_percent, 125);
+
+    for variant in ["silver", "arctic", "aurora", "ember", "violet"] {
+        assert_eq!(normalize_logo_variant(variant), variant);
+    }
+    assert_eq!(clamp_logo_scale_percent(0), 90);
 }
 
 #[test]
@@ -81,12 +103,18 @@ fn notification_sound_paths_round_trip_and_default_for_existing_settings() {
         notification_sound_theme: NotificationSoundTheme::CodexBar,
         notification_sound_paths: NotificationSoundPaths {
             critical_usage: Some(r"C:\sounds\critical.wav".to_string()),
+            expected_reset: Some(r"C:\sounds\expected-reset.wav".to_string()),
+            unexpected_reset: Some(r"C:\sounds\unexpected-reset.wav".to_string()),
+            banked_reset_credit: Some(r"C:\sounds\banked-reset.wav".to_string()),
             ..NotificationSoundPaths::default()
         },
         ..Settings::default()
     };
     let json = serde_json::to_string(&settings).expect("serialize notification sound paths");
     assert!(json.contains("\"criticalUsage\":\"C:\\\\sounds\\\\critical.wav\""));
+    assert!(json.contains("\"expectedReset\":\"C:\\\\sounds\\\\expected-reset.wav\""));
+    assert!(json.contains("\"unexpectedReset\":\"C:\\\\sounds\\\\unexpected-reset.wav\""));
+    assert!(json.contains("\"bankedResetCredit\":\"C:\\\\sounds\\\\banked-reset.wav\""));
 
     let loaded: Settings =
         serde_json::from_str(&json).expect("deserialize notification sound paths");
@@ -176,6 +204,51 @@ fn usage_thresholds_inherit_from_window_provider_and_global_levels() {
             high: 70.0,
             critical: 90.0,
         }
+    );
+}
+
+#[test]
+fn five_hour_thresholds_are_preserved_and_inherit_legacy_session_values() {
+    let mut settings = Settings::default();
+    settings.provider_usage_thresholds.insert(
+        "codex:session".into(),
+        UsageThresholdOverride {
+            high: Some(61.0),
+            critical: Some(81.0),
+        },
+    );
+
+    assert_eq!(
+        settings.usage_thresholds(ProviderId::Codex, "fiveHour"),
+        UsageThresholds {
+            high: 61.0,
+            critical: 81.0,
+        }
+    );
+
+    let loaded: Settings =
+        serde_json::from_str(r#"{"provider_usage_thresholds":{"codex:fiveHour":{"high":72.0}}}"#)
+            .expect("parse five-hour threshold override");
+    assert_eq!(
+        loaded.provider_usage_thresholds["codex:fiveHour"].high,
+        Some(72.0)
+    );
+}
+
+#[test]
+fn safe_future_window_threshold_ids_survive_normalization() {
+    let loaded: Settings = serde_json::from_str(
+        r#"{"provider_usage_thresholds":{"codex:model-gpt-6":{"critical":87.0},"codex:bad window":{"high":50.0}}}"#,
+    )
+    .expect("parse future threshold override");
+    assert_eq!(
+        loaded.provider_usage_thresholds["codex:model-gpt-6"].critical,
+        Some(87.0)
+    );
+    assert!(
+        !loaded
+            .provider_usage_thresholds
+            .contains_key("codex:bad window")
     );
 }
 
@@ -333,15 +406,27 @@ fn flow_surface_form_and_anchor_normalization_remain_bounded() {
     assert_eq!(normalize_flow_surface_form("lens"), "lens");
 
     assert_eq!(normalize_flow_surface_anchor("flowline", "left"), "left");
-    assert_eq!(normalize_flow_surface_anchor("flowline", "bottom"), "right");
+    assert_eq!(
+        normalize_flow_surface_anchor("flowline", "bottom"),
+        "bottom"
+    );
     assert_eq!(normalize_flow_surface_anchor("horizon", "bottom"), "bottom");
-    assert_eq!(normalize_flow_surface_anchor("horizon", "left"), "top");
-    assert_eq!(normalize_flow_surface_anchor("petal", "top-left"), "top-left");
+    assert_eq!(normalize_flow_surface_anchor("horizon", "left"), "left");
+    assert_eq!(
+        normalize_flow_surface_anchor("petal", "top-left"),
+        "top-left"
+    );
     assert_eq!(normalize_flow_surface_anchor("petal", "right"), "right");
     assert_eq!(normalize_flow_surface_anchor("petal", "free"), "free");
-    assert_eq!(normalize_flow_surface_anchor("orbital", "top-right"), "top-right");
+    assert_eq!(
+        normalize_flow_surface_anchor("orbital", "top-right"),
+        "top-right"
+    );
     assert_eq!(normalize_flow_surface_anchor("orbital", "left"), "left");
-    assert_eq!(normalize_flow_surface_anchor("lens", "bottom-left"), "bottom-left");
+    assert_eq!(
+        normalize_flow_surface_anchor("lens", "bottom-left"),
+        "bottom-left"
+    );
     assert_eq!(normalize_flow_surface_anchor("lens", "free"), "free");
 }
 
@@ -627,10 +712,7 @@ fn api_key_display_mask_is_utf8_safe() {
 fn test_start_at_login_command_uses_only_the_executable_path() {
     let path = std::path::PathBuf::from(r"C:\Program Files\QuotaArc\QuotaArc.exe");
     let command = Settings::start_at_login_command(&path);
-    assert_eq!(
-        command,
-        "\"C:\\Program Files\\QuotaArc\\QuotaArc.exe\""
-    );
+    assert_eq!(command, "\"C:\\Program Files\\QuotaArc\\QuotaArc.exe\"");
     assert!(!command.contains("menubar"));
 }
 
@@ -710,7 +792,7 @@ fn test_language_defaults_to_english() {
 #[test]
 fn test_language_all_variants_available() {
     let languages = Language::all();
-    assert_eq!(languages.len(), 8);
+    assert_eq!(languages.len(), 9);
     assert!(languages.contains(&Language::English));
     assert!(languages.contains(&Language::Chinese));
     assert!(languages.contains(&Language::ChineseTraditional));
@@ -719,6 +801,7 @@ fn test_language_all_variants_available() {
     assert!(languages.contains(&Language::Spanish));
     assert!(languages.contains(&Language::Russian));
     assert!(languages.contains(&Language::Turkish));
+    assert!(languages.contains(&Language::Arabic));
 }
 
 #[test]
@@ -729,6 +812,14 @@ fn test_language_display_names() {
     assert_eq!(Language::Japanese.display_name(), "日本語");
     assert_eq!(Language::Russian.display_name(), "Русский");
     assert_eq!(Language::Turkish.display_name(), "Türkçe");
+    assert_eq!(Language::Arabic.display_name(), "العربية");
+}
+
+#[test]
+fn test_language_resolves_arabic_aliases() {
+    assert_eq!(Language::resolve("arabic"), Some(Language::Arabic));
+    assert_eq!(Language::resolve("ar-SA"), Some(Language::Arabic));
+    assert_eq!(Language::resolve("العربية"), Some(Language::Arabic));
 }
 
 #[test]
@@ -1102,6 +1193,33 @@ fn codex_spark_usage_visibility_defaults_to_visible_and_roundtrips() {
 
 #[test]
 fn catalog_theme_validation_falls_back_to_default() {
+    for slug in [
+        "smoked-silver",
+        "tidal-glass",
+        "ember-alloy",
+        "aurora-bloom-material",
+        "solar-ember-material",
+        "ceramic-pearl-material",
+        "sapphire-observatory",
+        "eclipse-ember",
+        "02-graphite-precision",
+        "03-midnight-glass",
+        "05-stealth-mono",
+        "06-aurora-prism",
+        "07-solar-pearl",
+        "08-oceanic-glass",
+        "09-rose-quartz",
+        "10-verdant-halo",
+        "11-copper-ember",
+        "12-arctic-spectrum",
+        "13-lavender-mist",
+        "14-sapphire-circuit",
+        "15-crimson-atelier",
+        "17-jade-pavilion",
+        "33-ink-and-gold",
+    ] {
+        assert_eq!(super::normalize_catalog_theme(slug), slug);
+    }
     assert_eq!(
         crate::settings::normalize_catalog_theme("01-obsidian-orbit"),
         "01-obsidian-orbit"
@@ -1153,4 +1271,67 @@ fn taskbar_arc_scale_clamps_and_round_trips_independently() {
     let loaded: Settings = serde_json::from_str(&json).expect("deserialize");
     assert_eq!(loaded.taskbar_arc_scale, 135);
     assert_eq!(loaded.top_arc_scale, 90);
+}
+
+#[test]
+fn notification_event_preferences_default_on_and_round_trip_independently() {
+    let defaults: Settings = serde_json::from_str(r#"{ "enabled_providers": [] }"#)
+        .expect("legacy settings load notification defaults");
+    assert!(defaults.notification_events.high_usage);
+    assert!(defaults.notification_events.session_restored);
+    assert!(defaults.notification_events.expected_reset);
+    assert!(defaults.notification_events.unexpected_reset);
+    assert!(defaults.notification_events.banked_reset_credit);
+
+    let mut settings = Settings::default();
+    settings.notification_events.status_issue = false;
+    settings.notification_events.session_depleted = false;
+    settings.notification_events.expected_reset = false;
+    settings.notification_events.banked_reset_credit = false;
+    let json = serde_json::to_string(&settings).expect("serialize notification preferences");
+    let loaded: Settings =
+        serde_json::from_str(&json).expect("deserialize notification preferences");
+    assert!(!loaded.notification_events.status_issue);
+    assert!(!loaded.notification_events.session_depleted);
+    assert!(!loaded.notification_events.expected_reset);
+    assert!(loaded.notification_events.unexpected_reset);
+    assert!(!loaded.notification_events.banked_reset_credit);
+    assert!(loaded.notification_events.critical_usage);
+}
+
+#[test]
+fn notification_quiet_hours_cover_same_day_overnight_and_full_day_ranges() {
+    let mut quiet = NotificationQuietHours {
+        enabled: true,
+        start_minute: 22 * 60,
+        end_minute: 7 * 60,
+    };
+    assert!(quiet.contains_local_minute(23 * 60));
+    assert!(quiet.contains_local_minute(6 * 60 + 59));
+    assert!(!quiet.contains_local_minute(12 * 60));
+
+    quiet.start_minute = 9 * 60;
+    quiet.end_minute = 17 * 60;
+    assert!(quiet.contains_local_minute(9 * 60));
+    assert!(!quiet.contains_local_minute(17 * 60));
+
+    quiet.start_minute = 0;
+    quiet.end_minute = 0;
+    assert!(quiet.contains_local_minute(12 * 60));
+    quiet.enabled = false;
+    assert!(!quiet.contains_local_minute(0));
+}
+
+#[test]
+fn usage_step_notification_interval_defaults_off_and_clamps_on_load() {
+    let defaults = Settings::default();
+    assert_eq!(defaults.usage_step_notification_percent, None);
+
+    let low: Settings = serde_json::from_str(r#"{"usage_step_notification_percent":0}"#)
+        .expect("parse disabled step interval");
+    assert_eq!(low.usage_step_notification_percent, None);
+
+    let high: Settings = serde_json::from_str(r#"{"usage_step_notification_percent":140}"#)
+        .expect("parse oversized step interval");
+    assert_eq!(high.usage_step_notification_percent, Some(100));
 }

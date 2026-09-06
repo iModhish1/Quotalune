@@ -12,7 +12,11 @@ use crate::core::{RateWindow, UsagePace};
 use crate::locale::{self, LocaleKey};
 use crate::settings::Settings;
 use crate::sound::{NotificationSoundEvent, play_alert};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local, Timelike, Utc};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::borrow::Cow;
+use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
@@ -27,7 +31,7 @@ static TOAST_ICON_PATH: OnceLock<PathBuf> = OnceLock::new();
 /// retained for the life of the process.
 pub fn configure_toast_icon(path: PathBuf) {
     if path.is_file() {
-        let _ = TOAST_ICON_PATH.set(path);
+        drop(TOAST_ICON_PATH.set(path));
     } else {
         tracing::warn!(?path, "QuotaArc toast icon resource was not found");
     }
@@ -86,15 +90,24 @@ pub enum NotificationType {
     CriticalUsage,
     /// Usage limit exhausted
     Exhausted,
+    /// Usage crossed a user-selected percentage milestone.
+    UsageStep(u8),
     /// Provider status issue
     StatusIssue,
     /// Session quota depleted (at 100% usage)
     SessionDepleted,
     /// Session quota restored (back from 100%)
     SessionRestored,
+    /// A quota reset observed at its announced boundary.
+    ExpectedReset(i64),
+    /// A quota reset observed before its announced boundary or without one.
+    UnexpectedReset(i64),
+    /// The number of available banked reset credits increased.
+    BankedResetCredit(u32),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum PredictiveWarningWindow {
     Session,
     Weekly,
@@ -140,15 +153,71 @@ struct PredictiveWarningKey {
     reset: PredictiveResetWindow,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PersistedPredictiveWarningKey {
+    provider: String,
+    identity_digest: String,
+    window: PredictiveWarningWindow,
+    window_minutes: Option<u32>,
+    resets_at: i64,
+}
+
+impl PersistedPredictiveWarningKey {
+    fn from_observation(
+        provider: ProviderId,
+        identity: &str,
+        window: PredictiveWarningWindow,
+        reset: &PredictiveResetWindow,
+    ) -> Self {
+        Self {
+            provider: provider.cli_name().to_string(),
+            identity_digest: NotificationManager::identity_digest(identity),
+            window,
+            window_minutes: reset.window_minutes,
+            resets_at: reset.resets_at.timestamp(),
+        }
+    }
+
+    fn belongs_to_same_lane(&self, other: &Self) -> bool {
+        self.provider == other.provider
+            && self.identity_digest == other.identity_digest
+            && self.window == other.window
+    }
+
+    fn belongs_to_same_cycle(&self, other: &Self) -> bool {
+        if !self.belongs_to_same_lane(other) || self.window_minutes != other.window_minutes {
+            return false;
+        }
+        let tolerance_secs = self
+            .window_minutes
+            .map(|minutes| i64::from(minutes) * 30)
+            .unwrap_or(300)
+            .max(300);
+        (self.resets_at - other.resets_at).abs() < tolerance_secs
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ResetObservation {
+    used_percent: f64,
+    resets_at: Option<DateTime<Utc>>,
+    observed_at: DateTime<Utc>,
+}
+
 impl NotificationType {
     pub fn title(&self) -> &'static str {
         match self {
             NotificationType::HighUsage => "High Usage Warning",
             NotificationType::CriticalUsage => "Critical Usage Alert",
             NotificationType::Exhausted => "Usage Limit Reached",
+            NotificationType::UsageStep(_) => "Usage milestone reached",
             NotificationType::StatusIssue => "Provider Status Issue",
             NotificationType::SessionDepleted => "Session Depleted",
             NotificationType::SessionRestored => "Session Restored",
+            NotificationType::ExpectedReset(_) => "Quota reset completed",
+            NotificationType::UnexpectedReset(_) => "Unexpected quota reset",
+            NotificationType::BankedResetCredit(_) => "Reset credit received",
         }
     }
 
@@ -157,9 +226,13 @@ impl NotificationType {
             NotificationType::HighUsage => "⚠️",
             NotificationType::CriticalUsage => "🔴",
             NotificationType::Exhausted => "🚫",
+            NotificationType::UsageStep(_) => "📊",
             NotificationType::StatusIssue => "⚡",
             NotificationType::SessionDepleted => "🔴",
             NotificationType::SessionRestored => "✅",
+            NotificationType::ExpectedReset(_) => "✅",
+            NotificationType::UnexpectedReset(_) => "⚡",
+            NotificationType::BankedResetCredit(_) => "✦",
         }
     }
 
@@ -186,24 +259,242 @@ type ThresholdKey = (
 
 /// Session-transition tracking key: provider + account identity.
 type SessionTransitionKey = (ProviderId, String /* account */);
+type UsageObservationKey = (
+    ProviderId,
+    String, /* account */
+    String, /* window */
+);
+
+const NOTIFICATION_DEDUPE_VERSION: u8 = 1;
+const MAX_PERSISTED_NOTIFICATION_KEYS: usize = 512;
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+struct PersistedNotificationDedupe {
+    version: u8,
+    sent: Vec<String>,
+    predictive: Vec<PersistedPredictiveWarningKey>,
+}
 
 /// Notification manager
 pub struct NotificationManager {
     /// Track which notifications have been sent to avoid spam
     sent_notifications: std::collections::HashSet<ThresholdKey>,
+    /// Privacy-preserving hashes of sent keys restored across app launches.
+    durable_sent_notifications: VecDeque<String>,
+    durable_predictive_warning_keys: VecDeque<PersistedPredictiveWarningKey>,
     /// Track previous session percent for depleted/restored transitions (per account)
     previous_session_percent: std::collections::HashMap<SessionTransitionKey, f64>,
+    previous_usage_percent: std::collections::HashMap<UsageObservationKey, f64>,
+    previous_reset_observations: std::collections::HashMap<UsageObservationKey, ResetObservation>,
+    previous_banked_reset_credits: std::collections::HashMap<(ProviderId, String), u32>,
     predictive_warning_keys: std::collections::HashSet<PredictiveWarningKey>,
     deepseek_pricing_period: Option<String>,
 }
 
 impl NotificationManager {
+    fn quiet_hours_active(settings: &Settings) -> bool {
+        let now = Local::now();
+        #[allow(
+            clippy::cast_possible_truncation,
+            reason = "local clock hours and minutes always fit in u16"
+        )]
+        let minute = (now.hour() * 60 + now.minute()) as u16;
+        settings
+            .notification_quiet_hours
+            .contains_local_minute(minute)
+    }
+
     pub fn new() -> Self {
         Self {
             sent_notifications: std::collections::HashSet::new(),
+            durable_sent_notifications: VecDeque::new(),
+            durable_predictive_warning_keys: VecDeque::new(),
             previous_session_percent: std::collections::HashMap::new(),
+            previous_usage_percent: std::collections::HashMap::new(),
+            previous_reset_observations: std::collections::HashMap::new(),
+            previous_banked_reset_credits: std::collections::HashMap::new(),
             predictive_warning_keys: std::collections::HashSet::new(),
             deepseek_pricing_period: None,
+        }
+    }
+
+    fn persistence_path() -> Option<PathBuf> {
+        crate::logging::config_root().map(|root| root.join("notification-dedupe.json"))
+    }
+
+    /// Restore cross-process notification suppression. Corrupt or unknown
+    /// versions fail safely to an empty manager; quota fetching must continue.
+    pub fn load_persisted() -> Self {
+        Self::persistence_path().map_or_else(Self::new, |path| Self::load_from(&path))
+    }
+
+    pub fn persist(&self) -> std::io::Result<()> {
+        let path = Self::persistence_path().ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "could not determine notification state path",
+            )
+        })?;
+        self.persist_to(&path)
+    }
+
+    fn load_from(path: &Path) -> Self {
+        let Ok(raw) = crate::secure_file::read_string(path) else {
+            return Self::new();
+        };
+        let Ok(saved) = serde_json::from_str::<PersistedNotificationDedupe>(&raw) else {
+            return Self::new();
+        };
+        if saved.version != NOTIFICATION_DEDUPE_VERSION {
+            return Self::new();
+        }
+        let mut manager = Self::new();
+        for fingerprint in saved
+            .sent
+            .into_iter()
+            .filter(|value| value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit()))
+            .rev()
+            .take(MAX_PERSISTED_NOTIFICATION_KEYS)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+        {
+            if !manager.durable_sent_notifications.contains(&fingerprint) {
+                manager.durable_sent_notifications.push_back(fingerprint);
+            }
+        }
+        for key in saved
+            .predictive
+            .into_iter()
+            .filter(|key| {
+                key.identity_digest.len() == 64
+                    && key
+                        .identity_digest
+                        .bytes()
+                        .all(|byte| byte.is_ascii_hexdigit())
+                    && crate::core::cli_name_map().contains_key(key.provider.as_str())
+            })
+            .rev()
+            .take(MAX_PERSISTED_NOTIFICATION_KEYS)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+        {
+            if !manager.durable_predictive_warning_keys.contains(&key) {
+                manager.durable_predictive_warning_keys.push_back(key);
+            }
+        }
+        manager
+    }
+
+    fn persist_to(&self, path: &Path) -> std::io::Result<()> {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let saved = PersistedNotificationDedupe {
+            version: NOTIFICATION_DEDUPE_VERSION,
+            sent: self.durable_sent_notifications.iter().cloned().collect(),
+            predictive: self
+                .durable_predictive_warning_keys
+                .iter()
+                .cloned()
+                .collect(),
+        };
+        let json = serde_json::to_string(&saved)
+            .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))?;
+        crate::secure_file::write_string(path, &json)
+    }
+
+    fn notification_kind_key(kind: NotificationType) -> String {
+        match kind {
+            NotificationType::HighUsage => "high".to_string(),
+            NotificationType::CriticalUsage => "critical".to_string(),
+            NotificationType::Exhausted => "exhausted".to_string(),
+            NotificationType::UsageStep(step) => format!("step:{step}"),
+            NotificationType::StatusIssue => "status-issue".to_string(),
+            NotificationType::SessionDepleted => "session-depleted".to_string(),
+            NotificationType::SessionRestored => "session-restored".to_string(),
+            NotificationType::ExpectedReset(timestamp) => format!("expected-reset:{timestamp}"),
+            NotificationType::UnexpectedReset(timestamp) => {
+                format!("unexpected-reset:{timestamp}")
+            }
+            // A decrease explicitly re-arms this stable lane, so the count is
+            // intentionally excluded from the durable identity.
+            NotificationType::BankedResetCredit(_) => "banked-reset-credit".to_string(),
+        }
+    }
+
+    fn identity_digest(identity: &str) -> String {
+        let mut digest = Sha256::new();
+        digest.update((identity.len() as u64).to_le_bytes());
+        digest.update(identity.as_bytes());
+        format!("{:x}", digest.finalize())
+    }
+
+    fn durable_fingerprint(key: &ThresholdKey) -> String {
+        let mut digest = Sha256::new();
+        let kind = Self::notification_kind_key(key.3);
+        for part in [
+            key.0.cli_name(),
+            key.1.as_str(),
+            key.2.as_str(),
+            kind.as_str(),
+        ] {
+            digest.update((part.len() as u64).to_le_bytes());
+            digest.update(part.as_bytes());
+        }
+        format!("{:x}", digest.finalize())
+    }
+
+    fn was_sent(&self, key: &ThresholdKey) -> bool {
+        self.sent_notifications.contains(key)
+            || self
+                .durable_sent_notifications
+                .contains(&Self::durable_fingerprint(key))
+    }
+
+    /// Returns true only when the event has not been sent in this process or a
+    /// previous process. The raw account identity stays in memory only.
+    fn mark_sent(&mut self, key: ThresholdKey) -> bool {
+        let fingerprint = Self::durable_fingerprint(&key);
+        let is_new = !self.sent_notifications.contains(&key)
+            && !self.durable_sent_notifications.contains(&fingerprint);
+        self.sent_notifications.insert(key);
+        if !self.durable_sent_notifications.contains(&fingerprint) {
+            self.durable_sent_notifications.push_back(fingerprint);
+            while self.durable_sent_notifications.len() > MAX_PERSISTED_NOTIFICATION_KEYS {
+                self.durable_sent_notifications.pop_front();
+            }
+        }
+        is_new
+    }
+
+    fn forget_sent(&mut self, key: &ThresholdKey) {
+        self.sent_notifications.remove(key);
+        let fingerprint = Self::durable_fingerprint(key);
+        self.durable_sent_notifications
+            .retain(|saved| saved != &fingerprint);
+    }
+
+    fn forget_threshold_lane(&mut self, provider: ProviderId, account: &str, window: &str) {
+        for kind in [
+            NotificationType::HighUsage,
+            NotificationType::CriticalUsage,
+            NotificationType::Exhausted,
+        ] {
+            self.forget_sent(&(provider, account.to_string(), window.to_string(), kind));
+        }
+    }
+
+    fn forget_usage_steps(&mut self, provider: ProviderId, account: &str, window: &str) {
+        for step in 1..=100 {
+            self.forget_sent(&(
+                provider,
+                account.to_string(),
+                window.to_string(),
+                NotificationType::UsageStep(step),
+            ));
         }
     }
 
@@ -215,7 +506,7 @@ impl NotificationManager {
             .as_deref()
             .is_some_and(|previous| previous != period);
         self.deepseek_pricing_period = Some(period.to_string());
-        if !settings.show_notifications || !changed {
+        if !settings.show_notifications || !changed || Self::quiet_hours_active(settings) {
             return;
         }
         let label = match period {
@@ -241,6 +532,8 @@ impl NotificationManager {
         if !enabled {
             self.predictive_warning_keys
                 .retain(|key| key.provider != provider);
+            self.durable_predictive_warning_keys
+                .retain(|key| key.provider != provider.cli_name());
             return false;
         }
         if !matches!(provider, ProviderId::Claude | ProviderId::Codex) || identity.is_empty() {
@@ -258,18 +551,25 @@ impl NotificationManager {
                 resets_at,
             },
         };
+        let durable_key =
+            PersistedPredictiveWarningKey::from_observation(provider, identity, window, &key.reset);
 
         let warned_this_cycle = self.predictive_warning_keys.iter().any(|existing| {
             existing.provider == key.provider
                 && existing.identity == key.identity
                 && existing.window == key.window
                 && existing.reset.belongs_to_same_cycle(&key.reset)
-        });
+        }) || self
+            .durable_predictive_warning_keys
+            .iter()
+            .any(|existing| existing.belongs_to_same_cycle(&durable_key));
         self.predictive_warning_keys.retain(|existing| {
             existing.provider != key.provider
                 || existing.identity != key.identity
                 || existing.window != key.window
         });
+        self.durable_predictive_warning_keys
+            .retain(|existing| !existing.belongs_to_same_lane(&durable_key));
 
         if pace.will_last_to_reset {
             return false;
@@ -282,6 +582,10 @@ impl NotificationManager {
         }
 
         self.predictive_warning_keys.insert(key);
+        self.durable_predictive_warning_keys.push_back(durable_key);
+        while self.durable_predictive_warning_keys.len() > MAX_PERSISTED_NOTIFICATION_KEYS {
+            self.durable_predictive_warning_keys.pop_front();
+        }
         !warned_this_cycle
     }
 
@@ -289,6 +593,8 @@ impl NotificationManager {
         if !enabled {
             self.predictive_warning_keys
                 .retain(|key| key.provider != provider);
+            self.durable_predictive_warning_keys
+                .retain(|key| key.provider != provider.cli_name());
         }
     }
 
@@ -309,6 +615,10 @@ impl NotificationManager {
             rate_window,
             pace,
         ) {
+            return;
+        }
+
+        if Self::quiet_hours_active(settings) {
             return;
         }
 
@@ -345,6 +655,8 @@ impl NotificationManager {
             return;
         }
 
+        self.check_usage_step(provider, account, window, used_percent, settings);
+
         let thresholds = settings.usage_thresholds(provider, window);
         let notification_type = if used_percent >= 100.0 {
             Some(NotificationType::Exhausted)
@@ -356,23 +668,202 @@ impl NotificationManager {
             // Clear only this provider+account+window's threshold toasts so a cool
             // session on one account cannot re-arm another account's weekly (or
             // another window on the same account) on the next poll.
-            self.sent_notifications.retain(|(p, a, w, t)| {
-                *p != provider || a != account || w != window || !t.is_threshold_toast()
-            });
+            self.forget_threshold_lane(provider, account, window);
             None
         };
 
-        if let Some(notif_type) = notification_type {
+        if let Some(notif_type) = notification_type.filter(|kind| match kind {
+            NotificationType::HighUsage => settings.notification_events.high_usage,
+            NotificationType::CriticalUsage => settings.notification_events.critical_usage,
+            NotificationType::Exhausted => settings.notification_events.exhausted,
+            _ => true,
+        }) {
             let key = (
                 provider,
                 account.to_string(),
                 window.to_string(),
                 notif_type,
             );
-            if !self.sent_notifications.contains(&key) {
+            if self.mark_sent(key.clone()) {
                 self.send_notification(provider, window, used_percent, notif_type, settings);
-                self.sent_notifications.insert(key);
             }
+        }
+    }
+
+    fn check_usage_step(
+        &mut self,
+        provider: ProviderId,
+        account: &str,
+        window: &str,
+        used_percent: f64,
+        settings: &Settings,
+    ) {
+        let observation_key = (provider, account.to_string(), window.to_string());
+        let previous = self
+            .previous_usage_percent
+            .insert(observation_key, used_percent.clamp(0.0, 100.0));
+
+        if previous.is_some_and(|value| used_percent < value) {
+            self.forget_usage_steps(provider, account, window);
+        }
+
+        let Some(step) = settings.usage_step_notification_percent else {
+            return;
+        };
+        let Some(previous) = previous else {
+            return;
+        };
+        if used_percent <= previous || used_percent >= 100.0 {
+            return;
+        }
+
+        #[allow(
+            clippy::cast_possible_truncation,
+            reason = "both percentages are clamped to 0..=100 and step is a non-zero u8"
+        )]
+        let previous_bucket = (previous / f64::from(step)).floor() as u8;
+        #[allow(
+            clippy::cast_possible_truncation,
+            reason = "provider usage is normalized to 0..=100 and step is a non-zero u8"
+        )]
+        let current_bucket = (used_percent / f64::from(step)).floor() as u8;
+        if current_bucket <= previous_bucket {
+            return;
+        }
+
+        let milestone = current_bucket.saturating_mul(step).min(100);
+        let kind = NotificationType::UsageStep(milestone);
+        let key = (provider, account.to_string(), window.to_string(), kind);
+        if self.mark_sent(key) {
+            self.send_notification(provider, window, f64::from(milestone), kind, settings);
+        }
+    }
+
+    /// Observe a real quota window and classify resets against its previously
+    /// announced boundary. A substantial usage drop is accepted as reset
+    /// evidence even when the provider omits or delays its next reset time.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "reset evidence is deliberately explicit: provider/account/window/value/boundary/time/settings"
+    )]
+    pub fn check_reset_transition(
+        &mut self,
+        provider: ProviderId,
+        account: &str,
+        window: &str,
+        used_percent: f64,
+        resets_at: Option<DateTime<Utc>>,
+        observed_at: DateTime<Utc>,
+        settings: &Settings,
+    ) {
+        const RESET_DROP_PERCENT: f64 = 20.0;
+        const EXPECTED_TOLERANCE_SECONDS: i64 = 300;
+
+        let lane = (provider, account.to_string(), window.to_string());
+        if self
+            .previous_reset_observations
+            .get(&lane)
+            .is_some_and(|previous| observed_at <= previous.observed_at)
+        {
+            return;
+        }
+        let current = ResetObservation {
+            used_percent: used_percent.clamp(0.0, 100.0),
+            resets_at,
+            observed_at,
+        };
+        let previous = self.previous_reset_observations.insert(lane, current);
+        let Some(previous) = previous else {
+            return;
+        };
+
+        let boundary_moved = matches!(
+            (previous.resets_at, resets_at),
+            (Some(before), Some(after))
+                if after - before > chrono::Duration::seconds(EXPECTED_TOLERANCE_SECONDS)
+        );
+        let usage_dropped = previous.used_percent - current.used_percent >= RESET_DROP_PERCENT;
+        if !boundary_moved && !usage_dropped {
+            return;
+        }
+
+        let expected = previous.resets_at.is_some_and(|announced| {
+            observed_at >= announced - chrono::Duration::seconds(EXPECTED_TOLERANCE_SECONDS)
+        });
+        let fingerprint = resets_at.unwrap_or(observed_at).timestamp();
+        let kind = if expected {
+            NotificationType::ExpectedReset(fingerprint)
+        } else {
+            NotificationType::UnexpectedReset(fingerprint)
+        };
+        let enabled = if expected {
+            settings.notification_events.expected_reset
+        } else {
+            settings.notification_events.unexpected_reset
+        };
+        if !settings.show_notifications || !enabled {
+            return;
+        }
+
+        let key = (provider, account.to_string(), window.to_string(), kind);
+        if self.mark_sent(key) {
+            self.send_notification(provider, window, current.used_percent, kind, settings);
+        }
+    }
+
+    /// Track the provider's structured banked-reset count. The first reading is
+    /// a quiet baseline; only a later increase is user-actionable.
+    pub fn check_banked_reset_credits(
+        &mut self,
+        provider: ProviderId,
+        account: &str,
+        available_count: u32,
+        settings: &Settings,
+    ) {
+        let observation_key = (provider, account.to_string());
+        let previous = self
+            .previous_banked_reset_credits
+            .insert(observation_key, available_count);
+        let Some(previous) = previous else {
+            return;
+        };
+
+        if available_count <= previous {
+            if available_count < previous {
+                self.forget_sent(&(
+                    provider,
+                    account.to_string(),
+                    "reset-credits".to_string(),
+                    NotificationType::BankedResetCredit(previous),
+                ));
+            }
+            return;
+        }
+        if !settings.show_notifications || !settings.notification_events.banked_reset_credit {
+            return;
+        }
+
+        self.forget_sent(&(
+            provider,
+            account.to_string(),
+            "reset-credits".to_string(),
+            NotificationType::BankedResetCredit(previous),
+        ));
+        let kind = NotificationType::BankedResetCredit(available_count);
+        let key = (
+            provider,
+            account.to_string(),
+            "reset-credits".to_string(),
+            kind,
+        );
+        if self.mark_sent(key) {
+            self.send_notification(
+                provider,
+                "reset-credits",
+                f64::from(available_count),
+                kind,
+                settings,
+            );
         }
     }
 
@@ -383,21 +874,23 @@ impl NotificationManager {
         description: &str,
         settings: &Settings,
     ) {
+        if !settings.show_notifications || !settings.notification_events.status_issue {
+            return;
+        }
         let key = (
             provider,
             String::new(),
             String::new(),
             NotificationType::StatusIssue,
         );
-        if !self.sent_notifications.contains(&key) {
+        if self.mark_sent(key) {
             self.send_status_notification(provider, description, settings);
-            self.sent_notifications.insert(key);
         }
     }
 
     /// Clear status issue notification (when resolved)
     pub fn clear_status_issue(&mut self, provider: ProviderId) {
-        self.sent_notifications.remove(&(
+        self.forget_sent(&(
             provider,
             String::new(),
             String::new(),
@@ -431,20 +924,29 @@ impl NotificationManager {
             .unwrap_or(0.0);
 
         // Check for depleted transition: was not depleted, now is
-        if previous_percent < DEPLETED_THRESHOLD && current_percent >= DEPLETED_THRESHOLD {
-            let title = NotificationType::SessionDepleted.title();
-            let body = format!(
-                "{} session depleted. 0% left. Will notify when available again.",
-                provider.display_name()
+        if previous_percent < DEPLETED_THRESHOLD
+            && current_percent >= DEPLETED_THRESHOLD
+            && settings.notification_events.session_depleted
+        {
+            let title =
+                Self::notification_title(NotificationType::SessionDepleted, settings.ui_language);
+            let body = Self::notification_body(
+                provider,
+                "session",
+                current_percent,
+                NotificationType::SessionDepleted,
+                settings.ui_language,
             );
-            self.show_toast(title, &body);
-            Self::play_notification_sound(NotificationSoundEvent::SessionDepleted, settings);
-            self.sent_notifications.insert((
+            let depleted_key = (
                 provider,
                 account.to_string(),
                 "session".to_string(),
                 NotificationType::SessionDepleted,
-            ));
+            );
+            if self.mark_sent(depleted_key) && !Self::quiet_hours_active(settings) {
+                self.show_toast(&title, &body);
+                Self::play_notification_sound(NotificationSoundEvent::SessionDepleted, settings);
+            }
         }
         // Check for restored transition: was depleted, now is not
         else if previous_percent >= DEPLETED_THRESHOLD && current_percent < DEPLETED_THRESHOLD {
@@ -455,15 +957,28 @@ impl NotificationManager {
                 "session".to_string(),
                 NotificationType::SessionDepleted,
             );
-            if self.sent_notifications.contains(&depleted_key) {
-                let title = NotificationType::SessionRestored.title();
-                let body = format!(
-                    "{} session restored. Session quota is available again.",
-                    provider.display_name()
-                );
-                self.show_toast(title, &body);
-                Self::play_notification_sound(NotificationSoundEvent::SessionRestored, settings);
-                self.sent_notifications.remove(&depleted_key);
+            if self.was_sent(&depleted_key) {
+                if settings.notification_events.session_restored
+                    && !Self::quiet_hours_active(settings)
+                {
+                    let title = Self::notification_title(
+                        NotificationType::SessionRestored,
+                        settings.ui_language,
+                    );
+                    let body = Self::notification_body(
+                        provider,
+                        "session",
+                        current_percent,
+                        NotificationType::SessionRestored,
+                        settings.ui_language,
+                    );
+                    self.show_toast(&title, &body);
+                    Self::play_notification_sound(
+                        NotificationSoundEvent::SessionRestored,
+                        settings,
+                    );
+                }
+                self.forget_sent(&depleted_key);
             }
         }
 
@@ -481,18 +996,37 @@ impl NotificationManager {
         notif_type: NotificationType,
         settings: &Settings,
     ) {
-        let title = notif_type.title();
-        let body = Self::notification_body(provider, window, used_percent, notif_type);
-        self.show_toast(title, &body);
+        if Self::quiet_hours_active(settings) {
+            return;
+        }
+        let title = Self::notification_title(notif_type, settings.ui_language);
+        let body = Self::notification_body(
+            provider,
+            window,
+            used_percent,
+            notif_type,
+            settings.ui_language,
+        );
+        self.show_toast(&title, &body);
         Self::play_notification_sound(Self::sound_event_for(notif_type), settings);
     }
 
-    fn window_label(window: &str) -> &str {
+    fn window_label(window: &str, language: crate::settings::Language) -> Cow<'_, str> {
         match window {
-            "session" => "session",
-            "weekly" => "weekly",
-            other if !other.is_empty() => other,
-            _ => "usage",
+            "session" => Cow::Owned(locale::get_text(language, LocaleKey::ProviderSession)),
+            "fiveHour" => Cow::Owned(locale::get_text(language, LocaleKey::PanelFiveHours)),
+            "weekly" => Cow::Owned(locale::get_text(language, LocaleKey::ProviderWeekly)),
+            "modelSpecific" => Cow::Borrowed("model-specific"),
+            "tertiary" => Cow::Borrowed("additional limit"),
+            other if other.starts_with("window") && other.ends_with("Minutes") => {
+                let minutes = &other[6..other.len() - 7];
+                Cow::Owned(format!("{minutes}-minute"))
+            }
+            other if let Some(name) = other.strip_prefix("extra-") => {
+                Cow::Owned(name.replace(['-', '_'], " "))
+            }
+            other if !other.is_empty() => Cow::Borrowed(other),
+            _ => Cow::Borrowed("usage"),
         }
     }
 
@@ -501,31 +1035,83 @@ impl NotificationManager {
         window: &str,
         used_percent: f64,
         notif_type: NotificationType,
+        language: crate::settings::Language,
     ) -> String {
         let provider_name = provider.display_name();
-        let window_label = Self::window_label(window);
-        match notif_type {
-            NotificationType::HighUsage => {
-                format!(
-                    "{provider_name} {window_label} usage at {used_percent:.0}% - approaching limit"
-                )
-            }
+        let window_label = Self::window_label(window, language);
+        let quota = Self::quota_pair(used_percent, language);
+        let (key, suffix) = match notif_type {
+            NotificationType::HighUsage => (LocaleKey::NotificationToastHighBody, String::new()),
             NotificationType::CriticalUsage => {
-                format!(
-                    "{provider_name} {window_label} usage at {used_percent:.0}% - critically high!"
-                )
+                (LocaleKey::NotificationToastCriticalBody, String::new())
             }
             NotificationType::Exhausted => {
-                format!("{provider_name} {window_label} usage limit exhausted ({used_percent:.0}%)")
+                (LocaleKey::NotificationToastExhaustedBody, String::new())
             }
-            NotificationType::StatusIssue => format!("{provider_name} is experiencing issues"),
-            NotificationType::SessionDepleted => {
-                format!("{provider_name} session depleted. 0% left.")
+            NotificationType::UsageStep(milestone) => (
+                LocaleKey::NotificationToastMilestoneBody,
+                format!("{milestone}%"),
+            ),
+            NotificationType::StatusIssue => {
+                (LocaleKey::NotificationToastStatusBody, String::new())
             }
-            NotificationType::SessionRestored => {
-                format!("{provider_name} session restored. Quota available again.")
+            NotificationType::SessionDepleted => (
+                LocaleKey::NotificationToastSessionDepletedBody,
+                String::new(),
+            ),
+            NotificationType::SessionRestored => (
+                LocaleKey::NotificationToastSessionRestoredBody,
+                String::new(),
+            ),
+            NotificationType::ExpectedReset(_) => {
+                (LocaleKey::NotificationToastExpectedResetBody, String::new())
             }
-        }
+            NotificationType::UnexpectedReset(_) => (
+                LocaleKey::NotificationToastUnexpectedResetBody,
+                String::new(),
+            ),
+            NotificationType::BankedResetCredit(available) => {
+                return locale::format_locale(
+                    language,
+                    LocaleKey::NotificationToastBankedResetBody,
+                    &[provider_name, &available.to_string()],
+                );
+            }
+        };
+        locale::format_locale(
+            language,
+            key,
+            &[provider_name, &window_label, &quota, &suffix],
+        )
+    }
+
+    fn notification_title(
+        notif_type: NotificationType,
+        language: crate::settings::Language,
+    ) -> String {
+        let key = match notif_type {
+            NotificationType::HighUsage => LocaleKey::HighUsageAlert,
+            NotificationType::CriticalUsage => LocaleKey::CriticalUsageAlert,
+            NotificationType::Exhausted => LocaleKey::NotificationSoundEventExhausted,
+            NotificationType::UsageStep(_) => LocaleKey::UsageStepNotifications,
+            NotificationType::StatusIssue => LocaleKey::NotificationSoundEventStatusIssue,
+            NotificationType::SessionDepleted => LocaleKey::NotificationSoundEventSessionDepleted,
+            NotificationType::SessionRestored => LocaleKey::NotificationSoundEventSessionRestored,
+            NotificationType::ExpectedReset(_) => LocaleKey::ExpectedResetNotifications,
+            NotificationType::UnexpectedReset(_) => LocaleKey::UnexpectedResetNotifications,
+            NotificationType::BankedResetCredit(_) => LocaleKey::BankedResetCreditNotifications,
+        };
+        locale::get_text(language, key)
+    }
+
+    fn quota_pair(used_percent: f64, language: crate::settings::Language) -> String {
+        let used = used_percent.clamp(0.0, 100.0);
+        format!(
+            "{used:.0}% {} · {:.0}% {}",
+            locale::get_text(language, LocaleKey::DetailCostUsed),
+            100.0 - used,
+            locale::get_text(language, LocaleKey::DetailCostRemaining),
+        )
     }
 
     fn sound_event_for(notif_type: NotificationType) -> NotificationSoundEvent {
@@ -533,9 +1119,13 @@ impl NotificationManager {
             NotificationType::HighUsage => NotificationSoundEvent::HighUsage,
             NotificationType::CriticalUsage => NotificationSoundEvent::CriticalUsage,
             NotificationType::Exhausted => NotificationSoundEvent::Exhausted,
+            NotificationType::UsageStep(_) => NotificationSoundEvent::HighUsage,
             NotificationType::StatusIssue => NotificationSoundEvent::StatusIssue,
             NotificationType::SessionDepleted => NotificationSoundEvent::SessionDepleted,
             NotificationType::SessionRestored => NotificationSoundEvent::SessionRestored,
+            NotificationType::ExpectedReset(_) => NotificationSoundEvent::ExpectedReset,
+            NotificationType::UnexpectedReset(_) => NotificationSoundEvent::UnexpectedReset,
+            NotificationType::BankedResetCredit(_) => NotificationSoundEvent::BankedResetCredit,
         }
     }
 
@@ -551,9 +1141,16 @@ impl NotificationManager {
         description: &str,
         settings: &Settings,
     ) {
-        let title = NotificationType::StatusIssue.title();
-        let body = format!("{}: {}", provider.display_name(), description);
-        self.show_toast(title, &body);
+        if Self::quiet_hours_active(settings) {
+            return;
+        }
+        let title = Self::notification_title(NotificationType::StatusIssue, settings.ui_language);
+        let body = locale::format_locale(
+            settings.ui_language,
+            LocaleKey::NotificationToastStatusBody,
+            &[provider.display_name(), description],
+        );
+        self.show_toast(&title, &body);
         Self::play_notification_sound(NotificationSoundEvent::StatusIssue, settings);
     }
 
@@ -675,7 +1272,7 @@ fn ensure_aumid_registered() {
     // classify future notifications under the same identifier as the Tauri
     // package, so the Start menu, taskbar and Action Center agree on one app.
     for legacy_aumid in ["CodexBar", "QuotaArc", "QuotaArc.Dev"] {
-        let _ = hkcu.delete_subkey_all(format!(r"SOFTWARE\Classes\AppUserModelId\{legacy_aumid}"));
+        drop(hkcu.delete_subkey_all(format!(r"SOFTWARE\Classes\AppUserModelId\{legacy_aumid}")));
     }
     // HKCU\SOFTWARE\Classes\AppUserModelId\<AUMID> is the documented path for
     // registering Win32 desktop app AUMIDs without a COM server or Start Menu shortcut.
@@ -759,6 +1356,18 @@ mod tests {
             (
                 NotificationType::SessionRestored,
                 NotificationSoundEvent::SessionRestored,
+            ),
+            (
+                NotificationType::ExpectedReset(1),
+                NotificationSoundEvent::ExpectedReset,
+            ),
+            (
+                NotificationType::UnexpectedReset(2),
+                NotificationSoundEvent::UnexpectedReset,
+            ),
+            (
+                NotificationType::BankedResetCredit(3),
+                NotificationSoundEvent::BankedResetCredit,
             ),
         ];
 
@@ -1008,6 +1617,387 @@ mod tests {
         )));
     }
 
+    #[test]
+    fn disabled_notification_categories_do_not_arm_but_other_categories_still_work() {
+        let mut manager = NotificationManager::new();
+        let mut settings = Settings::default();
+        settings.notification_events.high_usage = false;
+
+        manager.check_and_notify(ProviderId::Claude, "", "weekly", 75.0, &settings);
+        assert!(!manager.sent_notifications.iter().any(|key| {
+            key.0 == ProviderId::Claude && key.2 == "weekly" && key.3 == NotificationType::HighUsage
+        }));
+
+        manager.check_and_notify(ProviderId::Claude, "", "weekly", 95.0, &settings);
+        assert!(manager.sent_notifications.iter().any(|key| {
+            key.0 == ProviderId::Claude
+                && key.2 == "weekly"
+                && key.3 == NotificationType::CriticalUsage
+        }));
+    }
+
+    #[test]
+    fn usage_step_notifications_only_fire_when_crossing_a_configured_milestone() {
+        let mut manager = NotificationManager::new();
+        let settings = Settings {
+            usage_step_notification_percent: Some(10),
+            ..Settings::default()
+        };
+
+        manager.check_and_notify(ProviderId::Claude, "account", "weekly", 21.0, &settings);
+        assert!(
+            !manager
+                .sent_notifications
+                .iter()
+                .any(|key| { matches!(key.3, NotificationType::UsageStep(_)) })
+        );
+
+        manager.check_and_notify(ProviderId::Claude, "account", "weekly", 29.0, &settings);
+        assert!(
+            !manager
+                .sent_notifications
+                .iter()
+                .any(|key| { matches!(key.3, NotificationType::UsageStep(_)) })
+        );
+
+        manager.check_and_notify(ProviderId::Claude, "account", "weekly", 31.0, &settings);
+        assert!(manager.sent_notifications.contains(&(
+            ProviderId::Claude,
+            "account".to_string(),
+            "weekly".to_string(),
+            NotificationType::UsageStep(30),
+        )));
+
+        manager.check_and_notify(ProviderId::Claude, "account", "weekly", 31.5, &settings);
+        assert_eq!(
+            manager
+                .sent_notifications
+                .iter()
+                .filter(|key| { matches!(key.3, NotificationType::UsageStep(_)) })
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn reset_transition_distinguishes_scheduled_and_early_resets() {
+        let mut manager = NotificationManager::new();
+        let settings = Settings::default();
+        let start = DateTime::from_timestamp(1_800_000_000, 0).unwrap();
+        let scheduled_at = start + Duration::hours(1);
+
+        manager.check_reset_transition(
+            ProviderId::Claude,
+            "account",
+            "weekly",
+            95.0,
+            Some(scheduled_at),
+            start,
+            &settings,
+        );
+        manager.check_reset_transition(
+            ProviderId::Claude,
+            "account",
+            "weekly",
+            3.0,
+            Some(scheduled_at + Duration::days(7)),
+            scheduled_at + Duration::seconds(30),
+            &settings,
+        );
+        assert!(
+            manager
+                .sent_notifications
+                .iter()
+                .any(|key| { matches!(key.3, NotificationType::ExpectedReset(_)) })
+        );
+
+        manager.check_reset_transition(
+            ProviderId::Claude,
+            "account-early",
+            "weekly",
+            80.0,
+            Some(start + Duration::hours(4)),
+            start,
+            &settings,
+        );
+        manager.check_reset_transition(
+            ProviderId::Claude,
+            "account-early",
+            "weekly",
+            8.0,
+            Some(start + Duration::hours(4)),
+            start + Duration::minutes(10),
+            &settings,
+        );
+        assert!(
+            manager
+                .sent_notifications
+                .iter()
+                .any(|key| { matches!(key.3, NotificationType::UnexpectedReset(_)) })
+        );
+    }
+
+    #[test]
+    fn disabled_reset_category_does_not_suppress_the_other_reset_kind() {
+        let mut manager = NotificationManager::new();
+        let mut settings = Settings::default();
+        settings.notification_events.expected_reset = false;
+        let start = DateTime::from_timestamp(1_800_000_000, 0).unwrap();
+
+        manager.check_reset_transition(
+            ProviderId::Claude,
+            "a",
+            "weekly",
+            90.0,
+            Some(start + Duration::hours(1)),
+            start,
+            &settings,
+        );
+        manager.check_reset_transition(
+            ProviderId::Claude,
+            "a",
+            "weekly",
+            1.0,
+            Some(start + Duration::days(7)),
+            start + Duration::hours(1),
+            &settings,
+        );
+        assert!(
+            !manager
+                .sent_notifications
+                .iter()
+                .any(|key| matches!(key.3, NotificationType::ExpectedReset(_)))
+        );
+
+        manager.check_reset_transition(
+            ProviderId::Claude,
+            "b",
+            "weekly",
+            90.0,
+            Some(start + Duration::hours(5)),
+            start,
+            &settings,
+        );
+        manager.check_reset_transition(
+            ProviderId::Claude,
+            "b",
+            "weekly",
+            1.0,
+            Some(start + Duration::hours(5)),
+            start + Duration::minutes(5),
+            &settings,
+        );
+        assert!(
+            manager
+                .sent_notifications
+                .iter()
+                .any(|key| matches!(key.3, NotificationType::UnexpectedReset(_)))
+        );
+    }
+
+    #[test]
+    fn reset_time_jitter_without_usage_drop_is_not_a_reset() {
+        let mut manager = NotificationManager::new();
+        let settings = Settings::default();
+        let start = DateTime::from_timestamp(1_800_000_000, 0).unwrap();
+        let announced = start + Duration::hours(4);
+
+        manager.check_reset_transition(
+            ProviderId::Claude,
+            "account",
+            "weekly",
+            45.0,
+            Some(announced),
+            start,
+            &settings,
+        );
+        manager.check_reset_transition(
+            ProviderId::Claude,
+            "account",
+            "weekly",
+            45.5,
+            Some(announced + Duration::seconds(45)),
+            start + Duration::minutes(1),
+            &settings,
+        );
+
+        assert!(!manager.sent_notifications.iter().any(|key| {
+            matches!(
+                key.3,
+                NotificationType::ExpectedReset(_) | NotificationType::UnexpectedReset(_)
+            )
+        }));
+    }
+
+    #[test]
+    fn stale_out_of_order_sample_cannot_create_a_reset_notification() {
+        let mut manager = NotificationManager::new();
+        let settings = Settings::default();
+        let start = DateTime::from_timestamp(1_800_000_000, 0).unwrap();
+
+        manager.check_reset_transition(
+            ProviderId::Claude,
+            "account",
+            "weekly",
+            88.0,
+            Some(start + Duration::hours(4)),
+            start,
+            &settings,
+        );
+        manager.check_reset_transition(
+            ProviderId::Claude,
+            "account",
+            "weekly",
+            2.0,
+            None,
+            start - Duration::minutes(1),
+            &settings,
+        );
+
+        assert!(!manager.sent_notifications.iter().any(|key| {
+            matches!(
+                key.3,
+                NotificationType::ExpectedReset(_) | NotificationType::UnexpectedReset(_)
+            )
+        }));
+    }
+
+    #[test]
+    fn banked_reset_credit_notifies_only_when_the_available_count_increases() {
+        let mut manager = NotificationManager::new();
+        let settings = Settings::default();
+
+        manager.check_banked_reset_credits(ProviderId::Codex, "account", 0, &settings);
+        assert!(
+            !manager
+                .sent_notifications
+                .iter()
+                .any(|key| { matches!(key.3, NotificationType::BankedResetCredit(_)) })
+        );
+
+        manager.check_banked_reset_credits(ProviderId::Codex, "account", 1, &settings);
+        assert!(manager.sent_notifications.contains(&(
+            ProviderId::Codex,
+            "account".to_string(),
+            "reset-credits".to_string(),
+            NotificationType::BankedResetCredit(1),
+        )));
+        manager.check_banked_reset_credits(ProviderId::Codex, "account", 1, &settings);
+        assert_eq!(
+            manager
+                .sent_notifications
+                .iter()
+                .filter(|key| { matches!(key.3, NotificationType::BankedResetCredit(_)) })
+                .count(),
+            1
+        );
+
+        manager.check_banked_reset_credits(ProviderId::Codex, "account", 0, &settings);
+        manager.check_banked_reset_credits(ProviderId::Codex, "account", 2, &settings);
+        assert!(manager.sent_notifications.contains(&(
+            ProviderId::Codex,
+            "account".to_string(),
+            "reset-credits".to_string(),
+            NotificationType::BankedResetCredit(2),
+        )));
+    }
+
+    #[test]
+    fn disabled_banked_reset_credit_keeps_observing_without_backlog_spam() {
+        let mut manager = NotificationManager::new();
+        let mut settings = Settings::default();
+        settings.notification_events.banked_reset_credit = false;
+
+        manager.check_banked_reset_credits(ProviderId::Codex, "account", 0, &settings);
+        manager.check_banked_reset_credits(ProviderId::Codex, "account", 1, &settings);
+        assert!(
+            !manager
+                .sent_notifications
+                .iter()
+                .any(|key| { matches!(key.3, NotificationType::BankedResetCredit(_)) })
+        );
+
+        settings.notification_events.banked_reset_credit = true;
+        manager.check_banked_reset_credits(ProviderId::Codex, "account", 1, &settings);
+        assert!(
+            !manager
+                .sent_notifications
+                .iter()
+                .any(|key| { matches!(key.3, NotificationType::BankedResetCredit(_)) })
+        );
+        manager.check_banked_reset_credits(ProviderId::Codex, "account", 2, &settings);
+        assert!(
+            manager
+                .sent_notifications
+                .iter()
+                .any(|key| { matches!(key.3, NotificationType::BankedResetCredit(2)) })
+        );
+    }
+
+    #[test]
+    fn notification_window_labels_are_human_readable() {
+        assert_eq!(
+            NotificationManager::window_label("fiveHour", crate::settings::Language::English),
+            "5h"
+        );
+        assert_eq!(
+            NotificationManager::window_label(
+                "window180Minutes",
+                crate::settings::Language::English
+            ),
+            "180-minute"
+        );
+        assert_eq!(
+            NotificationManager::window_label(
+                "extra-sonnet-45",
+                crate::settings::Language::English
+            ),
+            "sonnet 45"
+        );
+    }
+
+    #[test]
+    fn notification_bodies_always_explain_used_and_remaining_quota() {
+        let high = NotificationManager::notification_body(
+            ProviderId::Claude,
+            "fiveHour",
+            82.0,
+            NotificationType::HighUsage,
+            crate::settings::Language::English,
+        );
+        assert!(high.contains("Claude"));
+        assert!(high.contains("5h"));
+        assert!(high.contains("82% Used · 18% Remaining"), "{high}");
+
+        let reset = NotificationManager::notification_body(
+            ProviderId::Codex,
+            "weekly",
+            7.0,
+            NotificationType::ExpectedReset(1),
+            crate::settings::Language::English,
+        );
+        assert!(reset.contains("7% Used · 93% Remaining"));
+
+        let depleted = NotificationManager::notification_body(
+            ProviderId::Codex,
+            "session",
+            100.0,
+            NotificationType::SessionDepleted,
+            crate::settings::Language::English,
+        );
+        assert!(depleted.contains("100% Used · 0% Remaining"));
+
+        let arabic = NotificationManager::notification_body(
+            ProviderId::Codex,
+            "weekly",
+            82.0,
+            NotificationType::CriticalUsage,
+            crate::settings::Language::Arabic,
+        );
+        assert!(arabic.contains("الأسبوعي"));
+        assert!(arabic.contains("82% مستهلك · 18% متبقٍ"), "{arabic}");
+    }
+
     /// Mirrors `notify_usage_thresholds` in the Tauri shell: each refresh
     /// calls session then weekly. Confidence pass for #198 over many cycles.
     #[test]
@@ -1147,5 +2137,103 @@ mod tests {
         // Account B can still fire depleted independently.
         manager.check_session_transition(ProviderId::Claude, "account-b", 100.0, &settings);
         assert!(manager.sent_notifications.contains(&depleted_b));
+    }
+
+    #[test]
+    fn threshold_dedupe_survives_restart_without_persisting_account_identity() {
+        let temp = tempfile::tempdir().expect("create notification state directory");
+        let path = temp.path().join("notification-dedupe.json");
+        let settings = Settings::default();
+        let key = (
+            ProviderId::Claude,
+            "person@example.com".to_string(),
+            "weekly".to_string(),
+            NotificationType::HighUsage,
+        );
+
+        let mut first = NotificationManager::new();
+        first.check_and_notify(
+            ProviderId::Claude,
+            "person@example.com",
+            "weekly",
+            80.0,
+            &settings,
+        );
+        first.persist_to(&path).expect("persist notification state");
+
+        let serialized = std::fs::read_to_string(&path).expect("read notification state");
+        assert!(!serialized.contains("person@example.com"));
+        let mut restored = NotificationManager::load_from(&path);
+        assert!(restored.was_sent(&key));
+
+        restored.check_and_notify(
+            ProviderId::Claude,
+            "person@example.com",
+            "weekly",
+            10.0,
+            &settings,
+        );
+        assert!(!restored.was_sent(&key));
+    }
+
+    #[test]
+    fn corrupt_persisted_dedupe_state_fails_closed_to_an_empty_manager() {
+        let temp = tempfile::tempdir().expect("create notification state directory");
+        let path = temp.path().join("notification-dedupe.json");
+        std::fs::write(&path, "not-json").expect("write corrupt state");
+
+        let manager = NotificationManager::load_from(&path);
+
+        assert!(manager.sent_notifications.is_empty());
+        assert!(manager.durable_sent_notifications.is_empty());
+    }
+
+    #[test]
+    fn predictive_dedupe_survives_restart_and_rearms_after_recovery() {
+        let temp = tempfile::tempdir().expect("create notification state directory");
+        let path = temp.path().join("notification-dedupe.json");
+        let now = DateTime::from_timestamp(1_800_000_000, 0).unwrap();
+        let rate_window = window(now, Duration::hours(3), 300);
+        let risk = pace(false, Some(3600.0));
+        let recovery = pace(true, None);
+
+        let mut first = NotificationManager::new();
+        assert!(first.record_predictive_observation(
+            true,
+            ProviderId::Claude,
+            "oauth:person@example.com",
+            PredictiveWarningWindow::Session,
+            &rate_window,
+            &risk,
+        ));
+        first.persist_to(&path).expect("persist predictive state");
+
+        let serialized = std::fs::read_to_string(&path).expect("read predictive state");
+        assert!(!serialized.contains("person@example.com"));
+        let mut restored = NotificationManager::load_from(&path);
+        assert!(!restored.record_predictive_observation(
+            true,
+            ProviderId::Claude,
+            "oauth:person@example.com",
+            PredictiveWarningWindow::Session,
+            &rate_window,
+            &risk,
+        ));
+        assert!(!restored.record_predictive_observation(
+            true,
+            ProviderId::Claude,
+            "oauth:person@example.com",
+            PredictiveWarningWindow::Session,
+            &rate_window,
+            &recovery,
+        ));
+        assert!(restored.record_predictive_observation(
+            true,
+            ProviderId::Claude,
+            "oauth:person@example.com",
+            PredictiveWarningWindow::Session,
+            &rate_window,
+            &risk,
+        ));
     }
 }

@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 /// A Settings window should feel like a focused control room, not a dashboard
 /// that commandeers the monitor. Values are logical pixels and are mirrored
 /// by the frontend fitter.
-pub const SETTINGS_WINDOW_WIDTH: f64 = 720.0;
-pub const SETTINGS_WINDOW_HEIGHT: f64 = 660.0;
+pub const SETTINGS_WINDOW_WIDTH: f64 = 1040.0;
+pub const SETTINGS_WINDOW_HEIGHT: f64 = 760.0;
 pub const SETTINGS_WINDOW_MIN_WIDTH: f64 = 520.0;
 pub const SETTINGS_WINDOW_MIN_HEIGHT: f64 = 440.0;
 
@@ -299,10 +299,12 @@ mod tests {
     #[test]
     fn settings_properties() {
         let props = SurfaceMode::Settings.window_properties();
-        assert_eq!(props.width, 720.0);
-        assert_eq!(props.height, 660.0);
+        assert_eq!(props.width, 1040.0);
+        assert_eq!(props.height, 760.0);
         assert_eq!(props.min_width, Some(520.0));
         assert_eq!(props.min_height, Some(440.0));
+        assert!(props.resizable);
+        assert!(props.decorations);
     }
 
     #[test]

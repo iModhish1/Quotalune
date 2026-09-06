@@ -10,6 +10,7 @@ use crate::surface::SurfaceMode;
 const SETTINGS_TAB_IDS: &[&str] = &[
     "general",
     "providers",
+    "providerDisplay",
     "notifications",
     "menuBar",
     "menu",
@@ -181,6 +182,7 @@ mod tests {
     #[test]
     fn supported_settings_tabs_match_shell_tabs() {
         assert!(is_supported_settings_tab("menuBar"));
+        assert!(is_supported_settings_tab("providerDisplay"));
         assert!(is_supported_settings_tab("about"));
         assert!(!is_supported_settings_tab("apiKeys"));
         assert!(!is_supported_settings_tab("security"));

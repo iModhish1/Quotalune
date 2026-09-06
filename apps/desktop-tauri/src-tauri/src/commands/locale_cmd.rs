@@ -191,7 +191,8 @@ mod locale_tests {
                 "korean",
                 "spanish",
                 "russian",
-                "turkish"
+                "turkish",
+                "arabic"
             ]
         );
         assert_eq!(
@@ -204,7 +205,8 @@ mod locale_tests {
                 "한국어",
                 "Español",
                 "Русский",
-                "Türkçe"
+                "Türkçe",
+                "العربية"
             ]
         );
     }
@@ -294,6 +296,14 @@ mod locale_tests {
         assert!(matches!(
             parse_locale_language("Türkçe"),
             Some(Language::Turkish)
+        ));
+        assert!(matches!(
+            parse_locale_language("ar-SA"),
+            Some(Language::Arabic)
+        ));
+        assert!(matches!(
+            parse_locale_language("العربية"),
+            Some(Language::Arabic)
         ));
         assert!(parse_locale_language("klingon").is_none());
     }

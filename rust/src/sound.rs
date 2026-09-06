@@ -44,6 +44,9 @@ pub enum NotificationSoundEvent {
     StatusIssue,
     SessionDepleted,
     SessionRestored,
+    ExpectedReset,
+    UnexpectedReset,
+    BankedResetCredit,
 }
 
 impl NotificationSoundEvent {
@@ -56,6 +59,9 @@ impl NotificationSoundEvent {
             Self::StatusIssue => paths.status_issue.as_deref(),
             Self::SessionDepleted => paths.session_depleted.as_deref(),
             Self::SessionRestored => paths.session_restored.as_deref(),
+            Self::ExpectedReset => paths.expected_reset.as_deref(),
+            Self::UnexpectedReset => paths.unexpected_reset.as_deref(),
+            Self::BankedResetCredit => paths.banked_reset_credit.as_deref(),
         }
     }
 
@@ -65,7 +71,10 @@ impl NotificationSoundEvent {
             Self::CriticalUsage | Self::Exhausted | Self::StatusIssue | Self::SessionDepleted => {
                 "SystemHand"
             }
-            Self::SessionRestored => "SystemAsterisk",
+            Self::SessionRestored | Self::ExpectedReset | Self::BankedResetCredit => {
+                "SystemAsterisk"
+            }
+            Self::UnexpectedReset => "SystemHand",
         }
     }
 
@@ -78,6 +87,8 @@ impl NotificationSoundEvent {
             Self::StatusIssue => STATUS_ISSUE_WAV,
             Self::SessionDepleted => SESSION_DEPLETED_WAV,
             Self::SessionRestored => SESSION_RESTORED_WAV,
+            Self::ExpectedReset | Self::BankedResetCredit => SESSION_RESTORED_WAV,
+            Self::UnexpectedReset => CRITICAL_USAGE_WAV,
         }
     }
 }
@@ -240,6 +251,18 @@ pub fn validate_custom_sound_path_updates(
         (
             current.session_restored.as_deref(),
             updated.session_restored.as_deref(),
+        ),
+        (
+            current.expected_reset.as_deref(),
+            updated.expected_reset.as_deref(),
+        ),
+        (
+            current.unexpected_reset.as_deref(),
+            updated.unexpected_reset.as_deref(),
+        ),
+        (
+            current.banked_reset_credit.as_deref(),
+            updated.banked_reset_credit.as_deref(),
         ),
     ];
 
@@ -434,7 +457,7 @@ mod tests {
         None
     }
 
-    const ALL_EVENTS: [NotificationSoundEvent; 7] = [
+    const ALL_EVENTS: [NotificationSoundEvent; 10] = [
         NotificationSoundEvent::PredictiveWarning,
         NotificationSoundEvent::HighUsage,
         NotificationSoundEvent::CriticalUsage,
@@ -442,6 +465,9 @@ mod tests {
         NotificationSoundEvent::StatusIssue,
         NotificationSoundEvent::SessionDepleted,
         NotificationSoundEvent::SessionRestored,
+        NotificationSoundEvent::ExpectedReset,
+        NotificationSoundEvent::UnexpectedReset,
+        NotificationSoundEvent::BankedResetCredit,
     ];
 
     #[test]
@@ -464,6 +490,18 @@ mod tests {
         }
         assert_eq!(
             NotificationSoundEvent::SessionRestored.windows_sound_alias(),
+            "SystemAsterisk"
+        );
+        assert_eq!(
+            NotificationSoundEvent::ExpectedReset.windows_sound_alias(),
+            "SystemAsterisk"
+        );
+        assert_eq!(
+            NotificationSoundEvent::UnexpectedReset.windows_sound_alias(),
+            "SystemHand"
+        );
+        assert_eq!(
+            NotificationSoundEvent::BankedResetCredit.windows_sound_alias(),
             "SystemAsterisk"
         );
     }
@@ -494,7 +532,14 @@ mod tests {
                 u16::from_le_bytes(format[14..16].try_into().expect("bit depth")),
                 16
             );
-            wav_data.push(wav);
+            if !matches!(
+                event,
+                NotificationSoundEvent::ExpectedReset
+                    | NotificationSoundEvent::UnexpectedReset
+                    | NotificationSoundEvent::BankedResetCredit
+            ) {
+                wav_data.push(wav);
+            }
         }
 
         for first in 0..wav_data.len() {
@@ -514,6 +559,9 @@ mod tests {
             status_issue: Some("status.wav".to_string()),
             session_depleted: Some("depleted.wav".to_string()),
             session_restored: Some("restored.wav".to_string()),
+            expected_reset: Some("expected-reset.wav".to_string()),
+            unexpected_reset: Some("unexpected-reset.wav".to_string()),
+            banked_reset_credit: Some("banked-reset.wav".to_string()),
         };
         let expected = [
             "predictive.wav",
@@ -523,6 +571,9 @@ mod tests {
             "status.wav",
             "depleted.wav",
             "restored.wav",
+            "expected-reset.wav",
+            "unexpected-reset.wav",
+            "banked-reset.wav",
         ];
         for (event, expected_path) in ALL_EVENTS.into_iter().zip(expected) {
             assert_eq!(event.custom_path(&paths), Some(expected_path));

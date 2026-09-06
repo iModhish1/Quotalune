@@ -12,7 +12,7 @@ use tauri::menu::{CheckMenuItemBuilder, IsMenuItem, Menu, MenuItem, PredefinedMe
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager};
 
-use codexbar::tray::{render_bar_icon_rgba, render_percent_icon_rgba};
+use codexbar::tray::{apply_logo_identity_rgba, render_bar_icon_rgba, render_percent_icon_rgba};
 
 use crate::shell;
 use crate::state::{AppState, TrayAnchor};
@@ -712,11 +712,22 @@ fn render_tray_icon_for_settings(
     weekly_pct: Option<f64>,
     all_error: bool,
 ) -> (Vec<u8>, u32, u32) {
-    if settings.menu_bar_shows_percent {
+    let (rgba, width, height) = if settings.menu_bar_shows_percent {
         render_percent_icon_rgba(session_pct, all_error)
     } else {
         render_bar_icon_rgba(session_pct, weekly_pct, all_error)
-    }
+    };
+    (
+        apply_logo_identity_rgba(
+            rgba,
+            width,
+            height,
+            &settings.logo_variant,
+            settings.logo_scale_percent,
+        ),
+        width,
+        height,
+    )
 }
 
 /// Pick the provider whose usage the tray icon should render.

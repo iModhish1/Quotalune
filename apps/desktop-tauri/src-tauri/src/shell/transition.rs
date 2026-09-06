@@ -332,6 +332,14 @@ fn clamp_current_window_to_work_area(window: &WebviewWindow) {
     }
 }
 
+pub(super) fn should_reposition_target_update(
+    requested_position: Option<(i32, i32)>,
+    maximized: bool,
+    fullscreen: bool,
+) -> bool {
+    requested_position.is_some() && !maximized && !fullscreen
+}
+
 fn preserved_visible_mode_change_position(
     window: &WebviewWindow,
     resolution: &TransitionResolution,
@@ -424,6 +432,10 @@ pub(super) fn recovery_snapshot_for_failed_transition(
     }
 }
 
+pub(super) fn should_show_same_mode_retarget(visible: bool) -> bool {
+    !visible
+}
+
 fn apply_same_mode_target_update(
     app: &AppHandle,
     window: &WebviewWindow,
@@ -431,10 +443,16 @@ fn apply_same_mode_target_update(
     target: SurfaceTarget,
     position: Option<(i32, i32)>,
 ) -> Result<SurfaceMode, String> {
-    if let Some((x, y)) = position {
-        let _ = window.set_position(os_position(window, x, y));
+    if should_reposition_target_update(
+        position,
+        window.is_maximized().unwrap_or(false),
+        window.is_fullscreen().unwrap_or(false),
+    ) {
+        if let Some((x, y)) = position {
+            let _ = window.set_position(os_position(window, x, y));
+        }
+        clamp_current_window_to_work_area(window);
     }
-    clamp_current_window_to_work_area(window);
     // Commit state + emit event before making the window visible so the
     // React frontend renders the correct surface first.
     commit_surface_snapshot(
@@ -445,7 +463,11 @@ fn apply_same_mode_target_update(
         },
     )?;
     events::emit_surface_mode_changed(app, mode, mode, target);
-    if show_window(window).is_ok() && mode == SurfaceMode::TrayPanel {
+    let visible = window.is_visible().unwrap_or(false);
+    if should_show_same_mode_retarget(visible)
+        && show_window(window).is_ok()
+        && mode == SurfaceMode::TrayPanel
+    {
         mark_tray_panel_shown(app);
     }
     Ok(mode)

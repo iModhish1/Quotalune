@@ -10,6 +10,68 @@ use super::icon::UsageLevel;
 /// Side length of the generated tray icon in pixels.
 pub const TRAY_ICON_SIZE: u32 = 32;
 
+fn inside_rounded_square(x: u32, y: u32, size: u32, inset: u32, radius: u32) -> bool {
+    if x < inset || y < inset || x >= size.saturating_sub(inset) || y >= size.saturating_sub(inset)
+    {
+        return false;
+    }
+    let lo = inset + radius;
+    let hi = size.saturating_sub(inset + radius + 1);
+    let nearest_x = x.clamp(lo, hi);
+    let nearest_y = y.clamp(lo, hi);
+    let dx = x.abs_diff(nearest_x);
+    let dy = y.abs_diff(nearest_y);
+    dx * dx + dy * dy <= radius * radius
+}
+
+/// Apply the official QuotaArc identity to a dynamic usage icon. The usage
+/// renderer stays readable while the silhouette becomes a rounded, luminous
+/// derivative of the About mark instead of the old hard-edged grey square.
+pub fn apply_logo_identity_rgba(
+    mut rgba: Vec<u8>,
+    width: u32,
+    height: u32,
+    variant: &str,
+    scale_percent: u16,
+) -> Vec<u8> {
+    if width != height || rgba.len() != (width * height * 4) as usize {
+        return rgba;
+    }
+    let inset = if scale_percent < 96 {
+        3
+    } else if scale_percent < 108 {
+        2
+    } else {
+        1
+    };
+    let radius = (width / 5).max(3);
+    let (r, g, b) = match variant {
+        "arctic" => (70, 204, 255),
+        "aurora" => (133, 112, 255),
+        "ember" => (255, 126, 47),
+        "violet" => (173, 92, 255),
+        _ => (216, 223, 232),
+    };
+    for y in 0..height {
+        for x in 0..width {
+            let offset = ((y * width + x) * 4) as usize;
+            let outer = inside_rounded_square(x, y, width, inset, radius);
+            if !outer {
+                rgba[offset + 3] = 0;
+                continue;
+            }
+            let inner = inside_rounded_square(x, y, width, inset + 1, radius.saturating_sub(1));
+            if !inner {
+                rgba[offset] = r;
+                rgba[offset + 1] = g;
+                rgba[offset + 2] = b;
+                rgba[offset + 3] = 245;
+            }
+        }
+    }
+    rgba
+}
+
 /// Render a usage-bar tray icon as raw RGBA bytes.
 ///
 /// - `session_percent`: primary bar fill (0–100), colour-coded by [`UsageLevel`]
@@ -211,6 +273,31 @@ mod tests {
         assert_eq!(w, TRAY_ICON_SIZE);
         assert_eq!(h, TRAY_ICON_SIZE);
         assert_eq!(u32::try_from(rgba.len()).unwrap(), w * h * 4);
+    }
+
+    #[test]
+    fn logo_identity_rounds_the_dynamic_icon_and_applies_finish_and_scale() {
+        let (rgba, w, h) = render_bar_icon_rgba(52.0, Some(74.0), false);
+        let silver = apply_logo_identity_rgba(rgba.clone(), w, h, "silver", 116);
+        let ember = apply_logo_identity_rgba(rgba.clone(), w, h, "ember", 116);
+        let compact = apply_logo_identity_rgba(rgba, w, h, "silver", 90);
+        assert_eq!(silver[3], 0, "top-left corner must be transparent");
+        assert_ne!(silver, ember, "finish must affect the native rim");
+        assert!(
+            compact
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .filter(|pixel| pixel[3] == 0)
+                .count()
+                > silver
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .filter(|pixel| pixel[3] == 0)
+                    .count(),
+            "compact prominence must leave a smaller native silhouette"
+        );
     }
 
     #[test]

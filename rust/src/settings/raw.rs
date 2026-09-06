@@ -27,11 +27,16 @@ pub(super) struct RawSettings {
     start_minimized: bool,
     start_at_login: bool,
     show_notifications: bool,
+    #[serde(default)]
+    notification_events: NotificationEventPreferences,
+    #[serde(default)]
+    notification_quiet_hours: NotificationQuietHours,
     sound_enabled: bool,
     notification_sound_paths: NotificationSoundPaths,
     notification_sound_theme: NotificationSoundTheme,
     high_usage_threshold: f64,
     critical_usage_threshold: f64,
+    usage_step_notification_percent: Option<u8>,
     provider_usage_thresholds: HashMap<String, UsageThresholdOverride>,
     merge_tray_icons: bool,
     tray_icon_mode: TrayIconMode,
@@ -134,6 +139,10 @@ pub(super) struct RawSettings {
     install_updates_on_quit: bool,
     ui_language: Language,
     theme: ThemePreference,
+    #[serde(default = "default_logo_variant")]
+    logo_variant: String,
+    #[serde(default = "default_logo_scale_percent")]
+    logo_scale_percent: u16,
     #[serde(default = "default_window_scale_percent")]
     window_scale_percent: u16,
     #[serde(default = "default_tray_scale_percent")]
@@ -183,6 +192,8 @@ pub(super) struct RawSettings {
     top_arc_placement: String,
     #[serde(default = "default_flow_surface_form")]
     top_arc_form: String,
+    collection_layout: serde_json::Value,
+    surface_interactions: serde_json::Value,
     #[serde(default = "default_flow_surface_anchor")]
     top_arc_anchor: String,
     #[serde(default = "default_true")]
@@ -207,6 +218,14 @@ pub(super) struct RawSettings {
     usage_display_mode: Option<String>,
     #[serde(default)]
     provider_usage_overrides: std::collections::HashMap<String, String>,
+    #[serde(default)]
+    provider_detail_windows: std::collections::HashMap<String, String>,
+    #[serde(default)]
+    provider_limit_order: std::collections::HashMap<String, Vec<String>>,
+    #[serde(default)]
+    provider_limit_presentation: std::collections::HashMap<String, super::LimitPresentation>,
+    #[serde(default)]
+    global_limit_presentation: super::LimitPresentation,
     #[serde(default = "default_catalog_theme")]
     catalog_theme: String,
     #[serde(default)]
@@ -248,11 +267,14 @@ impl Default for RawSettings {
             start_minimized: s.start_minimized,
             start_at_login: s.start_at_login,
             show_notifications: s.show_notifications,
+            notification_events: s.notification_events,
+            notification_quiet_hours: s.notification_quiet_hours,
             sound_enabled: s.sound_enabled,
             notification_sound_paths: s.notification_sound_paths,
             notification_sound_theme: s.notification_sound_theme,
             high_usage_threshold: s.high_usage_threshold,
             critical_usage_threshold: s.critical_usage_threshold,
+            usage_step_notification_percent: s.usage_step_notification_percent,
             provider_usage_thresholds: HashMap::new(),
             merge_tray_icons: s.merge_tray_icons,
             tray_icon_mode: s.tray_icon_mode,
@@ -314,6 +336,8 @@ impl Default for RawSettings {
             install_updates_on_quit: s.install_updates_on_quit,
             ui_language: s.ui_language,
             theme: s.theme,
+            logo_variant: s.logo_variant,
+            logo_scale_percent: s.logo_scale_percent,
             window_scale_percent: s.window_scale_percent,
             tray_scale_percent: s.tray_scale_percent,
             powertoys_status_pipe_enabled: s.powertoys_status_pipe_enabled,
@@ -338,6 +362,8 @@ impl Default for RawSettings {
             top_arc_scale: s.top_arc_scale,
             top_arc_placement: s.top_arc_placement,
             top_arc_form: s.top_arc_form,
+            collection_layout: serde_json::to_value(s.collection_layout).unwrap_or_default(),
+            surface_interactions: serde_json::to_value(s.surface_interactions).unwrap_or_default(),
             top_arc_anchor: s.top_arc_anchor,
             top_arc_auto_hide: s.top_arc_auto_hide,
             top_arc_auto_hide_delay_ms: s.top_arc_auto_hide_delay_ms,
@@ -346,6 +372,10 @@ impl Default for RawSettings {
             privacy_mode: s.privacy_mode,
             usage_display_mode: s.usage_display_mode,
             provider_usage_overrides: s.provider_usage_overrides,
+            provider_detail_windows: s.provider_detail_windows,
+            provider_limit_order: s.provider_limit_order,
+            provider_limit_presentation: s.provider_limit_presentation,
+            global_limit_presentation: s.global_limit_presentation,
             catalog_theme: s.catalog_theme,
             active_profile_catalog_theme: s.active_profile_catalog_theme,
             surface_catalog_themes: s.surface_catalog_themes,
@@ -598,11 +628,17 @@ impl From<RawSettings> for Settings {
             start_minimized: raw.start_minimized,
             start_at_login: raw.start_at_login,
             show_notifications: raw.show_notifications,
+            notification_events: raw.notification_events,
+            notification_quiet_hours: raw.notification_quiet_hours,
             sound_enabled: raw.sound_enabled,
             notification_sound_paths: raw.notification_sound_paths,
             notification_sound_theme: raw.notification_sound_theme,
             high_usage_threshold: raw.high_usage_threshold,
             critical_usage_threshold: raw.critical_usage_threshold,
+            usage_step_notification_percent: raw
+                .usage_step_notification_percent
+                .filter(|value| *value > 0)
+                .map(|value| value.min(100)),
             provider_usage_thresholds: normalize_usage_threshold_overrides(
                 raw.provider_usage_thresholds,
             ),
@@ -642,6 +678,8 @@ impl From<RawSettings> for Settings {
             install_updates_on_quit: raw.install_updates_on_quit,
             ui_language: raw.ui_language,
             theme: raw.theme,
+            logo_variant: normalize_logo_variant(&raw.logo_variant),
+            logo_scale_percent: clamp_logo_scale_percent(raw.logo_scale_percent),
             window_scale_percent: clamp_window_scale_percent(raw.window_scale_percent),
             tray_scale_percent: clamp_tray_scale_percent(raw.tray_scale_percent),
             powertoys_status_pipe_enabled: raw.powertoys_status_pipe_enabled,
@@ -669,9 +707,15 @@ impl From<RawSettings> for Settings {
             top_arc_scale: clamp_surface_scale(raw.top_arc_scale),
             top_arc_placement: normalize_top_arc_placement(&raw.top_arc_placement),
             top_arc_form: normalize_flow_surface_form(&raw.top_arc_form),
+            collection_layout: collections::CollectionLayout::from_disk(raw.collection_layout),
+            surface_interactions: interactions::SurfaceInteractions::from_disk(
+                raw.surface_interactions,
+            ),
             top_arc_anchor: normalize_flow_surface_anchor(&raw.top_arc_form, &raw.top_arc_anchor),
             top_arc_auto_hide: raw.top_arc_auto_hide,
-            top_arc_auto_hide_delay_ms: clamp_flow_surface_auto_hide_delay(raw.top_arc_auto_hide_delay_ms),
+            top_arc_auto_hide_delay_ms: clamp_flow_surface_auto_hide_delay(
+                raw.top_arc_auto_hide_delay_ms,
+            ),
             top_arc_click_through: raw.top_arc_click_through,
             top_arc_hide_fullscreen: raw.top_arc_hide_fullscreen,
             privacy_mode: raw.privacy_mode,
@@ -679,6 +723,14 @@ impl From<RawSettings> for Settings {
                 &raw.usage_display_mode.clone().unwrap_or_default(),
             ),
             provider_usage_overrides: raw.provider_usage_overrides,
+            provider_detail_windows: raw.provider_detail_windows,
+            provider_limit_order: raw.provider_limit_order,
+            provider_limit_presentation: raw.provider_limit_presentation,
+            global_limit_presentation: if raw.global_limit_presentation.is_valid() {
+                raw.global_limit_presentation
+            } else {
+                super::LimitPresentation::default()
+            },
             catalog_theme: normalize_catalog_theme(&raw.catalog_theme),
             active_profile_catalog_theme: raw
                 .active_profile_catalog_theme

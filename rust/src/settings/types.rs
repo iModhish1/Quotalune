@@ -23,6 +23,79 @@ pub struct NotificationSoundPaths {
     pub status_issue: Option<String>,
     pub session_depleted: Option<String>,
     pub session_restored: Option<String>,
+    pub expected_reset: Option<String>,
+    pub unexpected_reset: Option<String>,
+    pub banked_reset_credit: Option<String>,
+}
+
+/// Independently configurable notification categories. New categories default
+/// on so existing installations keep their current behaviour after migration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct NotificationEventPreferences {
+    pub high_usage: bool,
+    pub critical_usage: bool,
+    pub exhausted: bool,
+    pub status_issue: bool,
+    pub session_depleted: bool,
+    pub session_restored: bool,
+    pub expected_reset: bool,
+    pub unexpected_reset: bool,
+    pub banked_reset_credit: bool,
+}
+
+/// Local-time notification suppression window. Minutes are counted from local
+/// midnight. Equal start/end values intentionally mean a full 24-hour window.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct NotificationQuietHours {
+    pub enabled: bool,
+    pub start_minute: u16,
+    pub end_minute: u16,
+}
+
+impl Default for NotificationQuietHours {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            start_minute: 22 * 60,
+            end_minute: 7 * 60,
+        }
+    }
+}
+
+impl NotificationQuietHours {
+    pub fn contains_local_minute(self, minute: u16) -> bool {
+        if !self.enabled {
+            return false;
+        }
+        let minute = minute.min(24 * 60 - 1);
+        let start = self.start_minute.min(24 * 60 - 1);
+        let end = self.end_minute.min(24 * 60 - 1);
+        if start == end {
+            true
+        } else if start < end {
+            minute >= start && minute < end
+        } else {
+            minute >= start || minute < end
+        }
+    }
+}
+
+impl Default for NotificationEventPreferences {
+    fn default() -> Self {
+        Self {
+            high_usage: true,
+            critical_usage: true,
+            exhausted: true,
+            status_issue: true,
+            session_depleted: true,
+            session_restored: true,
+            expected_reset: true,
+            unexpected_reset: true,
+            banked_reset_credit: true,
+        }
+    }
 }
 
 /// Sound theme used when an event has no custom WAV file.
@@ -48,9 +121,14 @@ pub fn normalize_usage_threshold_overrides(
                 .map_or((key.as_str(), None), |(provider, window)| {
                     (provider, Some(window))
                 });
-            if !known.contains_key(provider)
-                || window.is_some_and(|window| !matches!(window, "session" | "weekly"))
-            {
+            let safe_window = window.is_none_or(|window| {
+                !window.is_empty()
+                    && window.len() <= 64
+                    && window
+                        .bytes()
+                        .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+            });
+            if !known.contains_key(provider) || !safe_window {
                 return None;
             }
             value.high = value.high.map(|number| number.clamp(0.0, 100.0));
@@ -66,13 +144,21 @@ impl Settings {
         let window_key = format!("{provider_key}:{window}");
         let provider_override = self.provider_usage_thresholds.get(provider_key);
         let window_override = self.provider_usage_thresholds.get(&window_key);
+        let legacy_session_override = (window == "fiveHour")
+            .then(|| {
+                self.provider_usage_thresholds
+                    .get(&format!("{provider_key}:session"))
+            })
+            .flatten();
         UsageThresholds {
             high: window_override
                 .and_then(|value| value.high)
+                .or_else(|| legacy_session_override.and_then(|value| value.high))
                 .or_else(|| provider_override.and_then(|value| value.high))
                 .unwrap_or(self.high_usage_threshold),
             critical: window_override
                 .and_then(|value| value.critical)
+                .or_else(|| legacy_session_override.and_then(|value| value.critical))
                 .or_else(|| provider_override.and_then(|value| value.critical))
                 .unwrap_or(self.critical_usage_threshold),
         }
@@ -100,6 +186,8 @@ pub enum Language {
     Russian,
     /// Turkish
     Turkish,
+    /// Arabic
+    Arabic,
 }
 
 impl Language {
@@ -114,6 +202,7 @@ impl Language {
             Language::Spanish => "Español",
             Language::Russian => "Русский",
             Language::Turkish => "Türkçe",
+            Language::Arabic => "العربية",
         }
     }
 
@@ -128,6 +217,7 @@ impl Language {
             Language::Spanish,
             Language::Russian,
             Language::Turkish,
+            Language::Arabic,
         ]
     }
 
@@ -143,6 +233,7 @@ impl Language {
             Language::Spanish => "spanish",
             Language::Russian => "russian",
             Language::Turkish => "turkish",
+            Language::Arabic => "arabic",
         }
     }
 
@@ -158,6 +249,7 @@ impl Language {
             Language::Spanish => &["es", "es-mx", "español"],
             Language::Russian => &["ru", "ru-ru", "русский"],
             Language::Turkish => &["tr", "tr-tr", "türkçe", "turkce"],
+            Language::Arabic => &["ar", "ar-sa", "العربية", "عربي"],
         }
     }
 

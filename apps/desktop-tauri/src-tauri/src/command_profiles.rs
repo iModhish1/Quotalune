@@ -489,6 +489,215 @@ pub fn set_usage_settings(
     Ok(())
 }
 
+#[tauri::command]
+pub fn set_provider_limit_presentation(
+    app: AppHandle,
+    provider: String,
+    presentation: Option<codexbar::settings::LimitPresentation>,
+) -> Result<(), String> {
+    let id = codexbar::core::ProviderId::from_cli_name(&provider)
+        .ok_or_else(|| format!("unknown provider: {provider}"))?;
+    if presentation.as_ref().is_some_and(|value| !value.is_valid()) {
+        return Err("invalid limit presentation".into());
+    }
+    let mut settings = Settings::load();
+    if let Some(value) = presentation {
+        settings
+            .provider_limit_presentation
+            .insert(id.cli_name().into(), value);
+    } else {
+        settings.provider_limit_presentation.remove(id.cli_name());
+    }
+    settings.save().map_err(|e| e.to_string())?;
+    app.emit("codexbar:settings-updated", ())
+        .map_err(|e| e.to_string())
+}
+
+/// Persist the shared provider presentation. Individual provider entries keep
+/// their explicit override and inherit this value again when reset.
+#[tauri::command]
+pub fn set_global_limit_presentation(
+    app: AppHandle,
+    presentation: codexbar::settings::LimitPresentation,
+) -> Result<(), String> {
+    if !presentation.is_valid() {
+        return Err("invalid global limit presentation".into());
+    }
+    let mut settings = Settings::load();
+    settings.global_limit_presentation = presentation;
+    settings.save().map_err(|e| e.to_string())?;
+    app.emit("codexbar:settings-updated", ())
+        .map_err(|e| e.to_string())
+}
+
+fn apply_limit_order(
+    settings: &mut Settings,
+    provider: &str,
+    order: Option<Vec<String>>,
+) -> Result<(), String> {
+    let id = codexbar::core::ProviderId::from_cli_name(provider)
+        .ok_or_else(|| format!("unknown provider: {provider}"))?;
+    if let Some(mut ids) = order {
+        if ids.len() > 128
+            || ids
+                .iter()
+                .any(|id| id.is_empty() || id.len() > 256 || id.chars().any(char::is_control))
+        {
+            return Err("invalid limit IDs".into());
+        }
+        let mut seen = std::collections::HashSet::new();
+        ids.retain(|id| seen.insert(id.clone()));
+        settings
+            .provider_limit_order
+            .insert(id.cli_name().into(), ids);
+    } else {
+        settings.provider_limit_order.remove(id.cli_name());
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_provider_limit_order(
+    app: AppHandle,
+    provider: String,
+    order: Option<Vec<String>>,
+) -> Result<(), String> {
+    let mut settings = Settings::load();
+    apply_limit_order(&mut settings, &provider, order)?;
+    settings.save().map_err(|e| e.to_string())?;
+    app.emit("codexbar:settings-updated", ())
+        .map_err(|e| e.to_string())
+}
+
+fn apply_detail_window(
+    settings: &mut Settings,
+    provider: &str,
+    selection: &str,
+) -> Result<(), String> {
+    let id = codexbar::core::ProviderId::from_cli_name(provider)
+        .ok_or_else(|| format!("unknown provider: {provider}"))?;
+    if !matches!(selection, "all" | "session" | "weekly" | "both" | "none") {
+        return Err(format!("invalid detail window selection: {selection}"));
+    }
+    if selection == "all" {
+        settings.provider_detail_windows.remove(id.cli_name());
+    } else {
+        settings
+            .provider_detail_windows
+            .insert(id.cli_name().to_string(), selection.to_string());
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_provider_detail_window(
+    app: AppHandle,
+    provider: String,
+    selection: String,
+) -> Result<(), String> {
+    let mut settings = Settings::load();
+    apply_detail_window(&mut settings, &provider, &selection)?;
+    settings.save().map_err(|e| e.to_string())?;
+    app.emit("codexbar:settings-updated", ())
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[cfg(test)]
+#[test]
+fn detail_window_choice_validates_and_preserves_other_provider_settings() {
+    let mut settings = Settings::default();
+    settings
+        .provider_limit_order
+        .insert("claude".into(), vec!["model".into(), "primary".into()]);
+    settings.provider_limit_order.insert("codex".into(), vec![]);
+    apply_detail_window(&mut settings, "claude", "weekly").unwrap();
+    apply_detail_window(&mut settings, "openai", "session").unwrap();
+    assert_eq!(settings.provider_detail_windows["codex"], "session");
+    assert!(apply_detail_window(&mut settings, "claude", "invalid").is_err());
+    assert!(apply_detail_window(&mut settings, "unknown-provider", "weekly").is_err());
+    assert_eq!(settings.provider_detail_windows["claude"], "weekly");
+    apply_detail_window(&mut settings, "claude", "all").unwrap();
+    assert!(!settings.provider_detail_windows.contains_key("claude"));
+    assert_eq!(settings.provider_detail_windows.len(), 1);
+    apply_detail_window(&mut settings, "codex", "none").unwrap();
+    assert_eq!(settings.provider_detail_windows["codex"], "none");
+    let loaded: Settings =
+        serde_json::from_str(&serde_json::to_string(&settings).unwrap()).unwrap();
+    assert_eq!(
+        loaded.provider_detail_windows,
+        settings.provider_detail_windows
+    );
+    assert_eq!(loaded.provider_limit_order, settings.provider_limit_order);
+}
+
+#[cfg(test)]
+#[test]
+fn ordered_limits_preserve_other_providers_and_validate_before_mutation() {
+    let mut settings = Settings::default();
+    apply_limit_order(
+        &mut settings,
+        "claude",
+        Some(vec!["model".into(), "primary".into(), "model".into()]),
+    )
+    .unwrap();
+    apply_limit_order(&mut settings, "openai", Some(vec![])).unwrap();
+    assert_eq!(
+        settings.provider_limit_order["claude"],
+        vec!["model", "primary"]
+    );
+    assert!(settings.provider_limit_order["codex"].is_empty());
+    let before = settings.provider_limit_order.clone();
+    assert!(apply_limit_order(&mut settings, "claude", Some(vec!["".into()])).is_err());
+    assert!(apply_limit_order(&mut settings, "unknown", Some(vec![])).is_err());
+    assert_eq!(settings.provider_limit_order, before);
+    apply_limit_order(&mut settings, "claude", None).unwrap();
+    assert!(!settings.provider_limit_order.contains_key("claude"));
+    assert!(settings.provider_limit_order.contains_key("codex"));
+}
+
+#[cfg(test)]
+#[test]
+fn limit_presentation_round_trips_and_rejects_invalid_variants() {
+    let presentation = codexbar::settings::LimitPresentation {
+        shape: "ring".into(),
+        content: "both".into(),
+        direction: "reverse".into(),
+        identity: "glass".into(),
+    };
+    assert!(presentation.is_valid());
+    let mut settings = Settings {
+        global_limit_presentation: presentation.clone(),
+        ..Default::default()
+    };
+    settings
+        .provider_limit_presentation
+        .insert("claude".into(), presentation.clone());
+    let loaded: Settings =
+        serde_json::from_str(&serde_json::to_string(&settings).unwrap()).unwrap();
+    assert_eq!(loaded.provider_limit_presentation["claude"], presentation);
+    assert_eq!(loaded.global_limit_presentation, presentation);
+    let legacy: codexbar::settings::LimitPresentation = serde_json::from_value(serde_json::json!({
+        "shape":"horizontal","content":"both","direction":"forward"
+    }))
+    .unwrap();
+    assert_eq!(legacy.identity, "adaptive");
+    assert!(
+        !codexbar::settings::LimitPresentation {
+            shape: "invalid".into(),
+            ..presentation.clone()
+        }
+        .is_valid()
+    );
+    assert!(
+        !codexbar::settings::LimitPresentation {
+            identity: "invisible".into(),
+            ..presentation
+        }
+        .is_valid()
+    );
+}
+
 fn normalize_usage_settings_input(
     global_mode: &str,
     provider_overrides: &std::collections::HashMap<String, String>,
