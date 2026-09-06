@@ -76,6 +76,9 @@ nul
 !/docs/validation/
 /docs/validation/*
 !/docs/validation/*.md
+!/docs/validation/native-0.10.1/
+/docs/validation/native-0.10.1/*
+!/docs/validation/native-0.10.1/*.md
 /scripts/*
 /docs/ui-parity-workflow.md
 /scripts/crop_vm_preferences_proof.sh
