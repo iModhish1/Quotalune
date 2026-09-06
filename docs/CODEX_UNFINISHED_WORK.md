@@ -30,8 +30,24 @@ This list distinguishes an implemented slice from a fully accepted product requi
 - Public release or publishing.
 - Full native 24 structure-theme × 24 provider-identity × DPI sweep.
 - Multi-monitor/taskbar-orientation acceptance.
-- A production installer built from the reconciled final commit.
-- Controlled Personal upgrade from that installer.
+
+## Completed since this document was first written
+
+- A production installer was built from the reconciled `28f412ac`/0.10.0
+  commit (NSIS, MSI ×8 locales, portable ZIP) — see
+  `docs/CODEX_RELEASE_MANIFEST.md` for artifact hashes.
+- Personal was upgraded from 0.9.0 to 0.10.0 via a controlled promotion:
+  a complete rollback backup was taken first
+  (`.local/recovery/personal-backup-complete-20260906-232817/`, 4,051
+  files), the NSIS installer ran silently (exit code 0), and the
+  installed binary/version/SHA-256 were verified post-install
+  (`%LOCALAPPDATA%\QuotaArc\QuotaArc.exe`, 0.10.0,
+  `DCE2C1A426B8347EBBCFCF09217B83771D4B58E4ABE27A5E50024485483DD9F2`).
+  Profiles, settings, provider/API state, and history were all confirmed
+  preserved, and the app was independently relaunched to confirm restart
+  persistence. This was also independently re-verified (test counts,
+  clippy/fmt, installed-binary hash, backup file count, Start Menu
+  shortcut) in the following session before any further work began.
 
 ## Recommended order
 
