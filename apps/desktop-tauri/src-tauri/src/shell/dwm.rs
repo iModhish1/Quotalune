@@ -86,6 +86,11 @@ unsafe extern "system" {
         id: usize,
         data: usize,
     ) -> i32;
+    fn RemoveWindowSubclass(
+        hwnd: isize,
+        pfn: unsafe extern "system" fn(isize, u32, usize, isize, usize, usize) -> isize,
+        id: usize,
+    ) -> i32;
 }
 
 #[cfg(windows)]
@@ -286,3 +291,35 @@ pub fn force_dark_caption(_win: &tauri::WebviewWindow) {}
 
 #[cfg(not(windows))]
 pub fn force_dark_caption_resizable(_win: &tauri::WebviewWindow) {}
+
+/// Restore OS-owned hit testing, resize borders, caption buttons and Snap.
+/// The main window may have previously been a subclassed borderless surface.
+#[cfg(windows)]
+pub fn restore_native_caption(win: &tauri::WebviewWindow) {
+    use raw_window_handle::HasWindowHandle;
+    let Ok(handle) = win.window_handle() else {
+        return;
+    };
+    let raw_window_handle::RawWindowHandle::Win32(h) = handle.as_raw() else {
+        return;
+    };
+    // SAFETY: live HWND from Tauri; subclass identity and stack buffers belong to us.
+    unsafe {
+        let root = GetAncestor(h.hwnd.get(), 2);
+        let hwnd = if root == 0 { h.hwnd.get() } else { root };
+        RemoveWindowSubclass(hwnd, borderless_subclass_proc, BORDERLESS_SUBCLASS_ID);
+        let margins = Margins {
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 0,
+        };
+        DwmExtendFrameIntoClientArea(hwnd, &margins);
+        let dark: u32 = 1;
+        DwmSetWindowAttribute(hwnd, 20, &raw const dark as *const c_void, 4);
+        SetWindowPos(hwnd, 0, 0, 0, 0, 0, 0x0020 | 0x0002 | 0x0001 | 0x0004);
+    }
+}
+
+#[cfg(not(windows))]
+pub fn restore_native_caption(_win: &tauri::WebviewWindow) {}

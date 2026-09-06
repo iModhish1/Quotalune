@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState, type ReactElement, type ReactNode } from "react";
-import { getCurrentWindow, LogicalPosition, LogicalSize } from "@tauri-apps/api/window";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import type {
   BootstrapState,
@@ -9,7 +8,7 @@ import type {
 import { useSettings } from "../hooks/useSettings";
 import { useSurfaceTarget } from "../hooks/useSurfaceMode";
 import { useLocale } from "../hooks/useLocale";
-import { closeSettingsWindow, getWorkAreaRect, setSurfaceMode } from "../lib/tauri";
+import { setSurfaceMode } from "../lib/tauri";
 import { TAB_META, isSettingsTab } from "./settings/settingsTabs";
 import GeneralTab from "./settings/tabs/GeneralTab";
 import DisplayTab from "./settings/tabs/DisplayTab";
@@ -20,11 +19,9 @@ import UsageSpendTab from "./settings/tabs/UsageSpendTab";
 import SurfacesTab from "./settings/tabs/SurfacesTab";
 import ThemeGallery from "./settings/tabs/ThemeGallery";
 import UsageDisplaySection from "./settings/tabs/UsageDisplaySection";
-import {
-  SETTINGS_WINDOW_HEIGHT,
-  SETTINGS_WINDOW_WIDTH,
-  fitSettingsWindowSize,
-} from "./settings/settingsWindowGeometry";
+import {normalizeSettingsNavigation,SETTINGS_NAVIGATION_KEY} from "./settings/settingsNavigation";
+import "./settings/SettingsStudio.css";
+import SettingsWindowActions from "./settings/SettingsWindowActions";
 
 // Inline monochrome SVG icons stand in for the upstream macOS SF Symbols
 // (gearshape / square.grid.2x2 / eye / slider.horizontal.3 / info.circle).
@@ -121,32 +118,9 @@ const TabIcons: Record<SettingsTabId, ReactElement> = {
 };
 
 
-async function applySettingsWindowSize() {
-  const workArea = await getWorkAreaRect().catch(() => null);
-  const screenWidth = window.screen.availWidth || window.innerWidth || SETTINGS_WINDOW_WIDTH;
-  const screenHeight = window.screen.availHeight || window.innerHeight || SETTINGS_WINDOW_HEIGHT;
-  const maxWidth = Math.min(workArea?.width ?? screenWidth, screenWidth);
-  const maxHeight = Math.min(workArea?.height ?? screenHeight, screenHeight);
-  const { width, height } = fitSettingsWindowSize(maxWidth, maxHeight);
-  const win = getCurrentWindow();
-  await win.setSize(new LogicalSize(width, height)).catch(() => {});
-  const screenOrigin = window.screen as Screen & {
-    availLeft?: number;
-    availTop?: number;
-  };
-  const left = screenOrigin.availLeft ?? workArea?.x ?? 0;
-  const top = screenOrigin.availTop ?? workArea?.y ?? 0;
-  await win
-    .setPosition(
-      new LogicalPosition(
-        left + Math.max(8, Math.round((screenWidth - width) / 2)),
-        top + Math.max(8, Math.round((screenHeight - height) / 2)),
-      ),
-    )
-    .catch(() => {});
-}
-
 export default function Settings({ state, initialTab: propTab }: { state: BootstrapState; initialTab?: string }) {
+  const [navigation,setNavigation]=useState(()=>{try{return normalizeSettingsNavigation(localStorage.getItem(SETTINGS_NAVIGATION_KEY));}catch{return normalizeSettingsNavigation(null);}});
+  const [navigationError,setNavigationError]=useState(false);
   const { settings, saving, error, update } = useSettings(state.settings);
   const { t } = useLocale();
   const shellTarget = useSurfaceTarget("settings");
@@ -179,15 +153,21 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
   }
 
   useEffect(() => {
-    void applySettingsWindowSize();
-  }, []);
-
-  useEffect(() => {
     const active = document.querySelector<HTMLElement>(
       '.settings-tab[aria-selected="true"]',
     );
-    active?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
-  }, [activeTab]);
+    const nav = active?.parentElement;
+    if (!active || !nav) return;
+    const item = active.getBoundingClientRect(), box = nav.getBoundingClientRect();
+    // Scroll only the tab strip, never the root viewport or the content panel.
+    if (navigation === "side") {
+      if (item.top < box.top) nav.scrollTop += item.top - box.top;
+      else if (item.bottom > box.bottom) nav.scrollTop += item.bottom - box.bottom;
+    } else {
+      if (item.left < box.left) nav.scrollLeft += item.left - box.left;
+      else if (item.right > box.right) nav.scrollLeft += item.right - box.right;
+    }
+  }, [activeTab, navigation]);
 
   const set = (patch: SettingsUpdate) => void update(patch);
   const handleTabClick = useCallback((tab: SettingsTabId) => {
@@ -200,43 +180,43 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
 
   return (
     <div
-      className={`settings${activeTab === "providers" ? " settings--providers-active" : ""}`}
+      className={`settings settings-studio${activeTab === "providers" ? " settings--providers-active" : ""}`}
+      data-navigation={navigation}
     >
-      {/* custom title bar (decorations disabled for guaranteed dark theme) */}
-      <div className="settings-titlebar" data-tauri-drag-region>
-        <span className="settings-titlebar__title" data-tauri-drag-region>{t("SettingsWindowTitle")}</span>
-        <div className="settings-titlebar__controls">
-          <button
-            type="button"
-            className="settings-titlebar__control settings-titlebar__control--minimize"
-            onClick={() => void getCurrentWindow().minimize()}
-            aria-label={t("WindowMinimize")}
-            title={t("WindowMinimize")}
-          />
-          <button
-            type="button"
-            className="settings-titlebar__control settings-titlebar__control--close"
-            onClick={() => void closeSettingsWindow()}
-            aria-label={t("WindowClose")}
-            title={t("WindowClose")}
-          >
-            <svg aria-hidden viewBox="0 0 16 16" focusable="false">
-              <path d="M4.5 4.5l7 7M11.5 4.5l-7 7" />
-            </svg>
-          </button>
-        </div>
+      <div className="settings-studio-toolbar">
+        <div><strong>QuotaArc</strong><span>WORKSPACE / {t(TAB_META.find(tab=>tab.id===activeTab)!.labelKey)}</span></div>
+        <label>Navigation <select aria-label="Settings navigation placement" value={navigation} onChange={event=>{
+          const next=normalizeSettingsNavigation(event.target.value);setNavigation(next);
+          try{localStorage.setItem(SETTINGS_NAVIGATION_KEY,next);setNavigationError(false);}catch{setNavigationError(true);}
+        }}><option value="side">Sidebar</option><option value="top">Top</option><option value="bottom">Bottom</option></select></label>
+        {navigationError && <span role="alert">Layout changed for this session; preference could not be saved.</span>}
+        <SettingsWindowActions />
       </div>
-
       {/* tab bar */}
-      <nav className="settings-tabs" role="tablist">
+      <nav className="settings-tabs" role="tablist" aria-label="Settings sections" aria-orientation={navigation==="side"?"vertical":"horizontal"}>
         {TAB_META.map((tab) => (
           <button
             type="button"
             key={tab.id}
             role="tab"
+            id={`settings-tab-${tab.id}`}
+            aria-controls="settings-active-panel"
+            tabIndex={activeTab === tab.id ? 0 : -1}
             aria-selected={activeTab === tab.id}
             className={`settings-tab ${activeTab === tab.id ? "settings-tab--active" : ""}`}
             onClick={() => handleTabClick(tab.id)}
+            onKeyDown={(event) => {
+              const previous = navigation === "side" ? "ArrowUp" : "ArrowLeft";
+              const next = navigation === "side" ? "ArrowDown" : "ArrowRight";
+              const index = TAB_META.findIndex(item => item.id === tab.id);
+              const target = event.key === "Home" ? 0 : event.key === "End" ? TAB_META.length - 1
+                : event.key === next ? (index + 1) % TAB_META.length
+                : event.key === previous ? (index - 1 + TAB_META.length) % TAB_META.length : -1;
+              if (target < 0) return;
+              event.preventDefault();
+              handleTabClick(TAB_META[target].id);
+              document.getElementById(`settings-tab-${TAB_META[target].id}`)?.focus();
+            }}
           >
             <span className="settings-tab__icon">{TabIcons[tab.id]}</span>
             <span className="settings-tab__label">{t(tab.labelKey)}</span>
@@ -254,7 +234,7 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
       )}
 
       {/* tab panels */}
-      <div className={`settings-body${activeTab === "providers" ? " settings-body--providers" : ""}`}>
+      <div id="settings-active-panel" role="tabpanel" aria-labelledby={`settings-tab-${activeTab}`} tabIndex={0} className={`settings-body${activeTab === "providers" ? " settings-body--providers" : ""}`}>
         {activeTab === "general" && (
           <GeneralTab mode="general" settings={settings} set={set} saving={saving} />
         )}

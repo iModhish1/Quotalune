@@ -1,0 +1,6 @@
+{
+  "identifier": "settings-window",
+  "description": "User-controlled fullscreen in the Settings shell only.",
+  "windows": ["main", "settings"],
+  "permissions": ["core:window:allow-set-fullscreen"]
+}

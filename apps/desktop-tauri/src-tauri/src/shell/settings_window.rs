@@ -16,6 +16,7 @@ const SETTINGS_LABEL: &str = "settings";
 /// frontend can switch to the requested tab without a full reload.
 pub fn open_or_focus(app: &tauri::AppHandle, tab: &str) -> Result<(), String> {
     if let Some(window) = app.get_webview_window(SETTINGS_LABEL) {
+        window.unminimize().map_err(|e| e.to_string())?;
         window.show().map_err(|e| e.to_string())?;
         window.set_focus().map_err(|e| e.to_string())?;
         app.emit_to(SETTINGS_LABEL, "settings-change-tab", tab)
@@ -29,29 +30,45 @@ pub fn open_or_focus(app: &tauri::AppHandle, tab: &str) -> Result<(), String> {
         .title("QuotaArc Settings")
         .inner_size(SETTINGS_WINDOW_WIDTH, SETTINGS_WINDOW_HEIGHT)
         .min_inner_size(SETTINGS_WINDOW_MIN_WIDTH, SETTINGS_WINDOW_MIN_HEIGHT)
-        .decorations(false)
-        .shadow(false)
+        .decorations(true)
+        .shadow(true)
         .theme(Some(tauri::Theme::Dark))
         .resizable(true)
+        .maximizable(true)
         .build()
         .map_err(|e| e.to_string())?;
 
-    // Force DWM caption to dark; keep WS_THICKFRAME since window is resizable
-    super::dwm::force_dark_caption_resizable(&win);
+    super::dwm::restore_native_caption(&win);
 
     // Manually center: Tauri's .center() is unreliable on Windows when
     // called from async commands. Compute position from the primary monitor.
-    if let Ok(Some(monitor)) = win.primary_monitor() {
-        let pos = monitor.position();
-        let size = monitor.size();
-        let scale = win.scale_factor().unwrap_or(1.0);
-        let win_w = (SETTINGS_WINDOW_WIDTH * scale) as i32;
-        let win_h = (SETTINGS_WINDOW_HEIGHT * scale) as i32;
-        let x = pos.x + (size.width as i32 - win_w) / 2;
-        let y = pos.y + (size.height as i32 - win_h) / 2;
-        let _ = win.set_position(PhysicalPosition::new(x, y));
+    if let Some(monitor) = win
+        .current_monitor()
+        .ok()
+        .flatten()
+        .or_else(|| win.primary_monitor().ok().flatten())
+    {
+        let area = monitor.work_area();
+        let scale = monitor.scale_factor();
+        let width = SETTINGS_WINDOW_WIDTH.min((area.size.width as f64 / scale - 64.0).max(320.0));
+        let height =
+            SETTINGS_WINDOW_HEIGHT.min((area.size.height as f64 / scale - 64.0).max(240.0));
+        win.set_min_size(Some(tauri::LogicalSize::new(
+            SETTINGS_WINDOW_MIN_WIDTH.min(width),
+            SETTINGS_WINDOW_MIN_HEIGHT.min(height),
+        )))
+        .map_err(|e| e.to_string())?;
+        win.set_size(tauri::LogicalSize::new(width, height))
+            .map_err(|e| e.to_string())?;
+        let outer = win.outer_size().map_err(|e| e.to_string())?;
+        let x = area.position.x + (area.size.width.saturating_sub(outer.width) / 2) as i32;
+        let y = area.position.y + (area.size.height.saturating_sub(outer.height) / 2) as i32;
+        win.set_position(PhysicalPosition::new(x, y))
+            .map_err(|e| e.to_string())?;
     }
 
+    win.show().map_err(|e| e.to_string())?;
+    win.set_focus().map_err(|e| e.to_string())?;
     Ok(())
 }
 

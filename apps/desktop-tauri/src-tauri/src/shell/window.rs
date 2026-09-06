@@ -43,6 +43,7 @@ pub fn apply_window_layout(
 
     window.set_decorations(props.decorations).map_err(map_err)?;
     window.set_resizable(props.resizable).map_err(map_err)?;
+    window.set_maximizable(props.resizable).map_err(map_err)?;
     window
         .set_always_on_top(props.always_on_top)
         .map_err(map_err)?;
@@ -54,12 +55,12 @@ pub fn apply_window_layout(
     // resizable variant sees WS_THICKFRAME present and preserves it (keeping
     // the native resize affordance). Native decorations are incompatible with
     // this subclass, so decorated surfaces skip it.
-    if !props.decorations {
-        if props.resizable {
-            super::dwm::force_dark_caption_resizable(window);
-        } else {
-            super::dwm::force_dark_caption(window);
-        }
+    if props.decorations {
+        super::dwm::restore_native_caption(window);
+    } else if props.resizable {
+        super::dwm::force_dark_caption_resizable(window);
+    } else {
+        super::dwm::force_dark_caption(window);
     }
 
     if props.visible {
@@ -79,19 +80,27 @@ pub fn apply_window_layout(
         // falls back to the mode's default size for non-remembered modes.
         let (width, height) =
             logical_size_from_geometry(mode, props, crate::geometry_store::load(mode));
-        let (width, height) = capped_logical_size(window, width, height);
+        let margin = if mode == SurfaceMode::Settings {
+            64.0
+        } else {
+            16.0
+        };
+        let (width, height) = capped_logical_size(window, width, height, margin);
         let size = tauri::LogicalSize::new(width, height);
-        window.set_size(size).map_err(map_err)?;
-
         if let (Some(min_w), Some(min_h)) = (props.min_width, props.min_height) {
             window
-                .set_min_size(Some(tauri::LogicalSize::new(min_w, min_h)))
+                .set_min_size(Some(tauri::LogicalSize::new(
+                    min_w.min(width),
+                    min_h.min(height),
+                )))
                 .map_err(map_err)?;
         } else {
             window
                 .set_min_size::<tauri::LogicalSize<f64>>(None)
                 .map_err(map_err)?;
         }
+        // Lower a previous monitor's minimum before applying the fitted size.
+        window.set_size(size).map_err(map_err)?;
 
         Ok(true) // caller should show
     } else {
@@ -124,9 +133,7 @@ pub(super) fn logical_size_from_geometry(
     )
 }
 
-fn capped_logical_size(window: &WebviewWindow, width: f64, height: f64) -> (f64, f64) {
-    const MARGIN: f64 = 16.0;
-
+fn capped_logical_size(window: &WebviewWindow, width: f64, height: f64, margin: f64) -> (f64, f64) {
     let Some(monitor) = window
         .current_monitor()
         .ok()
@@ -143,8 +150,8 @@ fn capped_logical_size(window: &WebviewWindow, width: f64, height: f64) -> (f64,
         1.0
     };
     let work_area = monitor.work_area();
-    let max_width = (work_area.size.width as f64 / scale - MARGIN).max(320.0);
-    let max_height = (work_area.size.height as f64 / scale - MARGIN).max(240.0);
+    let max_width = (work_area.size.width as f64 / scale - margin).max(320.0);
+    let max_height = (work_area.size.height as f64 / scale - margin).max(240.0);
 
     (width.min(max_width), height.min(max_height))
 }
