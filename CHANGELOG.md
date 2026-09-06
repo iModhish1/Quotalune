@@ -4,6 +4,27 @@ All notable changes to QuotaArc are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/); versioning: [semver](https://semver.org/).
 The inherited Win-CodexBar history is archived in `docs/UPSTREAM_CHANGELOG.md`.
 
+## [0.10.1] — 2026-09-07
+
+### Added
+
+- A detached, live-refreshing Collections window rendering a saved
+  `collection_layout` on the real desktop — previously write-only from
+  the app's own point of view (Settings could save it, but nothing else
+  read it).
+
+### Fixed
+
+- 88 of 200 provider brand-color / meter-track combinations fell under
+  WCAG's 3:1 non-text contrast floor (as low as 1.05:1) for the
+  `adaptive` provider identity and several fixed identities; provider
+  accent colors are now nudged the minimum amount needed to stay
+  legible instead of rendered raw.
+- Corrected several stale claims in the 0.10.0 reconciliation handoff
+  documents (Personal-promotion status, notification threshold
+  customization, native Collections state) after auditing current
+  source rather than trusting the prior report.
+
 ## [0.10.0] — 2026-09-06
 
 ### Added
