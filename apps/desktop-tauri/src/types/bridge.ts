@@ -4,6 +4,7 @@ export type SettingsTabId =
   | "general"
   | "providers"
   | "providerDisplay"
+  | "collections"
   | "notifications"
   | "menuBar"
   | "menu"

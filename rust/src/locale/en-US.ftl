@@ -1,6 +1,8 @@
 TabGeneral = General
 TabProviders = Providers
 TabProviderDisplay = Provider Display
+TabCollections = Collections
+CollectionsPageHelper = Group providers into your own layout, choose how they're arranged, and see the result live in the detached Collections window.
 TabNotifications = Notifications
 TabMenuBar = Menu Bar
 TabMenu = Menu

@@ -4,7 +4,6 @@ import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Toggle } from "../../../components/FormControls";
 import { useLocale } from "../../../hooks/useLocale";
 import { useSurfaceDemo } from "../../../hooks/useSurfaceDemo";
-import CollectionSettings from "./CollectionSettings";
 import {normalizeSurfaceInteractions} from "../../../design-system/surfaceInteractions";
 import StructurePreview from "../StructurePreview";
 import {getSettingsSnapshot} from "../../../lib/tauri";
@@ -87,7 +86,6 @@ export default function SurfacesTab() {
     const subscription=listen("codexbar:settings-updated",()=>{void load();}).catch(()=>()=>{});
     return()=>{alive=false;void subscription.then(stop=>stop());};
   },[]);
-  const [collectionsOpen,setCollectionsOpen]=useState(false);
   const demo = useSurfaceDemo();
   const { t } = useLocale();
   const [config, setConfig] = useState<SurfaceSettings | null>(null);
@@ -265,8 +263,6 @@ export default function SurfacesTab() {
       <p className="settings-section__hint">
         Notch structures reveal details after a short hover or a click. Move away to collapse, or pin details to keep them open. Auto-hide restores a small reveal tab.
       </p>
-      <button type="button" aria-expanded={collectionsOpen} onClick={()=>setCollectionsOpen(value=>!value)}>{collectionsOpen?"Close collection editor":"Configure collections (experimental)"}</button>
-      {collectionsOpen&&<CollectionSettings/>}
     </section>
   );
 }

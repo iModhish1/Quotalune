@@ -1,0 +1,5 @@
+/* Compact header — no oversized hero card, per the density-audit wave. */
+.collections-page{display:flex;flex-direction:column;gap:12px;min-width:0}
+.collections-page__header{display:flex;flex-direction:column;gap:2px}
+.collections-page__header h2{margin:0;color:var(--qa-ink-1);font-size:15px;font-weight:600}
+.collections-page__header p{margin:0;color:var(--qa-ink-2);font-size:12px}

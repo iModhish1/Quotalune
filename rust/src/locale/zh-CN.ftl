@@ -209,7 +209,6 @@ Last30DaysCost = 近 30 天：${ "{:.2}" }
 StatusLabel = 状态：{ "{}" }
 TrayOpenQuotaArc = 弹出仪表盘
 TrayPopOutDashboard = 弹出仪表盘
-TrayShowWindow = 显示窗口
 TrayShowFloatBar = 显示浮动栏
 TrayShowEdgeArc = 显示 Edge Arc
 TrayShowTopArc = 显示 Top Arc

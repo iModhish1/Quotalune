@@ -193,7 +193,6 @@ Last30DaysCost = Последние 30 дней: ${ "{:.2}" }.
 StatusLabel = Статус: { "{}" }
 TrayOpenQuotaArc = Всплывающая панель мониторинга
 TrayPopOutDashboard = Всплывающая панель мониторинга
-TrayShowWindow = Показать окно
 TrayShowFloatBar = Показать плавающий бар
 TrayShowEdgeArc = Показать Edge Arc
 TrayShowTopArc = Показать Top Arc

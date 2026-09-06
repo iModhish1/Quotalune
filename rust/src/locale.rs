@@ -467,6 +467,8 @@ locale_keys! {
     TabSurfaces,
     TabThemes,
     TabProviderDisplay,
+    TabCollections,
+    CollectionsPageHelper,
     TrayShowTopArc,
     TrayPopOutDashboard,
     TrayShowFloatBar,

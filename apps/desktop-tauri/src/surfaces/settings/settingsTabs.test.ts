@@ -39,6 +39,7 @@ describe("TAB_META", () => {
       "general",
       "providers",
       "providerDisplay",
+      "collections",
       "notifications",
       "menuBar",
       "menu",

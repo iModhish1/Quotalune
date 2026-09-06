@@ -38,10 +38,10 @@ pub use window::hide_to_tray_if_current;
 pub enum MainRoute {
     ProviderDisplay,
     Providers,
-    /// Collections lives inside the Surfaces tab today, not yet its own
-    /// top-level destination (see docs/validation/COLLECTIONS_0_10_1.md) —
-    /// routing through this one variant keeps "which tab has Collections"
-    /// a single fact instead of duplicated across every caller.
+    /// A real first-class destination as of the tray/UX-reset wave (was
+    /// previously nested inside the Surfaces tab behind an extra
+    /// "experimental" disclosure — see docs/validation/COLLECTIONS_0_10_1.md
+    /// for that history).
     Collections,
     General,
     About,
@@ -52,7 +52,7 @@ impl MainRoute {
         match self {
             Self::ProviderDisplay => "providerDisplay",
             Self::Providers => "providers",
-            Self::Collections => "surfaces",
+            Self::Collections => "collections",
             Self::General => "general",
             Self::About => "about",
         }

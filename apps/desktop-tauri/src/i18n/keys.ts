@@ -237,6 +237,8 @@ export const ALL_LOCALE_KEYS = [
   "TabSurfaces",
   "TabThemes",
   "TabProviderDisplay",
+  "TabCollections",
+  "CollectionsPageHelper",
   "TrayShowTopArc",
   "TrayPopOutDashboard",
   "TrayShowFloatBar",

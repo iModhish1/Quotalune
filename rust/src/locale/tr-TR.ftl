@@ -215,7 +215,6 @@ Last30DaysCost = Son 30 gün: ${ "{:.2}" }
 StatusLabel = Durum: { "{}" }
 TrayOpenQuotaArc = Panoyu Ayrı Pencerede Aç
 TrayPopOutDashboard = Panoyu Ayrı Pencerede Aç
-TrayShowWindow = Pencereyi Göster
 TrayShowFloatBar = Yüzen Çubuğu Göster
 TrayShowEdgeArc = Edge Arc'i göster
 TrayShowTopArc = Top Arc'i göster

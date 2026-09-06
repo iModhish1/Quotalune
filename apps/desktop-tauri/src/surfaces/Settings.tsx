@@ -19,6 +19,7 @@ import UsageSpendTab from "./settings/tabs/UsageSpendTab";
 import SurfacesTab from "./settings/tabs/SurfacesTab";
 import ThemeGallery from "./settings/tabs/ThemeGallery";
 import ProviderDisplayTab from "./settings/tabs/ProviderDisplayTab";
+import CollectionsTab from "./settings/tabs/CollectionsTab";
 import {horizontalNavigationScrollDelta,normalizeSettingsNavigation,SETTINGS_NAVIGATION_KEY,shouldTransitionIntoSettings} from "./settings/settingsNavigation";
 import NavigationPreference from "./settings/NavigationPreference";
 import "./settings/SettingsStudio.css";
@@ -69,6 +70,14 @@ const TabIcons: Record<SettingsTabId, ReactElement> = {
       <circle cx="5" cy="8" r="2.5" />
       <path d="M7.5 8h6M10 5.5 13.5 8 10 10.5" />
       <path d="M3.5 8a1.5 1.5 0 0 0 3 0" />
+    </Svg>
+  ),
+  collections: (
+    <Svg>
+      <rect x="2" y="2" width="6" height="4.5" rx="1" />
+      <rect x="9.5" y="2" width="4.5" height="7" rx="1" />
+      <rect x="2" y="8" width="6" height="6" rx="1" />
+      <rect x="9.5" y="10.5" width="4.5" height="3.5" rx="1" />
     </Svg>
   ),
   notifications: (
@@ -288,6 +297,7 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
             saving={saving}
           />
         )}
+        {activeTab === "collections" && <CollectionsTab />}
         {activeTab === "notifications" && (
           <GeneralTab
             mode="notifications"

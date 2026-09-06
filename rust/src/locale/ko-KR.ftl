@@ -209,7 +209,6 @@ Last30DaysCost = 최근 30일: ${ "{:.2}" }
 StatusLabel = 상태: { "{}" }
 TrayOpenQuotaArc = 대시보드 띄우기
 TrayPopOutDashboard = 대시보드 띄우기
-TrayShowWindow = 창 표시
 TrayShowFloatBar = 플로트 바 표시
 TrayShowEdgeArc = Edge Arc 표시
 TrayShowTopArc = Top Arc 표시

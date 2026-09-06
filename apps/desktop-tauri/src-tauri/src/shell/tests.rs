@@ -40,11 +40,10 @@ fn every_main_route_resolves_to_a_distinct_settings_tab() {
     );
     assert_eq!(MainRoute::ProviderDisplay.settings_tab(), "providerDisplay");
     assert_eq!(MainRoute::Providers.settings_tab(), "providers");
-    // Collections has no dedicated top-level tab yet — it lives inside
-    // Surfaces (see docs/validation/COLLECTIONS_0_10_1.md). This assertion
-    // exists specifically so that adding a real Collections tab later is
-    // forced to update this single fact rather than silently drifting.
-    assert_eq!(MainRoute::Collections.settings_tab(), "surfaces");
+    // Collections is now its own first-class tab (tray/UX-reset wave) —
+    // this assertion is what would catch a future regression back to the
+    // old "nested inside Surfaces" indirection.
+    assert_eq!(MainRoute::Collections.settings_tab(), "collections");
     assert_eq!(MainRoute::General.settings_tab(), "general");
     assert_eq!(MainRoute::About.settings_tab(), "about");
 }
