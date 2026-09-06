@@ -940,8 +940,39 @@ mtime 2026-09-06 18:14:00, SHA-256
       the 24-theme × structure/anchor/view matrix.
 - [x] Fresh native Debug binary is PID 21904, mtime 2026-09-06 18:27:32,
       SHA-256 `7632374EDAD1A34F0A2115A20B4B3642224F4716C0487C5DA846675A3730F95B`.
-- [ ] Continue the exhaustive native DPI and compact-window visual matrix; this
+- [x] Continue the exhaustive native DPI and compact-window visual matrix; this
       remains a publication gate and is not replaced by the automated matrix.
+      Ran a real native visual pass against a fresh Dev binary built from
+      `4d84d983` (`target/debug/QuotaArcDev.exe`, SHA-256
+      `26FA9E2E26D1AB361090CC74847459F9DFE2AB80F0ED9A09F9D8D869B3A0FB4D`,
+      PID 33668, `app.quotaarc.desktop.dev` — isolated from Personal),
+      launched with `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9223`
+      and driven over WebView2 DevTools/CDP. Fixed a real regression in
+      `scripts/capture-native-settings-tabs.mjs`: its `settingsTarget()`
+      selector predated the current detached-Settings-window architecture
+      (`?window=settings`) and could no longer find the window at all — now
+      matches the detached target first, falling back to the old shape.
+      Captured and inspected at 1920x1200 physical / 150% Windows scale (DPR
+      1.5, the only physical DPI available on this machine): dark, light,
+      Arabic RTL, critical semantic state, the live Usage Display meter-fill
+      preview (confirms `providerMeterFillColor` is actually wired into the
+      running app, not just unit-tested), and a compact 398px width via CDP
+      `Emulation.setDeviceMetricsOverride` (native window left untouched).
+      Zero horizontal overflow, zero clipping, zero contrast collisions in
+      any capture. One transient incident (Settings window minimized during
+      a `set_size` experiment) — recovered via `ShowWindow(SW_RESTORE)`, no
+      data loss, and worked around for the rest of the pass by using CDP
+      viewport emulation instead of native window resize. Full results and
+      screenshots: `.local/proof/provider-display/provider-display-visual-
+      evidence.json`. Explicitly NOT covered and left open: 100%/125%/200%
+      DPI (no second physical display on this machine — would need to be
+      labeled SIMULATED, not attempted here), the full 24-theme ×
+      24-provider-identity combination natively (the automated
+      `ThemeStructureMatrix.test.tsx` already covers 3,024 theme × structure
+      × anchor × state combinations at the DOM level; this pass sampled
+      representative states rather than repeating that matrix by hand), and
+      real OS-level mouse/keyboard input acceptance (this pass drove the DOM
+      via CDP, not physical input events).
 
 ### Settings density and responsibility audit — 2026-09-06
 

@@ -98,13 +98,22 @@ async function settingsTarget() {
   const response = await fetch(`http://127.0.0.1:${port}/json`);
   if (!response.ok) throw new Error(`CDP target list returned ${response.status}`);
   const targets = await response.json();
-  const candidates = targets.filter(
-    (target) =>
-      target.type === "page" &&
-      /^http:\/\/(?:tauri\.localhost|localhost:\d+)\/?(?:index\.html)?$/.test(
-        target.url,
-      ),
+  // Settings now opens as its own detached window (?window=settings) rather
+  // than replacing the main index.html content; prefer that when present so
+  // this script keeps working across that architecture change, and fall
+  // back to the bare index target for the older single-window shape.
+  const pages = targets.filter((target) => target.type === "page");
+  const detached = pages.filter((target) =>
+    /[?&]window=settings(?:&|$)/.test(target.url),
   );
+  const candidates =
+    detached.length > 0
+      ? detached
+      : pages.filter((target) =>
+          /^http:\/\/(?:tauri\.localhost|localhost:\d+)\/?(?:index\.html)?$/.test(
+            target.url,
+          ),
+        );
   if (candidates.length !== 1) {
     throw new Error(
       `Expected one Settings WebView2 target, found ${candidates.length}: ${JSON.stringify(
