@@ -12,9 +12,9 @@ it("retains the draft on failed persistence and reports success only after savin
   render(<CollectionsStudio onSave={save}/>);
   fireEvent.click(screen.getByRole("button",{name:"Save collection layout"}));
   expect(await screen.findByRole("alert")).toHaveTextContent("revision conflict");
-  expect(screen.queryByText("Layout saved — native collection rendering pending")).not.toBeInTheDocument();
+  expect(screen.queryByText("Layout saved — live in the Collections window")).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button",{name:"Save collection layout"}));
-  await waitFor(()=>expect(screen.getByText("Layout saved — native collection rendering pending")).toBeInTheDocument());
+  await waitFor(()=>expect(screen.getByText("Layout saved — live in the Collections window")).toBeInTheDocument());
 });
 it("previews views and field changes, and clicks reveal the selected provider",()=>{
   render(<CollectionsStudio/>);

@@ -13,11 +13,23 @@ This list distinguishes an implemented slice from a fully accepted product requi
 
 ## Product work still open
 
-- Native Collections: detached provider windows, drop-to-group, split/reorder, 0/1/2/3/6/12 behavior, persistence and monitor-loss recovery.
+- Native Collections: a detached, single, live Collections window now renders
+  the saved `collection_layout` (see `docs/validation/COLLECTIONS_0_10_1.md`).
+  Genuinely still open: one independent native OS window *per group* (this
+  wave renders every group inside one window's canvas instead), and
+  drag-to-reposition from that native window (still Settings-editor-only).
 - Full structure acceptance: distinguish silhouettes, remove unjustified dead space, validate hit regions and ensure all legacy structures meet the newer design standard.
 - Full native footprint validation for every structure × anchor × compact/expanded state.
 - Complete native details/pin/Escape/keyboard interaction matrix for all structures.
-- Notification customization for every independent usage window, credit/reset event and reorderable rule.
+- ~~Notification customization for every independent usage window, credit/reset event and reorderable rule.~~
+  Audited 2026-09-07: this is already fully implemented, not open. Per-provider
+  *and* per-window (session/5-hour/weekly) threshold overrides exist with a
+  tested inheritance chain (window → provider → global) and a working Settings
+  UI (`GeneralTab.tsx`'s `notification-overrides` section, tested in
+  `GeneralTab.test.tsx`); every event category (High/Critical/Exhausted/
+  StatusIssue/SessionDepleted/SessionRestored/ExpectedReset/UnexpectedReset/
+  BankedResetCredit) is independently switchable with its own dedupe lane and
+  optional custom sound. No further work identified here.
 - Authentication UX and supported OAuth actions for each provider without implying unsupported flows.
 - Final reference-library evaluation and provenance/licence record for all imported concepts.
 - Final default black/silver identity approval and native icon legibility at all taskbar/tray sizes.

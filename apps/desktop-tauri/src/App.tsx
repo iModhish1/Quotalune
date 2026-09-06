@@ -33,6 +33,7 @@ const Settings = lazy(() => import("./surfaces/Settings"));
 const PopOutPanel = lazy(() => import("./surfaces/PopOutPanel"));
 const FloatBar = lazy(() => import("./floatbar/FloatBar"));
 const TopArc = lazy(() => import("./surfaces/top-arc/TopArc"));
+const CollectionsNativeView = lazy(() => import("./surfaces/collections/CollectionsNativeView"));
 const DemoStage = lazy(() => import("./demo/DemoStage"));
 
 function SurfaceFallback() {
@@ -56,6 +57,11 @@ function isTopArcWindow(): boolean {
   // report the shared `main` label while the window is being created.
   return getCurrentWebviewWindow().label === "top-arc"
     || new URLSearchParams(window.location.search).get("window") === "top-arc";
+}
+
+/** True when running inside the detached Collections window. */
+function isCollectionsWindow(): boolean {
+  return getCurrentWebviewWindow().label === "collections";
 }
 
 /** True when running inside the detached flyout ("Pop Out Dashboard") window. */
@@ -247,6 +253,16 @@ function AppInner() {
   // needed here, unlike the other detached-window branches above.
   if (isFlyoutWindow()) {
     return <TrayPanel state={state} />;
+  }
+
+  // Detached Collections window — the live, native rendering of a saved
+  // collection_layout (see CollectionsNativeView).
+  if (isCollectionsWindow()) {
+    return (
+      <Suspense fallback={<SurfaceFallback />}>
+        <CollectionsNativeView />
+      </Suspense>
+    );
   }
 
   return <SurfaceRouter surface={surface} state={state} />;

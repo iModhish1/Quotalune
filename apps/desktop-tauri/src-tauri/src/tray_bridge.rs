@@ -193,6 +193,8 @@ enum MenuAction {
     OpenSettings(String),
     /// Open (or focus) the dedicated flyout ("Pop Out Dashboard") window.
     OpenFlyout,
+    /// Open (or focus) the dedicated Collections window.
+    OpenCollections,
     Refresh,
     CheckForUpdates,
     /// Toggle the enabled/disabled state of the provider with the given CLI name.
@@ -229,6 +231,7 @@ fn resolve_menu_action(id: &str) -> Option<MenuAction> {
         "toggle_top_arc" => Some(MenuAction::ToggleTopArc),
         "toggle_taskbar_arc" => Some(MenuAction::ToggleTaskbarArc),
         "pop_out" => Some(MenuAction::OpenFlyout),
+        "collections" => Some(MenuAction::OpenCollections),
         _ if id.starts_with("toggle_provider:") => {
             let provider_id = id["toggle_provider:".len()..].to_string();
             Some(MenuAction::ToggleProvider(provider_id))
@@ -388,6 +391,9 @@ fn handle_menu_event(app: &AppHandle, id: &str) {
             // transition used) when no explicit position is given.
             crate::auto_refresh::note_menu_open();
             let _ = shell::flyout_window::open_or_focus(app, None);
+        }
+        Some(MenuAction::OpenCollections) => {
+            let _ = shell::collections_window::open_or_focus(app);
         }
         Some(MenuAction::Refresh) => {
             let handle = app.clone();

@@ -18,3 +18,8 @@
 [data-theme="light"] .settings-studio .collections-editor{background:#fff;border-color:#c6ced8}
 [data-theme="light"] .settings-studio .collections-editor fieldset{border-color:#c6ced8}
 [data-theme="light"] .settings-studio .collections-details{color:#edf0f2}
+
+/* Native Collections window: a plain widget surface, not the editor's
+   decorative "desktop" canvas placeholder — no fake grey gradient/border,
+   height grows with content instead of a fixed editor-preview height. */
+.collections-canvas[data-native="true"]{height:auto;min-height:0;background:none;border:0;border-radius:0;overflow:visible}

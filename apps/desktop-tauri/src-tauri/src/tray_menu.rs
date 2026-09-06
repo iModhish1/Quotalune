@@ -187,6 +187,7 @@ pub(crate) fn build_tray_menu_with(
         "Privacy Mode",
         privacy_mode,
     ));
+    menu.push(TrayMenuEntry::item("collections", "Collections"));
     menu.push(TrayMenuEntry::item(
         "settings",
         text(LocaleKey::TraySettings),

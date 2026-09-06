@@ -51,6 +51,9 @@ vi.mock("./floatbar/FloatBar", () => ({
 vi.mock("./surfaces/top-arc/TopArc", () => ({
   default: () => <div data-testid="surface-top-arc" />,
 }));
+vi.mock("./surfaces/collections/CollectionsNativeView", () => ({
+  default: () => <div data-testid="surface-collections" />,
+}));
 
 vi.mock("./hooks/useSurfaceSnapshot", () => ({
   useSurfaceSnapshot: () => ({
@@ -181,6 +184,18 @@ describe("App window-label routing", () => {
     expect(queryByTestId("surface-pop-out-panel")).toBeNull();
     expect(queryByTestId("surface-settings")).toBeNull();
     expect(queryByTestId("surface-float-bar")).toBeNull();
+  });
+
+  it("routes the detached Collections window to CollectionsNativeView, not TrayPanel", async () => {
+    webviewWindowMocks.label = "collections";
+
+    const { queryByTestId } = render(<App />);
+
+    await waitFor(() => {
+      expect(queryByTestId("surface-collections")).not.toBeNull();
+    });
+    expect(queryByTestId("surface-tray-panel")).toBeNull();
+    expect(queryByTestId("surface-settings")).toBeNull();
   });
 
   it("routes the detached settings window to Settings, not TrayPanel", async () => {

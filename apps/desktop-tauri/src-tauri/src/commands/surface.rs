@@ -109,6 +109,34 @@ pub fn close_settings_window(
     crate::shell::settings_window::dismiss(&app, &window)
 }
 
+/// Open (or focus) the detached Collections window — the native, always-live
+/// rendering of the `collection_layout` a user saves in Settings.
+///
+/// Same `async` requirement as `open_settings_window`/`open_flyout_window`:
+/// `WebviewWindowBuilder::build` deadlocks inside synchronous Tauri commands
+/// on Windows.
+#[tauri::command]
+pub async fn open_collections_window(app: tauri::AppHandle) -> Result<(), String> {
+    crate::shell::collections_window::open_or_focus(&app)
+}
+
+/// Hide the detached Collections window without exiting QuotaArc.
+#[tauri::command]
+pub fn close_collections_window(app: tauri::AppHandle) -> Result<(), String> {
+    crate::shell::collections_window::hide(&app)
+}
+
+/// Toggle the Collections window: hide if open, open (or focus) otherwise —
+/// the tray/menu action for a single "Collections" entry.
+#[tauri::command]
+pub async fn toggle_collections_window(app: tauri::AppHandle) -> Result<(), String> {
+    if crate::shell::collections_window::is_open(&app) {
+        crate::shell::collections_window::hide(&app)
+    } else {
+        crate::shell::collections_window::open_or_focus(&app)
+    }
+}
+
 /// Persist a user-chosen size for the "Pop Out Dashboard" flyout window.
 /// Only the size is stored (via a size-only `StoredSize` entry — no
 /// fabricated `x`/`y`); the flyout is always re-anchored above the tray on
