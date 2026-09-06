@@ -30,6 +30,14 @@ This is a local Personal candidate. It has not been tagged, pushed, signed or pu
 | `target/release/bundle/msi/QuotaArc_0.10.0_x64_zh-CN.msi` | 11,804,672 | `6DCD5E079D71F0AF0632F46315B12705CE2A8A696DB9A0EB56235BB769ED8D1F` |
 | `target/release/bundle/msi/QuotaArc_0.10.0_x64_zh-TW.msi` | 11,804,672 | `9C34FB6F816A33B640D318E5C50E78ADAA4385E5A5D154DC4D695D18346599AD` |
 
+## Forensic handoff archive
+
+- Path: `.local/release/QuotaArc_0.10.0_forensic-handoff.zip`
+- Entries: 36 (README, state JSON, five reports, requirement/plan/backlog, recovery text/diffs, six proof manifests, NSIS, portable and eight MSI packages).
+- Bytes: 113,009,023.
+- SHA-256: `A24D89E6AAD483FFA5C5DA5D39EFCB9B7238735BCE3C6174E49B243C0A644809`.
+- ZIP inventory verification: passed; README/state/reports/NSIS/portable/all eight MSI entries present.
+
 ## Personal promotion
 
 - Complete rollback copy: `.local/recovery/personal-backup-complete-20260906-232817/` (4,051 files; 176,790,104 bytes).
@@ -44,4 +52,3 @@ The installed executable hash differs from the intermediate release executable b
 ## Remaining acceptance limits
 
 See `docs/CODEX_UNFINISHED_WORK.md`. In particular, full physical DPI, OS-input, multi-monitor and native Collections acceptance remain open. Therefore this candidate is suitable for continued Personal validation, not a public release claim.
-

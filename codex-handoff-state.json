@@ -6,6 +6,11 @@
   "releaseSourceCommit": "28f412ac",
   "version": "0.10.0",
   "publiclyReleased": false,
+  "handoffArchive": {
+    "path": ".local/release/QuotaArc_0.10.0_forensic-handoff.zip",
+    "entries": 36,
+    "sha256": "A24D89E6AAD483FFA5C5DA5D39EFCB9B7238735BCE3C6174E49B243C0A644809"
+  },
   "workingTreeAtRecovery": "clean",
   "personal": {
     "installed": true,
@@ -40,4 +45,3 @@
     "docs/CODEX_RELEASE_MANIFEST.md"
   ]
 }
-
