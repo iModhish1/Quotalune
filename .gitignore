@@ -59,6 +59,7 @@ dist/
 nul
 /.playwright-cli/
 /output/playwright/
+/output/brand-icon-gen/
 
 # Local scripts and env files
 .env
@@ -85,6 +86,8 @@ nul
 !/scripts/capture-native-usage-proof.mjs
 !/scripts/capture-native-surface-proof.mjs
 !/scripts/capture-native-theme-matrix.mjs
+!/scripts/capture-native-settings-tabs.mjs
+!/scripts/verify-native-settings-reopen.mjs
 !/scripts/playwright/
 !/scripts/playwright/*.js
 !/scripts/macos-windows-cross-build.sh

@@ -1,4 +1,117 @@
-# Implementation Plan: Flow Surface Foundation
+# Active implementation plan — complete product requirements
+
+Authority: `MASTER_REQUIREMENTS.md` (2026-09-06). This section supersedes conflicting
+historical product decisions below. The active goal remains unfinished. Every new
+message must update the ledger and this backlog, not replace previous requirements.
+
+## Ordered delivery gates
+
+Current packet (2026-09-06 continuation): advance E03/E04 from palette variants
+to complete portable identities. Each live theme owns a unique named signature,
+frame/inlay, meter treatment, connector, mark treatment and restrained motion;
+the shared renderer applies those as paint-only tokens without changing quota
+semantics, provider branding or native footprints. The production gallery and
+browser-safe identity lab compare real renderers, default to a material-revealing
+Lens preview, and isolate app light/dark appearance from widget identity. Full
+frontend verification plus a fresh native replacement have passed. A 2,268-case
+React matrix now covers every 9 Theme × 14 Structure × 9 Anchor ×
+compact/expanded pairing, with targeted browser proofs across light/dark
+appearance and opposing corners. DPI-scaled Win32 magnetism now snaps during
+the native move loop on either axis while release commits the persistent anchor.
+Next, obtain physical pointer acceptance and extend visual evidence across the
+remaining renderer/anchor families; native input review remains open rather
+than inferred passed.
+
+Notification-center packet (2026-09-06): G06/G07 now use a real branded preview
+instead of a text summary: official mark, provider icon, status, semantic meter,
+used/remaining equivalents and localized explanatory copy. The event selector is
+a compact unified panel, provider/limit override copy is localized, and 398px
+dark/light browser proofs plus the full frontend and locale gates pass. Native toast
+content now localizes the provider window and event reason, including explicit Arabic,
+and states both used and remaining quota for every relevant event. Native toast visual
+rendering, animation and Windows input acceptance remain explicit open evidence.
+
+Settings-layout packet (2026-09-06): F01/F03/F05/F07/F08 now have a responsive
+shell proof using the production classes and components. Side, top and bottom
+navigation remain independent layout modes; navigation choices are localized
+preview cards rather than an ambiguous select. General, Notifications and Advanced
+use a content-sized two-column mosaic only when the viewport can support it, and
+collapse to one column without horizontal overflow. The visual matrix caught and
+fixed a real grid-track compression defect in the notification preview. Native
+resize/maximize/pointer acceptance and complete Arabic page screenshots remain open.
+
+Surface-control packet (2026-09-06): B/C/F controls in Surfaces no longer expose
+raw form-like checkbox stacks or value-less sliders. Interaction availability is
+explained per option, every range reports its live value, and demo/size actions have
+one consistent hierarchy and visible selected state across app appearances. The
+real themed 14-structure catalog remains the visual source of truth. A duplicate
+initial tray measurement discovered during this packet was removed and stress-checked
+to prevent a late second reveal under load. Full Surfaces localization and native
+pointer acceptance remain subsequent gates.
+
+Latest additions: D12 joins gates 2–3 (distinct source limits, never merged by duration);
+A06 joins gate 4 (user-selectable logo colorways); F09–F10 join gate 7 with explicit
+light-mode preview isolation and content-sized layout/overflow regression checks.
+
+1. **Requirement reconciliation (A–H):** preserve all requests, distinguish partial
+   code from verified behavior, and retain explicit conflicts/supersessions. Evidence:
+   master ledger plus this plan. This is documentation completion, not product completion.
+2. **Independent limit model (D01–D08):** discover actual available limits with stable
+   IDs; store selected IDs and order per provider, with empty distinct from default.
+   Migrate legacy presets without losing intent when a provider is offline. Keep
+   unknown IDs recoverable. Tests: zero/one/many limits, reordered windows, offline
+   recovery, migration, used/remaining normalization and settings round-trip.
+3. **Limit editor and shared renderer (D02–D09):** checkable items, accessible reorder,
+   per-limit bar/value/both, ring/horizontal/vertical and independent fill direction.
+   Show two selected limits and page extras by wheel/keyboard without cycling the
+   provider. Live preview uses the actual renderer and reports logical dimensions.
+   Gate: interaction tests and screenshots across structures, directions and counts.
+4. **Official identity (A01–A05):** use the About vector as the single master; derive
+   legible theme variants and native raster sizes, brighter silver rim and adjustable
+   reveal size. Inventory every UI/tray/executable/toast/installer asset before
+   replacing references. Preserve attribution and unrelated user assets. Gate:
+   asset-reference checks, small-size visual contact sheet, rebuilt native identity.
+5. **Structure and collection architecture (B01–B14, C01–C06):** fix all anchors,
+   corners, drag/snap, collapse and shared interactions before accepting new shapes.
+   Collections support detach/merge/reorder, max-three paging and empty disappearance.
+   Gate: pure reducer/layout tests, real pointer tests, native multi-monitor/DPI and
+   input-pass-through evidence. Measure detached-window cost before architecture choice.
+6. **Full visual identities (E01–E07):** inventory and visually evaluate all four
+   libraries, score distinct silhouettes, compactness, readability and feasibility;
+   generate selected concepts, then implement them one at a time. Themes include
+   typography, material, ornament, motion and bounded shape treatment, not palette
+   swaps alone. Keep quota semantics and layout safety shared. Gate: every theme ×
+   structure × supported view/anchor; compare generated reference with actual output.
+7. **Application completeness (F01–F08, D10–D11):** reorganize all settings, helper
+   text, live previews, Arabic/RTL, light/dark/system, window resizing and navigation;
+   implement genuine supported provider sign-in and clearly isolated demo data.
+   Gate: all-page interaction inventory, persisted settings, RTL/light screenshots,
+   native resize/maximize/fullscreen; never access credentials without existing consent.
+8. **Usage events (G01–G07):** per-window configurable thresholds/steps, expected and
+   unexpected resets, banked events, normalization and deduplication. Gate: deterministic
+   event fixtures including account change, stale samples and missed crossings; branded
+   accessible notification previews, reduced motion and non-interruption behavior.
+9. **Release acceptance (H01–H10):** settled/hidden CPU and full-process-tree memory,
+   startup opt-in, installer/update/uninstall, current complete tests/build/static checks,
+   native DPI/monitor matrix and exact binary provenance. No publishing or signing
+   claims without actual artifacts and required authority. Native input currently
+   unverified due to Access denied; this does not block safe code/browser work.
+
+## Packet discipline
+
+The root owns integration. Before each implementation slice record requirement IDs,
+exact files/ownership, baseline and acceptance checks; split large slices rather than
+editing shared schemas concurrently. Run focused tests first, then affected integration
+checks. Record actual results and remaining gates in `todo.md`. Browser fixtures and
+generated concepts never substitute for installed Windows evidence. No new dependencies
+without confirmation. Preserve Personal, authentication data and unrelated dirty files.
+
+## Historical foundation plan (superseded where conflicting)
+
+> 2026-09-06: The historical foundation below is preserved. The new requested
+> Collections/product-completion wave is specified in `COLLECTIONS_PRODUCT_PLAN.md`.
+> Its multi-island behavior supersedes the old single-overlay product restriction,
+> but the lightweight native rendering approach must pass a feasibility gate first.
 
 ## Overview
 
@@ -76,4 +189,109 @@ archived; future themes vary material tokens only.
 
 ## Open Questions
 
+## Active product redesign goal — 2026-09-06
+
+This goal supersedes the earlier one-theme-only product scope, not its safety
+or evidence requirements. The 15 user screenshots are the baseline: clipped
+select text, unstyled controls, stretched cards, monochrome inaccurate previews,
+legacy information architecture and window restoration during tab navigation.
+Preserve required upstream license attribution separately from product identity.
+
+Ordered delivery: (1) navigation geometry stability + shared form controls,
+(2) real component visual test host and all-page captures, (3) structure/style
+separation and token-driven colored live previews, (4) every-edge/corner layout
+and interaction matrix, (5) weekly/session/both provider display with reset
+availability, (6) configurable threshold/reset notifications, (7) redesigned
+page layouts and default list navigation preference, (8) native/performance and
+installer acceptance. Each slice requires focused tests, a build and rendered
+evidence. Native input permission failures remain explicitly unverified, not
+authorization to bypass platform security or fabricate native evidence.
+
 - None blocking: Obsidian Orbit is selected as the canonical starting theme because it is the existing default dark theme and provides the strongest readability baseline.
+# Reference-driven identity wave
+
+Read `REFERENCE_DESIGN_REVIEW.md` for the 2026-09-06 visual comparison and shortlist.
+Next identity work must implement semantic visual slots and reference-character
+prototypes, not count palette variants as new structures. Silver → Eclipse →
+Sapphire; retain every existing requirement in MASTER_REQUIREMENTS.md.
+
+## Provider workspace continuation — 2026-09-06
+
+The Providers page is now organized by task priority: searchable provider
+roster, persistent selected identity, usage plus connection actions, then
+provider-specific configuration. The layout uses two balanced columns where
+space permits and collapses without fixed-height clipping. Keep limit selection
+and ordering work separate: Session, 5-hour, Weekly, model-specific and extra
+windows remain independently selectable product concepts even when a provider
+source exposes only a subset.
+
+## Usage-display continuation — 2026-09-06
+
+The Usage Display editor now treats every provider window as an independent,
+ordered selection. Its always-visible live preview is the acceptance surface:
+the settings choice, displayed order, indicator content, shape and direction
+must agree before saving. The next continuation is native multi-size capture,
+then the remaining full-product queue in `MASTER_REQUIREMENTS.md`; do not regress
+to preset combinations or merge Session and 5-hour in copy, storage or rendering.
+
+## Mark/theme integration correction — 2026-09-06
+
+The screenshots prove that a globally correct logo asset is insufficient when
+its frame reads as a foreign black sticker. Keep the exact About mark as the
+master glyph, but require every theme identity to define the mark frame, rim,
+blend and shadow consumed by all structures. User-selected logo finishes remain
+an independent personalization layer; theme integration must preserve glyph
+contrast rather than override that choice.
+
+## Curated library wave — 2026-09-06
+
+The supplied 50-theme catalog is now a scored visual source rather than an
+unbounded palette dump. This wave adds fifteen clearly differentiated identities,
+including multiple daylight-safe systems. Each identity must implement surface,
+edge, relief, ornament, typography, meter, connector, motion and official-mark
+tokens while remaining compatible with every structure. A theme-specific mark
+treatment is automatic; manual logo finishes are a separate user preference.
+Acceptance requires unique slugs/signatures, canonical provider colors, explicit
+light metadata, a full Theme × Structure × State render test and inspected visual
+proof after the transparent official-glyph correction.
+
+## Provider presentation identity layer — 2026-09-06
+
+Introduce a third explicit customization layer: application shell theme,
+structure identity and provider presentation identity are independent. Provider
+identities may restyle card inlays, type hierarchy, meter tracks/caps, ring
+materials and value emphasis, but may not merge limit sources, alter provider
+meaning or reduce numeric contrast. Support global inheritance and per-provider
+overrides, live previews and deterministic compatibility checks across the full
+structure-theme matrix. State colors remain semantic and win over decoration.
+
+Implemented inheritance contract: `global_limit_presentation` is the persisted
+base identity/shape/content/direction. `provider_limit_presentation[provider]`
+is an optional complete override; deleting it resumes inheritance immediately.
+The normalized bridge passes only validated values to every live surface. The
+Usage & Spend studio exposes the global identity first and provider overrides
+below it, with Arabic copy in the shared locale registry. A deterministic
+24-theme × 8-provider-identity render matrix protects values, labels and meters;
+native-DPI visual contrast inspection remains a separate acceptance gate.
+
+## Shared surface interactions correction — 2026-09-06
+
+Interaction toggles are no longer disabled by structure name. The Top Arc host
+owns hover reveal, wheel paging and delayed fold for every generic structure;
+Notch and Reel keep their provider-level wheel/hover handlers without receiving
+a second bubbled cycle. Detail folding and whole-surface auto-hide use separate
+timers, so leaving an expanded surface first restores its compact footprint and
+only then permits the configured hide behavior. Focused tests cover enabled and
+disabled behavior; physical pointer acceptance remains part of the native gate.
+
+## Dedicated provider-display workspace — 2026-09-06
+
+Promote provider presentation from scattered controls to its own Settings page.
+The page has two bounded views so the 24-identity gallery and per-provider rules
+are never mounted as one giant reading flow: Identity Library owns global visual
+language and semantic-state preview; Usage Display owns used/remaining semantics,
+independent ordered limits, shape/content/direction, per-provider inheritance and
+provider accent color. Themes remains application/structure identity only, and
+Usage & Spend remains accounting/analytics only. Acceptance covers native dark,
+light and Arabic RTL captures, no horizontal overflow, locale parity and the full
+frontend/theme-structure compatibility suites.

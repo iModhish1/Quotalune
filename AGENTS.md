@@ -1,5 +1,16 @@
 # Repository Guidelines
 
+## Active product requirements
+
+`tasks/MASTER_REQUIREMENTS.md` is the authoritative user-requirement ledger;
+`tasks/plan.md` and `tasks/todo.md` contain its execution order and checkpoints.
+Append each new product request to that ledger before implementing it. New requests
+extend the backlog unless they explicitly supersede an earlier requirement. Keep
+requirement IDs, evidence and remaining acceptance gates linked; never interpret
+historical completion claims as current native verification. Preserve historical
+plans, but do not follow superseded material-only, single-window-only or preset-only
+product restrictions over the current ledger.
+
 <!-- TAWAJUD-CODEX-TRI-LANE:BEGIN v5.1 -->
 ## Tawajud project routing inheritance
 Follow the active Codex home's policies/Tawajud-Router-Current.md for routing; use global v5.1+ guidance when a file is unavailable. Preserve project-specific instructions and explicit user model/effort. Route each packet, retain objective quality checks, coordinate independent workers, and store only relevant verified project lessons. Older Tawajud routing-only blocks are superseded. No conversation activation or background model work.
