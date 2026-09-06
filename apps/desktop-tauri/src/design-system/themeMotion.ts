@@ -54,8 +54,38 @@ const PRESETS: Record<string, MotionPreset> = {
 
 const FALLBACK = PRESETS["01-obsidian-orbit"];
 
+/** Live identities intentionally reuse the bounded motion studies that best
+ * match their material character. Slug aliases keep archived concepts out of
+ * the selectable catalog without flattening every live theme to Orbit. */
+const LIVE_PRESET_ALIASES:Readonly<Record<string,string>>={
+  "sapphire-observatory":"14-sapphire-observatory",
+  "eclipse-ember":"07-eclipse-dial",
+  "aurora-bloom-material":"02-aurora-bloom",
+  "solar-ember-material":"03-solar-ember",
+  "ceramic-pearl-material":"04-porcelain-halo",
+  "smoked-silver":"13-lunar-titanium",
+  "tidal-glass":"10-celestial-ice",
+  "ember-alloy":"08-prism-zenith",
+  "02-graphite-precision":"13-lunar-titanium",
+  "03-midnight-glass":"10-celestial-ice",
+  "05-stealth-mono":"05-noir-constellation",
+  "06-aurora-prism":"09-quantum-orchid",
+  "07-solar-pearl":"04-porcelain-halo",
+  "08-oceanic-glass":"10-celestial-ice",
+  "09-rose-quartz":"09-quantum-orchid",
+  "10-verdant-halo":"11-emerald-singularity",
+  "11-copper-ember":"03-solar-ember",
+  "12-arctic-spectrum":"10-celestial-ice",
+  "13-lavender-mist":"02-aurora-bloom",
+  "14-sapphire-circuit":"06-halo-spine",
+  "15-crimson-atelier":"07-eclipse-dial",
+  "17-jade-pavilion":"04-porcelain-halo",
+  "33-ink-and-gold":"14-sapphire-observatory",
+};
+
 export function catalogMotion(theme: CatalogTheme): CatalogMotionProfile {
-  return { ...(PRESETS[theme.slug] ?? FALLBACK), durationMs: theme.expansionMs };
+  const alias=LIVE_PRESET_ALIASES[theme.slug];
+  return { ...(PRESETS[theme.slug] ?? (alias ? PRESETS[alias] : undefined) ?? FALLBACK), durationMs: theme.expansionMs };
 }
 
 export type CatalogMotionStyle = CSSProperties & {

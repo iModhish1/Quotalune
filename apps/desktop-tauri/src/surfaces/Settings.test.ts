@@ -1,11 +1,24 @@
 import { describe, expect, it } from "vitest";
+import { resetSettingsPanelScroll } from "./Settings";
 import { TAB_META } from "./settings/settingsTabs";
 
 describe("Settings navigation", () => {
-  it("lists providers separately after general", () => {
-    expect(TAB_META.slice(0, 2)).toEqual([
+  it("keeps provider accounts and provider presentation in separate adjacent pages", () => {
+    expect(TAB_META.slice(0, 3)).toEqual([
       { id: "general", labelKey: "TabGeneral" },
       { id: "providers", labelKey: "TabProviders" },
+      { id: "providerDisplay", labelKey: "TabProviderDisplay" },
     ]);
+  });
+
+  it("resets both axes when a settings page changes", () => {
+    const panel = document.createElement("div");
+    panel.scrollLeft = 640;
+    panel.scrollTop = 320;
+
+    resetSettingsPanelScroll(panel);
+
+    expect(panel.scrollLeft).toBe(0);
+    expect(panel.scrollTop).toBe(0);
   });
 });

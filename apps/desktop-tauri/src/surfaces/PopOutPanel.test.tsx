@@ -137,6 +137,9 @@ function settings(): SettingsSnapshot {
       statusIssue: null,
       sessionDepleted: null,
       sessionRestored: null,
+      expectedReset: null,
+      unexpectedReset: null,
+      bankedResetCredit: null,
     },
     highUsageThreshold: 70,
     criticalUsageThreshold: 90,
@@ -218,6 +221,12 @@ function renderPopOut(
 }
 
 describe("PopOutPanel", () => {
+  it("reports settings launch errors instead of silently leaving the dashboard",async()=>{
+    tauriMocks.openSettingsWindow.mockRejectedValueOnce(new Error("Window unavailable"));
+    renderPopOut([]);
+    fireEvent.click(await screen.findByText("TooltipSettings"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Window unavailable");
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     tauriMocks.refreshProviders.mockResolvedValue(undefined);

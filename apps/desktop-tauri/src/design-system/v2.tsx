@@ -103,15 +103,15 @@ export function QaMicroArc(props: Omit<QaCapacityArcProps, "showDot">) {
  */
 const ICON_OPTICAL: Record<string, number> = {
   claude: 0.95,
-  codex: 0.88,
-  copilot: 0.92,
-  opencode: 0.88,
-  opencodego: 0.88,
-  gemini: 0.92,
-  cursor: 0.9,
-  openrouter: 0.9,
-  deepseek: 0.95,
-  groq: 0.9,
+  codex: 1,
+  copilot: 0.97,
+  opencode: 0.96,
+  opencodego: 0.96,
+  gemini: 0.98,
+  cursor: 0.97,
+  openrouter: 0.97,
+  deepseek: 1,
+  groq: 0.97,
 };
 
 export function QaProviderIcon({
@@ -121,7 +121,7 @@ export function QaProviderIcon({
   providerId: string;
   size?: number;
 }) {
-  const scale = ICON_OPTICAL[providerId] ?? 0.92;
+  const scale = ICON_OPTICAL[providerId] ?? 0.98;
   return (
     <span
       aria-hidden="true"

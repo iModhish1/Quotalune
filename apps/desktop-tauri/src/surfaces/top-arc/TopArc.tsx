@@ -10,6 +10,7 @@ import {
   type FlowSurfaceSettings,
   type FlowSurfaceState,
 } from "../../design-system/flowSurface";
+import { normalizeSurfaceInteractions } from "../../design-system/surfaceInteractions";
 import { useStageRuntime } from "../../hooks/useStageRuntime";
 import {
   beginQuotaIslandDrag,
@@ -21,6 +22,8 @@ import {
 import FlowSurface from "../flow-surface/FlowSurface";
 import { useSurfaceDemo } from "../../hooks/useSurfaceDemo";
 import { SURFACE_DEMO_PROVIDERS } from "../../lib/surfaceDemo";
+import { isNotchForm } from "../notch/notchGeometry";
+import { wheelStep } from "../reel/reelGeometry";
 
 const DEMO_PROVIDERS: StageProvider[] = [
   { id: "codex", name: "OpenAI", iconId: "openai", resolvedMode: "remaining", arcFraction: 0.74, primaryValue: 74, secondaryValue: 26, primaryLabel: "remaining", reset: "3h 40m", status: "ok" },
@@ -41,6 +44,7 @@ function demoState(demo: TopArcProps["demo"]): FlowSurfaceState {
 function settingsToFlow(settings: SurfaceSettings): FlowSurfaceSettings {
   return normalizeFlowSurfaceSettings({
     form: settings.topArcForm,
+    interactions: settings.interactions,
     anchor: settings.topArcAnchor,
     scale: settings.topArcScale,
     autoHide: settings.topArcAutoHide,
@@ -62,6 +66,8 @@ export default function TopArc({ demo }: TopArcProps) {
   const draggingRef = useRef(false);
   const pointerInsideRef = useRef(false);
   const autoHideTimer = useRef<number | null>(null);
+  const foldTimer = useRef<number | null>(null);
+  const wheel = useRef({ sum: 0, lastAt: -Infinity });
   const nativeRevisionRef = useRef<string | null>(null);
   // A registered account is not a rendering entitlement. The compact host
   // receives only resolved values, so it cannot grow into an empty rail.
@@ -71,6 +77,13 @@ export default function TopArc({ demo }: TopArcProps) {
     if (autoHideTimer.current != null) {
       window.clearTimeout(autoHideTimer.current);
       autoHideTimer.current = null;
+    }
+  }, []);
+
+  const clearFold = useCallback(() => {
+    if (foldTimer.current != null) {
+      window.clearTimeout(foldTimer.current);
+      foldTimer.current = null;
     }
   }, []);
 
@@ -85,9 +98,10 @@ export default function TopArc({ demo }: TopArcProps) {
     const unlisten = listen("quotaarc:surfaces-changed", loadFlowSettings);
     return () => {
       clearAutoHide();
+      clearFold();
       void unlisten.then((dispose) => dispose()).catch(() => {});
     };
-  }, [clearAutoHide, demo, loadFlowSettings]);
+  }, [clearAutoHide, clearFold, demo, loadFlowSettings]);
 
   useEffect(() => {
     if (demo || dragging) return;
@@ -114,6 +128,21 @@ export default function TopArc({ demo }: TopArcProps) {
     setFocus((current) => providers.length === 0 ? 0 : (current + direction + providers.length) % providers.length);
   }, [providers.length]);
 
+  const schedulePointerExit = useCallback(() => {
+    clearFold();
+    const interactions = normalizeSurfaceInteractions(flowSettings.interactions);
+    if (draggingRef.current || surfaceState === "pinned") return;
+    if (surfaceState === "expanded") {
+      // Notch forms own their provider-level hover timer so moving between
+      // adjacent nodes never starts a second competing fold countdown.
+      if (isNotchForm(flowSettings.form)) return;
+      if (!interactions.autoFold) return;
+      foldTimer.current = window.setTimeout(() => setSurfaceState("compact"), interactions.foldDelayMs);
+      return;
+    }
+    scheduleAutoHide();
+  }, [clearFold, flowSettings.form, flowSettings.interactions, scheduleAutoHide, surfaceState]);
+
   useEffect(() => {
     if (!pointerInsideRef.current && (surfaceState === "compact" || surfaceState === "hover")) scheduleAutoHide();
     return clearAutoHide;
@@ -136,12 +165,27 @@ export default function TopArc({ demo }: TopArcProps) {
       onMouseEnter={() => {
         pointerInsideRef.current = true;
         clearAutoHide();
+        clearFold();
         if (draggingRef.current) return;
-        setSurfaceState((state) => state === "hidden" || state === "peek" || state === "compact" ? "hover" : state);
+        const interactions = normalizeSurfaceInteractions(flowSettings.interactions);
+        setSurfaceState((state) => {
+          if (state === "pinned") return state;
+          if (!isNotchForm(flowSettings.form) && interactions.hoverDetails && providers.length > 0) return "expanded";
+          return state === "hidden" || state === "peek" || state === "compact" ? "hover" : state;
+        });
       }}
       onMouseLeave={() => {
         pointerInsideRef.current = false;
-        scheduleAutoHide();
+        schedulePointerExit();
+      }}
+      onWheel={(event) => {
+        if (event.ctrlKey || isNotchForm(flowSettings.form) || flowSettings.form === "reel") return;
+        if (!normalizeSurfaceInteractions(flowSettings.interactions).wheelCycle || providers.length < 2) return;
+        const delta = (Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX)
+          * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 200 : 1);
+        const next = wheelStep(wheel.current, delta, performance.now());
+        wheel.current = next.state;
+        if (next.step) cycle(next.step);
       }}
     >
       <FlowSurface
@@ -155,6 +199,7 @@ export default function TopArc({ demo }: TopArcProps) {
         onReveal={() => setSurfaceState("compact")}
         onToggleExpanded={() => {
           clearAutoHide();
+          clearFold();
           setSurfaceState((state) => state === "expanded" || state === "pinned" ? "compact" : "expanded");
         }}
         onTogglePinned={() => setSurfaceState((state) => state === "pinned" ? "expanded" : "pinned")}

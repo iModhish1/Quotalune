@@ -4,10 +4,25 @@ import { CANONICAL_THEME, THEME_CATALOG } from "./themeCatalog";
 import { catalogMotion, catalogMotionStyle, motionDelay } from "./themeMotion";
 
 describe("catalogMotion", () => {
-  it("assigns one bounded motion character to the canonical theme", () => {
+  it("assigns a curated restrained motion profile to every live identity", () => {
     const characters = THEME_CATALOG.map((theme) => catalogMotion(theme).character);
+    const durations = THEME_CATALOG.map((theme) => catalogMotion(theme).durationMs);
 
-    expect(characters).toEqual(["orbit"]);
+    expect(characters.slice(0, 9)).toEqual([
+      "orbit",
+      "reticle",
+      "corona",
+      "bloom",
+      "detent",
+      "float",
+      "shutter",
+      "frost",
+      "facet",
+    ]);
+    expect(characters).toHaveLength(THEME_CATALOG.length);
+    expect(new Set(characters).size).toBeGreaterThanOrEqual(10);
+    expect(new Set(durations).size).toBeGreaterThanOrEqual(12);
+    expect(durations.every(duration=>duration>=150&&duration<=230)).toBe(true);
   });
 
   it("keeps every profile bounded and tied to the catalog expansion duration", () => {

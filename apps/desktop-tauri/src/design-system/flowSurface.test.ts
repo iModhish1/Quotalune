@@ -40,6 +40,7 @@ describe("Flow Surface contract", () => {
       scale: 125,
       autoHide: true,
       autoHideDelayMs: 3_000,
+      interactions:{hoverDetails:true,wheelCycle:true,autoFold:true,foldDelayMs:500},
     });
   });
 
@@ -71,6 +72,8 @@ describe("Flow Surface contract", () => {
       height: 58,
     });
     expect(flowSurfaceEnvelope("orbital", "hidden", 100)).toEqual({ width: 28, height: 28 });
+    expect(flowSurfaceEnvelope("flowline","hidden",100,3,"top")).toEqual({width:58,height:28});
+    expect(flowSurfaceEnvelope("horizon","hidden",100,3,"left")).toEqual({width:14,height:96});
   });
 
   it("shrinks a compact form when no provider has a truthful quota reading", () => {
@@ -79,6 +82,8 @@ describe("Flow Surface contract", () => {
       height: 84,
     });
     expect(flowSurfaceEnvelope("flowline", "compact", 100, 3).height).toBeLessThan(310);
+    expect(flowSurfaceEnvelope("flowline","compact",100,3,"top")).toEqual({width:226,height:56});
+    expect(flowSurfaceEnvelope("horizon","compact",100,3,"left")).toEqual({width:58,height:350});
   });
 
   it("keeps the orbital structure bounded and opens inward from its corner", () => {
@@ -95,10 +100,12 @@ describe("Flow Surface contract", () => {
 
   it("defines each structure's label, default anchor, and safe anchors in one catalog", () => {
     expect(FLOW_SURFACE_FORM_CATALOG.map((form) => form.id)).toEqual([
-      "seam", "ribbon", "cradle", "deck", "satellite", "flowline", "reel", "horizon", "petal", "orbital", "lens",
+      "crescent", "pebble", "fan", "seam", "ribbon", "cradle", "deck", "satellite", "flowline", "reel", "horizon", "petal", "orbital", "lens",
     ]);
     expect(flowSurfaceDefaultAnchor("lens")).toBe("bottom-right");
-    expect(flowSurfaceAnchorOptions("flowline")).toEqual(["right", "left", "free"]);
-    expect(flowSurfaceAnchorOptions("horizon")).toEqual(["top", "bottom", "free"]);
+    expect(flowSurfaceAnchorOptions("flowline")).toEqual(["right","left","top","bottom","top-left","top-right","bottom-left","bottom-right","free"]);
+    expect(flowSurfaceAnchorOptions("horizon")).toEqual(["right","left","top","bottom","top-left","top-right","bottom-left","bottom-right","free"]);
+    expect(resolveDetailDirection("flowline","top-left")).toBe("right");
+    expect(resolveDetailDirection("horizon","bottom-right")).toBe("left");
   });
 });

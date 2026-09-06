@@ -19,7 +19,17 @@ import CatalogTaskbar, { CATALOG_TASKBAR_FIXTURE } from "./CatalogTaskbar";
 import TaskbarMotionProof from "./TaskbarMotionProof";
 import GeometrySurface from "./GeometrySurface";
 import ReelPreview from "./ReelPreview";
+import MaterialProof from "./MaterialProof";
+import NotificationProof from "./NotificationProof";
+import AppearanceProof from "./AppearanceProof";
+import LogoProof from "./LogoProof";
 import CollectionsStudio from "./CollectionsStudio";
+import SurfaceGalleryProof from "./SurfaceGalleryProof";
+import SettingsLayoutProof from "./SettingsLayoutProof";
+import ProviderWorkspaceProof from "./ProviderWorkspaceProof";
+import UsageSpendProof from "./UsageSpendProof";
+import ThemeMarkProof from "./ThemeMarkProof";
+import ProviderIdentityProof from "./ProviderIdentityProof";
 import {
   TASKBAR_COMPACT_HEIGHT,
   TASKBAR_EXPANDED_HEIGHT,
@@ -75,6 +85,16 @@ const usageConfig: UsageDisplayConfig | undefined =
 export default function DemoStage() {
   if (params.get("gen") === "collections") return <CollectionsStudio />;
   if (params.get("gen") === "reel") return <ReelPreview />;
+  if (params.get("gen") === "materials") return <MaterialProof />;
+  if (params.get("gen") === "notifications") return <NotificationProof />;
+  if (params.get("gen") === "appearance") return <AppearanceProof />;
+  if (params.get("gen") === "logos") return <LogoProof />;
+  if (params.get("gen") === "surfaces") return <SurfaceGalleryProof />;
+  if (params.get("gen") === "settings-layout") return <SettingsLayoutProof />;
+  if (params.get("gen") === "providers") return <ProviderWorkspaceProof />;
+  if (params.get("gen") === "usage-spend") return <UsageSpendProof />;
+  if (params.get("gen") === "theme-marks") return <ThemeMarkProof />;
+  if (params.get("gen") === "provider-identities") return <ProviderIdentityProof />;
   const gen = params.get("gen") ?? "v3";
 
   const stage = (w: number, h: number, pos: CSSProperties, node: ReactNode) => (

@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-import { ArcGaugeV3, QaProviderIcon, formatPercentage } from "../../design-system";
+import { ArcGaugeV3, QaProviderIcon, formatPercentage, providerGlyphSize } from "../../design-system";
 import {
   catalogBySlug,
   providerColor,
@@ -235,7 +235,7 @@ export default function TaskbarStage({
             <span className="qa-taskbar-node__instrument">
               <ArcGaugeV3 className="qa-taskbar-node__gauge" remaining={provider.arcFraction} size={nodeSize} stroke={stageState === "expanded" ? 4.4 : 4} colorOverride={color} ariaLabel={`${provider.name} ${provider.primaryLabel} arc`} />
               <span className="qa-taskbar-node__icon">
-                <QaProviderIcon providerId={provider.iconId} size={Math.round(nodeSize * 0.32)} />
+                <QaProviderIcon providerId={provider.iconId} size={providerGlyphSize(nodeSize)} />
               </span>
             </span>
             <span className="qa-taskbar-node__value" style={{ color }}>{formatPercentage(provider.primaryValue)}</span>

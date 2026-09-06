@@ -13,11 +13,12 @@ import { useTheme } from "./hooks/useTheme";
 import { useLocale } from "./hooks/useLocale";
 import TrayPanel from "./surfaces/TrayPanel";
 import { FLOATBAR_WINDOW_LABEL } from "./floatbar/api";
-import { LocaleProvider } from "./i18n/LocaleProvider";
+import { LocaleProvider, PreviewLocaleProvider } from "./i18n/LocaleProvider";
 import type { BootstrapState, ThemePreference } from "./types/bridge";
 import type { SurfaceSnapshot } from "./hooks/useSurfaceSnapshot";
 import { useDeepSeekPricingStatus } from "./hooks/useDeepSeekPricingStatus";
 import { DesignSystemProvider } from "./design-system";
+import { logoSizeFromPercent, syncLogoAppearance } from "./design-system/logoAppearance";
 
 /**
  * Applies the QuotaArc design-system theme/motion context to a surface
@@ -72,9 +73,11 @@ export default function App() {
   // Demo stage: pure render, no Tauri APIs (headless screenshot gate).
   if (new URLSearchParams(window.location.search).get("window") === "demo") {
     return (
-      <Suspense fallback={<SurfaceFallback />}>
-        <DemoStage />
-      </Suspense>
+      <PreviewLocaleProvider>
+        <Suspense fallback={<SurfaceFallback />}>
+          <DemoStage />
+        </Suspense>
+      </PreviewLocaleProvider>
     );
   }
   return (
@@ -109,6 +112,10 @@ function AppInner() {
         }
         setState(bootstrap);
         setThemePreference(bootstrap.settings.theme);
+        syncLogoAppearance({
+          variant: bootstrap.settings.logoVariant ?? "silver",
+          size: logoSizeFromPercent(bootstrap.settings.logoScalePercent),
+        });
         setError(null);
       })
       .catch((cause: unknown) => {
@@ -143,6 +150,10 @@ function AppInner() {
             .then((bootstrap) => {
               setState(bootstrap);
               setThemePreference(bootstrap.settings.theme);
+              syncLogoAppearance({
+                variant: bootstrap.settings.logoVariant ?? "silver",
+                size: logoSizeFromPercent(bootstrap.settings.logoScalePercent),
+              });
               setError(null);
             })
             .catch(() => {});
@@ -156,9 +167,19 @@ function AppInner() {
       const detail = (evt as CustomEvent<BootstrapState["settings"]>).detail;
       if (detail) {
         setThemePreference(detail.theme);
+        syncLogoAppearance({
+          variant: detail.logoVariant ?? "silver",
+          size: logoSizeFromPercent(detail.logoScalePercent),
+        });
       } else {
         getSettingsSnapshot()
-          .then((fresh) => setThemePreference(fresh.theme))
+          .then((fresh) => {
+            setThemePreference(fresh.theme);
+            syncLogoAppearance({
+              variant: fresh.logoVariant ?? "silver",
+              size: logoSizeFromPercent(fresh.logoScalePercent),
+            });
+          })
           .catch(() => {});
       }
     };

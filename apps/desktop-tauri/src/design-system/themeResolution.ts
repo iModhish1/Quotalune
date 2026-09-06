@@ -1,4 +1,4 @@
-import { CANONICAL_THEME } from "./themeCatalog";
+import { CANONICAL_THEME, catalogBySlug } from "./themeCatalog";
 
 export const DEFAULT_CATALOG_THEME = "01-obsidian-orbit";
 
@@ -19,13 +19,18 @@ export interface CatalogThemeSettings {
 }
 
 /**
- * Production is intentionally locked to one composition and one visual token
- * set until the foundation is proven. Legacy per-profile and per-surface
- * selections are ignored rather than changing the active structure.
+ * Material precedence is independent of structure. Unknown/archived values
+ * fall through to the next valid scope, never to an unrelated experimental theme.
  */
 export function resolveCatalogTheme(
-  _settings: CatalogThemeSettings,
-  _surface: CatalogSurfaceId,
+  settings: CatalogThemeSettings,
+  surface: CatalogSurfaceId,
 ): { slug: string; source: CatalogThemeSource } {
+  const candidates = [[settings.surfaceCatalogThemes?.[surface],"surface"],
+    [settings.activeProfileCatalogTheme,"profile"],[settings.catalogTheme,"global"]] as const;
+  for(const [value,source] of candidates){
+    const theme=value ? catalogBySlug(value) : undefined;
+    if(theme)return {slug:theme.slug,source};
+  }
   return { slug: CANONICAL_THEME.slug, source: "default" };
 }

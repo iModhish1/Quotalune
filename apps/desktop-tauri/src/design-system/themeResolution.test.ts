@@ -3,6 +3,12 @@ import { describe, expect, it } from "vitest";
 import { resolveCatalogTheme } from "./themeResolution";
 
 describe("resolveCatalogTheme", () => {
+  it("resolves selectable materials through surface, profile, global and default", () => {
+    const config={catalogTheme:"smoked-silver",activeProfileCatalogTheme:"tidal-glass",surfaceCatalogThemes:{edge:"ember-alloy"}};
+    expect(resolveCatalogTheme(config,"edge")).toEqual({slug:"ember-alloy",source:"surface"});
+    expect(resolveCatalogTheme(config,"top")).toEqual({slug:"tidal-glass",source:"profile"});
+    expect(resolveCatalogTheme({catalogTheme:"smoked-silver"},"top")).toEqual({slug:"smoked-silver",source:"global"});
+  });
   it("locks every legacy scope to the canonical foundation theme", () => {
     const settings = {
       catalogTheme: "03-solar-ember",

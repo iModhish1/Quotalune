@@ -50,6 +50,17 @@ describe('provider identity and structure-theme compatibility matrix',()=>{
       expect(new Set(Object.values(semantics)).size,`${identity} distinct semantic tones`).toBe(3);
     }
   });
+  it('keeps the adaptive identity\'s primary and muted/reset-label text AA-legible on every structure theme',()=>{
+    // Mirrors surfaceMaterialStyle: adaptive's --pi-text/--pi-muted fall back to
+    // --surface-text/--surface-muted, rendered on --surface-raised (theme.bg[0]).
+    for(const theme of THEME_CATALOG){
+      const text=theme.material?.text??'#eef4f8';
+      const muted=theme.material?.muted??'#b1bcc7';
+      const bg=theme.bg[0];
+      expect(contrast(text,bg),`${theme.slug} adaptive primary text`).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(muted,bg),`${theme.slug} adaptive muted/reset-label text`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
   it('keeps the adaptive identity\'s warning/critical/exhausted tones AA-legible on every structure theme',()=>{
     // Adaptive has no contrastBase (self-contained plate); its tones fall back to the
     // CSS defaults in UsageWindowList.css: color-mix(in srgb, currentColor 72%, #hex).

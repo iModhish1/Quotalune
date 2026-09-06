@@ -1,21 +1,26 @@
 import type { CSSProperties } from "react";
+import { surfaceMaterialStyle } from "../../design-system/surfaceMaterial";
 
 import type { StageProvider } from "../../components/orbit/stageTypes";
+import UsageWindowList from "../../components/orbit/UsageWindowList";
 import {
   ArcGaugeV3,
   QaProviderIcon,
   formatPercentage,
+  providerGlyphSize,
 } from "../../design-system";
 import type {
   FlowSurfaceSettings,
   FlowSurfaceState,
 } from "../../design-system/flowSurface";
 import { hasSurfaceQuotaValue } from "../../design-system/flowSurface";
-import { CANONICAL_THEME, catalogBySlug } from "../../design-system/themeCatalog";
+import { CANONICAL_THEME, catalogBySlug, providerColor } from "../../design-system/themeCatalog";
+import { providerMeterFillColor } from "../../design-system/meterFill";
 import "./FlowSurface.css";
 import ReelSurface from "../reel/ReelSurface";
 import NotchSurface from "../notch/NotchSurface";
 import { isNotchForm } from "../notch/notchGeometry";
+import OfficialQuotaArcMark from '../../components/QuotaArcMark';
 
 export interface FlowSurfaceProps {
   catalog: string;
@@ -33,28 +38,10 @@ export interface FlowSurfaceProps {
 }
 
 function QuotaArcMark() {
-  return (
-    <svg className="flow-surface__mark" viewBox="0 0 32 32" aria-hidden="true">
-      <path d="M7 20.5C8.8 12.1 14.8 7.4 23.7 8.4" />
-      <path d="M8.5 24C14.7 26.2 22.5 22.2 24.5 14.2" />
-      <circle cx="18.3" cy="16.2" r="2.2" />
-    </svg>
-  );
+  return <OfficialQuotaArcMark className="flow-surface__mark"/>;
 }
 
-/**
- * The foundation is intentionally material-first: provider identity comes
- * from its icon and label, not a row of competing neon colours. Future
- * materials can replace this restrained silver scale without touching the
- * interaction or layout contract.
- */
-function providerTone(index: number, materialSlug: string): string {
-  const obsidianVoid = ["#e4e7eb", "#b9c0c9", "#9099a6", "#707986"];
-  const fallback = ["#d8dde4", "#b4bac4", "#9099a6", "#747d89"];
-  const tones = materialSlug === CANONICAL_THEME.slug ? obsidianVoid : fallback;
-  return tones[index % tones.length];
-}
-
+/** Geometry and interaction stay independent of the selected material palette. */
 function SurfaceProvider({
   provider,
   active,
@@ -62,6 +49,7 @@ function SurfaceProvider({
   color,
   gaugeSize = 31,
   onFocus,
+  onHover,
 }: {
   provider: StageProvider;
   active: boolean;
@@ -69,6 +57,7 @@ function SurfaceProvider({
   color: string;
   gaugeSize?: number;
   onFocus?: (index: number) => void;
+  onHover?: (index: number) => void;
 }) {
   return (
     <button
@@ -77,6 +66,7 @@ function SurfaceProvider({
       data-active={active}
       style={{ "--flow-provider": color, "--flow-gauge-size": `${gaugeSize}px` } as CSSProperties}
       onClick={() => onFocus?.(index)}
+      onMouseEnter={() => onHover?.(index)}
       aria-pressed={active}
       aria-label={`${provider.name}: ${formatPercentage(provider.primaryValue)} ${provider.primaryLabel}`}
     >
@@ -89,7 +79,7 @@ function SurfaceProvider({
           ariaLabel={`${provider.name} quota`}
         />
         <span className="flow-surface__provider-icon">
-          <QaProviderIcon providerId={provider.iconId} size={Math.max(10, Math.round(gaugeSize * 0.42))} />
+          <QaProviderIcon providerId={provider.iconId} size={providerGlyphSize(gaugeSize)} />
         </span>
       </span>
       <span className="flow-surface__provider-value">{formatPercentage(provider.primaryValue)}</span>
@@ -126,30 +116,31 @@ export default function FlowSurface({
   const scaleFactor = Math.min(1.25, Math.max(0.75, settings.scale / 100));
   const scaled = (pixels: number) => `${Math.round(pixels * scaleFactor)}px`;
   const style = {
-    "--flow-accent": "#d8dde4",
-    "--flow-accent-soft": "rgba(216, 221, 228, 0.22)",
-    "--flow-void": "rgba(4, 5, 8, 0.88)",
-    "--flow-void-strong": "rgba(1, 2, 4, 0.96)",
-    "--flow-hairline": "rgba(221, 227, 235, 0.18)",
+    ...surfaceMaterialStyle(theme),
+    "--flow-accent": theme.accent,
+    "--flow-accent-soft": theme.hairline,
+    "--flow-void": theme.bg[0],
+    "--flow-void-strong": theme.core,
+    "--flow-hairline": theme.coreEdge,
     "--flow-flowline-width": scaled(56),
     "--flow-flowline-radius": scaled(28),
     "--flow-horizon-height": scaled(58),
     "--flow-petal-width": scaled(170),
     "--flow-petal-height": scaled(118),
-    "--flow-petal-details-width": scaled(222),
-    "--flow-petal-details-height": scaled(154),
+    "--flow-petal-details-width": scaled(214),
+    "--flow-petal-details-height": scaled(140),
     "--flow-orbital-size": scaled(104),
     "--flow-orbital-empty-size": scaled(64),
-    "--flow-orbital-details-width": scaled(264),
-    "--flow-orbital-details-height": scaled(166),
+    "--flow-orbital-details-width": scaled(244),
+    "--flow-orbital-details-height": scaled(146),
     "--flow-lens-width": scaled(178),
     "--flow-lens-height": scaled(76),
     "--flow-lens-empty-width": scaled(76),
     "--flow-lens-empty-height": scaled(56),
-    "--flow-lens-details-width": scaled(286),
-    "--flow-lens-details-height": scaled(168),
-    "--flow-details-width": scaled(257),
-    "--flow-horizon-details-height": scaled(150),
+    "--flow-lens-details-width": scaled(252),
+    "--flow-lens-details-height": scaled(146),
+    "--flow-details-width": scaled(238),
+    "--flow-horizon-details-height": scaled(140),
   } as CSSProperties;
 
   if (state === "hidden") {
@@ -175,7 +166,7 @@ export default function FlowSurface({
       data-state={state}
       data-empty={!hasQuotaData}
       style={style}
-      aria-label="QuotaArc compact quota surface"
+      aria-label={`${settings.form} provider selector`}
     >
       <div className="flow-surface__core">
         {demoMode && <span className="flow-surface__demo" title="Synthetic data — not connected accounts">DEMO</span>}
@@ -203,9 +194,10 @@ export default function FlowSurface({
               provider={provider}
               index={index}
               active={index === focus}
-              color={providerTone(index, theme.slug)}
+              color={providerColor(theme, provider.id)}
               gaugeSize={settings.form === "orbital" || settings.form === "lens" ? 25 : 31}
               onFocus={onFocusProvider}
+              onHover={settings.interactions?.hoverDetails === false ? undefined : onFocusProvider}
             />
           ))}
         </div>
@@ -233,23 +225,28 @@ export default function FlowSurface({
               <button type="button" onClick={onRequestCompact ?? onToggleExpanded} aria-label="Collapse details">×</button>
             </span>
           </header>
-          <div className="flow-surface__metric">
-            <strong>{formatPercentage(focused?.primaryValue)}</strong>
-            <span>{focused?.primaryLabel ?? "unavailable"}</span>
-            <small>Resets {focused?.reset ?? "—"}</small>
-          </div>
-          <div className="flow-surface__detail-providers" role="list" aria-label="Providers">
-            {visible.map((provider, index) => (
-              <SurfaceProvider
-                key={provider.id}
-                provider={provider}
-                index={index}
-                active={index === focus}
-                color={providerTone(index, theme.slug)}
-                gaugeSize={settings.form === "orbital" || settings.form === "lens" ? 25 : 31}
-                onFocus={onFocusProvider}
-              />
-            ))}
+          <div className="flow-surface__detail-body">
+            <div className="flow-surface__detail-metrics">
+              {focused?.windows ? <div style={{"--provider-color":providerMeterFillColor(providerColor(theme,focused.id),focused.limitPresentation?.identity,theme)} as CSSProperties}><UsageWindowList providerId={focused.id} windows={focused.windows} hidden={focused.detailsHidden} presentation={focused.limitPresentation}/></div> : <div className="flow-surface__metric">
+                <strong>{formatPercentage(focused?.primaryValue)}</strong>
+                <span>{focused?.primaryLabel ?? "unavailable"}</span>
+                <small>Resets {focused?.reset ?? "—"}</small>
+              </div>}
+            </div>
+            <div className="flow-surface__detail-providers" role="list" aria-label="Providers">
+              {visible.map((provider, index) => (
+                <SurfaceProvider
+                  key={provider.id}
+                  provider={provider}
+                  index={index}
+                  active={index === focus}
+                  color={providerColor(theme, provider.id)}
+                  gaugeSize={settings.form === "orbital" || settings.form === "lens" ? 25 : 31}
+                  onFocus={onFocusProvider}
+                  onHover={settings.interactions?.hoverDetails === false ? undefined : onFocusProvider}
+                />
+              ))}
+            </div>
           </div>
         </section>
       )}

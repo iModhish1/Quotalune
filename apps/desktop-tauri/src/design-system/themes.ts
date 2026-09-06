@@ -15,6 +15,12 @@ import { normalizePercentage } from "./percent";
 export type UsageMode = "used" | "remaining" | "hybrid";
 
 export interface UsageDisplayConfig {
+  providerDetailWindows?: Record<string, "all" | "session" | "weekly" | "both" | "none">;
+  /** Ordered selected source IDs. Missing follows legacy/default; [] hides all details. */
+  providerLimitOrder?: Record<string, readonly string[]>;
+  providerLimitPresentation?: Record<string, import('./limitPresentation').LimitPresentation>;
+  /** Shared presentation inherited by providers without an explicit override. */
+  globalLimitPresentation?: import('./limitPresentation').LimitPresentation;
   /** Applies to every provider without an override. */
   global: UsageMode;
   /** Provider-level override keyed by provider CLI name. */

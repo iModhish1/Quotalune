@@ -1,0 +1,15 @@
+.structure-preview{position:relative;height:128px;min-width:0;display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events:none;background:radial-gradient(circle at 50% 35%,#43515d 0,#303a43 46%,#20262c 100%);border-radius:12px}
+.structure-preview__dimensions{position:absolute;z-index:2;inset:auto 8px 7px auto;padding:3px 6px;border:1px solid #ffffff24;border-radius:999px;background:#07090bc7;color:#e9eef5;font:600 9px/1.2 "Segoe UI Variable","Segoe UI",sans-serif;letter-spacing:.02em;box-shadow:0 3px 10px #0004;backdrop-filter:blur(6px)}
+.structure-preview__stage{transform-origin:top left;position:relative}
+.structure-preview *{animation:none!important;transition:none!important}
+.structure-preview[data-expanded=true] .structure-preview__viewport{animation:structure-preview-reveal var(--qa-theme-motion-duration) var(--qa-theme-motion-easing)!important}
+@keyframes structure-preview-reveal{from{opacity:.42;translate:var(--qa-theme-motion-enter-x) var(--qa-theme-motion-enter-y);rotate:var(--qa-theme-motion-enter-rotate);scale:var(--qa-theme-motion-enter-scale);filter:saturate(.72)}to{opacity:1;translate:0 0;rotate:0deg;scale:1;filter:saturate(1)}}
+@media(prefers-reduced-motion:reduce){.structure-preview[data-expanded=true] .structure-preview__viewport{animation:none!important}}
+.settings-studio .structure-preview button{padding:0;min-height:0;border:0;background:transparent}
+.settings-studio .surface-structure-picker__choices{grid-template-columns:repeat(auto-fit,minmax(184px,1fr));gap:12px}
+.settings-studio .surface-structure-choice{padding:8px;gap:8px;cursor:default}
+.settings-studio .surface-structure-choice>button{display:grid;gap:4px;text-align:left;width:100%;padding:8px}
+.settings-studio .surface-structure-choice small{white-space:normal;line-height:1.4}
+.settings-studio .surface-settings__preview{background:none;border:0;box-shadow:none;width:184px;height:128px;flex:none}
+[data-theme="light"] .structure-preview{background:radial-gradient(circle at 50% 35%,#dfe7ee 0,#c9d3dc 46%,#b9c4ce 100%)}
+[data-theme="light"] .structure-preview__dimensions{background:#17202be6;color:#f7fafc;border-color:#ffffff38}

@@ -145,9 +145,13 @@ export default function PopOutPanel({
     };
   }, [providerId, selectedProviderId, providerOrderKey]);
 
-  const openSettings = useCallback(() => {
-    openSettingsWindow("general");
-  }, []);
+  const [settingsLaunchError,setSettingsLaunchError]=useState<string|null>(null);
+  const openSettingsTab=useCallback(async(tab:string)=>{
+    setSettingsLaunchError(null);
+    try { await openSettingsWindow(tab); }
+    catch(error){setSettingsLaunchError(`Could not open settings: ${error instanceof Error?error.message:String(error)}`);}
+  },[]);
+  const openSettings = useCallback(() => { void openSettingsTab("general"); }, [openSettingsTab]);
   const goTray = useCallback(() => {
     // The flyout ("Pop Out Dashboard") is now its own dedicated OS window
     // rather than a state of the shared `main` window's surface-mode
@@ -156,8 +160,8 @@ export default function PopOutPanel({
     void openFlyoutWindow().catch(() => {});
   }, []);
   const openAbout = useCallback(() => {
-    openSettingsWindow("about");
-  }, []);
+    void openSettingsTab("about");
+  }, [openSettingsTab]);
   const quitApp = useCallback(() => {
     void quitApplication();
   }, []);
@@ -292,6 +296,7 @@ export default function PopOutPanel({
 
   return (
     <div className="popout-scale-shell">
+      {settingsLaunchError && <p role="alert" style={{padding:12,color:"#ffb4ab"}}>{settingsLaunchError}</p>}
       {surface}
     </div>
   );

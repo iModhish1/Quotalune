@@ -268,99 +268,103 @@ export function ProviderDetailPane({
         <ProviderIssueNotice detail={detail} t={t} />
       )}
 
-      <QuickActionsSection
-        provider={detail}
-        busy={busy}
-        onRefresh={handleRefresh}
-        onConnect={handleSwitchAccount}
-        onOpenDashboard={handleOpenDashboard}
-        onOpenStatusPage={handleOpenStatusPage}
-        onBuyCredits={handleBuyCredits}
-        t={t}
-      />
-
-      <UsageSection
-        provider={detail}
-        resetTimeRelative={resetTimeRelative}
-        t={t}
-      />
-      {detail.id === "wayfinder" && (
-        <WayfinderGatewaySection
-          draft={gatewayDraft}
-          error={gatewayError}
-          busy={busy}
-          disabled={settingsDisabled}
-          onDraftChange={(draft) =>
-            dispatch({ type: "SET_GATEWAY_DRAFT", draft })
-          }
-          onSave={() => void saveGateway()}
+      <div className="provider-detail-overview">
+        <UsageSection
+          provider={detail}
+          resetTimeRelative={resetTimeRelative}
           t={t}
         />
-      )}
-      <MenuBarMetricSection
-        provider={detail}
-        providerMetrics={providerMetrics}
-        disabled={settingsDisabled}
-        t={t}
-        onChange={onSettingsChange}
-      />
-      <AccentColorSection
-        providerId={detail.id}
-        accentColor={providerAccentColors[detail.id] ?? null}
-        t={t}
-        onChange={onSettingsChange}
-      />
-      <PaceSection pace={detail.pace} t={t} />
-      <CostSection cost={detail.cost} t={t} />
-
-      <GrokUsageSourceSection
-        providerId={detail.id}
-        currentValue={detail.usageSource}
-        t={t}
-        onChanged={reload}
-      />
-      <CookieSourceSection
-        providerId={detail.id}
-        currentValue={detail.cookieSource}
-        options={cookieOptions}
-        t={t}
-        onChanged={reload}
-      />
-      <RegionSection
-        providerId={detail.id}
-        currentValue={detail.region}
-        options={regionOptions}
-        t={t}
-        onChanged={reload}
-      />
-      <CredentialsDispatcher providerId={detail.id} t={t} />
-      {detail.id === "codex" && <CodexUsageOptions t={t} />}
-      {detail.id === "codex" && <CodexAccountsSection t={t} />}
-      <CredentialStorageSection
-        status={credentialStatus}
-        busy={busy}
-        onRevoke={handleRevokeCredentials}
-        t={t}
-      />
-      {tokenProviderIds.has(detail.id) && (
-        <TokenAccountsPanel
-          key={`token-${credKey}`}
-          providerId={detail.id}
-          compact
+        <QuickActionsSection
+          provider={detail}
+          busy={busy}
+          onRefresh={handleRefresh}
+          onConnect={handleSwitchAccount}
+          onOpenDashboard={handleOpenDashboard}
+          onOpenStatusPage={handleOpenStatusPage}
+          onBuyCredits={handleBuyCredits}
+          t={t}
         />
-      )}
-      <ApiKeySection key={`api-${credKey}`} providerId={detail.id} />
-      <CookieSection
-        key={`cookie-${credKey}`}
-        providerId={detail.id}
-        cookieDomain={cookieDomain}
-      />
-      <ChartsSection
-        providerId={detail.id}
-        accountEmail={detail.email}
-        accentColor={providerAccentColors[detail.id]}
-        t={t}
-      />
+      </div>
+
+      <div className="provider-detail-workspace">
+        {detail.id === "wayfinder" && (
+          <WayfinderGatewaySection
+            draft={gatewayDraft}
+            error={gatewayError}
+            busy={busy}
+            disabled={settingsDisabled}
+            onDraftChange={(draft) =>
+              dispatch({ type: "SET_GATEWAY_DRAFT", draft })
+            }
+            onSave={() => void saveGateway()}
+            t={t}
+          />
+        )}
+        <MenuBarMetricSection
+          provider={detail}
+          providerMetrics={providerMetrics}
+          disabled={settingsDisabled}
+          t={t}
+          onChange={onSettingsChange}
+        />
+        <AccentColorSection
+          providerId={detail.id}
+          accentColor={providerAccentColors[detail.id] ?? null}
+          t={t}
+          onChange={onSettingsChange}
+        />
+        <PaceSection pace={detail.pace} t={t} />
+        <CostSection cost={detail.cost} t={t} />
+
+        <GrokUsageSourceSection
+          providerId={detail.id}
+          currentValue={detail.usageSource}
+          t={t}
+          onChanged={reload}
+        />
+        <CookieSourceSection
+          providerId={detail.id}
+          currentValue={detail.cookieSource}
+          options={cookieOptions}
+          t={t}
+          onChanged={reload}
+        />
+        <RegionSection
+          providerId={detail.id}
+          currentValue={detail.region}
+          options={regionOptions}
+          t={t}
+          onChanged={reload}
+        />
+        <CredentialsDispatcher providerId={detail.id} t={t} />
+        {detail.id === "codex" && <CodexUsageOptions t={t} />}
+        {detail.id === "codex" && <CodexAccountsSection t={t} />}
+        <CredentialStorageSection
+          status={credentialStatus}
+          busy={busy}
+          onRevoke={handleRevokeCredentials}
+          t={t}
+        />
+        {tokenProviderIds.has(detail.id) && (
+          <TokenAccountsPanel
+            key={`token-${credKey}`}
+            providerId={detail.id}
+            compact
+          />
+        )}
+        <ApiKeySection key={`api-${credKey}`} providerId={detail.id} />
+        <CookieSection
+          key={`cookie-${credKey}`}
+          providerId={detail.id}
+          cookieDomain={cookieDomain}
+        />
+        <ChartsSection
+          providerId={detail.id}
+          accountEmail={detail.email}
+          accentColor={providerAccentColors[detail.id]}
+          t={t}
+        />
+      </div>
 
     </div>
   );

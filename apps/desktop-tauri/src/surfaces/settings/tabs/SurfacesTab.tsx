@@ -4,8 +4,12 @@ import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Toggle } from "../../../components/FormControls";
 import { useLocale } from "../../../hooks/useLocale";
 import { useSurfaceDemo } from "../../../hooks/useSurfaceDemo";
-import { NotchBody } from "../../notch/NotchBody";
-import { isNotchForm, notchLayout } from "../../notch/notchGeometry";
+import CollectionSettings from "./CollectionSettings";
+import {normalizeSurfaceInteractions} from "../../../design-system/surfaceInteractions";
+import StructurePreview from "../StructurePreview";
+import {getSettingsSnapshot} from "../../../lib/tauri";
+import {listen} from "@tauri-apps/api/event";
+import {resolveCatalogTheme} from "../../../design-system/themeResolution";
 import "../../notch/NotchSurface.css";
 import {
   FLOW_SURFACE_FORM_CATALOG,
@@ -38,26 +42,20 @@ function RangeControl({
   onChange: (value: number) => void;
 }) {
   return (
-    <input
-      type="range"
-      min={min}
-      max={max}
-      step={step}
-      value={value}
-      disabled={disabled}
-      onChange={(event) => onChange(Number(event.target.value))}
-      aria-label={`${label} ${value}`}
-      style={{ width: "100%" }}
-    />
+    <div className="surface-range">
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(Number(event.target.value))}
+        aria-label={`${label} ${value}`}
+      />
+      <output aria-live="polite">{value}{label === "Auto-hide delay" ? " ms" : "%"}</output>
+    </div>
   );
-}
-
-function StructureSilhouette({form}:{form:string}) {
-  if (!isNotchForm(form)) return <><i/><i/><i/></>;
-  const {core}=notchLayout(form,"compact","right",3);
-  return <span style={{position:"relative",display:"block",width:58,height:38,background:"#adb2b8",borderRadius:5}}>
-    <NotchBody form={form} width={core.width} height={core.height} mirror={false}/>
-  </span>;
 }
 
 function SurfaceControl({
@@ -81,6 +79,15 @@ function SurfaceControl({
 }
 
 export default function SurfacesTab() {
+  const [catalog,setCatalog]=useState("01-obsidian-orbit");
+  useEffect(()=>{
+    let alive=true;
+    const load=()=>getSettingsSnapshot().then(s=>{if(alive)setCatalog(resolveCatalogTheme(s,"top").slug);}).catch(()=>{});
+    void load();
+    const subscription=listen("codexbar:settings-updated",()=>{void load();}).catch(()=>()=>{});
+    return()=>{alive=false;void subscription.then(stop=>stop());};
+  },[]);
+  const [collectionsOpen,setCollectionsOpen]=useState(false);
   const demo = useSurfaceDemo();
   const { t } = useLocale();
   const [config, setConfig] = useState<SurfaceSettings | null>(null);
@@ -123,19 +130,41 @@ export default function SurfacesTab() {
           </p>
         </div>
         <div className="surface-settings__preview" data-form={config.topArcForm} aria-label={`${config.topArcForm} structure preview`}>
-          {isNotchForm(config.topArcForm) ? <StructureSilhouette form={config.topArcForm}/> : <><span className="surface-settings__preview-mark" /><i/><i/><i/></>}
+          <StructurePreview form={config.topArcForm} catalog={catalog}/>
         </div>
       </header>
 
       <div className="surface-settings__grid">
+        <div className="surface-settings__intro-controls">
+        <SurfaceControl title="Interaction behavior" description="Shared by every structure. Hover reveals details, the wheel changes providers, and auto-fold restores the compact footprint after you leave.">
+          <div className="surface-interactions">
+            {([
+              ['hoverDetails','Show details on hover','Reveal usage without taking focus.'],
+              ['wheelCycle','Cycle with the mouse wheel','Change providers only when the wheel is used.'],
+              ['autoFold','Fold details automatically','Return to the compact footprint after you leave.'],
+            ] as const).map(([key,label,helper])=>{
+              return <div className="surface-interaction" data-disabled={false} key={key}>
+                <span><strong>{label}</strong><small>{helper}</small></span>
+                <Toggle ariaLabel={label} disabled={false} checked={normalizeSurfaceInteractions(config.interactions)[key]} onChange={checked=>patch({interactions:{...normalizeSurfaceInteractions(config.interactions),[key]:checked}})}/>
+              </div>;
+            })}
+            <label className="surface-interaction surface-interaction--number">
+              <span><strong>Fold delay</strong><small>Pause before returning to the compact state.</small></span>
+              <span className="surface-number"><input aria-label="Fold delay (ms)" type="number" min={100} max={3000} step={100} disabled={!normalizeSurfaceInteractions(config.interactions).autoFold} value={normalizeSurfaceInteractions(config.interactions).foldDelayMs} onChange={e=>patch({interactions:normalizeSurfaceInteractions({...config.interactions,foldDelayMs:Number(e.target.value)})})}/><small>ms</small></span>
+            </label>
+          </div>
+        </SurfaceControl>
         <SurfaceControl title="Temporary demo" description="Six synthetic providers. No accounts, credentials or history are changed. Turns off when the app exits.">
+          <div className="surface-demo-action">
           <Toggle checked={demo.enabled} ariaLabel="Use six demo providers" disabled={false} onChange={value => { void demo.toggle(value); }} />
           <button type="button" onClick={() => {
             patch({ topArcEnabled: true, topArcForm: "seam", topArcAnchor: "right" });
             void demo.toggle(true);
-          }}>Try Seam · six providers</button>
+          }}><span>Preview Seam</span><small>Six sample providers</small></button>
+          </div>
           {demo.error && <p role="alert">{demo.error}</p>}
         </SurfaceControl>
+        </div>
         <div className="surface-settings__column">
           <SurfaceControl title="Show surface" description="Keep a compact quota control within reach without covering your work.">
           <Toggle
@@ -148,33 +177,59 @@ export default function SurfacesTab() {
           <SurfaceControl title="Opacity">
           <RangeControl label="Opacity" value={config.topArcOpacity} min={30} max={100} step={5} disabled={!config.topArcEnabled} onChange={(topArcOpacity) => patch({ topArcOpacity })} />
           </SurfaceControl>
-          <SurfaceControl title="Scale" description="Affects only this surface, never your desktop or other panels.">
+          <SurfaceControl title={`Size · ${config.topArcScale}%`} description="Resize the current structure. Does not change desktop scaling. Small structures offer a lower starting footprint.">
+          <div>
+          <div className="surface-size-presets" role="group" aria-label="Surface size presets">
+            {([{label:"Small",value:75},{label:"Default",value:100},{label:"Large",value:125}] as const).map(preset =>
+              <button key={preset.value} type="button" disabled={!config.topArcEnabled} aria-pressed={config.topArcScale===preset.value}
+                onClick={()=>patch({topArcScale:preset.value})}>{preset.label} · {preset.value}%</button>)}
+          </div>
           <RangeControl label="Scale" value={config.topArcScale} min={75} max={125} step={5} disabled={!config.topArcEnabled} onChange={(topArcScale) => patch({ topArcScale })} />
+          </div>
           </SurfaceControl>
         </div>
 
-        <div className="surface-settings__column">
+        <div className="surface-settings__column surface-settings__column--behavior">
+          <SurfaceControl title="Auto-hide" description="Retracts to a small reachable tab after the pointer leaves.">
+          <Toggle checked={config.topArcAutoHide} ariaLabel="Auto-hide QuotaArc surface" disabled={!config.topArcEnabled} onChange={(topArcAutoHide) => patch({ topArcAutoHide })} />
+          </SurfaceControl>
+          <SurfaceControl title="Hide delay" description="How long the compact surface stays visible after the pointer leaves.">
+          <RangeControl label="Auto-hide delay" value={config.topArcAutoHideDelayMs} min={300} max={3000} step={100} disabled={!config.topArcEnabled || !config.topArcAutoHide} onChange={(topArcAutoHideDelayMs) => patch({ topArcAutoHideDelayMs })} />
+          </SurfaceControl>
+          <SurfaceControl title="Click-through" description="Mouse input passes through the compact surface.">
+          <Toggle checked={config.topArcClickThrough} ariaLabel="QuotaArc compact click-through" disabled={!config.topArcEnabled} onChange={(topArcClickThrough) => patch({ topArcClickThrough })} />
+          </SurfaceControl>
+          <SurfaceControl title="Fullscreen privacy" description="Hide the surface while games and video use the whole screen.">
+          <Toggle checked={config.topArcHideFullscreen} ariaLabel="Hide QuotaArc surface during fullscreen apps" disabled={!config.topArcEnabled} onChange={(topArcHideFullscreen) => patch({ topArcHideFullscreen })} />
+          </SurfaceControl>
+        </div>
+
+        <div className="surface-settings__column surface-settings__column--catalog">
           <fieldset className="surface-structure-picker" disabled={!config.topArcEnabled}>
             <legend>Structure</legend>
-            <p>Changes the silhouette and placement behavior, never the quota logic.</p>
+            <div className="surface-structure-picker__meta">
+              <p>Choose a distinct silhouette. Every card is rendered by the real surface component with the active identity.</p>
+              <output>{FLOW_SURFACE_FORM_CATALOG.length} structures</output>
+            </div>
             <div className="surface-structure-picker__choices">
               {FLOW_SURFACE_FORM_CATALOG.map(({ id: form, name, description: note }) => (
-                <button
+                <article
                   key={form}
-                  type="button"
                   className="surface-structure-choice"
                   data-form={form}
                   data-selected={config.topArcForm === form}
-                  aria-pressed={config.topArcForm === form}
-                  onClick={() => patch({ topArcForm: form, topArcAnchor: flowSurfaceDefaultAnchor(form) })}
                 >
-                  <span className="surface-structure-choice__shape"><StructureSilhouette form={form}/></span>
-                  <strong>{name}</strong>
+                  <StructurePreview form={form} catalog={catalog} showDimensions/>
+                  <button type="button" aria-pressed={config.topArcForm===form}
+                    onClick={()=>patch({topArcForm:form,topArcAnchor:flowSurfaceDefaultAnchor(form)})}>
+                  <span className="surface-structure-choice__title"><strong>{name}</strong>{config.topArcForm===form&&<span>Selected</span>}</span>
                   <small>{note}</small>
-                </button>
+                  </button>
+                </article>
               ))}
             </div>
           </fieldset>
+          <div className="surface-settings__docking-row">
           <SurfaceControl title="Position" description="Choose a safe anchor, or use the larger drag grip on the surface for free placement.">
           <select
             value={config.topArcAnchor}
@@ -204,26 +259,14 @@ export default function SurfacesTab() {
             Restore default position
           </button>
           </SurfaceControl>
-        </div>
-
-        <div className="surface-settings__column surface-settings__column--behavior">
-          <SurfaceControl title="Auto-hide" description="Retracts to a small reachable tab after the pointer leaves.">
-          <Toggle checked={config.topArcAutoHide} ariaLabel="Auto-hide QuotaArc surface" disabled={!config.topArcEnabled} onChange={(topArcAutoHide) => patch({ topArcAutoHide })} />
-          </SurfaceControl>
-          <SurfaceControl title="Hide delay" description="How long the compact surface stays visible after the pointer leaves.">
-          <RangeControl label="Auto-hide delay" value={config.topArcAutoHideDelayMs} min={300} max={3000} step={100} disabled={!config.topArcEnabled || !config.topArcAutoHide} onChange={(topArcAutoHideDelayMs) => patch({ topArcAutoHideDelayMs })} />
-          </SurfaceControl>
-          <SurfaceControl title="Click-through" description="Mouse input passes through the compact surface.">
-          <Toggle checked={config.topArcClickThrough} ariaLabel="QuotaArc compact click-through" disabled={!config.topArcEnabled} onChange={(topArcClickThrough) => patch({ topArcClickThrough })} />
-          </SurfaceControl>
-          <SurfaceControl title="Fullscreen privacy" description="Hide the surface while games and video use the whole screen.">
-          <Toggle checked={config.topArcHideFullscreen} ariaLabel="Hide QuotaArc surface during fullscreen apps" disabled={!config.topArcEnabled} onChange={(topArcHideFullscreen) => patch({ topArcHideFullscreen })} />
-          </SurfaceControl>
+          </div>
         </div>
       </div>
       <p className="settings-section__hint">
         Notch structures reveal details after a short hover or a click. Move away to collapse, or pin details to keep them open. Auto-hide restores a small reveal tab.
       </p>
+      <button type="button" aria-expanded={collectionsOpen} onClick={()=>setCollectionsOpen(value=>!value)}>{collectionsOpen?"Close collection editor":"Configure collections (experimental)"}</button>
+      {collectionsOpen&&<CollectionSettings/>}
     </section>
   );
 }

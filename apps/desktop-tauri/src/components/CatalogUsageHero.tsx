@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-import { ArcGaugeV3, QaProviderIcon, formatPercentage } from "../design-system";
+import { ArcGaugeV3, QaProviderIcon, formatPercentage, providerGlyphSize } from "../design-system";
 import {
   catalogBySlug,
   providerColor,
@@ -195,7 +195,7 @@ export default function CatalogUsageHero({
               />
               {showProviderIcons && (
                 <span className="qa-catalog-hero__node-icon">
-                  <QaProviderIcon providerId={provider.iconId} size={Math.round(nodeSize * 0.32)} />
+                  <QaProviderIcon providerId={provider.iconId} size={providerGlyphSize(nodeSize)} />
                 </span>
               )}
             </span>

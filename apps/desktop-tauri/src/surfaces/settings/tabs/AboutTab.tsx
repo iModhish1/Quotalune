@@ -6,7 +6,7 @@ import { Field, Select, Toggle } from "../../../components/FormControls";
 import type { AppInfoBridge, UpdateChannel } from "../../../types/bridge";
 import type { LocaleKey } from "../../../i18n/keys";
 import type { TabProps } from "../settingsTabs";
-import quotaarcIcon from "../../../assets/quotaarc-void-mark.svg";
+import QuotaArcMark from "../../../components/QuotaArcMark";
 
 const REPO_URL = "https://github.com/quotaarc/quotaarc";
 const SUBMIT_ISSUE_URL = `${REPO_URL}/issues/new?labels=bug&template=bug_report.yml`;
@@ -62,7 +62,7 @@ export default function AboutTab({ settings, set, saving }: TabProps) {
   return (
     <section className="settings-section about-section">
       <div className="about-header">
-        <img className="about-icon" src={quotaarcIcon} alt={t("AppName")} />
+        <QuotaArcMark className="about-icon" size={92} label={t("AppName")} />
         <div className="about-title-block">
           <h2 className="about-title">{appInfo.name}</h2>
           <p className="about-version">

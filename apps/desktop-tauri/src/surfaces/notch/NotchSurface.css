@@ -4,6 +4,11 @@
 .notch-host:focus{outline:none}
 .notch-host:focus-visible .notch-provider[data-focused="true"] .notch-gauge{box-shadow:0 0 0 2px #fff}
 .notch-stage{position:relative;transform-origin:top left}
+.notch-host .notch-body [fill]:not([fill="none"]),.notch-host .notch-connector rect{fill:var(--surface-core)}
+.notch-host .notch-body rect:nth-child(1):not(:only-child){fill:var(--surface-edge)}
+.notch-host .notch-body rect:nth-child(2):not(:only-child){fill:var(--surface-raised)}
+.notch-host .notch-gauge{background:var(--surface-raised)}
+.notch-host .notch-reveal{background:var(--surface-core)!important}
 .notch-core{position:absolute;isolation:isolate}
 .notch-body{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .notch-provider{position:absolute;top:0;left:0;display:flex;flex-direction:column;align-items:center;width:var(--gauge-size);gap:5px;z-index:1;transition:transform 280ms cubic-bezier(.2,.8,.2,1),width 220ms ease}
@@ -16,6 +21,14 @@
 .notch-grip span{height:3px;width:16px;border-radius:4px;background:#747478;transition:width 160ms ease}
 .notch-grip:hover span{width:22px;background:#ddd}
 .notch-demo{position:absolute;bottom:8px;left:5px;font-size:6px;line-height:8px;color:#a2a2a6;letter-spacing:.6px;pointer-events:none}
+.notch-stage[data-form="crescent"] .notch-demo{left:auto;right:8px;top:3px;bottom:auto}
+.notch-stage[data-form="crescent"][data-anchor*="left"] .notch-demo{left:8px;right:auto}
+.notch-stage[data-form="crescent"] .notch-grip{left:auto!important;right:0;top:calc(50% - 11px);bottom:auto;width:20px;transform:rotate(90deg)}
+.notch-stage[data-form="crescent"][data-anchor*="left"] .notch-grip{left:0!important;right:auto}
+.notch-stage[data-form="crescent"][data-rotated="true"] .notch-demo{left:calc(50% - 12px);right:auto;top:3px}
+.notch-stage[data-form="crescent"][data-rotated="true"] .notch-grip{left:calc(50% - 15px)!important;right:auto;top:12px;width:30px;transform:none}
+.notch-stage[data-form="crescent"][data-anchor="bottom"] .notch-demo{top:auto;bottom:3px}
+.notch-stage[data-form="crescent"][data-anchor="bottom"] .notch-grip{top:auto;bottom:12px}
 .notch-stage[data-form="seam"] .notch-demo{left:auto;right:10px;bottom:30px}
 .notch-stage[data-form="ribbon"] .notch-grip{right:15px;top:20px;bottom:auto;width:20px;transform:rotate(90deg)}
 .notch-stage[data-form="ribbon"] .notch-demo{bottom:auto;left:auto;right:24px;top:3px}
@@ -26,10 +39,18 @@
 .notch-stage[data-form="cradle"][data-anchor^="top"] .notch-demo{top:8px;bottom:auto}
 .notch-stage[data-form="satellite"] .notch-grip{right:1px;top:76px;bottom:auto;width:22px;transform:rotate(90deg)}
 .notch-stage[data-form="satellite"] .notch-demo{left:auto;right:6px;top:108px;bottom:auto}
+.notch-stage[data-form="satellite"][data-folded="true"] .notch-grip{top:66px;left:17px;right:auto;width:30px;height:18px;transform:none}
+.notch-stage[data-form="satellite"][data-folded="true"] .notch-demo{top:1px;right:18px}
+.notch-stage[data-form="satellite"][data-rotated="true"] .notch-grip{top:auto;bottom:0;right:2px;left:auto;transform:none;height:18px}
+.notch-stage[data-form="satellite"][data-rotated="true"] .notch-demo{top:auto;bottom:3px;right:26px}
 .notch-stage[data-anchor*="left"]:not([data-form="deck"]) .notch-grip{right:auto;left:10px}
 .notch-stage[data-form="deck"] .notch-provider{margin-top:12px}
 .notch-stage[data-form="deck"] .notch-demo{left:auto;right:23px;bottom:9px}
 .notch-stage[data-form="deck"] .notch-grip{right:13px;top:0;bottom:auto;height:14px}
+.notch-stage[data-form="pebble"] .notch-grip,.notch-stage[data-form="pebble"][data-anchor*="left"] .notch-grip{left:57px;right:auto;top:72px;bottom:auto}
+.notch-stage[data-form="pebble"] .notch-demo{left:60px;bottom:4px;font-size:5px}
+.notch-stage[data-form="fan"] .notch-grip,.notch-stage[data-form="fan"][data-anchor*="left"] .notch-grip{left:75px;right:auto;bottom:2px}
+.notch-stage[data-form="fan"] .notch-demo{left:81px;bottom:26px;font-size:5px}
 .notch-deck-label{position:absolute;left:64px;right:25px;top:30px;pointer-events:none}
 .notch-deck-label strong{display:block;font-size:12px;font-weight:550;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .notch-deck-label>span{font-size:9px;color:var(--notch-muted);line-height:17px}
@@ -48,6 +69,7 @@
 .notch-detail-value b{font-weight:500}.notch-detail-value>span{float:right;color:var(--notch-muted)}
 .notch-detail footer{display:flex;align-items:center;justify-content:space-between;margin-top:12px;border-top:1px solid #202022;padding-top:6px;font-size:7px;letter-spacing:.35px;color:var(--notch-muted)}
 .notch-detail footer button{font-size:9px;min-width:28px;height:20px}
+.notch-detail:has(.quota-window-list[data-paged=true]) footer{margin-top:2px;padding-top:3px}
 .notch-reveal{width:100%;height:100%;background:#030303!important;border-radius:12px!important;display:grid;place-items:center}
 .notch-reveal span{display:block;width:3px;height:20px;border-radius:3px;background:#c9c9cb}
 .notch-stage[data-anchor="top"] .notch-reveal span,.notch-stage[data-anchor="bottom"] .notch-reveal span{width:20px;height:3px}

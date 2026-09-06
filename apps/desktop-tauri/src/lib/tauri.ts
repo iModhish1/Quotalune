@@ -65,6 +65,23 @@ export function updateSettings(
   return invoke<SettingsSnapshot>("update_settings", { patch });
 }
 
+export function setProviderDetailWindow(provider: string, selection: string): Promise<void> {
+  return invoke<void>("set_provider_detail_window", {provider, selection});
+}
+
+/** Null restores the inherited selection; [] explicitly hides all limit details. */
+export function setProviderLimitOrder(provider: string, order: string[] | null): Promise<void> {
+  return invoke<void>("set_provider_limit_order", { provider, order });
+}
+
+export function setProviderLimitPresentation(provider: string, presentation: import('../design-system/limitPresentation').LimitPresentation | null): Promise<void> {
+  return invoke<void>('set_provider_limit_presentation', {provider,presentation});
+}
+
+export function setGlobalLimitPresentation(presentation: import('../design-system/limitPresentation').LimitPresentation): Promise<void> {
+  return invoke<void>('set_global_limit_presentation', {presentation});
+}
+
 export function setUsageSettings(
   globalMode: "used" | "remaining" | "hybrid",
   providerOverrides: Record<string, "used" | "remaining" | "hybrid">,

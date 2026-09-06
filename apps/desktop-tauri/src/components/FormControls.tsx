@@ -52,16 +52,14 @@ export function Select({
   minWidth?: number;
 }) {
   const selectedLabel = options.find((option) => option.value === value)?.label ?? value;
-  const calculatedWidth = Math.min(
-    128,
-    Math.max(48, Math.ceil((selectedLabel ?? "").length * 6.8) + 18),
-  );
+  const calculatedWidth = Math.max(160, ...options.map(option => Math.ceil(option.label.length * 8.5) + 48));
   const width = Math.max(calculatedWidth, minWidth ?? 0);
 
   return (
     <select
       className="select"
-      style={{ width }}
+      style={{ width, maxWidth: "100%" }}
+      title={selectedLabel}
       value={value}
       disabled={disabled}
       aria-label={ariaLabel}

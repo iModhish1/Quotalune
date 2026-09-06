@@ -5,7 +5,7 @@ import type { SettingsTabId } from "../../types/bridge";
 import { isSettingsTab, TAB_META } from "./settingsTabs";
 
 describe("isSettingsTab", () => {
-  it.each(["general", "providers", "notifications", "menuBar", "menu", "usageSpend", "advanced", "about"])(
+  it.each(["general", "providers", "providerDisplay", "notifications", "menuBar", "menu", "usageSpend", "advanced", "about"])(
     "returns true for a known tab id (%s)",
     (id) => {
       expect(isSettingsTab(id)).toBe(true);
@@ -38,12 +38,14 @@ describe("TAB_META", () => {
     const expected: SettingsTabId[] = [
       "general",
       "providers",
+      "providerDisplay",
       "notifications",
       "menuBar",
       "menu",
       "usageSpend",
       "surfaces",
-      "themes",      "advanced",
+      "themes",
+      "advanced",
       "about",
     ];
     expect(declared).toEqual(new Set(expected));

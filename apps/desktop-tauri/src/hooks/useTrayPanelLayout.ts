@@ -74,6 +74,7 @@ export function useTrayPanelLayout({
   const [layoutReady, setLayoutReady] = useState(false);
   const [layoutRevision, setLayoutRevision] = useState(0);
   const layoutReadyRef = useRef(false);
+  const didMountLayoutKeyRef = useRef(false);
   const resizeRunRef = useRef(0);
   const layoutTimerRef = useRef<number | undefined>(undefined);
   // The window's actual PHYSICAL size after the last resize WE performed. The
@@ -182,6 +183,13 @@ export function useTrayPanelLayout({
   }, []);
 
   useEffect(() => {
+    // The measurement effect already runs once on mount. Scheduling another
+    // revision here creates two competing initial passes; under a busy test or
+    // WebView the second one can reveal the tray hundreds of milliseconds later.
+    if (!didMountLayoutKeyRef.current) {
+      didMountLayoutKeyRef.current = true;
+      return;
+    }
     requestLayout();
   }, [layoutKey, requestLayout]);
 

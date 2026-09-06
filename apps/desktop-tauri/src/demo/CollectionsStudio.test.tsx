@@ -1,6 +1,21 @@
-import {fireEvent,render,screen} from "@testing-library/react";
-import {expect,it} from "vitest";
+import {fireEvent,render,screen,waitFor} from "@testing-library/react";
+import {expect,it,vi} from "vitest";
 import CollectionsStudio from "./CollectionsStudio";
+import {SURFACE_DEMO_PROVIDERS} from "../lib/surfaceDemo";
+it("keeps grouped items safe when a live provider snapshot disappears",()=>{
+  const {rerender}=render(<CollectionsStudio providers={SURFACE_DEMO_PROVIDERS}/>);
+  rerender(<CollectionsStudio providers={SURFACE_DEMO_PROVIDERS.slice(1)}/>);
+  expect(screen.getByRole("button",{name:"claude quota details"})).toBeInTheDocument();
+});
+it("retains the draft on failed persistence and reports success only after saving",async()=>{
+  const save=vi.fn().mockRejectedValueOnce(new Error("revision conflict")).mockImplementationOnce(async layout=>({...layout,revision:1}));
+  render(<CollectionsStudio onSave={save}/>);
+  fireEvent.click(screen.getByRole("button",{name:"Save collection layout"}));
+  expect(await screen.findByRole("alert")).toHaveTextContent("revision conflict");
+  expect(screen.queryByText("Layout saved — native collection rendering pending")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button",{name:"Save collection layout"}));
+  await waitFor(()=>expect(screen.getByText("Layout saved — native collection rendering pending")).toBeInTheDocument());
+});
 it("previews views and field changes, and clicks reveal the selected provider",()=>{
   render(<CollectionsStudio/>);
   fireEvent.click(screen.getByRole("button",{name:"Claude quota details"}));

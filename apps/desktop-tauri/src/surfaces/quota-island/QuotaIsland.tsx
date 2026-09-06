@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-import { ArcGaugeV3, QaProviderIcon, formatPercentage } from "../../design-system";
+import { ArcGaugeV3, QaProviderIcon, formatPercentage, providerGlyphSize } from "../../design-system";
 import {
   CANONICAL_THEME,
   catalogBySlug,
@@ -93,7 +93,7 @@ export default function QuotaIsland({
               colorOverride={focused ? providerColor(theme, focused.iconId) : theme.accent}
               ariaLabel="Current quota arc"
             />
-            {focused && <QaProviderIcon providerId={focused.iconId} size={12} />}
+            {focused && <QaProviderIcon providerId={focused.iconId} size={providerGlyphSize(30)} />}
           </span>
           <span className="quota-island__trigger-value">{formatPercentage(focused?.primaryValue)}</span>
           <span className="quota-island__chevron" aria-hidden="true">⌄</span>
@@ -151,7 +151,7 @@ export default function QuotaIsland({
                 colorOverride={focused ? providerColor(theme, focused.iconId) : theme.accent}
                 ariaLabel="Focused quota arc"
               />
-              {focused && <QaProviderIcon providerId={focused.iconId} size={25} />}
+              {focused && <QaProviderIcon providerId={focused.iconId} size={providerGlyphSize(66)} />}
             </span>
             <div>
               <strong>{formatPercentage(focused?.primaryValue)}</strong>

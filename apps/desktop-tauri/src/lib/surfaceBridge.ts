@@ -4,6 +4,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 export interface SurfaceSettingsPatch {
+  interactions?: import("../design-system/surfaceInteractions").SurfaceInteractions;
   edgeArcEnabled?: boolean;
   edgeArcSide?: "left" | "right";
   edgeArcOpacity?: number;
@@ -82,6 +83,7 @@ export function updateSurfaceSettings(patch: SurfaceSettingsPatch): Promise<void
 }
 
 export interface SurfaceSettings {
+  interactions?: import("../design-system/surfaceInteractions").SurfaceInteractions;
   edgeArcEnabled: boolean;
   edgeArcSide: "left" | "right";
   edgeArcOpacity: number;

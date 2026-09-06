@@ -17,7 +17,8 @@ describe("characterizeSurfaceNodes", () => {
       return JSON.stringify(first.map((node) => [Math.round(node.x), Math.round(node.y), node.scale]));
     });
 
-    expect(signatures).toHaveLength(1);
+    expect(signatures).toHaveLength(THEME_CATALOG.length);
+    expect(new Set(signatures).size).toBe(1);
     expect(THEME_CATALOG[0]).toBe(CANONICAL_THEME);
   });
 

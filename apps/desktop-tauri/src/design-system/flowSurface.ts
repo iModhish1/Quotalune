@@ -5,6 +5,7 @@
  * it never changes quota semantics or creates a second native window.
  */
 import { isNotchForm, notchLayout, type NotchForm } from "../surfaces/notch/notchGeometry";
+import {normalizeSurfaceInteractions,type SurfaceInteractions} from "./surfaceInteractions";
 export type FlowSurfaceForm = "flowline" | "horizon" | "petal" | "orbital" | "lens" | "reel" | NotchForm;
 export type FlowSurfaceAnchor =
   | "left"
@@ -20,6 +21,7 @@ export type FlowSurfaceState = "hidden" | "peek" | "compact" | "hover" | "expand
 export type DetailDirection = "left" | "right" | "up" | "down" | "up-right" | "up-left";
 
 export interface FlowSurfaceSettings {
+  interactions?: SurfaceInteractions;
   form: FlowSurfaceForm;
   anchor: FlowSurfaceAnchor;
   scale: number;
@@ -39,19 +41,35 @@ export interface FlowSurfaceFormDefinition {
   anchors: readonly FlowSurfaceAnchor[];
 }
 
+export const ALL_FLOW_SURFACE_ANCHORS = [
+  "right","left","top","bottom","top-left","top-right","bottom-left","bottom-right","free",
+] as const satisfies readonly FlowSurfaceAnchor[];
+
 export const FLOW_SURFACE_FORM_CATALOG = [
+  {id:'crescent',name:'Crescent Rail',description:'Narrow curved rail with independent provider wells',defaultAnchor:'right',
+    anchors:['right','left','top','bottom','top-left','top-right','bottom-left','bottom-right','free']},
+  {
+    id: "pebble", name: "Pebble", description: "Soft three-lobe provider cluster",
+    defaultAnchor: "right",
+    anchors: ["right","left","top","bottom","top-left","top-right","bottom-left","bottom-right","free"],
+  },
+  {
+    id: "fan", name: "Fan", description: "Soft scalloped provider fan",
+    defaultAnchor: "bottom",
+    anchors: ["right","left","top","bottom","top-left","top-right","bottom-left","bottom-right","free"],
+  },
   ...(["seam", "ribbon", "cradle", "deck", "satellite"] as const).map((id,index) => ({
     id, name: ["Seam", "Ribbon", "Cradle", "Deck", "Satellite"][index],
     description: ["Sculpted edge notch", "Three-instrument ribbon", "Corner-hugging curve", "Stacked provider switcher", "Compact curved orbit"][index],
     defaultAnchor: (id === "ribbon" ? "top" : id === "cradle" ? "bottom-right" : "right") as FlowSurfaceAnchor,
-    anchors: (id === "seam" || id === "satellite" ? ["right","left","free"] : id === "ribbon" ? ["top","bottom","free"] : id === "cradle" ? ["top-left","top-right","bottom-left","bottom-right","free"] : ["right","left","top","bottom","top-left","top-right","bottom-left","bottom-right","free"]) as FlowSurfaceAnchor[],
+    anchors: ["right","left","top","bottom","top-left","top-right","bottom-left","bottom-right","free"] as FlowSurfaceAnchor[],
   })),
   {
     id: "flowline",
     name: "Flowline",
     description: "Quiet vertical rail",
     defaultAnchor: "right",
-    anchors: ["right", "left", "free"],
+    anchors: ALL_FLOW_SURFACE_ANCHORS,
   },
   {
     id: "reel",
@@ -65,7 +83,7 @@ export const FLOW_SURFACE_FORM_CATALOG = [
     name: "Horizon",
     description: "Low-profile edge ribbon",
     defaultAnchor: "top",
-    anchors: ["top", "bottom", "free"],
+    anchors: ALL_FLOW_SURFACE_ANCHORS,
   },
   {
     id: "petal",
@@ -216,6 +234,7 @@ export function normalizeFlowSurfaceSettings(value: unknown): FlowSurfaceSetting
   }
   return {
     form: value.form,
+    interactions: normalizeSurfaceInteractions(isRecord(value.interactions)?value.interactions:undefined),
     anchor: value.anchor,
     scale: clamp(Math.round(finiteNumber(value.scale, DEFAULT_FLOW_SURFACE_SETTINGS.scale)), 75, 125),
     autoHide: typeof value.autoHide === "boolean" ? value.autoHide : DEFAULT_FLOW_SURFACE_SETTINGS.autoHide,
@@ -233,21 +252,25 @@ export function flowSurfaceEnvelope(
   state: FlowSurfaceState,
   scale: number,
   providerCount = 3,
+  anchor: FlowSurfaceAnchor = flowSurfaceDefaultAnchor(form),
 ): FlowSurfaceEnvelope {
   if (isNotchForm(form)) {
-    const size=notchLayout(form,state,flowSurfaceDefaultAnchor(form),providerCount);
+    const size=notchLayout(form,state,anchor,providerCount);
     const factor=state === "hidden" || state === "peek" ? 1 : clamp(scale,75,125)/100;
     return {width:Math.round(size.width*factor),height:Math.round(size.height*factor)};
   }
+  const rotateFlowline=form==='flowline'&&(anchor==='top'||anchor==='bottom');
+  const rotateHorizon=form==='horizon'&&(anchor==='left'||anchor==='right');
+  const orient=(size:FlowSurfaceEnvelope):FlowSurfaceEnvelope=>rotateFlowline||rotateHorizon?{width:size.height,height:size.width}:size;
   if (state === "hidden") {
-    if (form === "horizon") return { width: 96, height: 14 };
+    if (form === "horizon") return orient({ width: 96, height: 14 });
     if (form === "petal" || form === "orbital" || form === "lens") return { width: 28, height: 28 };
-    return { width: 28, height: 58 };
+    return orient({ width: 28, height: 58 });
   }
   if (state === "peek") {
-    if (form === "horizon") return { width: 120, height: 16 };
+    if (form === "horizon") return orient({ width: 120, height: 16 });
     if (form === "petal" || form === "orbital" || form === "lens") return { width: 32, height: 32 };
-    return { width: 18, height: 72 };
+    return orient({ width: 18, height: 72 });
   }
   const compact = state !== "expanded" && state !== "pinned";
   const providers = Math.max(0, Math.min(3, Math.floor(providerCount)));
@@ -265,16 +288,20 @@ export function flowSurfaceEnvelope(
       ? { width: 56, height: 76 + providers * 50 }
       : BASE_ENVELOPES[form][compact ? "compact" : "expanded"];
   const factor = clamp(scale, 75, 125) / 100;
-  return {
+  const envelope={
     width: Math.round(base.width * factor),
     height: Math.round(base.height * factor),
   };
+  return rotateHorizon || rotateFlowline && compact ? {width:envelope.height,height:envelope.width}:envelope;
 }
 
 /** Open the temporary detail bubble into workspace, never through an edge. */
 export function resolveDetailDirection(form: FlowSurfaceForm, anchor: FlowSurfaceAnchor): DetailDirection {
-  if (form === "flowline") return anchor === "left" ? "right" : "left";
-  if (form === "horizon") return anchor === "bottom" ? "up" : "down";
+  if (form === "flowline" || form === "horizon") {
+    if (anchor.includes("left")) return "right";
+    if (anchor.includes("right")) return "left";
+    return anchor === "bottom" ? "up" : "down";
+  }
   if (form === "orbital") {
     if (anchor === "bottom-left") return "up-right";
     if (anchor === "top-right") return "left";

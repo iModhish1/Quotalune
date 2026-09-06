@@ -15,6 +15,7 @@ import type {
   LocaleStrings,
 } from "../types/bridge";
 import { ALL_LOCALE_KEYS, type LocaleKey } from "./keys";
+import { applyLocaleDocumentMetadata } from "./localeDirection";
 
 interface LocaleContextValue {
   /** Translate a key using the active language. Returns the key name as a
@@ -28,6 +29,21 @@ interface LocaleContextValue {
 }
 
 const LocaleContext = createContext<LocaleContextValue | null>(null);
+
+function readablePreviewKey(key:LocaleKey):string{
+  return key.replace(/([a-z0-9])([A-Z])/g,"$1 $2");
+}
+
+/** Browser-only visual proofs do not have a Tauri locale bridge. */
+export function PreviewLocaleProvider({children}:{children:ReactNode}){
+  const value=useMemo<LocaleContextValue>(()=>({
+    t:(key)=>readablePreviewKey(key),
+    language:"english",
+    setLanguage:async()=>{},
+    reload:async()=>{},
+  }),[]);
+  return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
+}
 
 function validateBundle(bundle: LocaleStrings): void {
   if (!import.meta.env.DEV) return;
@@ -48,6 +64,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   const load = useCallback(async (language?: Language | null) => {
     const next = await getLocaleStrings(language ?? null);
     validateBundle(next);
+    applyLocaleDocumentMetadata(next.language);
     setBundle(next);
   }, []);
 
@@ -134,4 +151,9 @@ export function useLocale(): LocaleContextValue {
     throw new Error("useLocale() must be used inside <LocaleProvider />");
   }
   return ctx;
+}
+
+/** Low-level visual primitives can render in isolated proof/tests without a provider. */
+export function useOptionalLocale(): LocaleContextValue | null {
+  return useContext(LocaleContext);
 }

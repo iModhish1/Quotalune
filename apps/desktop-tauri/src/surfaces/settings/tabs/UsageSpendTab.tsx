@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useLocale } from "../../../hooks/useLocale";
@@ -11,6 +11,7 @@ import {
 import type { CostSummaryDisplayStyle, SettingsSnapshot, SpendContract, UsageSpendSummary } from "../../../types/bridge";
 import type { LocaleKey } from "../../../i18n/keys";
 import type { TabProps } from "../settingsTabs";
+import "./UsageSpendTab.css";
 
 const currencyFormatters = new Map<string, Intl.NumberFormat>();
 
@@ -258,13 +259,19 @@ export default function UsageSpendTab(_props: TabProps) {
   }, [summary, t]);
 
   return (
-    <section className="settings-section">
-      <h3 className="settings-section__title settings-section__title--bold">
-        {t("UsageSpendTitle")}
-      </h3>
-      <p className="settings-section__caption">{t("UsageSpendCaption")}</p>
+    <section className="settings-section usage-spend">
+      <header className="usage-spend__header">
+        <div>
+          <span className="usage-spend__eyebrow">Quota intelligence</span>
+          <h3 className="settings-section__title settings-section__title--bold">
+            {t("UsageSpendTitle")}
+          </h3>
+          <p className="settings-section__caption">{t("UsageSpendCaption")}</p>
+        </div>
+        <span className="usage-spend__live"><i aria-hidden="true" />Live local data</span>
+      </header>
 
-      <div className="settings-section__group" style={{ marginBottom: 12, display: "flex", gap: 8 }}>
+      <div className="usage-spend__toolbar" aria-label="Usage and spend actions">
         <button
           type="button"
           className="credential-btn credential-btn--secondary"
@@ -299,7 +306,8 @@ export default function UsageSpendTab(_props: TabProps) {
         </button>
       </div>
 
-      <div className="settings-section__group" style={{ marginBottom: 12, display: "flex", gap: 8 }}>
+      <div className="usage-spend__filters">
+        <div className="usage-spend__periods" role="group" aria-label="History period">
         {([7, 30, 0] as const).map((days) => (
           <button
             key={days}
@@ -311,7 +319,9 @@ export default function UsageSpendTab(_props: TabProps) {
             {days === 0 ? t("UsageSpendAllTime") : `${days}d`}
           </button>
         ))}
-        <label style={{ display: "inline-flex", alignItems: "center", gap: 6, marginLeft: 8 }}>
+        </div>
+        <div className="usage-spend__imports">
+        <label>
           <input
             type="checkbox"
             checked={includeOpenCodex}
@@ -327,7 +337,7 @@ export default function UsageSpendTab(_props: TabProps) {
           {t("UsageSpendOpenCodexImport")}
         </label>
         {includeOpenCodex && (
-          <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <label>
             <input
               type="checkbox"
               checked={hideNativeCodex}
@@ -343,6 +353,7 @@ export default function UsageSpendTab(_props: TabProps) {
             {t("UsageSpendHideNativeCodex")}
           </label>
         )}
+        </div>
       </div>
 
       <CostSummaryStyleControl t={t} />
@@ -351,7 +362,7 @@ export default function UsageSpendTab(_props: TabProps) {
       {shareError && <p className="settings-section__error">{shareError}</p>}
 
       {!error && (
-        <table className="usage-spend-table" ref={tableRef}>
+        <div className="usage-spend__table-frame"><table className="usage-spend-table" ref={tableRef}>
           <thead>
             <tr>
               <th>{t("UsageSpendColProvider")}</th>
@@ -384,7 +395,7 @@ export default function UsageSpendTab(_props: TabProps) {
               </tr>
             )}
           </tbody>
-        </table>
+        </table></div>
       )}
 
       {!error && summary && <SpendContractOverview contract={summary.contract} t={t} />}
@@ -437,8 +448,8 @@ function SpendContractOverview({ contract, t }: { contract: SpendContract; t: (k
   ].filter(Boolean).join(" · ");
 
   return (
-    <div className="settings-section__group" style={{ marginTop: 16 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
+    <section className="usage-spend__insights" aria-label={t("UsageSpendSpend")}>
+      <div className="usage-spend__metric-grid">
         <MetricCard label={t("UsageSpendSpend")} value={total} detail={contract.knownZero ? t("UsageSpendKnownZero") : provenance} />
         <MetricCard label={t("UsageSpendPriceCoverage")} value={coverage} detail={`${contract.priceCoverage.unpriced} ${t("UsageSpendUnpriced")}`} />
         <MetricCard label={t("UsageSpendConversations")} value={contract.conversationCount.toLocaleString()} detail={contract.historyCoverageEstablished ? t("UsageSpendHistoryCovered") : t("UsageSpendPartialHistory")} />
@@ -446,21 +457,21 @@ function SpendContractOverview({ contract, t }: { contract: SpendContract; t: (k
       </div>
       <ActivityHeatmap cells={contract.hourlyActivity} t={t} />
       {contract.imports.map((source) => (
-        <p key={source.sourceId} className="settings-section__caption" style={{ marginTop: 8 }}>
+        <p key={source.sourceId} className="usage-spend__provenance settings-section__caption">
           {source.displayName}: {source.requestCount.toLocaleString()} {t("UsageSpendRequests")} · {source.conversationCount.toLocaleString()} {t("UsageSpendConversations").toLowerCase()}
         </p>
       ))}
-    </div>
+    </section>
   );
 }
 
 function MetricCard({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
-    <div className="provider-detail-section" style={{ padding: "10px 12px" }}>
+    <article className="usage-spend__metric">
       <span className="settings-section__caption">{label}</span>
-      <strong style={{ display: "block", marginTop: 3 }}>{value}</strong>
+      <strong>{value}</strong>
       <span className="settings-section__caption">{detail}</span>
-    </div>
+    </article>
   );
 }
 
@@ -468,11 +479,11 @@ function ActivityHeatmap({ cells, t }: { cells: SpendContract["hourlyActivity"];
   const lookup = new Map(cells.map((cell) => [`${cell.weekday}:${cell.hour}`, cell.conversations]));
   const max = Math.max(1, ...cells.map((cell) => cell.conversations));
   return (
-    <div style={{ marginTop: 14 }}>
-      <h4 style={{ margin: "0 0 8px" }}>{t("UsageSpendHourlyActivity")}</h4>
+    <section className="usage-spend__heatmap">
+      <h4>{t("UsageSpendHourlyActivity")}</h4>
       <div
         aria-label={t("UsageSpendHourlyActivity")}
-        style={{ display: "grid", gridTemplateColumns: "repeat(24, minmax(7px, 1fr))", gap: 2 }}
+        className="usage-spend__heatmap-grid"
       >
         {Array.from({ length: 7 * 24 }, (_, index) => {
           const weekday = Math.floor(index / 24);
@@ -483,22 +494,22 @@ function ActivityHeatmap({ cells, t }: { cells: SpendContract["hourlyActivity"];
             <span
               key={`${weekday}:${hour}`}
               title={`Day ${weekday + 1}, ${hour}:00 · ${value} conversations`}
-              style={{ aspectRatio: "1", borderRadius: 2, background: `rgb(90 160 255 / ${alpha})` }}
+              style={{ "--activity": alpha } as CSSProperties}
             />
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }
 
 function ContractModelsPanel({ contract, showAll, onToggleAll, t }: { contract: SpendContract; showAll: boolean; onToggleAll: () => void; t: (key: LocaleKey) => string }) {
   const visible = showAll ? contract.models : contract.models.slice(0, 8);
   return (
-    <div className="settings-section__group" style={{ marginTop: 20 }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+    <section className="usage-spend__panel">
+      <header className="usage-spend__panel-header">
         <div>
-          <h4 style={{ margin: 0 }}>{t("UsageSpendModels")}</h4>
+          <h4>{t("UsageSpendModels")}</h4>
           <p className="settings-section__caption">{t("UsageSpendAllTimeHistory")} {contract.historyDays} days of local history.</p>
         </div>
         {contract.models.length > 8 && (
@@ -506,25 +517,25 @@ function ContractModelsPanel({ contract, showAll, onToggleAll, t }: { contract: 
             {showAll ? t("UsageSpendShowLess") : t("UsageSpendShowAll") + " (" + contract.models.length + ")"}
           </button>
         )}
-      </div>
+      </header>
       {visible.length === 0 ? (
         <p className="settings-section__caption">{t("UsageSpendNoModels")}</p>
       ) : (
-        <div style={{ display: "grid", gap: 6, marginTop: 10 }}>
+        <div className="usage-spend__ranked-list">
           {visible.map((model) => (
-            <div key={model.model} className="provider-detail-section" style={{ padding: "10px 12px", display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 12 }}>
+            <article key={model.model} className="usage-spend__ranked-item">
               <span>
                 <strong>{model.model}</strong>
-                <span className="settings-section__caption" style={{ display: "block" }}>
+                <span className="settings-section__caption">
                   {model.totalTokens.toLocaleString()} {t("UsageSpendTokens")}{model.customPricing ? " · " + t("UsageSpendCustomPricing") : ""}
                 </span>
               </span>
               <span>{model.costUsd == null ? t("UsageSpendUnpriced") : formatUsd(model.costUsd, "USD")}</span>
-            </div>
+            </article>
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -547,11 +558,11 @@ function ProjectsPanel({
   const partial = contract.projectSourceStatus != null && contract.projectSourceStatus !== "complete";
 
   return (
-    <div className="settings-section__group" style={{ marginTop: 20 }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+    <section className="usage-spend__panel">
+      <header className="usage-spend__panel-header">
         <div>
-          <h4 style={{ margin: 0 }}>{t("UsageSpendProjects")}</h4>
-          <p className="settings-section__caption" style={{ marginTop: 4 }}>
+          <h4>{t("UsageSpendProjects")}</h4>
+          <p className="settings-section__caption">
             Ranked Codex local project spend for the last {contract.historyDays} days
             {partial ? ` · ${t("UsageSpendPartialHistory")}` : ""}.
           </p>
@@ -561,38 +572,26 @@ function ProjectsPanel({
             {showAll ? t("UsageSpendShowLess") : `${t("UsageSpendShowAll")} (${contract.projects.length})`}
           </button>
         )}
-      </div>
+      </header>
 
       {projects.length === 0 ? (
         <p className="settings-section__caption">{t("UsageSpendNoProjects")}</p>
       ) : (
-        <div style={{ display: "grid", gap: 6, marginTop: 10 }}>
+        <div className="usage-spend__ranked-list">
           {projects.map((project) => {
             const isExpanded = expanded.has(project.id);
             const partialCost = project.costEstimate.unknownTokens > 0;
             return (
-              <div key={project.id} className="provider-detail-section" style={{ padding: "10px 12px" }}>
+              <article key={project.id} className="usage-spend__project">
                 <button
                   type="button"
                   onClick={() => onToggleProject(project.id)}
                   aria-expanded={isExpanded}
-                  style={{
-                    width: "100%",
-                    display: "grid",
-                    gridTemplateColumns: "minmax(0, 1fr) auto auto",
-                    gap: 12,
-                    alignItems: "center",
-                    border: 0,
-                    padding: 0,
-                    background: "transparent",
-                    color: "inherit",
-                    textAlign: "left",
-                    cursor: "pointer",
-                  }}
+                  className="usage-spend__project-button"
                 >
-                  <span style={{ minWidth: 0 }}>
+                  <span className="usage-spend__project-copy">
                     <strong>{project.displayName}</strong>
-                    <span className="settings-section__caption" style={{ display: "block" }}>
+                    <span className="settings-section__caption">
                       {project.sessionCount} {t("UsageSpendConversations")}
                       {project.topModel ? ` · ${project.topModel}` : ""}
                     </span>
@@ -602,15 +601,12 @@ function ProjectsPanel({
                 </button>
 
                 {isExpanded && (
-                  <div style={{ display: "grid", gap: 5, marginTop: 9, paddingTop: 8, borderTop: "1px solid var(--border-subtle)" }}>
+                  <div className="usage-spend__conversations">
                     {contract.conversations
                       .filter((session) => session.projectId === project.id)
                       .map((session) => (
-                        <div
-                          key={session.id}
-                          style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 10 }}
-                        >
-                          <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <div key={session.id}>
+                          <span>
                             {session.displayTitle}
                           </span>
                           <span>
@@ -621,12 +617,12 @@ function ProjectsPanel({
                       ))}
                   </div>
                 )}
-              </div>
+              </article>
             );
           })}
         </div>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -657,7 +653,7 @@ function CostSummaryStyleControl({ t }: { t: (key: LocaleKey) => string }) {
   ];
 
   return (
-    <div className="settings-section__group" style={{ marginBottom: 16 }}>
+    <div className="usage-spend__summary-style">
       <label className="settings-section__label" htmlFor="cost-summary-style">
         {t("CostSummaryDisplayStyle")}
       </label>

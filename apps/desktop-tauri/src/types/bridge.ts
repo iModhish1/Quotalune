@@ -3,6 +3,7 @@ export type VisibleSurfaceMode = Exclude<SurfaceMode, "hidden">;
 export type SettingsTabId =
   | "general"
   | "providers"
+  | "providerDisplay"
   | "notifications"
   | "menuBar"
   | "menu"
@@ -25,7 +26,10 @@ export type NotificationSoundEvent =
   | "exhausted"
   | "statusIssue"
   | "sessionDepleted"
-  | "sessionRestored";
+  | "sessionRestored"
+  | "expectedReset"
+  | "unexpectedReset"
+  | "bankedResetCredit";
 
 export interface NotificationSoundPaths {
   predictiveWarning: string | null;
@@ -35,6 +39,27 @@ export interface NotificationSoundPaths {
   statusIssue: string | null;
   sessionDepleted: string | null;
   sessionRestored: string | null;
+  expectedReset: string | null;
+  unexpectedReset: string | null;
+  bankedResetCredit: string | null;
+}
+
+export interface NotificationEventPreferences {
+  highUsage: boolean;
+  criticalUsage: boolean;
+  exhausted: boolean;
+  statusIssue: boolean;
+  sessionDepleted: boolean;
+  sessionRestored: boolean;
+  expectedReset: boolean;
+  unexpectedReset: boolean;
+  bankedResetCredit: boolean;
+}
+
+export interface NotificationQuietHours {
+  enabled: boolean;
+  startMinute: number;
+  endMinute: number;
 }
 
 export type MetricPreference =
@@ -56,7 +81,8 @@ export type Language =
   | "korean"
   | "spanish"
   | "russian"
-  | "turkish";
+  | "turkish"
+  | "arabic";
 
 /** Language catalog entry from the Rust backend. */
 export type LanguageOption = {
@@ -182,11 +208,14 @@ export interface SettingsSnapshot {
   startAtLogin: boolean;
   startMinimized: boolean;
   showNotifications: boolean;
+  notificationEvents?: NotificationEventPreferences;
+  notificationQuietHours?: NotificationQuietHours;
   soundEnabled: boolean;
   notificationSoundTheme: NotificationSoundTheme;
   notificationSoundPaths: NotificationSoundPaths;
   highUsageThreshold: number;
   criticalUsageThreshold: number;
+  usageStepNotificationPercent?: number;
   providerUsageThresholds?: Record<string, UsageThresholdOverride>;
   predictivePaceWarningEnabled: boolean;
   showPace?: boolean;
@@ -207,6 +236,10 @@ export interface SettingsSnapshot {
   surfaceCatalogThemes?: Partial<Record<"taskbar" | "top" | "edge" | "hud" | "quick" | "dashboard", string>>;
   usageDisplayMode?: string | null;
   providerUsageOverrides?: Record<string, string>;
+  providerDetailWindows?: Record<string, string>;
+  providerLimitOrder?: Record<string, string[]>;
+  providerLimitPresentation?: Record<string, import('../design-system/limitPresentation').LimitPresentation>;
+  globalLimitPresentation?: import('../design-system/limitPresentation').LimitPresentation;
   updateChannel: UpdateChannel;
   autoDownloadUpdates: boolean;
   installUpdatesOnQuit: boolean;
@@ -224,6 +257,8 @@ export interface SettingsSnapshot {
   httpProxyPassword?: string;
   uiLanguage: Language;
   theme: ThemePreference;
+  logoVariant?: import('../design-system/logoAppearance').LogoVariant;
+  logoScalePercent?: number;
   /** 100..=250 — clamped server-side. */
   windowScalePercent: number;
   /** 100..=200 — clamped server-side. */
@@ -285,11 +320,14 @@ export interface SettingsUpdate {
   startAtLogin?: boolean;
   startMinimized?: boolean;
   showNotifications?: boolean;
+  notificationEvents?: NotificationEventPreferences;
+  notificationQuietHours?: NotificationQuietHours;
   soundEnabled?: boolean;
   notificationSoundTheme?: NotificationSoundTheme;
   notificationSoundPaths?: NotificationSoundPaths;
   highUsageThreshold?: number;
   criticalUsageThreshold?: number;
+  usageStepNotificationPercent?: number;
   providerUsageThresholds?: Record<string, UsageThresholdOverride>;
   predictivePaceWarningEnabled?: boolean;
   showPace?: boolean;
@@ -318,6 +356,8 @@ export interface SettingsUpdate {
   httpProxyPassword?: string;
   uiLanguage?: Language;
   theme?: ThemePreference;
+  logoVariant?: import('../design-system/logoAppearance').LogoVariant;
+  logoScalePercent?: number;
   windowScalePercent?: number;
   trayScalePercent?: number;
   powertoysStatusPipeEnabled?: boolean;

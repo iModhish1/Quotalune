@@ -46,14 +46,15 @@ export function useSettings(initial: SettingsSnapshot): UseSettingsReturn {
   // snapshot so this surface (e.g. the PopOut window scale) re-renders live.
   useEffect(() => {
     let active = true;
-    let unlisten: (() => void) | undefined;
+    const unlisteners: (() => void)[] = [];
     // `Promise.resolve` tolerates test mocks that return a bare unlisten fn (or
     // undefined) instead of a promise; the `active` flag handles unmounting
     // before the listener finishes registering.
+    for (const eventName of ["settings-changed", "codexbar:settings-updated"]) {
     Promise.resolve(
-      listen("settings-changed", () => {
+      listen(eventName, () => {
         getSettingsSnapshot()
-          .then((fresh) => setSettings(fresh))
+          .then((fresh) => { if(active)setSettings(fresh); })
           .catch(() => {
             // Keep the current copy if the refresh fails.
           });
@@ -61,15 +62,16 @@ export function useSettings(initial: SettingsSnapshot): UseSettingsReturn {
     )
       .then((fn) => {
         if (active) {
-          unlisten = fn;
+          if(fn)unlisteners.push(fn);
         } else {
           fn?.();
         }
       })
       .catch(() => {});
+    }
     return () => {
       active = false;
-      unlisten?.();
+      unlisteners.forEach(stop=>stop());
     };
   }, []);
 

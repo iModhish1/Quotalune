@@ -214,6 +214,12 @@ export function ProvidersSidebar({
           </button>
         )}
       </div>
+      <div className="providers-sidebar-summary" aria-hidden="true">
+        <span className="providers-sidebar-summary__active">
+          {ordered.filter((provider) => provider.enabled).length}
+        </span>
+        <span>{ordered.length}</span>
+      </div>
       <ul
         ref={sidebarRef}
         className="providers-sidebar"
@@ -290,7 +296,7 @@ export function ProvidersSidebar({
                 aria-hidden="true"
                 title={t("ProviderSidebarReorderHint")}
               >
-                ⋮⋮
+                ⠇
               </span>
               <span className="providers-sidebar__reorder-controls">
                 <button

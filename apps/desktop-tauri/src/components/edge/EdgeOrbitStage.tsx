@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-import { ArcGaugeV3, QaProviderIcon, formatPercentage } from "../../design-system";
+import { ArcGaugeV3, QaProviderIcon, formatPercentage, providerGlyphSize } from "../../design-system";
 import {
   catalogBySlug,
   providerColor,
@@ -182,7 +182,7 @@ export default function EdgeOrbitStage({
                 ariaLabel={`${provider.name} ${provider.primaryLabel} arc`}
               />
               <span className="qa-edge-orbit__icon">
-                <QaProviderIcon providerId={provider.iconId} size={Math.round(nodeSize * 0.31)} />
+                <QaProviderIcon providerId={provider.iconId} size={providerGlyphSize(nodeSize)} />
               </span>
             </span>
             <span className="qa-edge-orbit__compact-value">{formatPercentage(provider.primaryValue)}</span>

@@ -1,0 +1,33 @@
+/* One master silhouette, several accessible finishes. The mask keeps the exact
+   About geometry while the finish can remain legible on very different themes. */
+.quotaarc-mark {
+  display:block;
+  flex-shrink:0;
+  max-width:100%;
+  max-height:100%;
+  pointer-events:none;
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  border-radius:24%;
+  filter:drop-shadow(0 0 1px rgba(255,255,255,.9)) drop-shadow(0 2px 3px rgba(0,0,0,.45));
+}
+.quotaarc-mark>img{display:block;width:100%;height:100%;pointer-events:none}
+.quotaarc-mark>.quotaarc-mark__glyph{display:none}
+.quotaarc-mark:not([data-logo-variant="silver"])::after{content:"";position:absolute;inset:0;z-index:1;border-radius:inherit;mix-blend-mode:color;opacity:.86}
+.quotaarc-mark[data-logo-variant="arctic"]::after{background:linear-gradient(145deg,#dffbff,#36c8ff 46%,#4f6fff 78%,#e8fbff)}
+.quotaarc-mark[data-logo-variant="aurora"]::after{background:conic-gradient(from 205deg,#6fffd1,#39a8ff,#ac73ff,#ff82b7,#6fffd1)}
+.quotaarc-mark[data-logo-variant="ember"]::after{background:linear-gradient(145deg,#fff1b8,#ffac38 38%,#ff5236 72%,#ffd16a)}
+.quotaarc-mark[data-logo-variant="violet"]::after{background:linear-gradient(145deg,#f7ecff,#c58cff 34%,#714dff 67%,#55d9ff)}
+
+/* Small reveal controls need a clearer silver rim. No animated filters or
+   geometry travel: native hit areas stay unchanged. */
+:is(.notch-reveal,.reel-reveal,.flow-surface__reveal) .quotaarc-mark {
+  box-sizing:border-box;
+  width:24px;
+  height:24px;
+  border:1px solid #d9dfe8;
+  border-radius:26%;
+  box-shadow:0 0 0 1px #66717e;
+}
+.notch-reveal .quotaarc-mark {width:21px;height:21px}

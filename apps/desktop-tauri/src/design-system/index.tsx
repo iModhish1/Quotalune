@@ -125,3 +125,5 @@ export {
   arcFraction,
   formatTokenCount,
 } from "./percent";
+
+export { providerGlyphSize } from "./providerIconSizing";

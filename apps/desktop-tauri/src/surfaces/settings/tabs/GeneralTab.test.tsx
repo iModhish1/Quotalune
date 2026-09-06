@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LOGO_APPEARANCE_STORAGE_KEY } from "../../../design-system/logoAppearance";
 
 vi.mock("../../../hooks/useLocale", () => ({
   useLocale: () => ({ t: (key: string) => key }),
@@ -31,6 +32,17 @@ const settings: SettingsSnapshot = {
   startAtLogin: false,
   startMinimized: false,
   showNotifications: true,
+  notificationEvents: {
+    highUsage: true,
+    criticalUsage: true,
+    exhausted: true,
+    statusIssue: true,
+    sessionDepleted: true,
+    sessionRestored: true,
+    expectedReset: true,
+    unexpectedReset: true,
+    bankedResetCredit: true,
+  },
   soundEnabled: true,
   notificationSoundTheme: "windows",
   notificationSoundPaths: {
@@ -41,9 +53,13 @@ const settings: SettingsSnapshot = {
     statusIssue: null,
     sessionDepleted: null,
     sessionRestored: null,
+    expectedReset: null,
+    unexpectedReset: null,
+    bankedResetCredit: null,
   },
   highUsageThreshold: 70,
   criticalUsageThreshold: 90,
+  usageStepNotificationPercent: undefined,
   predictivePaceWarningEnabled: false,
   trayIconMode: "single",
   switcherShowsIcons: true,
@@ -87,6 +103,8 @@ const settings: SettingsSnapshot = {
     providerAccentColors: {},
   showResetWhenExhausted: false,
 };
+
+beforeEach(() => localStorage.removeItem(LOGO_APPEARANCE_STORAGE_KEY));
 
 describe("GeneralTab language picker", () => {
   it("renders all supported language options", () => {
@@ -149,6 +167,23 @@ describe("GeneralTab language picker", () => {
     expect(set).toHaveBeenCalledWith({ predictivePaceWarningEnabled: true });
   });
 
+  it("configures quiet hours independently from the notification master switch", () => {
+    const set = vi.fn();
+    render(
+      <GeneralTab
+        mode="notifications"
+        settings={{...settings, notificationQuietHours:{enabled:false,startMinute:1320,endMinute:420}}}
+        set={set}
+        saving={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "NotificationQuietHours" }));
+    expect(set).toHaveBeenCalledWith({
+      notificationQuietHours:{enabled:true,startMinute:1320,endMinute:420},
+    });
+  });
+
   it("updates the low power mode preference", () => {
     const set = vi.fn();
     render(<GeneralTab settings={settings} set={set} saving={false} />);
@@ -168,7 +203,7 @@ describe("GeneralTab language picker", () => {
 
     const select = screen.getByRole("combobox", { name: "NotificationSoundTheme" });
     expect(select.querySelectorAll("option")).toHaveLength(2);
-    expect(select).toHaveStyle({ width: "180px" });
+    expect(parseFloat((select as HTMLElement).style.width)).toBeGreaterThanOrEqual(180);
     fireEvent.change(select, {
       target: { value: "codexBar" },
     });
@@ -176,7 +211,7 @@ describe("GeneralTab language picker", () => {
     expect(set).toHaveBeenCalledWith({ notificationSoundTheme: "codexBar" });
   });
 
-  it("renders and previews all seven notification events", () => {
+  it("renders and previews all ten notification events", () => {
     render(
       <GeneralTab mode="notifications" settings={settings} set={vi.fn()} saving={false} />,
     );
@@ -184,15 +219,15 @@ describe("GeneralTab language picker", () => {
     const previewButtons = screen.getAllByRole("button", {
       name: /NotificationTestSound$/,
     });
-    expect(previewButtons).toHaveLength(7);
+    expect(previewButtons).toHaveLength(10);
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "NotificationSoundEventSessionRestored: NotificationTestSound",
+        name: "NotificationSoundEventExpectedReset: NotificationTestSound",
       }),
     );
     expect(invoke).toHaveBeenCalledWith("play_notification_sound", {
-      event: "sessionRestored",
+      event: "expectedReset",
     });
   });
 
@@ -297,6 +332,73 @@ describe("GeneralTab language picker", () => {
     fireEvent.blur(saved);
     expect(set).toHaveBeenLastCalledWith({ providerUsageThresholds: {} });
   });
+
+  it("toggles each notification category without disabling the others", () => {
+    const set = vi.fn();
+    render(
+      <GeneralTab mode="notifications" settings={settings} set={set} saving={false} />,
+    );
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "NotificationSoundEventStatusIssue" }));
+    expect(set).toHaveBeenCalledWith({
+      notificationEvents: {...settings.notificationEvents, statusIssue: false},
+    });
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "ExpectedResetNotifications" }));
+    expect(set).toHaveBeenLastCalledWith({
+      notificationEvents: {...settings.notificationEvents, expectedReset: false},
+    });
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "BankedResetCreditNotifications" }));
+    expect(set).toHaveBeenLastCalledWith({
+      notificationEvents: {...settings.notificationEvents, bankedResetCredit: false},
+    });
+  });
+
+  it("enables an arbitrary usage-step notification interval independently", () => {
+    const set = vi.fn();
+    render(
+      <GeneralTab mode="notifications" settings={settings} set={set} saving={false} />,
+    );
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "UsageStepNotifications" }));
+    expect(set).toHaveBeenCalledWith({ usageStepNotificationPercent: 10 });
+  });
+
+  it("offers every catalog provider with independent session, five-hour, and weekly rules", () => {
+    render(
+      <GeneralTab
+        mode="notifications"
+        settings={settings}
+        set={vi.fn()}
+        saving={false}
+        providerCatalog={[
+          { id: "codex", displayName: "Codex", cookieDomain: null },
+          { id: "gemini", displayName: "Gemini", cookieDomain: null },
+        ]}
+      />,
+    );
+
+    fireEvent.change(screen.getByRole("combobox", { name: "TabProviders" }), {
+      target: { value: "gemini" },
+    });
+
+    expect(
+      screen.getByRole("spinbutton", {
+        name: "Gemini · ProviderSession HighUsageAlert",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("spinbutton", {
+        name: "Gemini · PanelFiveHours HighUsageAlert",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("spinbutton", {
+        name: "Gemini · ProviderWeekly HighUsageAlert",
+      }),
+    ).toBeInTheDocument();
+  });
 });
 
 
@@ -327,4 +429,18 @@ describe("GeneralTab language picker", () => {
     );
 
     expect(screen.queryByRole("combobox", { name: "ThemeLabel" })).toBeNull();
+  });
+
+  it("offers independent logo finishes and prominence with a live persisted preview", () => {
+    render(<GeneralTab settings={settings} set={vi.fn()} saving={false} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "LogoAurora" }));
+    fireEvent.click(screen.getByRole("button", { name: "LogoBalanced" }));
+
+    expect(JSON.parse(localStorage.getItem(LOGO_APPEARANCE_STORAGE_KEY) ?? "null")).toEqual({
+      variant: "aurora",
+      size: "balanced",
+    });
+    expect(screen.getByRole("button", { name: "LogoAurora" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "LogoBalanced" })).toHaveAttribute("aria-pressed", "true");
   });

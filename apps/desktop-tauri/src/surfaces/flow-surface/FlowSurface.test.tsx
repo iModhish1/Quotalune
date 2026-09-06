@@ -20,6 +20,19 @@ const settings: FlowSurfaceSettings = {
 };
 
 describe("FlowSurface", () => {
+  it.each(["flowline","reel","satellite"] as const)("keeps named usage windows visible in %s details",form=>{
+    const data=[{...providers[0],windows:[{id:"session",label:"5-hour session",primaryValue:73,primaryLabel:"used" as const,arcFraction:.73,reset:"51 min",resetsAt:null},{id:"weekly",label:"Weekly",primaryValue:7,primaryLabel:"used" as const,arcFraction:.07,reset:"4d",resetsAt:null}]}];
+    render(<FlowSurface catalog="tidal-glass" settings={{...settings,form}} state="expanded" providers={data}/>);
+    expect(screen.getByRole("meter",{name:"5-hour session used"})).toHaveAttribute("aria-valuenow","73");
+    expect(screen.getByRole("meter",{name:"Weekly used"})).toHaveAttribute("aria-valuenow","7");
+    expect(screen.getByText("Resets in 4d")).toBeInTheDocument();
+  });
+  it.each(["flowline", "reel", "satellite"] as const)("uses catalog provider energy in %s instead of a hard-coded palette", (form) => {
+    const {container} = render(<FlowSurface catalog="01-obsidian-orbit" settings={{...settings, form}} state="expanded" providers={providers}/>);
+    const strokes = Array.from(container.querySelectorAll("[stroke]")).map(node => node.getAttribute("stroke"));
+    expect(strokes).toContain("#10a37f");
+    expect(strokes).toContain("#e0a884");
+  });
   it("keeps the hidden state to one reachable reveal control", () => {
     render(<FlowSurface catalog="01-obsidian-orbit" settings={settings} state="hidden" providers={providers} />);
 

@@ -4,6 +4,7 @@ import type { LocaleKey } from "../../i18n/keys";
 export const TAB_META: { id: SettingsTabId; labelKey: LocaleKey }[] = [
   { id: "general", labelKey: "TabGeneral" },
   { id: "providers", labelKey: "TabProviders" },
+  { id: "providerDisplay", labelKey: "TabProviderDisplay" },
   { id: "notifications", labelKey: "TabNotifications" },
   { id: "menuBar", labelKey: "TabMenuBar" },
   { id: "menu", labelKey: "TabMenu" },

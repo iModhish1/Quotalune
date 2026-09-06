@@ -68,4 +68,15 @@ describe("useSettings live sync", () => {
     unmount();
     await waitFor(() => expect(unlisten).toHaveBeenCalledTimes(1));
   });
+  it('refreshes on the catalog/profile settings broadcast as well',async()=>{
+    tauriMocks.getSettingsSnapshot.mockResolvedValue(snapshot(100));
+    const initial=snapshot(100);
+    const {result,unmount}=renderHook(()=>useSettings(initial));
+    await waitFor(()=>expect(eventMocks.listeners['codexbar:settings-updated']).toBeTypeOf('function'));
+    tauriMocks.getSettingsSnapshot.mockResolvedValue(snapshot(125));
+    await act(async()=>eventMocks.listeners['codexbar:settings-updated']());
+    expect(result.current.settings.windowScalePercent).toBe(125);
+    unmount();
+    await waitFor(()=>expect(eventMocks.listeners['codexbar:settings-updated']).toBeUndefined());
+  });
 });

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactElement, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import type {
   BootstrapState,
@@ -18,10 +18,12 @@ import ProvidersTab from "./settings/tabs/ProvidersTab";
 import UsageSpendTab from "./settings/tabs/UsageSpendTab";
 import SurfacesTab from "./settings/tabs/SurfacesTab";
 import ThemeGallery from "./settings/tabs/ThemeGallery";
-import UsageDisplaySection from "./settings/tabs/UsageDisplaySection";
-import {normalizeSettingsNavigation,SETTINGS_NAVIGATION_KEY} from "./settings/settingsNavigation";
+import ProviderDisplayTab from "./settings/tabs/ProviderDisplayTab";
+import {horizontalNavigationScrollDelta,normalizeSettingsNavigation,SETTINGS_NAVIGATION_KEY,shouldTransitionIntoSettings} from "./settings/settingsNavigation";
+import NavigationPreference from "./settings/NavigationPreference";
 import "./settings/SettingsStudio.css";
 import SettingsWindowActions from "./settings/SettingsWindowActions";
+import SettingsShellHeader from "./settings/SettingsShellHeader";
 
 // Inline monochrome SVG icons stand in for the upstream macOS SF Symbols
 // (gearshape / square.grid.2x2 / eye / slider.horizontal.3 / info.circle).
@@ -60,6 +62,13 @@ const TabIcons: Record<SettingsTabId, ReactElement> = {
       <circle cx="12" cy="4" r="1.5" />
       <circle cx="8" cy="12" r="1.5" />
       <path d="M5.3 4.8 7.2 10M10.7 4.8 8.8 10M5.5 4h5" />
+    </Svg>
+  ),
+  providerDisplay: (
+    <Svg>
+      <circle cx="5" cy="8" r="2.5" />
+      <path d="M7.5 8h6M10 5.5 13.5 8 10 10.5" />
+      <path d="M3.5 8a1.5 1.5 0 0 0 3 0" />
     </Svg>
   ),
   notifications: (
@@ -117,6 +126,11 @@ const TabIcons: Record<SettingsTabId, ReactElement> = {
   ),
 };
 
+export function resetSettingsPanelScroll(panel: HTMLElement | null): void {
+  if (!panel) return;
+  panel.scrollTop = 0;
+  panel.scrollLeft = 0;
+}
 
 export default function Settings({ state, initialTab: propTab }: { state: BootstrapState; initialTab?: string }) {
   const [navigation,setNavigation]=useState(()=>{try{return normalizeSettingsNavigation(localStorage.getItem(SETTINGS_NAVIGATION_KEY));}catch{return normalizeSettingsNavigation(null);}});
@@ -137,6 +151,7 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
       : null;
   const [prevPropTab, setPrevPropTab] = useState(propTab);
   const [prevShellTab, setPrevShellTab] = useState(shellTab);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   // Adjust local tab during render when external drivers change (no effect sync).
   if (propTab !== prevPropTab) {
@@ -169,31 +184,38 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
     }
   }, [activeTab, navigation]);
 
+  // Every settings page owns its own reading origin. A horizontally scrollable
+  // collection/editor must not leave the next page shifted into empty space.
+  useLayoutEffect(() => {
+    resetSettingsPanelScroll(panelRef.current);
+  }, [activeTab, navigation]);
+
   const set = (patch: SettingsUpdate) => void update(patch);
   const handleTabClick = useCallback((tab: SettingsTabId) => {
     setActiveTab(tab);
-    // Only transition the main window if we're NOT in the detached settings window
-    if (getCurrentWebviewWindow().label !== "settings") {
+    // Tab changes are local while Settings already owns the surface. Re-running
+    // a native transition here can disturb Windows maximize/Snap geometry.
+    if (shouldTransitionIntoSettings(getCurrentWebviewWindow().label,shellTarget!==null)) {
       void setSurfaceMode("settings", { kind: "settings", tab });
     }
-  }, []);
+  }, [shellTarget]);
 
   return (
     <div
       className={`settings settings-studio${activeTab === "providers" ? " settings--providers-active" : ""}`}
       data-navigation={navigation}
     >
-      <div className="settings-studio-toolbar">
-        <div><strong>QuotaArc</strong><span>WORKSPACE / {t(TAB_META.find(tab=>tab.id===activeTab)!.labelKey)}</span></div>
-        <label>Navigation <select aria-label="Settings navigation placement" value={navigation} onChange={event=>{
-          const next=normalizeSettingsNavigation(event.target.value);setNavigation(next);
-          try{localStorage.setItem(SETTINGS_NAVIGATION_KEY,next);setNavigationError(false);}catch{setNavigationError(true);}
-        }}><option value="side">Sidebar</option><option value="top">Top</option><option value="bottom">Bottom</option></select></label>
-        {navigationError && <span role="alert">Layout changed for this session; preference could not be saved.</span>}
+      <SettingsShellHeader section={t(TAB_META.find(tab=>tab.id===activeTab)!.labelKey)}>
         <SettingsWindowActions />
-      </div>
+      </SettingsShellHeader>
       {/* tab bar */}
-      <nav className="settings-tabs" role="tablist" aria-label="Settings sections" aria-orientation={navigation==="side"?"vertical":"horizontal"}>
+      <nav className="settings-tabs" role="tablist" aria-label="Settings sections" aria-orientation={navigation==="side"?"vertical":"horizontal"} onWheel={event=>{
+        if(navigation==="side")return;
+        const delta=horizontalNavigationScrollDelta(event.deltaX,event.deltaY);
+        if(delta===0)return;
+        event.currentTarget.scrollLeft+=delta;
+        event.preventDefault();
+      }}>
         {TAB_META.map((tab) => (
           <button
             type="button"
@@ -234,9 +256,12 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
       )}
 
       {/* tab panels */}
-      <div id="settings-active-panel" role="tabpanel" aria-labelledby={`settings-tab-${activeTab}`} tabIndex={0} className={`settings-body${activeTab === "providers" ? " settings-body--providers" : ""}`}>
+      <div ref={panelRef} id="settings-active-panel" role="tabpanel" aria-labelledby={`settings-tab-${activeTab}`} tabIndex={0} data-tab={activeTab} className={`settings-body${activeTab === "providers" ? " settings-body--providers" : ""}`}>
         {activeTab === "general" && (
-          <GeneralTab mode="general" settings={settings} set={set} saving={saving} />
+          <><NavigationPreference value={navigation} error={navigationError} onChange={next=>{
+            setNavigation(next);
+            try{localStorage.setItem(SETTINGS_NAVIGATION_KEY,next);setNavigationError(false);}catch{setNavigationError(true);}
+          }}/><GeneralTab mode="general" settings={settings} set={set} saving={saving} /></>
         )}
         {activeTab === "providers" && (
           <ProvidersTab
@@ -246,8 +271,22 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
             saving={saving}
           />
         )}
+        {activeTab === "providerDisplay" && (
+          <ProviderDisplayTab
+            settings={settings}
+            providerCatalog={state.providers}
+            set={set}
+            saving={saving}
+          />
+        )}
         {activeTab === "notifications" && (
-          <GeneralTab mode="notifications" settings={settings} set={set} saving={saving} />
+          <GeneralTab
+            mode="notifications"
+            settings={settings}
+            set={set}
+            saving={saving}
+            providerCatalog={state.providers}
+          />
         )}
         {activeTab === "menuBar" && (
           <DisplayTab mode="menuBar" settings={settings} set={set} saving={saving} />
@@ -260,10 +299,7 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
         )}
         {activeTab === "surfaces" && <SurfacesTab />}
         {activeTab === "themes" && (
-          <>
-            <ThemeGallery />
-            <UsageDisplaySection providerCatalog={state.providers} />
-          </>
+          <ThemeGallery />
         )}
         {activeTab === "advanced" && (
           <AdvancedTab settings={settings} set={set} saving={saving} />
