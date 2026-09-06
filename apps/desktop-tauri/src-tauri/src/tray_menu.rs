@@ -127,22 +127,50 @@ pub(crate) fn build_tray_menu_with(
         menu.push(TrayMenuEntry::separator());
     }
 
+    // "Open QuotaArc" is the single primary entry point — same action as
+    // left-click and a cold/relaunch, per startup_destination. Distinct from
+    // "Provider Display" (an explicit, unambiguous deep link some users may
+    // prefer over whatever "Opens to" currently resolves to) and from the
+    // detached "Pop Out Dashboard" (a genuinely separate, still-supported
+    // compact-window feature, kept clearly named rather than merged with
+    // the main workspace).
+    menu.push(TrayMenuEntry::item(
+        "open_main_app",
+        text(LocaleKey::TrayOpenMainApp),
+    ));
+    menu.push(TrayMenuEntry::item(
+        "provider_display",
+        text(LocaleKey::TrayProviderDisplayRoute),
+    ));
+    menu.push(TrayMenuEntry::separator());
+
     menu.push(TrayMenuEntry::item(
         "refresh",
         text(LocaleKey::TrayRefreshAll),
     ));
+    menu.push(TrayMenuEntry::separator());
+
+    // Collections: primary action opens/focuses the main app on the tab
+    // Collections currently lives in (see docs/validation/COLLECTIONS_0_10_1.md);
+    // the detached native Collections window remains available as an
+    // explicit secondary action rather than the only way to reach it.
     menu.push(TrayMenuEntry::item(
-        "pop_out",
-        text(LocaleKey::TrayPopOutDashboard),
+        "collections",
+        text(LocaleKey::TrayCollections),
     ));
     menu.push(TrayMenuEntry::item(
-        "show_panel",
-        text(LocaleKey::TrayShowWindow),
+        "open_collections_window",
+        text(LocaleKey::TrayOpenCollectionsWindow),
     ));
     if !profiles.is_empty() {
+        // No dedicated "manage profiles" page exists in the main app yet —
+        // profile *switching* (this submenu) is the real, working feature;
+        // adding a "Manage Profiles" item routing to some other page would
+        // be misleading, so this stays a plain switch-profile list until a
+        // real Profiles destination exists.
         menu.push(TrayMenuEntry::submenu(
             "profiles",
-            "Profiles",
+            text(LocaleKey::TrayProfiles),
             profiles
                 .iter()
                 .map(|p| {
@@ -151,6 +179,31 @@ pub(crate) fn build_tray_menu_with(
                 .collect(),
         ));
     }
+    if !providers.is_empty() {
+        let mut provider_items: Vec<TrayMenuEntry> = providers
+            .iter()
+            .map(|provider| {
+                let is_enabled = enabled_providers.contains(&provider.id);
+                TrayMenuEntry::check_item(
+                    format!("toggle_provider:{}", provider.id),
+                    &provider.display_name,
+                    is_enabled,
+                )
+            })
+            .collect();
+        provider_items.push(TrayMenuEntry::separator());
+        provider_items.push(TrayMenuEntry::item(
+            "manage_providers",
+            text(LocaleKey::TrayManageProviders),
+        ));
+        menu.push(TrayMenuEntry::submenu(
+            "providers",
+            text(LocaleKey::TrayProviders),
+            provider_items,
+        ));
+    }
+    menu.push(TrayMenuEntry::separator());
+
     menu.push(TrayMenuEntry::check_item(
         "toggle_float_bar",
         text(LocaleKey::TrayShowFloatBar),
@@ -158,36 +211,22 @@ pub(crate) fn build_tray_menu_with(
     ));
     menu.push(TrayMenuEntry::check_item(
         "toggle_top_arc",
-        "Show Quota Island",
+        text(LocaleKey::TrayShowQuotaIsland),
         surfaces.top_arc,
+    ));
+    menu.push(TrayMenuEntry::item(
+        "pop_out",
+        text(LocaleKey::TrayPopOutDashboard),
     ));
     menu.push(TrayMenuEntry::separator());
 
-    if !providers.is_empty() {
-        menu.push(TrayMenuEntry::submenu(
-            "providers",
-            text(LocaleKey::TrayProviders),
-            providers
-                .iter()
-                .map(|provider| {
-                    let is_enabled = enabled_providers.contains(&provider.id);
-                    TrayMenuEntry::check_item(
-                        format!("toggle_provider:{}", provider.id),
-                        &provider.display_name,
-                        is_enabled,
-                    )
-                })
-                .collect(),
-        ));
-        menu.push(TrayMenuEntry::separator());
-    }
-
     menu.push(TrayMenuEntry::check_item(
         "toggle_privacy_mode",
-        "Privacy Mode",
+        text(LocaleKey::TrayPrivacyMode),
         privacy_mode,
     ));
-    menu.push(TrayMenuEntry::item("collections", "Collections"));
+    menu.push(TrayMenuEntry::separator());
+
     menu.push(TrayMenuEntry::item(
         "settings",
         text(LocaleKey::TraySettings),
@@ -325,7 +364,9 @@ mod tests {
         }
 
         assert_eq!(label_for(&menu, "refresh"), "すべて更新");
-        assert_eq!(label_for(&menu, "show_panel"), "ウィンドウを表示");
+        // TrayOpenMainApp has no Japanese translation yet — falls back to
+        // English, per this repo's established locale-fallback convention.
+        assert_eq!(label_for(&menu, "open_main_app"), "Open QuotaArc");
         assert_eq!(label_for(&menu, "settings"), "設定...");
         assert_eq!(label_for(&menu, "quit"), "終了");
 
@@ -333,12 +374,17 @@ mod tests {
             .iter()
             .find(|e| e.id.as_deref() == Some("providers"))
             .expect("providers submenu");
+        // Provider entries first, then a separator and "Manage Providers...".
         let provider_labels: Vec<&str> = providers
             .children
             .iter()
+            .filter(|e| !e.is_separator)
             .map(|e| e.label.as_str())
             .collect();
-        assert_eq!(provider_labels, vec!["Codex", "Claude"]);
+        assert_eq!(
+            provider_labels,
+            vec!["Codex", "Claude", "Manage Providers..."]
+        );
     }
 
     #[test]

@@ -166,12 +166,6 @@ fn build_native_tray_menu(
 
 fn resolve_menu_target(id: &str) -> Option<shell::ShellTransitionRequest> {
     match id {
-        // "Show Window" — the full draggable window (PopOut mode), unchanged.
-        "show_panel" => Some(shell::ShellTransitionRequest {
-            mode: SurfaceMode::PopOut,
-            target: SurfaceTarget::Dashboard,
-            position: None,
-        }),
         // NOTE: "pop_out" ("Pop Out Dashboard") is NOT handled here — it opens
         // the dedicated flyout window (MenuAction::OpenFlyout in
         // resolve_menu_action below), not a `shell::ShellTransitionRequest`
@@ -189,12 +183,18 @@ fn resolve_menu_target(id: &str) -> Option<shell::ShellTransitionRequest> {
 
 enum MenuAction {
     Transition(shell::ShellTransitionRequest),
-    /// Open Settings/About in a detached window.
-    OpenSettings(String),
-    /// Open (or focus) the dedicated flyout ("Pop Out Dashboard") window.
+    /// Open/focus the main workspace per the configured startup destination
+    /// — the same action as left-click, a cold launch, or a relaunch.
+    OpenMainApp,
+    /// Open/focus the main workspace on one specific, named route —
+    /// unambiguous regardless of the user's configured startup destination.
+    OpenMainRoute(shell::MainRoute),
+    /// Open (or focus) the dedicated flyout ("Pop Out Dashboard") window —
+    /// a distinct, still-supported compact-window feature, not the main app.
     OpenFlyout,
-    /// Open (or focus) the dedicated Collections window.
-    OpenCollections,
+    /// Open (or focus) the dedicated detached Collections window — a
+    /// secondary path; "Collections" itself opens the main app.
+    OpenCollectionsWindow,
     Refresh,
     CheckForUpdates,
     /// Toggle the enabled/disabled state of the provider with the given CLI name.
@@ -209,18 +209,18 @@ enum MenuAction {
     Quit,
 }
 
-enum MenuTransitionDispatch {
-    Transition(shell::ShellTransitionRequest),
-    Reopen(shell::ShellTransitionRequest),
-}
-
 fn resolve_menu_action(id: &str) -> Option<MenuAction> {
     match id {
+        "open_main_app" => Some(MenuAction::OpenMainApp),
+        "provider_display" => Some(MenuAction::OpenMainRoute(shell::MainRoute::ProviderDisplay)),
+        "collections" => Some(MenuAction::OpenMainRoute(shell::MainRoute::Collections)),
+        "manage_providers" => Some(MenuAction::OpenMainRoute(shell::MainRoute::Providers)),
+        "open_collections_window" => Some(MenuAction::OpenCollectionsWindow),
         "refresh" => Some(MenuAction::Refresh),
         "check_for_updates" => Some(MenuAction::CheckForUpdates),
         "quit" => Some(MenuAction::Quit),
-        "settings" => Some(MenuAction::OpenSettings("general".into())),
-        "about" => Some(MenuAction::OpenSettings("about".into())),
+        "settings" => Some(MenuAction::OpenMainRoute(shell::MainRoute::General)),
+        "about" => Some(MenuAction::OpenMainRoute(shell::MainRoute::About)),
         "toggle_float_bar" => Some(MenuAction::ToggleFloatBar),
         "toggle_edge_arc" => Some(MenuAction::ToggleEdgeArc),
         "toggle_privacy_mode" => Some(MenuAction::TogglePrivacyMode),
@@ -231,27 +231,11 @@ fn resolve_menu_action(id: &str) -> Option<MenuAction> {
         "toggle_top_arc" => Some(MenuAction::ToggleTopArc),
         "toggle_taskbar_arc" => Some(MenuAction::ToggleTaskbarArc),
         "pop_out" => Some(MenuAction::OpenFlyout),
-        "collections" => Some(MenuAction::OpenCollections),
         _ if id.starts_with("toggle_provider:") => {
             let provider_id = id["toggle_provider:".len()..].to_string();
             Some(MenuAction::ToggleProvider(provider_id))
         }
         _ => resolve_menu_target(id).map(MenuAction::Transition),
-    }
-}
-
-fn resolve_menu_transition_dispatch(
-    id: &str,
-    request: shell::ShellTransitionRequest,
-) -> MenuTransitionDispatch {
-    if id == "show_panel" {
-        MenuTransitionDispatch::Reopen(shell::ShellTransitionRequest {
-            mode: request.mode,
-            target: request.target,
-            position: None,
-        })
-    } else {
-        MenuTransitionDispatch::Transition(request)
     }
 }
 
@@ -303,20 +287,22 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                 let app = tray.app_handle();
                 if button == MouseButton::Left && button_state == MouseButtonState::Up {
                     store_anchor(app, &rect, position);
-                    // Left-click toggles the dedicated flyout window (Pop Out
-                    // Dashboard): open it, or cleanly close it when this same
-                    // click already blur-dismissed it (no open→close flicker).
-                    // The full window stays available via "Show Window"
-                    // (SurfaceMode::PopOut on `main`) — the two now coexist as
-                    // separate OS windows instead of mutually-exclusive states
-                    // of one window. Called directly (not spawned): native
-                    // tray-icon event callbacks run on the same main-thread
-                    // event-loop context as `on_menu_event` below, where
-                    // `settings_window::open_or_focus` is also called
-                    // synchronously — the WebviewWindowBuilder deadlock only
-                    // affects builds invoked from *synchronous Tauri IPC
-                    // commands*, not native event-loop callbacks.
-                    shell::flyout_window::toggle_with_blur_consume(app, None);
+                    // Left-click opens/focuses the main QuotaArc workspace —
+                    // the same "activate the app" action a cold launch and a
+                    // single-instance relaunch use, per `startup_destination`
+                    // (tray/UX reset wave). Previously toggled the compact
+                    // Pop Out Dashboard flyout instead, which is exactly the
+                    // "mini tray dashboard on click" behavior product review
+                    // flagged; the flyout remains reachable explicitly via
+                    // its own "Pop Out Dashboard" menu item. Called directly
+                    // (not spawned): native tray-icon event callbacks run on
+                    // the same main-thread event-loop context as
+                    // `on_menu_event` below, where `settings_window::
+                    // open_or_focus` is also called synchronously — the
+                    // WebviewWindowBuilder deadlock only affects builds
+                    // invoked from *synchronous Tauri IPC commands*, not
+                    // native event-loop callbacks.
+                    crate::activate_configured_destination(app);
                 }
             }
         })
@@ -361,29 +347,14 @@ fn handle_menu_event(app: &AppHandle, id: &str) {
     match resolve_menu_action(id) {
         Some(MenuAction::Transition(request)) => {
             crate::auto_refresh::note_menu_open();
-            match resolve_menu_transition_dispatch(id, request) {
-                // Pass None so default_surface_position can use remembered PopOut
-                // geometry first, then fall back to tray/current-monitor placement.
-                MenuTransitionDispatch::Reopen(request) => {
-                    let _ = shell::reopen_to_target(
-                        app,
-                        request.mode,
-                        request.target,
-                        request.position,
-                    );
-                }
-                MenuTransitionDispatch::Transition(request) => {
-                    let _ = shell::transition_to_target(
-                        app,
-                        request.mode,
-                        request.target,
-                        request.position,
-                    );
-                }
-            }
+            let _ =
+                shell::transition_to_target(app, request.mode, request.target, request.position);
         }
-        Some(MenuAction::OpenSettings(tab)) => {
-            let _ = shell::settings_window::open_or_focus(app, &tab);
+        Some(MenuAction::OpenMainApp) => {
+            crate::activate_configured_destination(app);
+        }
+        Some(MenuAction::OpenMainRoute(route)) => {
+            let _ = shell::open_or_focus_main_window(app, route);
         }
         Some(MenuAction::OpenFlyout) => {
             // Pass None: open_or_focus falls back to the tray-anchored
@@ -392,7 +363,7 @@ fn handle_menu_event(app: &AppHandle, id: &str) {
             crate::auto_refresh::note_menu_open();
             let _ = shell::flyout_window::open_or_focus(app, None);
         }
-        Some(MenuAction::OpenCollections) => {
+        Some(MenuAction::OpenCollectionsWindow) => {
             let _ = shell::collections_window::open_or_focus(app);
         }
         Some(MenuAction::Refresh) => {
@@ -932,18 +903,18 @@ mod tests {
     }
 
     #[test]
-    fn settings_menu_routes_to_open_settings_action() {
+    fn settings_menu_routes_to_the_main_workspace_general_and_about_routes() {
         let action = resolve_menu_action("about").expect("about action");
-        match action {
-            MenuAction::OpenSettings(tab) => assert_eq!(tab, "about"),
-            _ => panic!("expected OpenSettings for 'about'"),
-        }
+        assert!(matches!(
+            action,
+            MenuAction::OpenMainRoute(shell::MainRoute::About)
+        ));
 
         let action = resolve_menu_action("settings").expect("settings action");
-        match action {
-            MenuAction::OpenSettings(tab) => assert_eq!(tab, "general"),
-            _ => panic!("expected OpenSettings for 'settings'"),
-        }
+        assert!(matches!(
+            action,
+            MenuAction::OpenMainRoute(shell::MainRoute::General)
+        ));
     }
 
     #[test]
@@ -960,20 +931,15 @@ mod tests {
 
     #[test]
     fn pop_out_menu_routes_to_open_flyout_action() {
-        // "Pop Out Dashboard" opens the dedicated flyout window — not a
-        // `shell::ShellTransitionRequest` against the `main`-window surface
-        // machine — which is what lets it coexist with "Show Window"
-        // (SurfaceMode::PopOut, which stays on `main`) instead of the two
-        // being mutually-exclusive states of one window.
+        // "Pop Out Dashboard" opens the dedicated flyout window — a distinct,
+        // still-supported compact-window feature, deliberately separate from
+        // "Open QuotaArc" (the main workspace). The old ambiguous "Show
+        // Window" item (which duplicated this by reshaping `main` into the
+        // same PopOut/Dashboard surface via a second mechanism) was retired
+        // in the tray/UX-reset wave.
         let action = resolve_menu_action("pop_out").expect("pop_out action");
         assert!(matches!(action, MenuAction::OpenFlyout));
-
-        // resolve_menu_target no longer resolves "pop_out" at all — it is
-        // intercepted earlier in resolve_menu_action.
-        assert!(resolve_menu_target("pop_out").is_none());
-
-        let show_window = resolve_menu_target("show_panel").expect("show_panel target");
-        assert_eq!(show_window.mode, SurfaceMode::PopOut);
+        assert!(resolve_menu_action("show_panel").is_none());
 
         // SurfaceMode::TrayPanel is retained purely as a data key (geometry
         // key / window_properties source / panel-size reference) for the
@@ -983,65 +949,43 @@ mod tests {
     }
 
     #[test]
-    fn show_panel_menu_reopens_popout_dashboard_with_default_position_chain() {
-        let request = resolve_menu_target("show_panel").expect("show_panel target");
-        assert_eq!(request.mode, SurfaceMode::PopOut);
-        assert_eq!(request.target, SurfaceTarget::Dashboard);
-
-        let dispatch = resolve_menu_transition_dispatch(
-            "show_panel",
-            shell::ShellTransitionRequest {
-                mode: SurfaceMode::PopOut,
-                target: SurfaceTarget::Dashboard,
-                position: Some((320, 240)),
-            },
-        );
-
-        match dispatch {
-            MenuTransitionDispatch::Reopen(request) => {
-                assert_eq!(request.mode, SurfaceMode::PopOut);
-                assert_eq!(request.target, SurfaceTarget::Dashboard);
-                assert_eq!(request.position, None);
-            }
-            MenuTransitionDispatch::Transition(_) => {
-                panic!("show_panel should reopen via default PopOut positioning")
-            }
-        }
+    fn open_main_app_and_named_routes_resolve_distinctly() {
+        assert!(matches!(
+            resolve_menu_action("open_main_app"),
+            Some(MenuAction::OpenMainApp)
+        ));
+        assert!(matches!(
+            resolve_menu_action("provider_display"),
+            Some(MenuAction::OpenMainRoute(shell::MainRoute::ProviderDisplay))
+        ));
+        assert!(matches!(
+            resolve_menu_action("collections"),
+            Some(MenuAction::OpenMainRoute(shell::MainRoute::Collections))
+        ));
+        assert!(matches!(
+            resolve_menu_action("manage_providers"),
+            Some(MenuAction::OpenMainRoute(shell::MainRoute::Providers))
+        ));
+        assert!(matches!(
+            resolve_menu_action("open_collections_window"),
+            Some(MenuAction::OpenCollectionsWindow)
+        ));
     }
 
     #[test]
-    fn non_show_panel_menu_keeps_explicit_position() {
-        // "pop_out" no longer reaches resolve_menu_transition_dispatch at all
-        // (it's intercepted as MenuAction::OpenFlyout in resolve_menu_action
-        // before falling through to resolve_menu_target); a provider deep
-        // link is the realistic surviving non-"show_panel" caller of this
-        // dispatch function today.
-        let dispatch = resolve_menu_transition_dispatch(
-            "provider:codex",
-            shell::ShellTransitionRequest {
-                mode: SurfaceMode::PopOut,
-                target: SurfaceTarget::Provider {
-                    provider_id: "codex".into(),
-                },
-                position: Some((320, 240)),
-            },
+    fn provider_deep_link_resolves_to_a_popout_provider_target() {
+        // The only surviving `resolve_menu_target`/`MenuAction::Transition`
+        // caller is a `provider:` deep link, passed straight through to
+        // `transition_to_target` in `handle_menu_event`.
+        let request = resolve_menu_target("provider:codex").expect("provider target");
+        assert_eq!(request.mode, SurfaceMode::PopOut);
+        assert_eq!(
+            request.target,
+            SurfaceTarget::Provider {
+                provider_id: "codex".into()
+            }
         );
-
-        match dispatch {
-            MenuTransitionDispatch::Transition(request) => {
-                assert_eq!(request.mode, SurfaceMode::PopOut);
-                assert_eq!(
-                    request.target,
-                    SurfaceTarget::Provider {
-                        provider_id: "codex".into()
-                    }
-                );
-                assert_eq!(request.position, Some((320, 240)));
-            }
-            MenuTransitionDispatch::Reopen(_) => {
-                panic!("non-show-panel actions should use direct transitions")
-            }
-        }
+        assert_eq!(request.position, None);
     }
 
     #[test]

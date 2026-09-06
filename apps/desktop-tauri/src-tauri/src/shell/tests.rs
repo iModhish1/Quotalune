@@ -1,4 +1,3 @@
-use super::ShellTransitionRequest;
 use super::geometry::{
     MonitorPlacement, inferred_tray_anchor_rect, inferred_tray_panel_position_for_monitor,
     surface_panel_size, tray_anchor_rect,
@@ -16,11 +15,39 @@ use super::transition::{
     should_synthesize_default_position,
 };
 use super::window::{logical_size_from_geometry, prepare_hide_to_tray_if_current};
+use super::{MainRoute, ShellTransitionRequest};
 
 use crate::state::AppState;
 use crate::surface::{SurfaceMode, SurfaceTransition};
 use crate::surface_target::SurfaceTarget;
 use crate::window_positioner::{self, Rect};
+
+#[test]
+fn every_main_route_resolves_to_a_distinct_settings_tab() {
+    let routes = [
+        MainRoute::ProviderDisplay,
+        MainRoute::Providers,
+        MainRoute::Collections,
+        MainRoute::General,
+        MainRoute::About,
+    ];
+    let tabs: Vec<&str> = routes.iter().map(|route| route.settings_tab()).collect();
+    let unique: std::collections::HashSet<&str> = tabs.iter().copied().collect();
+    assert_eq!(
+        unique.len(),
+        tabs.len(),
+        "every MainRoute must resolve to its own tab: {tabs:?}"
+    );
+    assert_eq!(MainRoute::ProviderDisplay.settings_tab(), "providerDisplay");
+    assert_eq!(MainRoute::Providers.settings_tab(), "providers");
+    // Collections has no dedicated top-level tab yet — it lives inside
+    // Surfaces (see docs/validation/COLLECTIONS_0_10_1.md). This assertion
+    // exists specifically so that adding a real Collections tab later is
+    // forced to update this single fact rather than silently drifting.
+    assert_eq!(MainRoute::Collections.settings_tab(), "surfaces");
+    assert_eq!(MainRoute::General.settings_tab(), "general");
+    assert_eq!(MainRoute::About.settings_tab(), "about");
+}
 
 #[test]
 fn tab_navigation_never_repositions_user_sized_windows() {

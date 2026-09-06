@@ -1173,6 +1173,12 @@ pub async fn update_surface_settings(
     // Surfaces read settings on their next config event too.
     use tauri::Emitter;
     let _ = app.emit("quotaarc:surfaces-changed", ());
+    // The tray's Float Bar / Quota Island checkmarks read settings at menu-
+    // build time — without this, toggling a surface from Settings left them
+    // showing stale state until some unrelated tray action happened to
+    // rebuild the menu (e.g. a provider toggle). One source of truth means
+    // every writer keeps every reader in sync, not just the writer's own UI.
+    crate::tray_bridge::rebuild_tray_menu(&app);
     Ok(())
 }
 

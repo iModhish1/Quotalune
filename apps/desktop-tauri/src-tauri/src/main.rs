@@ -56,7 +56,9 @@ struct LaunchBehavior {
 /// Settings workspace, on this tab". Falls back safely for "lastOpened" with
 /// no (or an unknown/stale) remembered tab, and for any value
 /// `normalize_startup_destination` wouldn't otherwise recognize.
-fn resolve_startup_destination(settings: &codexbar::settings::Settings) -> Option<String> {
+pub(crate) fn resolve_startup_destination(
+    settings: &codexbar::settings::Settings,
+) -> Option<String> {
     const DEFAULT_TAB: &str = "providerDisplay";
     match settings.startup_destination.as_str() {
         "dashboard" => None,
@@ -72,6 +74,28 @@ fn resolve_startup_destination(settings: &codexbar::settings::Settings) -> Optio
     }
 }
 
+/// Open/focus whatever `startup_destination` currently resolves to: the main
+/// Settings workspace on the resolved tab, or (destination "dashboard") the
+/// compact Pop Out Dashboard. The single reusable "activate the app the way
+/// the user configured" action — used by cold launch, single-instance
+/// relaunch, and the tray icon's left-click (all three previously
+/// duplicated this branch, and the relaunch/left-click paths had each
+/// independently drifted from the cold-launch fix — see Phase-1/tray-reset
+/// commits). Reloads settings fresh so a change made after this process
+/// started (via the Settings UI) is honored immediately.
+pub(crate) fn activate_configured_destination(app: &tauri::AppHandle) {
+    let current = codexbar::settings::Settings::load();
+    match resolve_startup_destination(&current) {
+        Some(tab) => {
+            let _ = shell::settings_window::open_or_focus(app, &tab);
+        }
+        None => {
+            let request = primary_window_request();
+            let _ = shell::reopen_to_target(app, request.mode, request.target, request.position);
+        }
+    }
+}
+
 fn should_hide_close_request(mode: SurfaceMode) -> bool {
     matches!(
         mode,
@@ -79,7 +103,7 @@ fn should_hide_close_request(mode: SurfaceMode) -> bool {
     )
 }
 
-fn primary_window_request() -> shell::ShellTransitionRequest {
+pub(crate) fn primary_window_request() -> shell::ShellTransitionRequest {
     shell::ShellTransitionRequest {
         mode: SurfaceMode::PopOut,
         target: SurfaceTarget::Dashboard,
@@ -241,26 +265,10 @@ fn main() {
         .manage(Mutex::new(initial_state))
         .plugin(shortcut_bridge::plugin())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
-            match instance_activation(args.iter().skip(1)) {
+        .plugin(tauri_plugin_single_instance::init(
+            |app, args, _cwd| match instance_activation(args.iter().skip(1)) {
                 InstanceActivation::MainWorkspace => {
-                    // Reload fresh: settings may have changed via the
-                    // Settings UI since this process started.
-                    let current = codexbar::settings::Settings::load();
-                    match resolve_startup_destination(&current) {
-                        Some(tab) => {
-                            let _ = shell::settings_window::open_or_focus(app, &tab);
-                        }
-                        None => {
-                            let request = primary_window_request();
-                            let _ = shell::reopen_to_target(
-                                app,
-                                request.mode,
-                                request.target,
-                                request.position,
-                            );
-                        }
-                    }
+                    activate_configured_destination(app);
                 }
                 InstanceActivation::CompactSurface => {
                     let request = primary_window_request();
@@ -272,8 +280,8 @@ fn main() {
                     );
                 }
                 InstanceActivation::None => {}
-            }
-        }))
+            },
+        ))
         .invoke_handler(tauri::generate_handler![
             commands::get_bootstrap_state,
             commands::get_provider_catalog,
@@ -444,23 +452,9 @@ fn main() {
                 });
             } else if launch.open_main_workspace_at_start {
                 let app = app.handle().clone();
-                let tab = resolve_startup_destination(&settings);
                 tauri::async_runtime::spawn(async move {
                     tokio::time::sleep(VISIBLE_START_ACTIVATION_DELAY).await;
-                    match tab {
-                        Some(tab) => {
-                            let _ = shell::settings_window::open_or_focus(&app, &tab);
-                        }
-                        None => {
-                            let request = primary_window_request();
-                            let _ = shell::reopen_to_target(
-                                &app,
-                                request.mode,
-                                request.target,
-                                request.position,
-                            );
-                        }
-                    }
+                    activate_configured_destination(&app);
                 });
             } else if launch.open_primary_window_at_start {
                 let app = app.handle().clone();
