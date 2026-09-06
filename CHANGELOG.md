@@ -4,6 +4,27 @@ All notable changes to QuotaArc are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/); versioning: [semver](https://semver.org/).
 The inherited Win-CodexBar history is archived in `docs/UPSTREAM_CHANGELOG.md`.
 
+## [0.10.0] — 2026-09-06
+
+### Added
+
+- A dedicated Provider Display workspace with independently selectable and reorderable usage windows.
+- Twenty-four structure themes and twenty-four contrast-protected provider identities.
+- Expanded compact surface catalog, live previews, placement controls, Arabic localization and RTL layouts.
+- Official QuotaArc mark finishes and configurable prominence across the application surfaces.
+
+### Changed
+
+- Settings is resizable, maximizable and full-screen capable with responsive sidebar, top and bottom navigation.
+- Provider hover, wheel navigation and delayed folding now use shared interaction rules across surface families.
+- Usage meters support configurable shapes, value modes, fill directions and per-provider overrides.
+
+### Fixed
+
+- Provider glyph sizing and meter contrast across structure/theme combinations.
+- Edge and corner docking, compact footprint reclamation and detached Settings target discovery.
+- Light-theme contrast, narrow-window overflow and Arabic RTL alignment regressions.
+
 ## [0.1.0] — 2026-09-02
 
 First QuotaArc release. Built on the Win-CodexBar foundation (MIT) with an
