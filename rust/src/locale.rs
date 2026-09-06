@@ -206,6 +206,11 @@ locale_keys! {
     StartMinimized,
     StartAtLoginHelper,
     StartMinimizedHelper,
+    StartupDestination,
+    StartupDestinationHelper,
+    StartupDestinationDashboard,
+    StartupDestinationProviderDisplay,
+    StartupDestinationLastOpened,
 
     // Notification settings (Preferences)
     ShowNotificationsHelper,

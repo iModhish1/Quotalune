@@ -388,6 +388,50 @@ fn float_bar_style_normalization_rejects_unknown_values() {
 }
 
 #[test]
+fn startup_destination_normalization_is_bounded() {
+    assert_eq!(normalize_startup_destination("dashboard"), "dashboard");
+    assert_eq!(
+        normalize_startup_destination("providerDisplay"),
+        "providerDisplay"
+    );
+    assert_eq!(normalize_startup_destination("lastOpened"), "lastOpened");
+    assert_eq!(normalize_startup_destination("nonsense"), "providerDisplay");
+    assert_eq!(normalize_startup_destination(""), "providerDisplay");
+}
+
+#[test]
+fn corrupt_startup_destination_on_disk_falls_back_without_discarding_other_settings() {
+    let settings: Settings = serde_json::from_value(serde_json::json!({
+        "top_arc_scale": 110,
+        "startup_destination": "garbage",
+    }))
+    .unwrap();
+    assert_eq!(settings.top_arc_scale, 110);
+    assert_eq!(
+        normalize_startup_destination(&settings.startup_destination),
+        "providerDisplay"
+    );
+}
+
+#[test]
+fn missing_startup_destination_defaults_to_provider_display() {
+    let settings: Settings = serde_json::from_value(serde_json::json!({})).unwrap();
+    assert_eq!(settings.startup_destination, "providerDisplay");
+    assert_eq!(settings.last_settings_tab, None);
+}
+
+#[test]
+fn last_settings_tab_round_trips() {
+    let settings = Settings {
+        last_settings_tab: Some("providerDisplay".into()),
+        ..Settings::default()
+    };
+    let restored: Settings =
+        serde_json::from_str(&serde_json::to_string(&settings).unwrap()).unwrap();
+    assert_eq!(restored.last_settings_tab, Some("providerDisplay".into()));
+}
+
+#[test]
 fn quota_island_placement_normalization_is_bounded() {
     assert_eq!(normalize_top_arc_placement("top-left"), "top-left");
     assert_eq!(normalize_top_arc_placement("top-center"), "top-center");

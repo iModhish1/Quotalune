@@ -38,8 +38,38 @@ const VISIBLE_START_ACTIVATION_DELAY: Duration = Duration::from_millis(500);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct LaunchBehavior {
+    /// Open the compact Pop Out Dashboard: forced-visible (debug/test) or an
+    /// explicit tray/menu-bar CLI launch. Unaffected by `startup_destination`
+    /// — a user who explicitly asked for the tray view gets the tray view.
     open_primary_window_at_start: bool,
+    /// A plain desktop launch (double-click / Start Menu, no CLI args, not
+    /// minimized, no compact overlay enabled): open the main Settings
+    /// workspace directly per `startup_destination`, instead of the old
+    /// PopOut dashboard the user has to click through from.
+    open_main_workspace_at_start: bool,
     suppress_blur_dismiss: bool,
+}
+
+/// Resolve what a plain desktop launch should open, from `startup_destination`:
+/// `None` means "the compact Pop Out Dashboard" (the old default surface,
+/// still available as an explicit choice); `Some(tab)` means "the main
+/// Settings workspace, on this tab". Falls back safely for "lastOpened" with
+/// no (or an unknown/stale) remembered tab, and for any value
+/// `normalize_startup_destination` wouldn't otherwise recognize.
+fn resolve_startup_destination(settings: &codexbar::settings::Settings) -> Option<String> {
+    const DEFAULT_TAB: &str = "providerDisplay";
+    match settings.startup_destination.as_str() {
+        "dashboard" => None,
+        "lastOpened" => Some(
+            settings
+                .last_settings_tab
+                .as_deref()
+                .filter(|tab| surface_target::is_supported_settings_tab(tab))
+                .unwrap_or(DEFAULT_TAB)
+                .to_string(),
+        ),
+        _ => Some(DEFAULT_TAB.to_string()),
+    }
 }
 
 fn should_hide_close_request(mode: SurfaceMode) -> bool {
@@ -84,13 +114,34 @@ where
         .collect()
 }
 
-fn should_reopen_primary_window_from_instance_args<I, S>(args: I) -> bool
+/// What a second launch attempt (caught by the single-instance plugin, while
+/// this process is already running) should activate: the compact Pop Out
+/// Dashboard for an explicit tray/menu-bar re-launch (same as a first-launch
+/// explicit request), or the main Settings workspace — per
+/// `startup_destination`, exactly like a fresh plain launch — for a plain
+/// re-launch (clicking the Start Menu / desktop icon again). `None` for
+/// unrelated CLI invocations (e.g. `quotaarc usage -p claude`), which must
+/// not raise any window.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum InstanceActivation {
+    None,
+    CompactSurface,
+    MainWorkspace,
+}
+
+fn instance_activation<I, S>(args: I) -> InstanceActivation
 where
     I: IntoIterator<Item = S>,
     S: AsRef<str>,
 {
     let args = nonblank_launch_args(args);
-    args.is_empty() || should_open_primary_window_from_args(&args)
+    if args.is_empty() {
+        InstanceActivation::MainWorkspace
+    } else if should_open_primary_window_from_args(&args) {
+        InstanceActivation::CompactSurface
+    } else {
+        InstanceActivation::None
+    }
 }
 
 fn launch_behavior<I, S>(
@@ -106,14 +157,14 @@ where
     let args = nonblank_launch_args(args);
     let explicit_primary_launch = should_open_primary_window_from_args(&args);
     let plain_desktop_launch = args.is_empty();
+    // A compact QuotaArc surface is itself the non-interrupting desktop
+    // launch. Do not also raise a window over the user's work in that case;
+    // an explicit tray/menu launch or a plain desktop launch still opens one.
+    let unattended_by_compact_surface = !start_minimized && !compact_surface_enabled;
 
     LaunchBehavior {
-        open_primary_window_at_start: force_visible
-            || explicit_primary_launch
-            // A compact QuotaArc surface is itself the non-interrupting
-            // desktop launch. Do not also raise the old dashboard over the
-            // user's work; an explicit tray/menu launch still opens it.
-            || (plain_desktop_launch && !start_minimized && !compact_surface_enabled),
+        open_primary_window_at_start: force_visible || explicit_primary_launch,
+        open_main_workspace_at_start: plain_desktop_launch && unattended_by_compact_surface,
         suppress_blur_dismiss: force_visible,
     }
 }
@@ -191,10 +242,36 @@ fn main() {
         .plugin(shortcut_bridge::plugin())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
-            if should_reopen_primary_window_from_instance_args(args.iter().skip(1)) {
-                let request = primary_window_request();
-                let _ =
-                    shell::reopen_to_target(app, request.mode, request.target, request.position);
+            match instance_activation(args.iter().skip(1)) {
+                InstanceActivation::MainWorkspace => {
+                    // Reload fresh: settings may have changed via the
+                    // Settings UI since this process started.
+                    let current = codexbar::settings::Settings::load();
+                    match resolve_startup_destination(&current) {
+                        Some(tab) => {
+                            let _ = shell::settings_window::open_or_focus(app, &tab);
+                        }
+                        None => {
+                            let request = primary_window_request();
+                            let _ = shell::reopen_to_target(
+                                app,
+                                request.mode,
+                                request.target,
+                                request.position,
+                            );
+                        }
+                    }
+                }
+                InstanceActivation::CompactSurface => {
+                    let request = primary_window_request();
+                    let _ = shell::reopen_to_target(
+                        app,
+                        request.mode,
+                        request.target,
+                        request.position,
+                    );
+                }
+                InstanceActivation::None => {}
             }
         }))
         .invoke_handler(tauri::generate_handler![
@@ -365,6 +442,26 @@ fn main() {
                     tokio::time::sleep(PROOF_ACTIVATION_DELAY).await;
                     proof_harness::activate(&app_handle);
                 });
+            } else if launch.open_main_workspace_at_start {
+                let app = app.handle().clone();
+                let tab = resolve_startup_destination(&settings);
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(VISIBLE_START_ACTIVATION_DELAY).await;
+                    match tab {
+                        Some(tab) => {
+                            let _ = shell::settings_window::open_or_focus(&app, &tab);
+                        }
+                        None => {
+                            let request = primary_window_request();
+                            let _ = shell::reopen_to_target(
+                                &app,
+                                request.mode,
+                                request.target,
+                                request.position,
+                            );
+                        }
+                    }
+                });
             } else if launch.open_primary_window_at_start {
                 let app = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
@@ -534,38 +631,46 @@ mod tests {
         assert!(!should_open_primary_window_from_args([
             "usage", "-p", "claude"
         ]));
-        assert!(!should_reopen_primary_window_from_instance_args([
-            "usage", "-p", "claude"
-        ]));
+        assert_eq!(
+            instance_activation(["usage", "-p", "claude"]),
+            InstanceActivation::None
+        );
         assert_eq!(
             launch_behavior(false, false, false, ["usage", "-p", "claude"]),
             LaunchBehavior {
                 open_primary_window_at_start: false,
+                open_main_workspace_at_start: false,
                 suppress_blur_dismiss: false,
             }
         );
     }
 
     #[test]
-    fn plain_desktop_launch_opens_unless_start_minimized() {
+    fn plain_desktop_launch_opens_the_main_workspace_unless_start_minimized() {
+        // A plain double-click/Start Menu launch opens the main Settings
+        // workspace directly (per startup_destination), not the old compact
+        // Pop Out Dashboard the user had to click through from.
         assert_eq!(
             launch_behavior(false, false, false, std::iter::empty::<&str>()),
             LaunchBehavior {
-                open_primary_window_at_start: true,
+                open_primary_window_at_start: false,
+                open_main_workspace_at_start: true,
                 suppress_blur_dismiss: false,
             }
         );
         assert_eq!(
             launch_behavior(false, false, false, [""]),
             LaunchBehavior {
-                open_primary_window_at_start: true,
+                open_primary_window_at_start: false,
+                open_main_workspace_at_start: true,
                 suppress_blur_dismiss: false,
             }
         );
         assert_eq!(
             launch_behavior(false, false, false, ["  "]),
             LaunchBehavior {
-                open_primary_window_at_start: true,
+                open_primary_window_at_start: false,
+                open_main_workspace_at_start: true,
                 suppress_blur_dismiss: false,
             }
         );
@@ -573,6 +678,7 @@ mod tests {
             launch_behavior(false, true, false, std::iter::empty::<&str>()),
             LaunchBehavior {
                 open_primary_window_at_start: false,
+                open_main_workspace_at_start: false,
                 suppress_blur_dismiss: false,
             }
         );
@@ -584,19 +690,33 @@ mod tests {
             launch_behavior(false, false, true, std::iter::empty::<&str>()),
             LaunchBehavior {
                 open_primary_window_at_start: false,
+                open_main_workspace_at_start: false,
                 suppress_blur_dismiss: false,
             }
         );
     }
 
     #[test]
-    fn single_instance_plain_launch_reopens_primary_window() {
-        assert!(should_reopen_primary_window_from_instance_args(
-            std::iter::empty::<&str>()
-        ));
-        assert!(should_reopen_primary_window_from_instance_args([""]));
-        assert!(should_reopen_primary_window_from_instance_args(["  "]));
-        assert!(should_reopen_primary_window_from_instance_args(["menubar"]));
+    fn single_instance_plain_relaunch_activates_the_main_workspace() {
+        // Clicking QuotaArc again while it's already running must restore/
+        // focus the main workspace, not spawn the old compact dashboard.
+        assert_eq!(
+            instance_activation(std::iter::empty::<&str>()),
+            InstanceActivation::MainWorkspace
+        );
+        assert_eq!(instance_activation([""]), InstanceActivation::MainWorkspace);
+        assert_eq!(
+            instance_activation(["  "]),
+            InstanceActivation::MainWorkspace
+        );
+    }
+
+    #[test]
+    fn single_instance_explicit_tray_relaunch_activates_the_compact_surface() {
+        assert_eq!(
+            instance_activation(["menubar"]),
+            InstanceActivation::CompactSurface
+        );
     }
 
     #[test]
@@ -605,6 +725,7 @@ mod tests {
             launch_behavior(false, true, false, ["menubar"]),
             LaunchBehavior {
                 open_primary_window_at_start: true,
+                open_main_workspace_at_start: false,
                 suppress_blur_dismiss: false,
             }
         );
@@ -617,6 +738,7 @@ mod tests {
             launch,
             LaunchBehavior {
                 open_primary_window_at_start: true,
+                open_main_workspace_at_start: false,
                 suppress_blur_dismiss: true,
             }
         );
@@ -627,6 +749,68 @@ mod tests {
     fn proof_mode_suppresses_blur_dismiss() {
         let launch = launch_behavior(false, true, false, std::iter::empty::<&str>());
         assert!(should_suppress_blur_dismiss(launch, true));
+    }
+
+    fn settings_with(
+        startup_destination: &str,
+        last_settings_tab: Option<&str>,
+    ) -> codexbar::settings::Settings {
+        codexbar::settings::Settings {
+            startup_destination: startup_destination.to_string(),
+            last_settings_tab: last_settings_tab.map(str::to_string),
+            ..codexbar::settings::Settings::default()
+        }
+    }
+
+    #[test]
+    fn startup_destination_dashboard_opens_the_compact_surface_instead_of_settings() {
+        assert_eq!(
+            resolve_startup_destination(&settings_with("dashboard", None)),
+            None
+        );
+    }
+
+    #[test]
+    fn startup_destination_provider_display_opens_settings_on_that_tab() {
+        assert_eq!(
+            resolve_startup_destination(&settings_with("providerDisplay", None)),
+            Some("providerDisplay".to_string())
+        );
+    }
+
+    #[test]
+    fn startup_destination_last_opened_restores_the_remembered_tab() {
+        assert_eq!(
+            resolve_startup_destination(&settings_with("lastOpened", Some("themes"))),
+            Some("themes".to_string())
+        );
+    }
+
+    #[test]
+    fn startup_destination_last_opened_falls_back_when_nothing_was_remembered_yet() {
+        assert_eq!(
+            resolve_startup_destination(&settings_with("lastOpened", None)),
+            Some("providerDisplay".to_string())
+        );
+    }
+
+    #[test]
+    fn startup_destination_last_opened_falls_back_on_a_stale_unknown_tab() {
+        // e.g. a tab renamed/removed in a later release than remembered it.
+        assert_eq!(
+            resolve_startup_destination(&settings_with("lastOpened", Some("apiKeys"))),
+            Some("providerDisplay".to_string())
+        );
+    }
+
+    #[test]
+    fn startup_destination_invalid_value_falls_back_to_provider_display() {
+        // normalize_startup_destination already repairs this on load, but the
+        // resolver stays safe even if it's ever handed a raw, unnormalized value.
+        assert_eq!(
+            resolve_startup_destination(&settings_with("garbage", Some("themes"))),
+            Some("providerDisplay".to_string())
+        );
     }
 
     #[test]

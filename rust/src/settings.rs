@@ -212,6 +212,24 @@ pub struct Settings {
     /// Whether to start minimized
     pub start_minimized: bool,
 
+    /// Which surface a plain desktop launch (no CLI args, not minimized, no
+    /// compact overlay enabled) opens directly into: "dashboard" (the
+    /// compact Pop Out Dashboard, the old default), "providerDisplay" (the
+    /// main Settings workspace's Provider Display tab, the current default),
+    /// or "lastOpened" (whichever Settings tab was last active, tracked in
+    /// [`Self::last_settings_tab`]). Explicit tray/menu-bar launches are
+    /// unaffected — they always open the compact tray experience.
+    #[serde(default = "default_startup_destination")]
+    pub startup_destination: String,
+
+    /// The most recently active Settings tab, used when
+    /// [`Self::startup_destination`] is "lastOpened". Validated against the
+    /// current supported tab list at the point of use (in the desktop shell,
+    /// which owns that list) rather than here, so a tab removed in a later
+    /// release safely falls back instead of ever being treated as fatal.
+    #[serde(default)]
+    pub last_settings_tab: Option<String>,
+
     /// Whether to start at login
     pub start_at_login: bool,
 
@@ -815,6 +833,19 @@ pub fn normalize_edge_arc_side(value: &str) -> String {
     }
 }
 
+fn default_startup_destination() -> String {
+    "providerDisplay".to_string()
+}
+
+/// Keep the startup destination bounded even when a settings file was
+/// hand-edited or produced by an older build that predates this field.
+pub fn normalize_startup_destination(value: &str) -> String {
+    match value {
+        "dashboard" | "providerDisplay" | "lastOpened" => value.to_string(),
+        _ => default_startup_destination(),
+    }
+}
+
 /// Keep placement values bounded even when a settings file was hand-edited or
 /// produced by an older build. The island always has a safe top-center escape.
 pub fn normalize_top_arc_placement(value: &str) -> String {
@@ -1000,6 +1031,8 @@ impl Default for Settings {
             refresh_all_providers_on_menu_open: false,
             low_power_mode_preference: LowPowerModePreference::Off,
             start_minimized: false,
+            startup_destination: default_startup_destination(),
+            last_settings_tab: None,
             start_at_login: false,
             show_notifications: true,
             notification_events: NotificationEventPreferences::default(),
@@ -1136,6 +1169,7 @@ impl Settings {
         // The canonical foundation intentionally ignores persisted selections
         // for the archived themes. Keep this migration in-memory until a
         // normal settings save so a read can never destroy user history.
+        settings.startup_destination = normalize_startup_destination(&settings.startup_destination);
         settings.catalog_theme = normalize_catalog_theme(&settings.catalog_theme);
         settings.active_profile_catalog_theme = settings
             .active_profile_catalog_theme

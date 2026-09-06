@@ -25,6 +25,8 @@ pub(super) struct RawSettings {
     low_power_mode_preference: Option<LowPowerModePreference>,
 
     start_minimized: bool,
+    startup_destination: String,
+    last_settings_tab: Option<String>,
     start_at_login: bool,
     show_notifications: bool,
     #[serde(default)]
@@ -265,6 +267,8 @@ impl Default for RawSettings {
             low_power_mode: s.low_power_mode_preference == LowPowerModePreference::On,
             low_power_mode_preference: Some(s.low_power_mode_preference),
             start_minimized: s.start_minimized,
+            startup_destination: s.startup_destination,
+            last_settings_tab: s.last_settings_tab,
             start_at_login: s.start_at_login,
             show_notifications: s.show_notifications,
             notification_events: s.notification_events,
@@ -626,6 +630,8 @@ impl From<RawSettings> for Settings {
             refresh_all_providers_on_menu_open: raw.refresh_all_providers_on_menu_open,
             low_power_mode_preference,
             start_minimized: raw.start_minimized,
+            startup_destination: raw.startup_destination,
+            last_settings_tab: raw.last_settings_tab,
             start_at_login: raw.start_at_login,
             show_notifications: raw.show_notifications,
             notification_events: raw.notification_events,

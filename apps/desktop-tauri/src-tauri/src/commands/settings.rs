@@ -15,6 +15,8 @@ pub struct SettingsUpdate {
     pub low_power_mode_preference: Option<String>,
     pub start_at_login: Option<bool>,
     pub start_minimized: Option<bool>,
+    pub startup_destination: Option<String>,
+    pub last_settings_tab: Option<String>,
     pub show_notifications: Option<bool>,
     pub notification_events: Option<codexbar::settings::NotificationEventPreferences>,
     pub notification_quiet_hours: Option<codexbar::settings::NotificationQuietHours>,
@@ -198,6 +200,13 @@ impl SettingsUpdate {
         }
         if let Some(v) = self.start_minimized {
             settings.start_minimized = v;
+        }
+        if let Some(v) = self.startup_destination.as_deref() {
+            settings.startup_destination = codexbar::settings::normalize_startup_destination(v);
+        }
+        if let Some(v) = self.last_settings_tab.as_deref() {
+            settings.last_settings_tab =
+                crate::surface_target::is_supported_settings_tab(v).then(|| v.to_string());
         }
         if let Some(v) = self.global_shortcut.clone() {
             settings.global_shortcut = v;

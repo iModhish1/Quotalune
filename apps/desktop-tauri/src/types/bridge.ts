@@ -207,6 +207,8 @@ export interface SettingsSnapshot {
   lowPowerModePreference?: "off" | "on" | "automatic";
   startAtLogin: boolean;
   startMinimized: boolean;
+  startupDestination?: "dashboard" | "providerDisplay" | "lastOpened";
+  lastSettingsTab?: string;
   showNotifications: boolean;
   notificationEvents?: NotificationEventPreferences;
   notificationQuietHours?: NotificationQuietHours;
@@ -319,6 +321,8 @@ export interface SettingsUpdate {
   lowPowerModePreference?: "off" | "on" | "automatic";
   startAtLogin?: boolean;
   startMinimized?: boolean;
+  startupDestination?: "dashboard" | "providerDisplay" | "lastOpened";
+  lastSettingsTab?: string;
   showNotifications?: boolean;
   notificationEvents?: NotificationEventPreferences;
   notificationQuietHours?: NotificationQuietHours;

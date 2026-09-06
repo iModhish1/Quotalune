@@ -333,6 +333,31 @@ describe("GeneralTab language picker", () => {
     expect(set).toHaveBeenLastCalledWith({ providerUsageThresholds: {} });
   });
 
+  it("defaults the startup destination selector to Provider Display and persists a change", () => {
+    const set = vi.fn();
+    render(
+      <GeneralTab mode="general" settings={settings} set={set} saving={false} />,
+    );
+    const select = screen.getByRole("combobox", { name: "StartupDestination" });
+    expect(select).toHaveValue("providerDisplay");
+    fireEvent.change(select, { target: { value: "lastOpened" } });
+    expect(set).toHaveBeenLastCalledWith({ startupDestination: "lastOpened" });
+  });
+
+  it("respects a saved startup destination other than the default", () => {
+    render(
+      <GeneralTab
+        mode="general"
+        settings={{ ...settings, startupDestination: "dashboard" }}
+        set={vi.fn()}
+        saving={false}
+      />,
+    );
+    expect(
+      screen.getByRole("combobox", { name: "StartupDestination" }),
+    ).toHaveValue("dashboard");
+  });
+
   it("toggles each notification category without disabling the others", () => {
     const set = vi.fn();
     render(

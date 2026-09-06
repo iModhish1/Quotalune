@@ -190,6 +190,15 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
     resetSettingsPanelScroll(panelRef.current);
   }, [activeTab, navigation]);
 
+  // Remember the active tab for "Last opened" startup destination. Only
+  // persists once settings have actually loaded, so a fresh/loading render
+  // never overwrites a real remembered tab with the transient "general"
+  // default state starts in.
+  useEffect(() => {
+    if (!settings || settings.lastSettingsTab === activeTab) return;
+    void update({ lastSettingsTab: activeTab });
+  }, [activeTab, settings, update]);
+
   const set = (patch: SettingsUpdate) => void update(patch);
   const handleTabClick = useCallback((tab: SettingsTabId) => {
     setActiveTab(tab);

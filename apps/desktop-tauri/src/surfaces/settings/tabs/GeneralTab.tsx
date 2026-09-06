@@ -470,6 +470,21 @@ export default function GeneralTab({
               onChange={(v) => set({ startMinimized: v })}
             />
           </Field>
+          <Field label={t("StartupDestination")} description={t("StartupDestinationHelper")}>
+            <Select
+              value={settings.startupDestination ?? "providerDisplay"}
+              disabled={saving}
+              ariaLabel={t("StartupDestination")}
+              options={[
+                { value: "providerDisplay", label: t("StartupDestinationProviderDisplay") },
+                { value: "lastOpened", label: t("StartupDestinationLastOpened") },
+                { value: "dashboard", label: t("StartupDestinationDashboard") },
+              ]}
+              onChange={(value) =>
+                set({ startupDestination: value as "dashboard" | "providerDisplay" | "lastOpened" })
+              }
+            />
+          </Field>
         </div>
       </section>}
 
