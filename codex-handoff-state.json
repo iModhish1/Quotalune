@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-06T23:31:00+03:00",
+  "repository": "N:\\QuotaArc\\quotaarc",
+  "branch": "feature/v9-theme-runtime",
+  "releaseSourceCommit": "28f412ac",
+  "version": "0.10.0",
+  "publiclyReleased": false,
+  "workingTreeAtRecovery": "clean",
+  "personal": {
+    "installed": true,
+    "launched": true,
+    "version": "0.10.0",
+    "architecture": "x64",
+    "sha256": "DCE2C1A426B8347EBBCFCF09217B83771D4B58E4ABE27A5E50024485483DD9F2",
+    "rollbackBackup": ".local/recovery/personal-backup-complete-20260906-232817"
+  },
+  "verification": {
+    "frontendTests": { "files": 119, "tests": 652, "passed": true },
+    "rustCoreTests": { "tests": 1470, "passed": true },
+    "desktopShellTests": { "tests": 427, "passed": true },
+    "clippy": true,
+    "fmt": true,
+    "localeKeys": 953,
+    "frontendBuild": true,
+    "tauriBundles": true
+  },
+  "openGates": [
+    "physical DPI 100/125/200 percent",
+    "OS-level pointer and keyboard matrix",
+    "multi-monitor and taskbar orientation",
+    "native detached Collections completion",
+    "public signing and release"
+  ],
+  "documents": [
+    "docs/CODEX_TO_CLAUDE_MASTER_HANDOFF.md",
+    "docs/CODEX_UNFINISHED_WORK.md",
+    "docs/CODEX_CHANGE_INVENTORY.md",
+    "docs/CODEX_KNOWN_ISSUES_AND_TECH_DEBT.md",
+    "docs/CODEX_RELEASE_MANIFEST.md"
+  ]
+}
+
