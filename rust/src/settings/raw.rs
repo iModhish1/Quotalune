@@ -228,6 +228,11 @@ pub(super) struct RawSettings {
     provider_limit_presentation: std::collections::HashMap<String, super::LimitPresentation>,
     #[serde(default)]
     global_limit_presentation: super::LimitPresentation,
+    #[serde(default)]
+    reset_presentation: super::ResetPresentationSettings,
+    #[serde(default)]
+    reset_presentation_overrides:
+        std::collections::HashMap<String, super::ResetPresentationSettings>,
     #[serde(default = "default_catalog_theme")]
     catalog_theme: String,
     #[serde(default)]
@@ -380,6 +385,8 @@ impl Default for RawSettings {
             provider_limit_order: s.provider_limit_order,
             provider_limit_presentation: s.provider_limit_presentation,
             global_limit_presentation: s.global_limit_presentation,
+            reset_presentation: s.reset_presentation,
+            reset_presentation_overrides: s.reset_presentation_overrides,
             catalog_theme: s.catalog_theme,
             active_profile_catalog_theme: s.active_profile_catalog_theme,
             surface_catalog_themes: s.surface_catalog_themes,
@@ -737,6 +744,12 @@ impl From<RawSettings> for Settings {
             } else {
                 super::LimitPresentation::default()
             },
+            reset_presentation: raw.reset_presentation.normalized(),
+            reset_presentation_overrides: raw
+                .reset_presentation_overrides
+                .into_iter()
+                .map(|(surface, settings)| (surface, settings.normalized()))
+                .collect(),
             catalog_theme: normalize_catalog_theme(&raw.catalog_theme),
             active_profile_catalog_theme: raw
                 .active_profile_catalog_theme

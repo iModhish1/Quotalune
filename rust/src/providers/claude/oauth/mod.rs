@@ -3,10 +3,12 @@
 //! Loads OAuth credentials from Claude CLI and fetches usage from the API.
 
 use chrono::{DateTime, Utc};
+use chrono_tz::Tz;
 use reqwest::Client;
 use reqwest::header::{HeaderValue, RETRY_AFTER};
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::{LazyLock, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
@@ -636,9 +638,23 @@ fn parse_iso8601_date(s: &str) -> Option<DateTime<Utc>> {
         })
 }
 
-/// Format a reset date for display
+/// Format a reset date for display, converted to the user's local system
+/// timezone. The instant itself (a `DateTime<Utc>`) remains authoritative
+/// and untouched; this pre-formatted string is only a legacy display
+/// fallback for surfaces that don't (yet) run it through the frontend
+/// `resetPresentation.ts` pipeline -- it previously formatted in raw UTC
+/// regardless of the user's actual timezone, which is the bug this fixes.
 fn format_reset_date(date: DateTime<Utc>) -> String {
-    date.format("%b %-d at %-I:%M%p").to_string()
+    let zone = Tz::from_str(&crate::core::local_timezone_name()).unwrap_or(chrono_tz::UTC);
+    format_reset_date_in_zone(date, zone)
+}
+
+/// Zone-parameterized so the timezone-conversion behavior is directly
+/// testable without depending on the host's real system timezone.
+fn format_reset_date_in_zone(date: DateTime<Utc>, zone: Tz) -> String {
+    date.with_timezone(&zone)
+        .format("%b %-d at %-I:%M%p")
+        .to_string()
 }
 
 #[cfg(test)]

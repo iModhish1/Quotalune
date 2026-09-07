@@ -6,7 +6,11 @@ import {
 import type { ProviderUsageSnapshot, RateWindowSnapshot } from "../../types/bridge";
 import type { StageProvider } from "./stageTypes";
 import {isLimitPresentation,resolveLimitPresentation} from '../../design-system/limitPresentation';
-import { formatResetPresentation, type ResetTranslate } from "../../lib/resetPresentation";
+import {
+  formatResetPresentation,
+  type ResetPresentationConfig,
+  type ResetTranslate,
+} from "../../lib/resetPresentation";
 
 function remainingOf(provider: ProviderUsageSnapshot): number | null {
   const window = provider.selectedMetric ?? provider.primary;
@@ -31,6 +35,10 @@ export interface StageResetOptions {
   locale?: string;
   translate?: ResetTranslate;
   now?: number;
+  /** The user's persisted Reset Presentation config (global or a
+   *  surface-specific override). Defaults to countdown-only when omitted,
+   *  matching the product's pre-existing behavior. */
+  config?: Partial<ResetPresentationConfig>;
 }
 
 /** The single reset-text pipeline for every stage-driven surface. Prefers
@@ -38,7 +46,9 @@ export interface StageResetOptions {
  *  `formatResetPresentation`; falls back to the backend's pre-formatted
  *  `resetDescription` (stripped of its own "Resets in " prefix, which the
  *  caller supplies separately) when `resetsAt` is absent or unparseable --
- *  never fabricates a value. */
+ *  never fabricates a value. Joins every enabled module's compact text with
+ *  " · " (e.g. "51m · Sep 12 · 19:00") so the one string this field carries
+ *  still reflects the user's full module selection, not just a countdown. */
 function formatWindowReset(window: RateWindowSnapshot | null | undefined, options?: StageResetOptions): string {
   const description = window?.resetDescription ?? "";
   const fallback = () => {
@@ -51,10 +61,21 @@ function formatWindowReset(window: RateWindowSnapshot | null | undefined, option
     now: options?.now,
     locale: options?.locale ?? "en-US",
     translate: options?.translate,
-    config: { preset: "countdownOnly", modules: ["countdown"] },
+    config: options?.config ?? { preset: "countdownOnly", modules: ["countdown"] },
   });
-  if (!result.isValid || !result.countdown) return fallback();
-  return result.countdown.short;
+  if (!result.isValid) return fallback();
+  const parts = result.orderedParts
+    .map((part) => {
+      if (part === "countdown") return result.countdown?.short;
+      if (part === "date") return result.date?.short;
+      if (part === "time") return result.time?.short;
+      if (part === "weekday") return result.weekday;
+      if (part === "timezone") return result.timezone;
+      return undefined;
+    })
+    .filter((value): value is string => Boolean(value));
+  if (parts.length === 0) return fallback();
+  return parts.join(" · ");
 }
 
 function resetOf(provider: ProviderUsageSnapshot, options?: StageResetOptions): string {

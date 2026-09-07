@@ -244,6 +244,8 @@ export interface SettingsSnapshot {
   providerLimitOrder?: Record<string, string[]>;
   providerLimitPresentation?: Record<string, import('../design-system/limitPresentation').LimitPresentation>;
   globalLimitPresentation?: import('../design-system/limitPresentation').LimitPresentation;
+  resetPresentation?: import('../lib/resetPresentationSettings').ResetPresentationSettingsDto;
+  resetPresentationOverrides?: Record<string, import('../lib/resetPresentationSettings').ResetPresentationSettingsDto>;
   updateChannel: UpdateChannel;
   autoDownloadUpdates: boolean;
   installUpdatesOnQuit: boolean;

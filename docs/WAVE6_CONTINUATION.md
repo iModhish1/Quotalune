@@ -296,4 +296,64 @@ pass covers (item-by-item in the validation doc); NOT PASSED against the
 owner's full 50-section spec — the Settings UI, persistence, and
 full-surface migration are real, larger, separate work.
 
+## Phase 6: Reset system end-to-end — Composer, persistence, overrides, Claude fix
+
+Direct follow-up to Phase 5: the owner explicitly required the reset
+system be fully user-configurable, persisted, migrated, wired into
+production surfaces, and the Claude UTC bug fixed before resuming
+Structure Theme/Fable work. Full detail and the final item-by-item
+acceptance checklist are in
+[`docs/validation/RESET_TIME_PRESENTATION_SYSTEM.md`](validation/RESET_TIME_PRESENTATION_SYSTEM.md)
+(replaces the Phase 5 checklist there) — summary here:
+
+**Built this pass**: `ResetPresentationSettings` persisted Rust struct
+(`rust/src/settings.rs`) with full validation/repair/migration (15 tests);
+two validated Tauri commands (`set_reset_presentation`,
+`set_reset_presentation_surface_override`) wired into `SettingsSnapshot`;
+a DTO↔config mapping module (`lib/resetPresentationSettings.ts`, 10
+tests) including a real Regional-Format resolver kept independent of UI
+language; a real production Settings section
+(`surfaces/settings/tabs/ResetDisplaySection.tsx`, mounted as a third view
+in the existing Provider Display tab) — preset selector, custom
+module/order editor with accessible Move Up/Down, advanced
+timezone/regional/clock/date controls, and a live dual-locale preview
+powered by the exact production formatter (8 tests); every real
+stage-driven surface (`TrayPanel`, `FloatBar`, `PopOutPanel`,
+`useStageRuntime` — covering tray/hud/dashboard/taskbar/top/edge/quick)
+now resolves surface-override → global → default precedence through
+`useResetStageOptions`, and `StageProvider.reset` now reflects the user's
+full module selection (joined with " · "), not just a hardcoded
+countdown-only view. Fixed the previously-identified Claude UTC-only
+`resetDescription` bug in both `web_api.rs` and `oauth/mod.rs`, reusing
+the exact `chrono_tz` + `local_timezone_name()` pattern already
+established in `cli_reset.rs`, with 2 new regression tests proving the
+timezone conversion (not just "doesn't crash").
+
+**Verified**: 755/755 frontend tests (703 baseline + 34 Phase 5 + 18 new),
+`tsc --noEmit` clean, `pnpm run build` succeeds. `cargo test --workspace`:
+1938 passing (1491 codexbar + 447 desktop-tauri). `cargo clippy
+--workspace --all-targets -- -D warnings` clean. `cargo fmt --check`
+clean. `scripts/scan-secrets.mjs` clean. `git diff --check` clean.
+
+**NOT done this pass** (see the validation doc's final checklist for the
+full item-by-item honesty pass):
+- **Surface-override UI control** — the backend/precedence is real and
+  wired everywhere; the Composer itself only edits the *global* config,
+  no UI yet to set a per-surface override.
+- **Tray/Rust-side formatter migration** — `commands/bridge.rs`'s own
+  tray formatting functions and `useFormattedResetTime.ts` are still
+  separate, unmigrated implementations. This is the largest remaining
+  gap against "one authoritative pipeline" and "tray parity" — an Arabic
+  tray tooltip is not guaranteed to say the same thing as the frontend
+  surfaces yet.
+- **Native CDP screenshots** — none of the 15 named files captured.
+- **Fresh native RTL re-verification** — the Composer's bidi isolation is
+  test-verified (JSDOM), not re-confirmed against the real Dev binary.
+
+**Verdict**: NOT PASSED against the owner's full final checklist —
+Settings Composer/persistence/migration/Claude-bug-fix are real and
+verified; surface-override UI, tray/Rust formatter migration, and native
+proof remain genuine, scoped-out gaps, reported honestly rather than
+claimed complete.
+
 ## Overall verdict so far

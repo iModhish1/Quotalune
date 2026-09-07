@@ -3,9 +3,10 @@ import { useLocale } from "../../../hooks/useLocale";
 import type { ProviderCatalogEntry, SettingsSnapshot, SettingsUpdate } from "../../../types/bridge";
 import ProviderIdentityGallery from "./ProviderIdentityGallery";
 import UsageDisplaySection from "./UsageDisplaySection";
+import ResetDisplaySection from "./ResetDisplaySection";
 import "./ProviderDisplayTab.css";
 
-type ProviderDisplayView = "identities" | "rules";
+type ProviderDisplayView = "identities" | "rules" | "resetDisplay";
 
 interface ProviderDisplayTabProps {
   settings: SettingsSnapshot;
@@ -51,11 +52,15 @@ export default function ProviderDisplayTab({
           <strong>{t("UsageDisplay")}</strong>
           <small>{t("ProviderPresentationGlobalTitle")}</small>
         </button>
+        <button type="button" aria-pressed={view === "resetDisplay"} onClick={() => setView("resetDisplay")}>
+          <span aria-hidden="true">⏱</span>
+          <strong>Reset Display</strong>
+          <small>Countdown, date &amp; time</small>
+        </button>
       </nav>
 
-      {view === "identities" ? (
-        <ProviderIdentityGallery />
-      ) : (
+      {view === "identities" && <ProviderIdentityGallery />}
+      {view === "rules" && (
         <UsageDisplaySection
           providerCatalog={providerCatalog}
           providerAccentColors={settings.providerAccentColors}
@@ -63,6 +68,7 @@ export default function ProviderDisplayTab({
           externalSaving={saving}
         />
       )}
+      {view === "resetDisplay" && <ResetDisplaySection />}
     </div>
   );
 }

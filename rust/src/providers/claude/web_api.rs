@@ -1,8 +1,10 @@
 //! Claude Web API fetcher - uses browser cookies to fetch usage from claude.ai
 
 use chrono::{DateTime, Utc};
+use chrono_tz::Tz;
 use reqwest::{Client, header};
 use serde::Deserialize;
+use std::str::FromStr;
 
 use crate::browser::cookies::get_cookie_header;
 use crate::core::{
@@ -662,9 +664,24 @@ impl ClaudeWebApiFetcher {
             })
     }
 
-    /// Format reset time for display
+    /// Format reset time for display, converted to the user's local system
+    /// timezone. The instant itself (`resets_at`, a `DateTime<Utc>`) is the
+    /// authoritative value passed through untouched; this pre-formatted
+    /// string is only a legacy display fallback for surfaces that don't
+    /// (yet) run it through the frontend `resetPresentation.ts` pipeline --
+    /// it must never be treated as the source of truth, and must never
+    /// silently present in UTC to a non-UTC user (the bug this fixes).
     fn format_reset_time(dt: DateTime<Utc>) -> String {
-        dt.format("%b %-d at %-I:%M%p").to_string()
+        let zone = Tz::from_str(&crate::core::local_timezone_name()).unwrap_or(chrono_tz::UTC);
+        Self::format_reset_time_in_zone(dt, zone)
+    }
+
+    /// Zone-parameterized so the timezone-conversion behavior is directly
+    /// testable without depending on the host's real system timezone.
+    fn format_reset_time_in_zone(dt: DateTime<Utc>, zone: Tz) -> String {
+        dt.with_timezone(&zone)
+            .format("%b %-d at %-I:%M%p")
+            .to_string()
     }
 
     /// Convert rate limit tier to plan name
@@ -766,12 +783,42 @@ fn append_web_extra_windows(
 #[cfg(test)]
 mod tests {
     use super::{AccountResponse, ClaudeWebApiFetcher, UsageWindow, cookie_value};
+    use chrono::{DateTime, Utc};
     use reqwest::header;
     use std::sync::{Mutex, OnceLock};
 
     fn env_lock() -> &'static Mutex<()> {
         static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
         LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    /// Regression test for the UTC-only `resetDescription` bug: the same
+    /// instant must render as a different local clock hour depending on
+    /// the target timezone -- never silently formatted in raw UTC
+    /// regardless of the user's actual zone.
+    #[test]
+    fn format_reset_time_converts_to_the_target_zone_not_utc() {
+        let instant: DateTime<Utc> = "2026-09-12T19:00:00Z".parse().unwrap();
+        let riyadh =
+            ClaudeWebApiFetcher::format_reset_time_in_zone(instant, chrono_tz::Asia::Riyadh);
+        let los_angeles = ClaudeWebApiFetcher::format_reset_time_in_zone(
+            instant,
+            chrono_tz::America::Los_Angeles,
+        );
+        let utc = ClaudeWebApiFetcher::format_reset_time_in_zone(instant, chrono_tz::UTC);
+
+        // 19:00 UTC -> 22:00 in Riyadh (UTC+3), 12:00 in Los Angeles (UTC-7, PDT).
+        assert!(riyadh.contains("10:00PM"), "got: {riyadh}");
+        assert!(los_angeles.contains("12:00PM"), "got: {los_angeles}");
+        assert!(utc.contains("7:00PM"), "got: {utc}");
+        assert_ne!(
+            riyadh, utc,
+            "must not silently format in UTC for a non-UTC zone"
+        );
+        assert_ne!(
+            los_angeles, utc,
+            "must not silently format in UTC for a non-UTC zone"
+        );
     }
 
     #[test]

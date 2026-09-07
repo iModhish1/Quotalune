@@ -82,6 +82,17 @@ export function setGlobalLimitPresentation(presentation: import('../design-syste
   return invoke<void>('set_global_limit_presentation', {presentation});
 }
 
+export function setResetPresentation(config: import('./resetPresentationSettings').ResetPresentationSettingsDto): Promise<void> {
+  return invoke<void>('set_reset_presentation', {config});
+}
+
+export function setResetPresentationSurfaceOverride(
+  surface: string,
+  config: import('./resetPresentationSettings').ResetPresentationSettingsDto | null,
+): Promise<void> {
+  return invoke<void>('set_reset_presentation_surface_override', {surface,config});
+}
+
 export function setUsageSettings(
   globalMode: "used" | "remaining" | "hybrid",
   providerOverrides: Record<string, "used" | "remaining" | "hybrid">,

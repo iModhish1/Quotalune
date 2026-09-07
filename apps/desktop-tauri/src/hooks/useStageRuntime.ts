@@ -8,7 +8,7 @@ import {
   toStageProviders,
   usageConfigFromSnapshot,
 } from "../components/orbit/stageProviders";
-import { useResetStageOptions } from "./useResetStageOptions";
+import { useResetStageOptions, type ResetStageSettingsSource } from "./useResetStageOptions";
 import {
   DEFAULT_CATALOG_THEME,
   resolveCatalogTheme,
@@ -28,6 +28,7 @@ export function useStageRuntime({
   const [catalog, setCatalog] = useState(DEFAULT_CATALOG_THEME);
   const [catalogSource, setCatalogSource] = useState<CatalogThemeSource>("default");
   const [usageConfig, setUsageConfig] = useState<UsageDisplayConfig | undefined>();
+  const [resetSettings, setResetSettings] = useState<ResetStageSettingsSource>({});
   const [settingsError, setSettingsError] = useState<string | null>(null);
 
   const reloadSettings = useCallback(() => {
@@ -38,6 +39,10 @@ export function useStageRuntime({
         setCatalog(resolved.slug);
         setCatalogSource(resolved.source);
         setUsageConfig(usageConfigFromSnapshot(snapshot));
+        setResetSettings({
+          resetPresentation: snapshot.resetPresentation,
+          resetPresentationOverrides: snapshot.resetPresentationOverrides,
+        });
         setSettingsError(null);
       })
       .catch((cause: unknown) => {
@@ -54,7 +59,7 @@ export function useStageRuntime({
     };
   }, [enabled, reloadSettings]);
 
-  const resetOptions = useResetStageOptions();
+  const resetOptions = useResetStageOptions(resetSettings, surface);
   const providers = useMemo(
     () => toStageProviders(live.providers ?? [], usageConfig, resetOptions),
     [live.providers, usageConfig, resetOptions],

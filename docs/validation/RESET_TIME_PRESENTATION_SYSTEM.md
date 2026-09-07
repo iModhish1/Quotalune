@@ -226,73 +226,199 @@ codexbar-crate tests all pass, including the 17 `locale::tests` covering
 every language; `cargo clippy --workspace --all-targets` and `cargo fmt
 --check` both clean. `scripts/scan-secrets.mjs` clean.
 
-## Acceptance checklist (owner's exact list)
+## Phase 6: Settings Composer, persistence, overrides, Claude bug fix
+
+The owner's follow-up instruction required the reset system to be fully
+user-configurable, persisted, migrated, wired into production surfaces, and
+the previously-identified Claude UTC bug fixed — not just a formatter API.
+This phase built the missing product layers on top of the accepted Phase 5
+core, without changing the core itself (no defect was found in it).
+
+### Rust persistence (`rust/src/settings.rs`)
+
+`ResetPresentationSettings` — a new persisted struct mirroring the frontend
+`ResetPresentationConfig`, with `preset`, `modules`, `order`,
+`timezoneMode`/`timezoneId`, `regionalFormat`/`regionalLocale`,
+`clockFormat`, `meridiemStyle`, `monthStyle`, `weekdayStyle`, `yearStyle`,
+`countdownDetail`, `numberingSystem`. Added to `Settings` as
+`reset_presentation` (global) and `reset_presentation_overrides:
+HashMap<String, ResetPresentationSettings>` (per-surface, keyed by surface
+id — "taskbar"/"top"/"edge"/"hud"/"quick"/"dashboard"/"tray"/etc.).
+
+- **Validation** (`is_valid()`): every enum field checked against its known
+  set; `modules` must be non-empty with no duplicates and only known ids;
+  `order` must have no duplicates and only known ids; `timezoneId`/
+  `regionalLocale`, when set, must pass a structural IANA-timezone /
+  BCP-47 check (`is_valid_iana_timezone`, `is_valid_bcp47_locale`) — real
+  functions, not stubs, each with their own tests covering the 6 named
+  timezones (Asia/Riyadh, Europe/London, America/New_York,
+  America/Los_Angeles, Asia/Tokyo, Australia/Sydney) plus rejected garbage
+  (`+03:00`, `GMT+3`, path-traversal strings, empty).
+- **Repair, never reject** (`normalized()`): a settings file with one
+  corrupt field is repaired field-by-field against the same defaults
+  rather than the whole config (or the whole settings file) being
+  discarded. Explicitly handles the case field-level validity doesn't
+  catch: an `order` that omits an enabled `module` gets that module
+  appended, never silently dropped.
+- **Migration**: `Settings::load()` calls `.normalized()` on both the
+  global config and every override, in-memory, the same way existing
+  fields like `catalog_theme` are migrated — never persisted destructively
+  until a normal save. A settings.json saved before this feature existed
+  (no `reset_presentation` key at all) deserializes via `#[serde(default)]`
+  straight into `ResetPresentationSettings::default()`, which is
+  bit-for-bit the product's pre-existing countdown-only/adaptive/system
+  behavior — no surprise change for existing users. 15 dedicated tests
+  (`settings::reset_presentation_settings_tests`, plus 3 in
+  `settings::tests`) cover default-equals-current-behavior, every named
+  preset, empty/duplicate/unknown modules, duplicate/incomplete order,
+  every named timezone, rejected garbage, corrupt-field repair,
+  missing-field migration (direct JSON deserialize), full roundtrip
+  (temp-file save/reload), and a hand-corrupted `reset_presentation`
+  object in an otherwise-valid settings.json never panicking.
+
+### Bridge + commands
+
+`SettingsSnapshot` (`apps/desktop-tauri/src-tauri/src/commands/bridge.rs`)
+now carries `resetPresentation`/`resetPresentationOverrides` (camelCase via
+`#[serde(rename_all = "camelCase")]` on the nested struct, the same pattern
+already used for `NotificationEventPreferences`/`NotificationQuietHours`).
+Two new validated, persisted Tauri commands
+(`apps/desktop-tauri/src-tauri/src/command_profiles.rs`,
+registered in `main.rs`): `set_reset_presentation` (global) and
+`set_reset_presentation_surface_override` (per-surface; `None` clears an
+override). Both reject an invalid config outright rather than persisting a
+corrupt one, and both emit `codexbar:settings-updated` so every live
+surface picks up the change without a restart — the same broadcast
+mechanism `set_global_limit_presentation` already uses.
+
+### Settings → frontend config mapping
+
+New `apps/desktop-tauri/src/lib/resetPresentationSettings.ts` is the one
+place the persisted DTO shape and the pure `ResetPresentationConfig` shape
+convert between each other (`dtoToResetSettings`/`resetSettingsToDto`),
+plus `resolveRegionalLocale()` — the Regional Format resolver: "system"
+tries `Intl.DateTimeFormat().resolvedOptions().locale` (a real signal
+independent of the UI language, when the platform exposes one different
+from it) before falling back to the UI language; "uiLanguage" always
+matches the app's language; "custom" uses an explicit BCP-47 tag. This is
+what keeps UI language, timezone, and regional formatting genuinely
+separable, per the spec: Arabic UI + a British `en-GB` regional format +
+`Asia/Riyadh` timezone is a representable, working combination. 10 tests
+in `resetPresentationSettings.test.ts` cover default-when-unset, full
+field mapping, sanitization of corrupt module/order/preset values, and a
+round-trip identity.
+
+### Reset Display Composer (`surfaces/settings/tabs/ResetDisplaySection.tsx`)
+
+A real, third view inside the existing Provider Display tab (alongside
+Provider Identities and Usage Display, the two closest existing
+"how usage/reset gets shown" sections) — not a demo editor. Preset select
+(the 6 named presets, `custom` reveals module checkboxes + an accessible
+Move-Up/Move-Down order list, matching the exact reorder pattern
+`ProvidersSidebar.tsx` already uses); an "Advanced formatting" `<details>`
+(closed by default, opens automatically on `custom`) with Timezone
+(Follow System — showing the currently-resolved zone — or Custom with a
+validated IANA text input), Regional Format (System/UI Language/Custom
+with a BCP-47 text input), Clock Format, Meridiem, Month/Weekday/Year
+style, and Countdown Detail. A live preview renders both an English and an
+Arabic example from a fixed deterministic sample instant, through the
+exact same `formatResetPresentation` production function every real
+surface calls — never a hardcoded preview string — with the Arabic value
+wrapped in `<bdi dir="ltr">` and a visible "Screen reader text: …" line
+showing the actual `fullAriaLabel`. Persistence is optimistic with
+revert-on-failure, following the exact pattern `UsageDisplaySection.tsx`
+already established. 8 component tests cover: loading a persisted config
+and rendering a real preview value, the Arabic `<bdi>` isolation, preset
+selection persisting the matching module set, revealing the custom
+controls, module toggling (forcing preset to `custom`), refusing to drop
+the last enabled module, Move-Up/Down persisting the expected order, and
+save-failure revert with a visible error.
+
+### Wired into every real stage-driven surface
+
+`stageProviders.ts`'s `formatWindowReset()` now accepts the full resolved
+`config` (not a hardcoded `countdownOnly` override) and joins every
+enabled module's compact text with " · " (e.g. `"51m · Sep 12 · 19:00"`),
+so the one string `StageProvider.reset` carries reflects the user's whole
+module selection, not just a countdown. `useResetStageOptions.ts` now
+takes the live `SettingsSnapshot` slice and a `surfaceId`, and resolves
+precedence itself: surface override → global `resetPresentation` →
+`formatResetPresentation`'s own built-in safe defaults. Every real call
+site now passes both: `TrayPanel.tsx` ("tray"), `FloatBar.tsx` ("hud"),
+`PopOutPanel.tsx` ("dashboard"), and `useStageRuntime.ts` (its own
+`surface: CatalogSurfaceId` parameter — "taskbar"/"top"/"edge"/"quick",
+used by every orbital surface built on that shared hook).
+
+### Claude UTC-only `resetDescription` bug — fixed
+
+`rust/src/providers/claude/web_api.rs::format_reset_time` and
+`rust/src/providers/claude/oauth/mod.rs::format_reset_date` previously
+formatted the reset instant with `%b %-d at %-I:%M%p` directly on the
+`DateTime<Utc>` value — always UTC, regardless of the user's actual
+timezone. Both now convert to the local system zone first, via the exact
+same `chrono_tz::Tz::from_str(&crate::core::local_timezone_name())`
+pattern `providers/claude/cli_reset.rs` already used elsewhere in the same
+provider family (reused, not reinvented). The authoritative `resets_at`
+instant itself was never wrong and is untouched — only this legacy
+pre-formatted fallback string was. Both functions were split into a
+zone-parameterized inner function so the conversion is directly testable
+without depending on the test host's real system timezone; two regression
+tests assert the same UTC instant renders a different local hour in
+Asia/Riyadh vs. America/Los_Angeles vs. UTC itself.
+
+### Verified (Phase 6)
+
+755/755 frontend tests (703 baseline + 34 Phase 5 + 18 new this phase),
+`tsc --noEmit` clean, `pnpm run build` succeeds. `cargo test --workspace`:
+1491 (codexbar crate) + 447 (desktop-tauri crate) = 1938 passing, including
+15 new `ResetPresentationSettings` tests and 2 new Claude-timezone
+regression tests. `cargo clippy --workspace --all-targets -- -D warnings`
+clean. `cargo fmt --check` clean. `scripts/scan-secrets.mjs` clean.
+`git diff --check` clean (only pre-existing CRLF-normalization notices).
+
+## Acceptance checklist (owner's exact final list)
 
 | # | Item | Status |
 |---|---|---|
-| 1 | Arabic mixed RTL/LTR layout | Not re-verified this pass (no new surface markup written — see Scope below) |
-| 2 | Provider names stay LTR | Unchanged (pre-existing `<bdi>`/normal text; this pass adds no provider-name rendering) |
-| 3 | Plans stay LTR | Unchanged (pre-existing) |
-| 4 | Latin digits stay Latin | **PASS** — enforced via `numberingSystem: "latn"`, tested for both Arabic date and countdown output |
-| 5 | `73%` never reverses | Out of this pass's scope (no percentage rendering touched) |
-| 6 | System timezone works globally | **PASS** — `resolveResetTimeZone` + tests |
-| 7 | Custom timezone works | **PASS** — `timezoneMode: "custom"` + tests |
-| 8 | IANA timezone IDs used | **PASS** — never a raw offset |
-| 9 | DST correct | **PASS** — `Europe/London` BST/GMT test |
-| 10 | System/12h/24h clock modes work | **PASS** — `clockFormat` + tests |
-| 11 | Countdown adapts by duration | **PASS** — full tiering test matrix |
-| 12 | Countdown-only supported | **PASS** — `countdownOnly` preset |
-| 13 | Absolute-only supported | **PASS** — `dateAndTime` preset / `modules: ["date","time"]` |
-| 14 | Both supported | **PASS** — `countdownDateAndTime`/`full` presets |
-| 15 | Multiple modules selectable | **PASS** — `modules` is a set |
-| 16 | Ordering customizable | **PASS** — `order` field, tested |
-| 17 | Weekday configurable | **PASS** — `weekdayStyle` |
-| 18 | Date detail configurable | **PASS** via `monthStyle`/`yearStyle` (see scope note above re: the separate 5-preset `dateStyle` enum) |
-| 19 | Month format configurable | **PASS** — `monthStyle` |
-| 20 | Surface responsiveness works | **NOT DONE** — no per-surface density adaptation built this pass (see Scope) |
-| 21 | One shared formatter powers production | **PASS** — `stageProviders.ts::resetOf` is the real, live consumer for ~20 surfaces; other duplicate formatters (tray Rust-side, `useFormattedResetTime`) were not migrated/removed this pass (see Scope) |
-| 22 | Arabic ARIA is semantic | **PASS** — `fullAriaLabel`/`countdown.ariaLabel` always the full sentence, never the compact form; real Arabic templates added (was previously falling back to English, now fixed) |
-| 23 | No excessive timer/render cost | **PASS** — `countdownRefreshIntervalMs` floors at 30s, never 1Hz; `useResetPresentation`/existing hooks size their interval accordingly |
-| 24 | Tests pass | **PASS** — 34 new + 737/737 total frontend; Rust workspace green; clippy/fmt clean |
-| 25 | Native proof exists | **NOT DONE** this pass — no CDP native-verification screenshots captured (see Scope) |
-| 26 | Commit created | Pending — see repo history for the commit made alongside this document |
+| Settings Composer exists | **PASS** — `ResetDisplaySection.tsx`, a real production Settings section, not a demo |
+| Settings persist | **PASS** — `rust/src/settings.rs::ResetPresentationSettings` + `set_reset_presentation` command, validated server-side |
+| Migrations work | **PASS** — `#[serde(default)]` + `.normalized()` in `Settings::load()`; missing-field and corrupt-field migration tests |
+| Timezone system works | **PASS** — Follow System (live-resolved, shown in the UI), tested |
+| Custom timezone works | **PASS** — validated IANA input, tested against all 6 named zones |
+| Regional format works | **PASS** — System/UI Language/Custom, kept independent of UI language and timezone |
+| System/12h/24h works | **PASS** — unchanged from Phase 5, now user-configurable via the Composer |
+| Countdown adaptive behavior works | **PASS** — unchanged core, now user-configurable |
+| Countdown-only works | **PASS** — `countdownOnly` preset |
+| Absolute-only works | **PASS** — `dateAndTime` preset |
+| Both works | **PASS** — `countdownDateAndTime`/`full` presets |
+| Order is user-controlled | **PASS** — accessible Move Up/Down list in the Composer, persisted `order` array |
+| Day/month/weekday/year styles work | **PASS** — all four independently configurable in Advanced formatting |
+| Surface overrides work where implemented | **PARTIAL** — the Rust persistence, validated command, and `useResetStageOptions` precedence resolution (surface → global → default) are real and wired into all 4 stage-driven call sites; the Composer UI itself only edits the *global* config — there is no UI control yet to set a surface-specific override (a user could not do this without calling the Tauri command directly) |
+| All duplicate production formatters migrated | **PARTIAL** — `stageProviders.ts::resetOf` (the single highest-leverage integration point, ~20 surfaces) now uses the persisted config; `useFormattedResetTime.ts` and the Rust-side tray formatters in `commands/bridge.rs` (`format_compact_reset_countdown`, `normalize_reset_description`, `compact_tray_status_label`) were **not** migrated this pass — they still run their own separate formatting logic |
+| Claude UTC-only bug fixed | **PASS** — both call sites fixed, with regression tests proving the timezone conversion |
+| Tray parity exists | **NOT DONE** — the native tray still renders through its own unmigrated Rust formatter (see above); an Arabic tray tooltip and the frontend surfaces are not guaranteed to say the same thing yet |
+| Arabic mixed RTL/LTR works | **PASS in the Composer's own preview** (bidi-isolated `<bdi>`, verified by test); **not freshly native-re-verified** on the live app surfaces this pass |
+| Latin digits remain Latin | **PASS** — unchanged from Phase 5, still enforced and tested |
+| Native screenshots exist | **NOT DONE** — no CDP native-verification screenshots captured this pass |
+| Timer/render performance is acceptable | **PASS** — unchanged `countdownRefreshIntervalMs` floor (≥30s, no 1Hz loop); no new per-frame `Intl` construction introduced |
+| All tests/builds pass | **PASS** — see Verified section above |
+| Commits created | See repo history for the commit(s) made alongside this document |
 
-## Explicitly out of scope this pass
+## Explicitly out of scope / not done (honest, carried forward)
 
-This was scoped, as told to the owner mid-session, to the core formatter
-and its one highest-leverage wiring point rather than the full 50-section
-surface. Not done, and real remaining work:
-
-- **Settings "Reset Display Composer" UI** (preset dropdown, multi-select
-  checkboxes, keyboard-accessible order list, timezone/clock/date-style
-  pickers, live preview) — no UI was built. `useResetPresentation` exists
-  as the hook such a UI would call for its live preview, using the same
-  production code path, but no screen consumes it yet.
-- **Persisted settings** — no `timezoneMode`/`customTimeZone`/
-  `clockFormat`/`resetPreset`/etc. fields were added to `rust/src/
-  settings.rs::Settings`, so there is no user-facing way to change these
-  yet; every real call site currently uses `defaultResetPresentationConfig()`
-  (countdown-only, adaptive, system timezone/clock — the safe defaults
-  the spec itself asks for).
-- **Per-surface overrides** — not built; `resetOptions` only threads
-  locale/translate today, not a per-surface config override.
-- **Migrating the other duplicate formatters** — `useFormattedResetTime.ts`
-  and the Rust-side tray formatters
-  (`apps/desktop-tauri/src-tauri/src/commands/bridge.rs`) were left
-  untouched. They still work (and still test green), but they are not yet
-  re-pointed at this pipeline. `stageProviders.ts` was chosen as the one
-  real integration point because it is the single function feeding every
-  `StageProvider`-based surface, per the "one authoritative pipeline"
-  requirement — it just isn't the *only* remaining reset-formatting code
-  in the app yet.
-- **Fixing Claude's UTC-only `resetDescription`** — the real bug in
-  `rust/src/providers/claude/web_api.rs:666-668` and
-  `rust/src/providers/claude/oauth/mod.rs:640-642` (formats in UTC with no
-  local conversion) was identified but not fixed; it's masked for
-  `stageProviders.ts` consumers now that `resetsAt` (the real instant) is
-  preferred over `resetDescription`, but the raw backend string itself is
-  still wrong if anything else reads it directly.
-- **Native CDP verification / screenshots** — not captured this pass.
-- **Percentage/provider-name bidi audit** (`73%` reversal, etc.) — not
-  touched; those are unrelated to reset-time formatting and were already
-  handled (or not) by prior Wave 6 work.
+- **Surface-override UI control** — backend-complete, no Composer control to set one yet (see checklist row above).
+- **Tray/Rust-side formatter migration** — `commands/bridge.rs`'s own tray
+  formatting functions and `useFormattedResetTime.ts` remain separate,
+  unmigrated implementations. This is the largest remaining piece of the
+  "one authoritative pipeline" requirement — the frontend stage surfaces
+  are unified; the tray (native, Rust-rendered) and the two hooks/composer
+  code paths are not yet reconciled into one.
+- **Native CDP screenshots** — none of the 15 named files from the spec
+  (`RESET_SETTINGS_COMPOSER.png`, `AR_COUNTDOWN_ONLY.png`, etc.) were
+  captured this pass.
+- **Fresh native RTL re-verification** — the bidi-isolation claim for the
+  Composer's own preview is test-verified (JSDOM), not re-confirmed via
+  CDP against the real Dev binary this pass.
+- **Percentage/provider-name bidi audit** (`73%` reversal, etc.) — still
+  out of scope; unrelated to reset-time formatting, already covered (or
+  not) by prior Wave 6 work.

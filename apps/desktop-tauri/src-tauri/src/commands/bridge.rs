@@ -711,6 +711,9 @@ pub struct SettingsSnapshot {
     provider_limit_presentation:
         std::collections::HashMap<String, codexbar::settings::LimitPresentation>,
     global_limit_presentation: codexbar::settings::LimitPresentation,
+    reset_presentation: codexbar::settings::ResetPresentationSettings,
+    reset_presentation_overrides:
+        std::collections::HashMap<String, codexbar::settings::ResetPresentationSettings>,
     update_channel: &'static str,
     auto_download_updates: bool,
     install_updates_on_quit: bool,
@@ -840,6 +843,8 @@ impl From<Settings> for SettingsSnapshot {
             provider_limit_order: settings.provider_limit_order,
             provider_limit_presentation: settings.provider_limit_presentation,
             global_limit_presentation: settings.global_limit_presentation,
+            reset_presentation: settings.reset_presentation,
+            reset_presentation_overrides: settings.reset_presentation_overrides,
             update_channel: update_channel_label(settings.update_channel),
             auto_download_updates: settings.auto_download_updates,
             install_updates_on_quit: settings.install_updates_on_quit,

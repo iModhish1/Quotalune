@@ -116,7 +116,7 @@ export default function TrayPanel({ state }: { state: BootstrapState }) {
     />
   );
 
-  const resetOptions = useResetStageOptions();
+  const resetOptions = useResetStageOptions(settings, "tray");
   const stageProviders = toStageProviders(sorted, usageConfigFromSnapshot(settings), resetOptions);
   const catalog = resolveCatalogTheme(settings, "quick").slug;
 

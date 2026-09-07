@@ -924,6 +924,108 @@ fn test_settings_roundtrip_with_language() {
 }
 
 #[test]
+fn test_settings_load_missing_reset_presentation_field_defaults_to_countdown_only() {
+    // Simulate loading a settings.json saved before the Reset Presentation
+    // system existed -- must not wipe or corrupt the rest of the file, and
+    // must migrate to a config equivalent to the product's pre-existing
+    // countdown behavior (never a surprise switch to absolute-date mode).
+    let legacy_json = r#"{
+            "enabled_providers": ["claude", "codex"],
+            "refresh_interval_secs": 300,
+            "start_minimized": false
+        }"#;
+
+    let settings: Settings = serde_json::from_str(legacy_json)
+        .expect("legacy settings without reset_presentation must still load");
+    assert_eq!(
+        settings.reset_presentation,
+        ResetPresentationSettings::default()
+    );
+    assert_eq!(settings.reset_presentation.preset, "countdownOnly");
+    assert_eq!(
+        settings.reset_presentation.modules,
+        vec!["countdown".to_string()]
+    );
+    assert_eq!(settings.reset_presentation.timezone_mode, "system");
+    // The rest of the file is unaffected.
+    assert!(settings.enabled_providers.contains("claude"));
+    assert_eq!(settings.refresh_interval_secs, 300);
+}
+
+#[test]
+fn test_settings_reset_presentation_roundtrips() {
+    use std::io::Write;
+    use tempfile::NamedTempFile;
+
+    let settings = Settings {
+        reset_presentation: ResetPresentationSettings {
+            preset: "full".to_string(),
+            modules: vec![
+                "weekday".to_string(),
+                "date".to_string(),
+                "time".to_string(),
+                "countdown".to_string(),
+            ],
+            order: vec![
+                "weekday".to_string(),
+                "date".to_string(),
+                "time".to_string(),
+                "countdown".to_string(),
+                "timezone".to_string(),
+            ],
+            timezone_mode: "custom".to_string(),
+            timezone_id: Some("Asia/Riyadh".to_string()),
+            clock_format: "h24".to_string(),
+            ..ResetPresentationSettings::default()
+        },
+        ..Settings::default()
+    };
+
+    let mut temp_file = NamedTempFile::new().expect("failed to create temp file");
+    let json = serde_json::to_string_pretty(&settings).expect("failed to serialize settings");
+    temp_file
+        .write_all(json.as_bytes())
+        .expect("failed to write settings");
+    let content = std::fs::read_to_string(temp_file.path()).expect("failed to read settings");
+    let loaded: Settings = serde_json::from_str(&content).expect("failed to deserialize settings");
+
+    assert_eq!(loaded.reset_presentation.preset, "full");
+    assert_eq!(loaded.reset_presentation.timezone_mode, "custom");
+    assert_eq!(
+        loaded.reset_presentation.timezone_id.as_deref(),
+        Some("Asia/Riyadh")
+    );
+    assert_eq!(loaded.reset_presentation.clock_format, "h24");
+    assert!(loaded.reset_presentation.is_valid());
+}
+
+#[test]
+fn test_settings_corrupt_reset_presentation_json_never_crashes_and_repairs_on_load() {
+    // A hand-edited or partially-corrupted settings.json must still load --
+    // the corrupt sub-object is repaired by `.normalized()` (which
+    // `Settings::load()` applies), never a panic or a rejected file.
+    let corrupt_json = r#"{
+            "enabled_providers": ["claude"],
+            "refresh_interval_secs": 300,
+            "start_minimized": false,
+            "reset_presentation": {
+                "preset": "not-a-real-preset",
+                "modules": ["countdown", "countdown", "made-up-module"],
+                "order": [],
+                "timezoneMode": "custom",
+                "timezoneId": "definitely not iana",
+                "clockFormat": "26-hour"
+            }
+        }"#;
+
+    let settings: Settings = serde_json::from_str(corrupt_json)
+        .expect("corrupt reset_presentation must still deserialize");
+    let repaired = settings.reset_presentation.normalized();
+    assert!(repaired.is_valid());
+    assert_eq!(repaired.timezone_id, None);
+}
+
+#[test]
 fn test_settings_with_utf8_bom_parses_perprovider_tray_mode() {
     let json = "\u{feff}{\n            \"enabled_providers\": [\"claude\", \"codex\"],\n            \"refresh_interval_secs\": 300,\n            \"tray_icon_mode\": \"perprovider\"\n        }";
 

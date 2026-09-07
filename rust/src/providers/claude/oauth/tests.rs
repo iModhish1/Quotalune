@@ -1,6 +1,34 @@
-use super::{ClaudeOAuthCredentials, ClaudeOAuthFetcher, OAuthUsageResponse, UsageWindow};
+use super::{
+    ClaudeOAuthCredentials, ClaudeOAuthFetcher, OAuthUsageResponse, UsageWindow,
+    format_reset_date_in_zone,
+};
+use chrono::{DateTime, Utc};
 use reqwest::header::HeaderValue;
 use std::time::Duration;
+
+/// Regression test for the UTC-only `resetDescription` bug: the same
+/// instant must render as a different local clock hour depending on the
+/// target timezone -- never silently formatted in raw UTC regardless of
+/// the user's actual zone.
+#[test]
+fn format_reset_date_converts_to_the_target_zone_not_utc() {
+    let instant: DateTime<Utc> = "2026-09-12T19:00:00Z".parse().unwrap();
+    let riyadh = format_reset_date_in_zone(instant, chrono_tz::Asia::Riyadh);
+    let los_angeles = format_reset_date_in_zone(instant, chrono_tz::America::Los_Angeles);
+    let utc = format_reset_date_in_zone(instant, chrono_tz::UTC);
+
+    assert!(riyadh.contains("10:00PM"), "got: {riyadh}");
+    assert!(los_angeles.contains("12:00PM"), "got: {los_angeles}");
+    assert!(utc.contains("7:00PM"), "got: {utc}");
+    assert_ne!(
+        riyadh, utc,
+        "must not silently format in UTC for a non-UTC zone"
+    );
+    assert_ne!(
+        los_angeles, utc,
+        "must not silently format in UTC for a non-UTC zone"
+    );
+}
 
 #[test]
 fn keeps_sub_one_utilization_in_percent_units() {

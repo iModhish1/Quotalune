@@ -421,6 +421,8 @@ fn main() {
             command_profiles::set_provider_limit_order,
             command_profiles::set_provider_limit_presentation,
             command_profiles::set_global_limit_presentation,
+            command_profiles::set_reset_presentation,
+            command_profiles::set_reset_presentation_surface_override,
         ])
         .setup(move |app| {
             if let Ok(icon_path) = app

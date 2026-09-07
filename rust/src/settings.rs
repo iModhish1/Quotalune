@@ -132,6 +132,457 @@ mod limit_presentation_tests {
         );
     }
 }
+/// Persisted user configuration for the Reset Time / Presentation system
+/// (`apps/desktop-tauri/src/lib/resetPresentation.ts` is the frontend
+/// counterpart this mirrors -- keep field semantics in sync). Only the
+/// *display* preference lives here; the authoritative reset instant itself
+/// (`resetsAt`) is never persisted or derived from this struct.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ResetPresentationSettings {
+    pub preset: String,
+    pub modules: Vec<String>,
+    pub order: Vec<String>,
+    pub timezone_mode: String,
+    #[serde(default)]
+    pub timezone_id: Option<String>,
+    #[serde(default = "default_regional_format")]
+    pub regional_format: String,
+    /// Explicit BCP-47 locale tag, used only when `regional_format` is
+    /// "custom".
+    #[serde(default)]
+    pub regional_locale: Option<String>,
+    #[serde(default = "default_clock_format")]
+    pub clock_format: String,
+    #[serde(default = "default_meridiem_style")]
+    pub meridiem_style: String,
+    #[serde(default = "default_month_style")]
+    pub month_style: String,
+    #[serde(default = "default_weekday_style")]
+    pub weekday_style: String,
+    #[serde(default = "default_year_style")]
+    pub year_style: String,
+    #[serde(default = "default_countdown_detail")]
+    pub countdown_detail: String,
+    #[serde(default = "default_numbering_system")]
+    pub numbering_system: String,
+}
+
+fn default_regional_format() -> String {
+    "system".to_string()
+}
+fn default_clock_format() -> String {
+    "system".to_string()
+}
+fn default_meridiem_style() -> String {
+    "auto".to_string()
+}
+fn default_month_style() -> String {
+    "short".to_string()
+}
+fn default_weekday_style() -> String {
+    "off".to_string()
+}
+fn default_year_style() -> String {
+    "auto".to_string()
+}
+fn default_countdown_detail() -> String {
+    "adaptive".to_string()
+}
+fn default_numbering_system() -> String {
+    "latn".to_string()
+}
+
+const RESET_MODULES: &[&str] = &["countdown", "date", "time", "weekday", "timezone"];
+
+impl Default for ResetPresentationSettings {
+    /// Matches the product's current (pre-existing) countdown behavior, per
+    /// the migration requirement that existing users see no surprise
+    /// change: countdown-only, adaptive detail, system timezone/clock.
+    fn default() -> Self {
+        Self {
+            preset: "countdownOnly".to_string(),
+            modules: vec!["countdown".to_string()],
+            order: RESET_MODULES.iter().map(|m| m.to_string()).collect(),
+            timezone_mode: "system".to_string(),
+            timezone_id: None,
+            regional_format: default_regional_format(),
+            regional_locale: None,
+            clock_format: default_clock_format(),
+            meridiem_style: default_meridiem_style(),
+            month_style: default_month_style(),
+            weekday_style: default_weekday_style(),
+            year_style: default_year_style(),
+            countdown_detail: default_countdown_detail(),
+            numbering_system: default_numbering_system(),
+        }
+    }
+}
+
+impl ResetPresentationSettings {
+    /// Validate every field independently; a settings file with one corrupt
+    /// field should never crash the app, only fall back to the default.
+    pub fn is_valid(&self) -> bool {
+        matches!(
+            self.preset.as_str(),
+            "countdownOnly"
+                | "dateAndTime"
+                | "countdownDateAndTime"
+                | "full"
+                | "compact"
+                | "custom"
+        ) && !self.modules.is_empty()
+            && self
+                .modules
+                .iter()
+                .all(|m| RESET_MODULES.contains(&m.as_str()))
+            && self
+                .modules
+                .iter()
+                .collect::<std::collections::HashSet<_>>()
+                .len()
+                == self.modules.len()
+            && self
+                .order
+                .iter()
+                .all(|m| RESET_MODULES.contains(&m.as_str()))
+            && self
+                .order
+                .iter()
+                .collect::<std::collections::HashSet<_>>()
+                .len()
+                == self.order.len()
+            && matches!(self.timezone_mode.as_str(), "system" | "custom")
+            && self
+                .timezone_id
+                .as_deref()
+                .is_none_or(is_valid_iana_timezone)
+            && matches!(
+                self.regional_format.as_str(),
+                "system" | "uiLanguage" | "custom"
+            )
+            && self
+                .regional_locale
+                .as_deref()
+                .is_none_or(is_valid_bcp47_locale)
+            && matches!(self.clock_format.as_str(), "system" | "h12" | "h24")
+            && matches!(self.meridiem_style.as_str(), "auto" | "latin" | "localized")
+            && matches!(self.month_style.as_str(), "numeric" | "short" | "full")
+            && matches!(self.weekday_style.as_str(), "off" | "short" | "full")
+            && matches!(self.year_style.as_str(), "off" | "on" | "auto")
+            && matches!(
+                self.countdown_detail.as_str(),
+                "adaptive" | "compact" | "detailed"
+            )
+            && self.numbering_system == "latn"
+    }
+
+    /// Best-effort repair: keep whatever validates, replace whatever
+    /// doesn't with the matching field from the default. Never rejects the
+    /// whole settings file over one bad field.
+    pub fn normalized(self) -> Self {
+        // Always runs the full reconciliation rather than short-circuiting
+        // on `is_valid()`: field-level validity doesn't guarantee `order`
+        // covers every enabled module, and that gap must still be repaired.
+        let fallback = Self::default();
+        let modules: Vec<String> = {
+            let mut seen = std::collections::HashSet::new();
+            let cleaned: Vec<String> = self
+                .modules
+                .into_iter()
+                .filter(|m| RESET_MODULES.contains(&m.as_str()) && seen.insert(m.clone()))
+                .collect();
+            if cleaned.is_empty() {
+                fallback.modules.clone()
+            } else {
+                cleaned
+            }
+        };
+        let order: Vec<String> = {
+            let mut seen = std::collections::HashSet::new();
+            let mut cleaned: Vec<String> = self
+                .order
+                .into_iter()
+                .filter(|m| RESET_MODULES.contains(&m.as_str()) && seen.insert(m.clone()))
+                .collect();
+            // Any enabled module missing from a corrupt order is appended
+            // rather than silently unrenderable.
+            for module in &modules {
+                if !cleaned.contains(module) {
+                    cleaned.push(module.clone());
+                }
+            }
+            if cleaned.is_empty() {
+                fallback.order.clone()
+            } else {
+                cleaned
+            }
+        };
+        Self {
+            preset: if matches!(
+                self.preset.as_str(),
+                "countdownOnly"
+                    | "dateAndTime"
+                    | "countdownDateAndTime"
+                    | "full"
+                    | "compact"
+                    | "custom"
+            ) {
+                self.preset
+            } else {
+                fallback.preset
+            },
+            modules,
+            order,
+            timezone_mode: if matches!(self.timezone_mode.as_str(), "system" | "custom") {
+                self.timezone_mode
+            } else {
+                fallback.timezone_mode
+            },
+            timezone_id: self.timezone_id.filter(|id| is_valid_iana_timezone(id)),
+            regional_format: if matches!(
+                self.regional_format.as_str(),
+                "system" | "uiLanguage" | "custom"
+            ) {
+                self.regional_format
+            } else {
+                fallback.regional_format
+            },
+            regional_locale: self
+                .regional_locale
+                .filter(|tag| is_valid_bcp47_locale(tag)),
+            clock_format: if matches!(self.clock_format.as_str(), "system" | "h12" | "h24") {
+                self.clock_format
+            } else {
+                fallback.clock_format
+            },
+            meridiem_style: if matches!(
+                self.meridiem_style.as_str(),
+                "auto" | "latin" | "localized"
+            ) {
+                self.meridiem_style
+            } else {
+                fallback.meridiem_style
+            },
+            month_style: if matches!(self.month_style.as_str(), "numeric" | "short" | "full") {
+                self.month_style
+            } else {
+                fallback.month_style
+            },
+            weekday_style: if matches!(self.weekday_style.as_str(), "off" | "short" | "full") {
+                self.weekday_style
+            } else {
+                fallback.weekday_style
+            },
+            year_style: if matches!(self.year_style.as_str(), "off" | "on" | "auto") {
+                self.year_style
+            } else {
+                fallback.year_style
+            },
+            countdown_detail: if matches!(
+                self.countdown_detail.as_str(),
+                "adaptive" | "compact" | "detailed"
+            ) {
+                self.countdown_detail
+            } else {
+                fallback.countdown_detail
+            },
+            numbering_system: fallback.numbering_system,
+        }
+    }
+}
+
+/// Minimal structural IANA timezone id check: `Region/City[/Subcity]`,
+/// ASCII letters/digits/`_`/`+`/`-` per segment. This is not a full IANA
+/// database lookup (the crate doesn't bundle one) but it rejects the
+/// dangerous/nonsensical cases -- empty, a raw UTC offset like `+03:00`,
+/// control characters, absurd length -- so a corrupt or hostile value can
+/// never reach `Intl` on the frontend unchecked.
+pub fn is_valid_iana_timezone(value: &str) -> bool {
+    if value.is_empty() || value.len() > 128 {
+        return false;
+    }
+    if value == "UTC" || value == "GMT" {
+        return true;
+    }
+    let segments: Vec<&str> = value.split('/').collect();
+    if segments.len() < 2 {
+        return false;
+    }
+    segments.iter().all(|segment| {
+        !segment.is_empty()
+            && segment
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '+' | '-'))
+    })
+}
+
+/// Minimal structural BCP-47 language-tag check: `language[-Region]`,
+/// ASCII letters/digits/`-` only, reasonable length. Not a full BCP-47
+/// validator (no registry lookup) -- like `is_valid_iana_timezone`, this
+/// exists to reject empty/control-character/absurd-length garbage before
+/// it reaches `Intl` on the frontend, not to certify every tag is real.
+pub fn is_valid_bcp47_locale(value: &str) -> bool {
+    if value.is_empty() || value.len() > 64 {
+        return false;
+    }
+    value
+        .split('-')
+        .all(|segment| !segment.is_empty() && segment.chars().all(|c| c.is_ascii_alphanumeric()))
+}
+
+#[cfg(test)]
+mod reset_presentation_settings_tests {
+    use super::{ResetPresentationSettings, is_valid_bcp47_locale, is_valid_iana_timezone};
+
+    #[test]
+    fn default_matches_pre_existing_countdown_behavior() {
+        let defaults = ResetPresentationSettings::default();
+        assert!(defaults.is_valid());
+        assert_eq!(defaults.preset, "countdownOnly");
+        assert_eq!(defaults.modules, vec!["countdown".to_string()]);
+        assert_eq!(defaults.timezone_mode, "system");
+        assert_eq!(defaults.clock_format, "system");
+        assert_eq!(defaults.countdown_detail, "adaptive");
+    }
+
+    #[test]
+    fn accepts_every_named_preset() {
+        for preset in [
+            "countdownOnly",
+            "dateAndTime",
+            "countdownDateAndTime",
+            "full",
+            "compact",
+            "custom",
+        ] {
+            let settings = ResetPresentationSettings {
+                preset: preset.to_string(),
+                ..ResetPresentationSettings::default()
+            };
+            assert!(settings.is_valid(), "preset {preset} must be valid");
+        }
+    }
+
+    #[test]
+    fn rejects_empty_modules() {
+        let settings = ResetPresentationSettings {
+            modules: vec![],
+            ..ResetPresentationSettings::default()
+        };
+        assert!(!settings.is_valid());
+    }
+
+    #[test]
+    fn rejects_duplicate_modules() {
+        let settings = ResetPresentationSettings {
+            modules: vec!["countdown".to_string(), "countdown".to_string()],
+            ..ResetPresentationSettings::default()
+        };
+        assert!(!settings.is_valid());
+    }
+
+    #[test]
+    fn rejects_unknown_module_id() {
+        let settings = ResetPresentationSettings {
+            modules: vec!["seconds-ticker".to_string()],
+            ..ResetPresentationSettings::default()
+        };
+        assert!(!settings.is_valid());
+    }
+
+    #[test]
+    fn rejects_duplicate_order_entries() {
+        let settings = ResetPresentationSettings {
+            order: vec![
+                "countdown".to_string(),
+                "countdown".to_string(),
+                "date".to_string(),
+            ],
+            ..ResetPresentationSettings::default()
+        };
+        assert!(!settings.is_valid());
+    }
+
+    #[test]
+    fn validates_iana_timezone_ids() {
+        for zone in [
+            "Asia/Riyadh",
+            "Europe/London",
+            "America/New_York",
+            "America/Los_Angeles",
+            "Asia/Tokyo",
+            "Australia/Sydney",
+            "UTC",
+        ] {
+            assert!(
+                is_valid_iana_timezone(zone),
+                "{zone} should be a valid IANA id"
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_raw_utc_offsets_and_garbage() {
+        for zone in ["+03:00", "GMT+3", "", "not a timezone", "../../etc/passwd"] {
+            assert!(!is_valid_iana_timezone(zone), "{zone} should be rejected");
+        }
+    }
+
+    #[test]
+    fn normalized_repairs_a_corrupt_field_without_discarding_the_rest() {
+        let settings = ResetPresentationSettings {
+            clock_format: "26-hour".to_string(), // corrupt
+            modules: vec!["date".to_string(), "time".to_string()],
+            ..ResetPresentationSettings::default()
+        };
+        let normalized = settings.normalized();
+        assert!(normalized.is_valid());
+        assert_eq!(normalized.clock_format, "system"); // repaired
+        assert_eq!(
+            normalized.modules,
+            vec!["date".to_string(), "time".to_string()]
+        ); // preserved
+    }
+
+    #[test]
+    fn normalized_appends_an_enabled_module_missing_from_a_corrupt_order() {
+        let settings = ResetPresentationSettings {
+            modules: vec!["countdown".to_string(), "timezone".to_string()],
+            order: vec!["countdown".to_string()],
+            ..ResetPresentationSettings::default()
+        };
+        let normalized = settings.normalized();
+        assert!(normalized.is_valid());
+        assert!(normalized.order.contains(&"timezone".to_string()));
+    }
+
+    #[test]
+    fn validates_bcp47_locale_tags() {
+        for tag in ["en-US", "ar-SA", "en", "zh-Hans", "pt-BR"] {
+            assert!(
+                is_valid_bcp47_locale(tag),
+                "{tag} should be a valid BCP-47 tag"
+            );
+        }
+        for tag in ["", "not a locale", "en_US", "../../etc"] {
+            assert!(!is_valid_bcp47_locale(tag), "{tag} should be rejected");
+        }
+    }
+
+    #[test]
+    fn normalized_falls_back_to_default_timezone_id_when_invalid() {
+        let settings = ResetPresentationSettings {
+            timezone_mode: "custom".to_string(),
+            timezone_id: Some("not-a-real-zone!!".to_string()),
+            ..ResetPresentationSettings::default()
+        };
+        let normalized = settings.normalized();
+        assert!(normalized.is_valid());
+        assert_eq!(normalized.timezone_id, None);
+    }
+}
+
 pub mod collections;
 pub mod interactions;
 mod manual_cookies;
@@ -579,6 +1030,20 @@ pub struct Settings {
     /// Shared presentation inherited by providers without an explicit override.
     #[serde(default)]
     pub global_limit_presentation: LimitPresentation,
+
+    /// Global Reset Time / Presentation configuration (countdown/date/time
+    /// modules, ordering, timezone, clock format, ...). Surfaces that don't
+    /// yet support an override use this directly; `reset_presentation_overrides`
+    /// holds any per-surface overrides, consulted first.
+    #[serde(default)]
+    pub reset_presentation: ResetPresentationSettings,
+
+    /// Per-surface overrides of `reset_presentation`, keyed by surface id
+    /// ("taskbar", "top", "edge", "hud", "quickPanel", "dashboard",
+    /// "providerDisplay", "tray"). A surface absent here inherits the
+    /// global `reset_presentation` unchanged.
+    #[serde(default)]
+    pub reset_presentation_overrides: std::collections::HashMap<String, ResetPresentationSettings>,
 
     /// Orbital theme catalog selection (themeCatalog slug, e.g.
     /// "01-obsidian-orbit"). Invalid or missing slugs fall back to the
@@ -1120,6 +1585,8 @@ impl Default for Settings {
             provider_limit_order: std::collections::HashMap::new(),
             provider_limit_presentation: std::collections::HashMap::new(),
             global_limit_presentation: LimitPresentation::default(),
+            reset_presentation: ResetPresentationSettings::default(),
+            reset_presentation_overrides: std::collections::HashMap::new(),
             catalog_theme: default_catalog_theme(),
             active_profile_catalog_theme: None,
             surface_catalog_themes: std::collections::HashMap::new(),
@@ -1183,6 +1650,12 @@ impl Settings {
             normalize_flow_surface_anchor(&settings.top_arc_form, &settings.top_arc_anchor);
         settings.top_arc_auto_hide_delay_ms =
             clamp_flow_surface_auto_hide_delay(settings.top_arc_auto_hide_delay_ms);
+        settings.reset_presentation = std::mem::take(&mut settings.reset_presentation).normalized();
+        settings.reset_presentation_overrides =
+            std::mem::take(&mut settings.reset_presentation_overrides)
+                .into_iter()
+                .map(|(surface, config)| (surface, config.normalized()))
+                .collect();
 
         // V9 retires the competing edge and taskbar overlays. Preserve their
         // old configuration on disk until a normal save, but never restore a

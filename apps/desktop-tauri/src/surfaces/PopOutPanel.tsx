@@ -211,7 +211,7 @@ export default function PopOutPanel({
     />
   );
 
-  const resetOptions = useResetStageOptions();
+  const resetOptions = useResetStageOptions(settings, "dashboard");
   const stageProviders = toStageProviders(sorted, usageConfigFromSnapshot(settings), resetOptions);
   const catalog = resolveCatalogTheme(settings, "dashboard").slug;
 

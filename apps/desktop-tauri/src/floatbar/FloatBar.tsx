@@ -339,7 +339,7 @@ export default function FloatBar({ state }: { state: BootstrapState }) {
         b.selectedMetric.usedPercent - a.selectedMetric.usedPercent,
     );
   }, [providers, settings.enabledProviders, filterIds]);
-  const resetOptions = useResetStageOptions();
+  const resetOptions = useResetStageOptions(settings, "hud");
   const stageProviders = useMemo(
     () => toStageProviders(visible, usageConfigFromSnapshot(settings), resetOptions),
     [visible, settings.usageDisplayMode, settings.providerUsageOverrides, resetOptions],

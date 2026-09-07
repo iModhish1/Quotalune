@@ -585,6 +585,54 @@ pub fn set_global_limit_presentation(
         .map_err(|e| e.to_string())
 }
 
+/// Persist the global Reset Time / Presentation configuration. Rejected
+/// (not saved) if any field is invalid -- the settings file on disk is
+/// never overwritten with a corrupt config from this path; a corrupt
+/// config already on disk from another source is instead repaired at load
+/// time by `ResetPresentationSettings::normalized()`.
+#[tauri::command]
+pub fn set_reset_presentation(
+    app: AppHandle,
+    config: codexbar::settings::ResetPresentationSettings,
+) -> Result<(), String> {
+    if !config.is_valid() {
+        return Err("invalid reset presentation configuration".into());
+    }
+    let mut settings = Settings::load();
+    settings.reset_presentation = config;
+    settings.save().map_err(|e| e.to_string())?;
+    app.emit("codexbar:settings-updated", ())
+        .map_err(|e| e.to_string())
+}
+
+/// Persist (or clear, when `config` is `None`) a per-surface override of
+/// the global Reset Time / Presentation configuration.
+#[tauri::command]
+pub fn set_reset_presentation_surface_override(
+    app: AppHandle,
+    surface: String,
+    config: Option<codexbar::settings::ResetPresentationSettings>,
+) -> Result<(), String> {
+    if surface.is_empty() || surface.len() > 64 || surface.chars().any(char::is_control) {
+        return Err("invalid surface id".into());
+    }
+    let mut settings = Settings::load();
+    match config {
+        Some(config) if config.is_valid() => {
+            settings
+                .reset_presentation_overrides
+                .insert(surface, config);
+        }
+        Some(_) => return Err("invalid reset presentation configuration".into()),
+        None => {
+            settings.reset_presentation_overrides.remove(&surface);
+        }
+    }
+    settings.save().map_err(|e| e.to_string())?;
+    app.emit("codexbar:settings-updated", ())
+        .map_err(|e| e.to_string())
+}
+
 fn apply_limit_order(
     settings: &mut Settings,
     provider: &str,
