@@ -51,7 +51,7 @@ $borderPen = [System.Drawing.Pen]::new([System.Drawing.Color]::FromArgb(255, 41,
 try {
     $graphics.DrawString("QuotaArc V9  ·  Native Usage Proof", $titleFont, $titleBrush, $outer, 22)
     $graphics.DrawString(
-        "Fresh QuotaArcDev.exe · Settings-driven state changes · real Tauri Taskbar WebView2 · 250% DPI",
+        "Fresh QuotalisDev.exe · Settings-driven state changes · real Tauri Taskbar WebView2 · 250% DPI",
         $subtitleFont,
         $mutedBrush,
         $outer,

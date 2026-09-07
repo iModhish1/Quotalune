@@ -398,6 +398,14 @@ async fn run_copilot_device_login(app: &tauri::AppHandle) -> Result<(), String> 
 mod tests {
     use super::*;
 
+    /// Quotalis rebrand regression guard (owner spec section 30/31): the
+    /// About screen renders whatever this bridge command returns verbatim
+    /// -- it must never regress to the legacy "QuotaArc" name.
+    #[test]
+    fn app_info_reports_the_current_public_brand() {
+        assert_eq!(get_app_info().name, "Quotalis");
+    }
+
     #[test]
     fn dashboard_url_resolves_from_codex_provider_metadata() {
         assert_eq!(

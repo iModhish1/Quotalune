@@ -467,3 +467,46 @@ fn resource_key_names(resource: &str) -> HashSet<&str> {
         .filter(|name| !name.is_empty())
         .collect()
 }
+
+/// Regression guard for the Quotalis rebrand (owner spec section 30): no
+/// locale VALUE may say "QuotaArc" except the one intentionally-legacy
+/// exception (the real, current, unmigrated `%APPDATA%\QuotaArc` path hint --
+/// saying "Quotalis" there would be a new lie, not a fix, until a data-path
+/// migration actually happens). Locale KEY names are exempt: two keys
+/// (NotificationSoundThemeQuotaArc, TrayOpenQuotaArc) intentionally keep
+/// their old identifier because it mirrors a persisted enum value / is
+/// referenced by rust/src/locale.rs's LocaleKey enum and i18n/keys.ts --
+/// renaming the key would desync them, see the Quotalis rebrand commits.
+#[test]
+fn no_locale_value_says_quotaarc_except_the_documented_legacy_path_hint() {
+    let resources = [
+        ("en-US", include_str!("en-US.ftl")),
+        ("ar-SA", include_str!("ar-SA.ftl")),
+        ("zh-CN", include_str!("zh-CN.ftl")),
+        ("zh-TW", include_str!("zh-TW.ftl")),
+        ("ja-JP", include_str!("ja-JP.ftl")),
+        ("ko-KR", include_str!("ko-KR.ftl")),
+        ("es-MX", include_str!("es-MX.ftl")),
+        ("ru-RU", include_str!("ru-RU.ftl")),
+        ("tr-TR", include_str!("tr-TR.ftl")),
+    ];
+    const ALLOWED_KEYS_WITH_QUOTAARC_VALUE: &[&str] = &["HooksConfigPathHint"];
+
+    for (locale, resource) in resources {
+        for line in resource.lines() {
+            let Some((key, value)) = line.split_once('=') else {
+                continue;
+            };
+            let key = key.trim();
+            if !value.contains("QuotaArc") {
+                continue;
+            }
+            assert!(
+                ALLOWED_KEYS_WITH_QUOTAARC_VALUE.contains(&key),
+                "{locale}.ftl: key {key:?} has a \"QuotaArc\" value but is not \
+                 in the documented legacy-path-hint exception list -- did a \
+                 rebrand string leak back in? line: {line:?}"
+            );
+        }
+    }
+}

@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "QuotaArc",
+  "productName": "Quotalis",
   "version": "0.10.1",
   "identifier": "app.quotaarc.desktop",
   "build": {
@@ -35,6 +35,7 @@
   },
   "bundle": {
     "active": true,
+    "publisher": "Quotalis",
     "resources": {
       "../../../assets/brand/icons/quotaarc-icon-128.png": "quotaarc-icon-128.png"
     },
@@ -81,5 +82,5 @@
       }
     }
   },
-  "mainBinaryName": "QuotaArc"
+  "mainBinaryName": "Quotalis"
 }

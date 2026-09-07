@@ -547,7 +547,7 @@ const manifest = {
   schemaVersion: 1,
   capturedAt: new Date().toISOString(),
   source: {
-    executable: "target/debug/QuotaArc.exe",
+    executable: "target/debug/Quotalis.exe",
     processId: pid,
     proofMode: "settings:general",
     appearance: requestedTheme ?? originalTheme ?? "unresolved",

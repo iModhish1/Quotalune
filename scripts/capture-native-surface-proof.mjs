@@ -188,7 +188,7 @@ const evidence = {
   schemaVersion: 1,
   generatedAtUtc: new Date().toISOString(),
   pid,
-  executable: "target/debug/QuotaArcDev.exe",
+  executable: "target/debug/QuotalisDev.exe",
   runtime: "fresh native Tauri WebView2 compositor",
   theme,
   configuration,

@@ -320,7 +320,7 @@ const manifest = {
   schemaVersion: 1,
   capturedAt: new Date().toISOString(),
   source: {
-    executable: "target/debug/QuotaArcDev.exe",
+    executable: "target/debug/QuotalisDev.exe",
     processId: pid,
     channel: "dev",
     proofMode: "settings:themes",

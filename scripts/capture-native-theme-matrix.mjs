@@ -177,7 +177,7 @@ const evidence = {
   schemaVersion: 1,
   generatedAtUtc: new Date().toISOString(),
   pid,
-  executable: "target/debug/QuotaArcDev.exe",
+  executable: "target/debug/QuotalisDev.exe",
   runtime: "native Tauri Taskbar WebView2 at persisted surface scope",
   interaction: "set_catalog_theme IPC + settings-updated runtime reload",
   themeCount: captures.length,
