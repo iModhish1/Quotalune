@@ -1547,3 +1547,101 @@ fn usage_step_notification_interval_defaults_off_and_clamps_on_load() {
         .expect("parse oversized step interval");
     assert_eq!(high.usage_step_notification_percent, Some(100));
 }
+
+/// Quotalis rebrand settings/profile compatibility proof (owner spec
+/// section 6): a settings.json fixture shaped like a real legacy QuotaArc
+/// file -- provider config, theme selection, provider presentation (Follow
+/// Structure/Independent), Reset Display configuration, Dashboard mode,
+/// Dashboard performance preset, and surface (Top Arc) configuration --
+/// must deserialize into the current `Settings` struct with every field
+/// intact. The on-disk settings schema was not touched by the Quotalis
+/// rebrand (only branding text and the crate/event names were), so this is
+/// the same deserialization path any real install already exercises; this
+/// test proves it executably rather than asserting it by construction.
+#[test]
+fn legacy_quotaarc_settings_fixture_survives_intact() {
+    let legacy_json = r#"{
+        "enabled_providers": ["claude", "codex", "gemini"],
+        "refresh_interval_secs": 180,
+        "catalog_theme": "smoked-silver",
+        "reset_time_relative": false,
+        "show_reset_when_exhausted": true,
+        "dashboard_mode": "providers3d",
+        "dashboard_performance_preset": "highFidelity",
+        "global_limit_presentation": {
+            "shape": "vertical",
+            "content": "value",
+            "direction": "reverse",
+            "identity": "precision"
+        },
+        "top_arc_enabled": true,
+        "top_arc_placement": "top-left",
+        "top_arc_opacity": 80,
+        "hide_personal_info": true
+    }"#;
+
+    let settings: Settings =
+        serde_json::from_str(legacy_json).expect("legacy settings fixture must still load");
+
+    // Provider config
+    assert!(settings.enabled_providers.contains("claude"));
+    assert!(settings.enabled_providers.contains("codex"));
+    assert!(settings.enabled_providers.contains("gemini"));
+    assert_eq!(settings.refresh_interval_secs, 180);
+
+    // Theme selection
+    assert_eq!(settings.catalog_theme, "smoked-silver");
+
+    // Reset Display configuration
+    assert!(!settings.reset_time_relative);
+    assert!(settings.show_reset_when_exhausted);
+
+    // Dashboard mode + performance preset (Dashboard Studio, Phase 2)
+    assert_eq!(settings.dashboard_mode, DashboardModeId::Providers3d);
+    assert_eq!(
+        settings.dashboard_performance_preset,
+        DashboardPerformancePreset::HighFidelity
+    );
+
+    // Provider presentation (Follow Structure ["adaptive"] vs an independent
+    // per-provider identity token, e.g. "precision")
+    assert_eq!(settings.global_limit_presentation.identity, "precision");
+    assert_eq!(settings.global_limit_presentation.shape, "vertical");
+
+    // Surface configuration (Top Arc)
+    assert!(settings.top_arc_enabled);
+    assert_eq!(settings.top_arc_placement, "top-left");
+    assert_eq!(settings.top_arc_opacity, 80);
+
+    // A field with no special migration logic, to prove the fixture is not
+    // silently discarding unrelated data either.
+    assert!(settings.hide_personal_info);
+
+    // Collections layout was not present in the fixture -- must default
+    // safely, not fail the whole parse (matches the existing lenient
+    // RawSettings migration pattern used throughout this struct).
+    assert_eq!(
+        settings.collection_layout,
+        crate::settings::collections::CollectionLayout::default()
+    );
+}
+
+/// Companion to the above: a legacy profiles.json fixture (the separate
+/// on-disk store `ProfileStore` owns) must also deserialize intact.
+#[test]
+fn legacy_quotaarc_profiles_fixture_survives_intact() {
+    let legacy_profiles_json = r#"{
+        "schemaVersion": 1,
+        "activeProfileId": "prof-work",
+        "profiles": [
+            { "id": "prof-work", "name": "Work" }
+        ],
+        "accounts": []
+    }"#;
+
+    let store: crate::profiles::ProfileStore = serde_json::from_str(legacy_profiles_json)
+        .expect("legacy profiles fixture must still load");
+    assert_eq!(store.active_profile_id, "prof-work");
+    assert_eq!(store.profiles.len(), 1);
+    assert_eq!(store.profiles[0].name, "Work");
+}

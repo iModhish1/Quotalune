@@ -42,7 +42,7 @@ export default function ReelPreview() {
       <label>Fold ms <input type="number" min={100} max={3000} step={100} style={{width:55}} value={interactions.foldDelayMs} onChange={e=>setInteractions(current=>normalizeSurfaceInteractions({...current,foldDelayMs:Number(e.target.value)}))}/></label>
     </div>
     <div ref={canvas} style={{position:"absolute",inset:"190px 0 0",overflow:"hidden"}}>
-    <div onPointerDown={e=>{if(e.button!==0 || !(e.target as HTMLElement).closest('[aria-label="Move QuotaArc"]'))return;
+    <div onPointerDown={e=>{if(e.button!==0 || !(e.target as HTMLElement).closest('[aria-label="Move Quotalis"]'))return;
       drag.current={x:e.clientX,y:e.clientY,left:position.x,top:position.y};e.currentTarget.setPointerCapture(e.pointerId);}}
       onPointerMove={e=>{if(!drag.current)return;setAnchor("free");setFree({x:Math.max(0,Math.min(area.width-width,drag.current.left+e.clientX-drag.current.x)),y:Math.max(0,Math.min(area.height-height,drag.current.top+e.clientY-drag.current.y))});}}
       onPointerUp={e=>{if(!drag.current)return;drag.current=undefined;setAnchor(snapSurface(position.x,position.y,width,height,area.width,area.height));e.currentTarget.releasePointerCapture(e.pointerId);}}

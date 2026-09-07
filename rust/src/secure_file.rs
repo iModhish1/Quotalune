@@ -331,4 +331,46 @@ mod tests {
             "protected Windows file must not contain plaintext JSON"
         );
     }
+
+    /// Quotalis rebrand secure-storage compatibility proof (owner spec
+    /// section 4): the on-disk format tag ("codexbar.secure-file") was
+    /// deliberately NOT renamed for cosmetic reasons -- this test builds a
+    /// fixture file by hand using that exact literal string (standing in
+    /// for a real file a legacy QuotaArc install would have written, since
+    /// the format is byte-for-byte identical either way) and proves the
+    /// *current* `read_string` still decrypts it via the real Windows DPAPI
+    /// unprotect API on this machine -- not mocked, not assumed. No
+    /// Personal secrets are read, copied, or logged; this is a synthetic
+    /// tempdir fixture only.
+    #[cfg(windows)]
+    #[test]
+    fn legacy_format_tagged_secure_file_is_still_decryptable() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("legacy-settings.json");
+        let legacy_plaintext = r#"{"apiKeys":{},"legacyMarker":"quotaarc-fixture"}"#;
+
+        // Build the fixture the way a legacy QuotaArc process would have:
+        // encrypt with the real DPAPI protect() call, wrap it in a
+        // ProtectedFile whose `format` field is the literal, unrenamed
+        // "codexbar.secure-file" tag -- asserted explicitly here so this
+        // test would fail loudly if that constant ever drifted.
+        assert_eq!(FORMAT, "codexbar.secure-file");
+        let (protection, encrypted) = protect(legacy_plaintext.as_bytes()).unwrap();
+        let legacy_fixture = ProtectedFile {
+            format: FORMAT.to_string(),
+            version: VERSION,
+            protection: protection.to_string(),
+            payload: base64::engine::general_purpose::STANDARD.encode(encrypted),
+        };
+        std::fs::write(&path, serde_json::to_string(&legacy_fixture).unwrap()).unwrap();
+
+        // The current (Quotalis) read path: same function every real
+        // Settings::load() call in production uses.
+        let recovered = read_string(&path).unwrap();
+        assert_eq!(recovered, legacy_plaintext);
+        assert_eq!(
+            status(&path),
+            SecureFileStatus::Protected(protection.to_string())
+        );
+    }
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build and run the CodexBar Tauri desktop shell on Linux / WSL.
+# Build and run the Quotalis Tauri desktop shell on Linux / WSL.
 #
 # Usage:
 #   ./scripts/dev.sh                 # debug build + run
@@ -72,7 +72,7 @@ if grep -qi microsoft /proc/version 2>/dev/null || [ -n "${WSL_DISTRO_NAME:-}" ]
         echo "Use --cli to run CLI commands instead."
         echo ""
         if [ "$CLI_MODE" -eq 0 ]; then
-            echo "Tip: 'codexbar usage -p claude' works without a display."
+            echo "Tip: 'quotalis usage -p claude' works without a display."
             echo ""
             CLI_MODE=1
             echo "Auto-switching to CLI mode."
@@ -119,19 +119,19 @@ find_binary() {
 if [ "$SKIP_BUILD" -eq 0 ]; then
     if [ "$CLI_MODE" -eq 1 ]; then
         if [ "$RELEASE" -eq 1 ]; then
-            echo "Building CodexBar CLI (release, target=$NATIVE_TARGET)..."
-            cargo build --manifest-path "$RUST_DIR/Cargo.toml" --bin codexbar --release "${TARGET_FLAG[@]}"
+            echo "Building Quotalis CLI (release, target=$NATIVE_TARGET)..."
+            cargo build --manifest-path "$RUST_DIR/Cargo.toml" --bin quotalis --release "${TARGET_FLAG[@]}"
         else
-            echo "Building CodexBar CLI (debug, target=$NATIVE_TARGET)..."
-            cargo build --manifest-path "$RUST_DIR/Cargo.toml" --bin codexbar "${TARGET_FLAG[@]}"
+            echo "Building Quotalis CLI (debug, target=$NATIVE_TARGET)..."
+            cargo build --manifest-path "$RUST_DIR/Cargo.toml" --bin quotalis "${TARGET_FLAG[@]}"
         fi
     else
         cd "$TAURI_APP_DIR"
         if [ "$RELEASE" -eq 1 ]; then
-            echo "Building CodexBar Desktop (release, no bundle)..."
+            echo "Building Quotalis Desktop (release, no bundle)..."
             pnpm run tauri:build
         else
-            echo "Building CodexBar Desktop (debug, no bundle)..."
+            echo "Building Quotalis Desktop (debug, no bundle)..."
             pnpm run tauri:build:debug
         fi
         cd "$REPO_ROOT"
@@ -144,9 +144,9 @@ PROFILE="debug"
 [ "$RELEASE" -eq 1 ] && PROFILE="release"
 
 if [ "$CLI_MODE" -eq 1 ]; then
-    BINARY_NAME="codexbar"
+    BINARY_NAME="quotalis"
 else
-    BINARY_NAME="codexbar-desktop-tauri"
+    BINARY_NAME="Quotalis"
 fi
 
 if ! BINARY="$(find_binary "$BINARY_NAME" "$PROFILE")"; then
@@ -159,10 +159,10 @@ fi
 
 echo ""
 if [ "$CLI_MODE" -eq 1 ]; then
-    echo "Running: codexbar usage -p all"
+    echo "Running: quotalis usage -p all"
     RUN_ARGS=(usage -p all)
 else
-    echo "Running: CodexBar Desktop"
+    echo "Running: Quotalis Desktop"
 fi
 
 if [ "$VERBOSE" -eq 1 ]; then

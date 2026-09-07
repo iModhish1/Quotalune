@@ -38,9 +38,9 @@ foreach ($path in $expectedPaths) {
         throw "Missing expected release asset: $path"
     }
 }
-Assert-AssetMatchesSidecar (Join-Path $AssetsDir "CodexBar-$version-Setup.exe")
-Assert-AssetMatchesSidecar (Join-Path $AssetsDir "CodexBar-$version-portable.exe")
-Assert-AssetMatchesSidecar (Join-Path $AssetsDir "CodexBarCLI-v$version-windows-x64.zip")
+Assert-AssetMatchesSidecar (Join-Path $AssetsDir "Quotalis-$version-Setup.exe")
+Assert-AssetMatchesSidecar (Join-Path $AssetsDir "Quotalis-$version-portable.exe")
+Assert-AssetMatchesSidecar (Join-Path $AssetsDir "QuotalisCLI-v$version-windows-x64.zip")
 
 # Copy only the six publishable assets and the build logs into the persisted bundle.
 foreach ($path in $expectedPaths) {

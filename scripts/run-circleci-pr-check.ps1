@@ -121,7 +121,7 @@ try {
     Write-Host "[ok] Node $installedNodeVersion"
 
     # --- pnpm ---------------------------------------------------------------
-    $pnpmShimDir = Join-Path $env:LOCALAPPDATA 'CodexBar\ci-toolchain\pnpm'
+    $pnpmShimDir = Join-Path $env:LOCALAPPDATA 'Quotalis\ci-toolchain\pnpm'
     New-Item -ItemType Directory -Force -Path $pnpmShimDir | Out-Null
     & corepack enable --install-directory $pnpmShimDir
     if ($LASTEXITCODE -ne 0) { throw "corepack enable exited with code $LASTEXITCODE" }

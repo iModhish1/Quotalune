@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Build and run the QuotaArc Tauri desktop shell for Windows.
+    Build and run the Quotalis Tauri desktop shell for Windows.
 
 .DESCRIPTION
     Checks that build prerequisites are installed, then builds the Tauri desktop
@@ -35,7 +35,7 @@ $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $TauriFrontendDir = Join-Path $RepoRoot "apps\desktop-tauri"
 $TargetDir = Join-Path $RepoRoot "target"
-$DesktopBinaryName = "QuotaArc.exe"
+$DesktopBinaryName = "Quotalis.exe"
 
 function Get-RustHostTriple {
     if (-not (Get-Command rustc -ErrorAction SilentlyContinue)) {
@@ -122,10 +122,10 @@ if (-not $SkipBuild) {
     Push-Location $TauriFrontendDir
     try {
         if ($Release) {
-            Write-Host "Building QuotaArc Desktop (release, no bundle)..." -ForegroundColor Cyan
+            Write-Host "Building Quotalis Desktop (release, no bundle)..." -ForegroundColor Cyan
             & $pnpmCommand.Source run tauri:build
         } else {
-            Write-Host "Building QuotaArc Desktop (debug, no bundle)..." -ForegroundColor Cyan
+            Write-Host "Building Quotalis Desktop (debug, no bundle)..." -ForegroundColor Cyan
             & $pnpmCommand.Source run tauri:build:debug
         }
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -172,5 +172,5 @@ if (-not $env:TAURI_DEV) {
 }
 
 Write-Host ""
-Write-Host "Starting QuotaArc Desktop..." -ForegroundColor Green
+Write-Host "Starting Quotalis Desktop..." -ForegroundColor Green
 & $binary

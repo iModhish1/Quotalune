@@ -83,11 +83,11 @@ describe("SurfacesTab", () => {
     expect(screen.getByText("80%")).toBeInTheDocument();
     expect(bridge.updateSurfaceSettings).toHaveBeenLastCalledWith({topArcOpacity:80});
   });
-  it("exposes one bounded QuotaArc surface control and persists its visibility", async () => {
+  it("exposes one bounded Quotalis surface control and persists its visibility", async () => {
     bridge.getSurfaceSettings.mockResolvedValue(SETTINGS);
     render(<SurfacesTab />);
 
-    const island = await screen.findByRole("checkbox", { name: "Show QuotaArc Surface" });
+    const island = await screen.findByRole("checkbox", { name: "Show Quotalis Surface" });
     expect(screen.queryByRole("checkbox", { name: "Show Edge Arc" })).not.toBeInTheDocument();
     expect(screen.queryByRole("checkbox", { name: "Show Taskbar Arc" })).not.toBeInTheDocument();
 
@@ -107,14 +107,14 @@ describe("SurfacesTab", () => {
       topArcForm: "horizon",
       topArcAnchor: "top",
     }));
-    expect(screen.getByRole("combobox", { name: "QuotaArc surface position" })).toHaveValue("top");
+    expect(screen.getByRole("combobox", { name: "Quotalis surface position" })).toHaveValue("top");
   });
 
   it("offers true wall docking for compact orbital structures", async () => {
     bridge.getSurfaceSettings.mockResolvedValue({ ...SETTINGS, topArcEnabled: true, topArcForm: "orbital", topArcAnchor: "right" });
     render(<SurfacesTab />);
 
-    const position = await screen.findByRole("combobox", { name: "QuotaArc surface position" });
+    const position = await screen.findByRole("combobox", { name: "Quotalis surface position" });
     expect(screen.getByRole("option", { name: "Right wall" })).toHaveValue("right");
     expect(position).toHaveValue("right");
   });
@@ -124,7 +124,7 @@ describe("SurfacesTab", () => {
     render(<SurfacesTab />);
 
     expect(await screen.findByRole("button", { name: /Lens/ })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "QuotaArc surface position" })).toHaveValue("left");
+    expect(screen.getByRole("combobox", { name: "Quotalis surface position" })).toHaveValue("left");
     expect(screen.getByRole("option", { name: "Left wall" })).toHaveValue("left");
   });
 });

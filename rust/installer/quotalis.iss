@@ -1,4 +1,4 @@
-#define MyAppName "QuotaArc"
+#define MyAppName "Quotalis"
 #ifndef AppVersion
   #define AppVersion "0.0.0-dev"
 #endif
@@ -9,7 +9,7 @@
   #define OutputDir "..\\target\\installer"
 #endif
 #ifndef OutputBaseFilename
-  #define OutputBaseFilename "QuotaArc-" + AppVersion + "-x64-Setup"
+  #define OutputBaseFilename "Quotalis-" + AppVersion + "-x64-Setup"
 #endif
 #ifndef VCRedistPath
   #define VCRedistPath "..\\target\\installer-deps\\vc_redist.x64.exe"
@@ -19,16 +19,22 @@
 #endif
 
 [Setup]
+; LEGACY_SECURITY_COMPATIBILITY: AppId is Inno's own upgrade-continuity
+; identity, a separate namespace from the Tauri bundle identifier
+; (app.quotaarc.desktop). Preserved unchanged per
+; docs/validation/QUOTALIS_WINDOWS_IDENTITY_MIGRATION.md's Option A --
+; renaming it would be a cosmetic change with real upgrade-continuity risk
+; if this installer is ever run against a machine that used it before.
 AppId=QuotaArcDesktop
 AppName={#MyAppName}
 AppVersion={#AppVersion}
 AppVerName={#MyAppName} {#AppVersion}
-AppPublisher=QuotaArc
+AppPublisher=Quotalis
 AppPublisherURL=https://github.com/quotaarc/quotaarc
 AppSupportURL=https://github.com/quotaarc/quotaarc/issues
 AppUpdatesURL=https://github.com/quotaarc/quotaarc/releases
-DefaultDirName={localappdata}\Programs\QuotaArc
-DefaultGroupName=QuotaArc
+DefaultDirName={localappdata}\Programs\Quotalis
+DefaultGroupName=Quotalis
 DisableProgramGroupPage=yes
 DisableDirPage=auto
 PrivilegesRequired=lowest
@@ -40,7 +46,7 @@ SolidCompression=yes
 OutputDir={#OutputDir}
 OutputBaseFilename={#OutputBaseFilename}
 SetupIconFile=..\icons\icon.ico
-UninstallDisplayIcon={app}\codexbar.exe
+UninstallDisplayIcon={app}\Quotalis.exe
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 
@@ -48,31 +54,33 @@ ArchitecturesInstallIn64BitMode=x64compatible
 Name: "desktopicon"; Description: "Create a desktop shortcut"; Flags: unchecked
 
 [Files]
-Source: "{#TargetBinDir}\codexbar.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#TargetBinDir}\codexbar-cli.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#TargetBinDir}\codexbar-desktop.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TargetBinDir}\Quotalis.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TargetBinDir}\quotalis-cli.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TargetBinDir}\quotalis-desktop.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\icons\icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#VCRedistPath}"; Flags: dontcopy
 Source: "{#WebView2BootstrapperPath}"; Flags: dontcopy
 
 [Icons]
-Name: "{autoprograms}\QuotaArc"; Filename: "{app}\codexbar.exe"; Parameters: "menubar"; WorkingDir: "{app}"; IconFilename: "{app}\icon.ico"
-Name: "{autodesktop}\QuotaArc"; Filename: "{app}\codexbar.exe"; Parameters: "menubar"; WorkingDir: "{app}"; Tasks: desktopicon; IconFilename: "{app}\icon.ico"
+Name: "{autoprograms}\Quotalis"; Filename: "{app}\Quotalis.exe"; Parameters: "menubar"; WorkingDir: "{app}"; IconFilename: "{app}\icon.ico"
+Name: "{autodesktop}\Quotalis"; Filename: "{app}\Quotalis.exe"; Parameters: "menubar"; WorkingDir: "{app}"; Tasks: desktopicon; IconFilename: "{app}\icon.ico"
 
 [Registry]
-; Give legacy installer builds the same stable Windows notification identity as
-; the Tauri package. This prevents Windows from substituting the generic app glyph.
-Root: HKCU; Subkey: "Software\Classes\AppUserModelId\app.quotaarc.desktop"; ValueType: string; ValueName: "DisplayName"; ValueData: "QuotaArc"; Flags: uninsdeletekey
+; Give this installer the same stable Windows notification identity as the
+; Tauri package. This prevents Windows from substituting the generic app
+; glyph. app.quotaarc.desktop preserved unchanged (Option A); the
+; DisplayName shown in Windows notification settings is the current brand.
+Root: HKCU; Subkey: "Software\Classes\AppUserModelId\app.quotaarc.desktop"; ValueType: string; ValueName: "DisplayName"; ValueData: "Quotalis"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Classes\AppUserModelId\app.quotaarc.desktop"; ValueType: string; ValueName: "IconUri"; ValueData: "{app}\icon.ico"
 Root: HKCU; Subkey: "Software\Classes\AppUserModelId\app.quotaarc.desktop"; ValueType: string; ValueName: "IconBackgroundColor"; ValueData: "FF10141C"
 
 [Run]
 ; Interactive installs: optional checkbox on the finish page.
-Filename: "{app}\codexbar.exe"; Parameters: "menubar"; Description: "Launch QuotaArc"; Flags: nowait postinstall skipifsilent; Check: CanLaunchCodexBar
+Filename: "{app}\Quotalis.exe"; Parameters: "menubar"; Description: "Launch Quotalis"; Flags: nowait postinstall skipifsilent; Check: CanLaunchQuotalis
 ; Silent upgrades (winget / in-app updater): always relaunch so the tray icon
 ; returns after CloseApplications kills the previous process. Single-instance
 ; handles a second launch from the updater helper if both fire.
-Filename: "{app}\codexbar.exe"; Parameters: "menubar"; Flags: nowait postinstall skipifnotsilent; Check: CanLaunchCodexBar
+Filename: "{app}\Quotalis.exe"; Parameters: "menubar"; Flags: nowait postinstall skipifnotsilent; Check: CanLaunchQuotalis
 
 [Code]
 var
@@ -207,7 +215,7 @@ begin
   Result := NeedsVCRedistRestart or NeedsWebView2Restart;
 end;
 
-function CanLaunchCodexBar(): Boolean;
+function CanLaunchQuotalis(): Boolean;
 begin
   Result := not NeedsVCRedistRestart and not NeedsWebView2Restart;
 end;

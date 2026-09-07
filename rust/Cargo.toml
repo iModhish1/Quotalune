@@ -1,6 +1,6 @@
 [package]
 name = "quotalis_core"
-version = "0.10.1"
+version = "0.11.0"
 edition = "2024"
 authors = ["CodexBar Contributors"]
 description = "Windows and WSL system tray app for monitoring AI provider usage limits"
@@ -111,7 +111,7 @@ strip = true
 panic = "abort"
 
 [[bin]]
-name = "quotaarc"
+name = "quotalis"
 path = "src/main.rs"
 
 [lints]

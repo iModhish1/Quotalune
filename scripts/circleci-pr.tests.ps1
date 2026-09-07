@@ -48,7 +48,7 @@ Assert-Throws { Get-ExpectedSha256 -ChecksumText '' -FileName 'x' } 'empty check
 Assert-Throws { Get-ExpectedSha256 -ChecksumText 'not-a-digest' -FileName 'x' } 'malformed checksum text throws'
 Assert-Throws { Get-ExpectedSha256 -ChecksumText 'abc123  node.msi' -FileName 'node.msi' } 'short digest entry throws'
 
-$testRoot = Join-Path ([IO.Path]::GetTempPath()) ('win-codexbar-circleci-tests-' + [guid]::NewGuid().ToString('N'))
+$testRoot = Join-Path ([IO.Path]::GetTempPath()) ('quotalis-circleci-tests-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $testRoot | Out-Null
 $fixture = Join-Path $testRoot 'fixture.bin'
 [IO.File]::WriteAllText($fixture, 'deterministic fixture')

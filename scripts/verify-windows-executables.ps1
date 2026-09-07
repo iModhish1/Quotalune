@@ -58,10 +58,10 @@ $cliHash = Get-Sha256 $cli
 $legacyDesktopHash = Get-Sha256 $legacyDesktop
 
 if ($desktopHash -eq $cliHash) {
-    throw "codexbar.exe and codexbar-cli.exe must not be byte-identical; the CLI must be the console binary."
+    throw "Quotalis.exe and quotalis-cli.exe must not be byte-identical; the CLI must be the console binary."
 }
 if ($desktopHash -ne $legacyDesktopHash) {
-    throw "codexbar.exe and codexbar-desktop.exe should be identical desktop binaries."
+    throw "Quotalis.exe and quotalis-desktop.exe should be identical desktop binaries."
 }
 
 $desktopSubsystem = Get-PeSubsystem $desktop
@@ -69,25 +69,25 @@ $cliSubsystem = Get-PeSubsystem $cli
 $legacyDesktopSubsystem = Get-PeSubsystem $legacyDesktop
 
 if ($desktopSubsystem -ne 2) {
-    throw "codexbar.exe must be a Windows GUI-subsystem desktop binary; got subsystem $desktopSubsystem."
+    throw "Quotalis.exe must be a Windows GUI-subsystem desktop binary; got subsystem $desktopSubsystem."
 }
 if ($legacyDesktopSubsystem -ne 2) {
-    throw "codexbar-desktop.exe must be a Windows GUI-subsystem desktop binary; got subsystem $legacyDesktopSubsystem."
+    throw "quotalis-desktop.exe must be a Windows GUI-subsystem desktop binary; got subsystem $legacyDesktopSubsystem."
 }
 if ($cliSubsystem -ne 3) {
-    throw "codexbar-cli.exe must be a Windows console-subsystem CLI binary; got subsystem $cliSubsystem."
+    throw "quotalis-cli.exe must be a Windows console-subsystem CLI binary; got subsystem $cliSubsystem."
 }
 
 if ($CheckCliStdout) {
-    $stdoutPath = Join-Path ([System.IO.Path]::GetTempPath()) "codexbar-cli-stdout-$PID.txt"
+    $stdoutPath = Join-Path ([System.IO.Path]::GetTempPath()) "quotalis-cli-stdout-$PID.txt"
     try {
         & $cli --help > $stdoutPath
         if ($LASTEXITCODE -ne 0) {
-            throw "codexbar-cli.exe --help exited with $LASTEXITCODE"
+            throw "quotalis-cli.exe --help exited with $LASTEXITCODE"
         }
         $stdout = Get-Content -Raw -LiteralPath $stdoutPath
         if (-not $stdout -or $stdout -notmatch "Usage:" -or $stdout -notmatch "diagnose") {
-            throw "codexbar-cli.exe --help did not write expected CLI help to redirected stdout."
+            throw "quotalis-cli.exe --help did not write expected CLI help to redirected stdout."
         }
     } finally {
         Remove-Item -LiteralPath $stdoutPath -Force -ErrorAction SilentlyContinue

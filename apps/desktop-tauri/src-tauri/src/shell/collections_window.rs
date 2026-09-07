@@ -111,7 +111,7 @@ pub fn open_or_focus(app: &tauri::AppHandle) -> Result<(), String> {
     let url = WebviewUrl::App("index.html?window=collections".into());
 
     let win = tauri::WebviewWindowBuilder::new(app, COLLECTIONS_LABEL, url)
-        .title("QuotaArc Collections")
+        .title("Quotalis Collections")
         .inner_size(DEFAULT_WIDTH, DEFAULT_HEIGHT)
         .min_inner_size(MIN_WIDTH, MIN_HEIGHT)
         .decorations(true)

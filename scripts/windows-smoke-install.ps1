@@ -4,7 +4,7 @@ param(
 
     [string]$ExpectedVersion = "",
 
-    [string]$InstallDir = "$env:LOCALAPPDATA\Programs\CodexBar",
+    [string]$InstallDir = "$env:LOCALAPPDATA\Programs\Quotalis",
 
     [switch]$LeaveInstalled
 )
@@ -53,7 +53,7 @@ foreach ($name in @("QuotaArc", "QuotaArcDev")) {
     Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force
 }
 
-$logDir = Join-Path $env:TEMP "codexbar-installer-smoke"
+$logDir = Join-Path $env:TEMP "quotalis-installer-smoke"
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $installLog = Join-Path $logDir "install.log"
 
@@ -69,9 +69,9 @@ if ($install.ExitCode -notin @(0, 3010)) {
     throw "Installer exited with $($install.ExitCode). Log: $installLog"
 }
 
-$desktopExe = Join-Path $InstallDir "codexbar.exe"
-$cliExe = Join-Path $InstallDir "codexbar-cli.exe"
-$legacyDesktopExe = Join-Path $InstallDir "codexbar-desktop.exe"
+$desktopExe = Join-Path $InstallDir "Quotalis.exe"
+$cliExe = Join-Path $InstallDir "quotalis-cli.exe"
+$legacyDesktopExe = Join-Path $InstallDir "quotalis-desktop.exe"
 $icon = Join-Path $InstallDir "icon.ico"
 Assert-Path -Path $desktopExe -Label "installed desktop executable"
 Assert-Path -Path $cliExe -Label "installed CLI executable"
@@ -79,11 +79,11 @@ Assert-Path -Path $legacyDesktopExe -Label "installed desktop compatibility exec
 Assert-Path -Path $icon -Label "icon"
 
 $desktopHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $desktopExe).Hash.ToLowerInvariant()
-Write-Step "installed codexbar.exe sha256: $desktopHash"
+Write-Step "installed Quotalis.exe sha256: $desktopHash"
 $cliHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $cliExe).Hash.ToLowerInvariant()
-Write-Step "installed codexbar-cli.exe sha256: $cliHash"
+Write-Step "installed quotalis-cli.exe sha256: $cliHash"
 $legacyDesktopHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $legacyDesktopExe).Hash.ToLowerInvariant()
-Write-Step "installed codexbar-desktop.exe sha256: $legacyDesktopHash"
+Write-Step "installed quotalis-desktop.exe sha256: $legacyDesktopHash"
 
 $verifyExecutablesScript = Join-Path (Split-Path -Parent $PSScriptRoot) "scripts\verify-windows-executables.ps1"
 if (-not (Test-Path -LiteralPath $verifyExecutablesScript)) {
@@ -98,27 +98,27 @@ if (-not (Test-Path -LiteralPath $verifyExecutablesScript)) {
 if ($ExpectedVersion) {
     $versionOutput = (& $cliExe --version) -join "`n"
     if ($LASTEXITCODE -ne 0) {
-        throw "codexbar-cli.exe --version exited with $LASTEXITCODE"
+        throw "quotalis-cli.exe --version exited with $LASTEXITCODE"
     }
     if ($versionOutput -notmatch [regex]::Escape($ExpectedVersion)) {
-        throw "Expected codexbar-cli.exe --version to mention $ExpectedVersion, got: $versionOutput"
+        throw "Expected quotalis-cli.exe --version to mention $ExpectedVersion, got: $versionOutput"
     }
     Write-Step "CLI version output: $versionOutput"
 }
 
 $helpOutput = (& $cliExe --help) -join "`n"
 if ($LASTEXITCODE -ne 0) {
-    throw "codexbar-cli.exe --help exited with $LASTEXITCODE"
+    throw "quotalis-cli.exe --help exited with $LASTEXITCODE"
 }
 if ($helpOutput -notmatch "Usage:" -or $helpOutput -notmatch "diagnose") {
-    throw "codexbar-cli.exe --help did not print CLI help."
+    throw "quotalis-cli.exe --help did not print CLI help."
 }
 Write-Step "CLI help output: ok"
 
 $uninstallKeys = @(
-    "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\WinCodexBar_is1",
-    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\WinCodexBar_is1",
-    "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\WinCodexBar_is1"
+    "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\QuotaArcDesktop_is1",
+    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\QuotaArcDesktop_is1",
+    "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\QuotaArcDesktop_is1"
 )
 $uninstallEntry = $null
 foreach ($key in $uninstallKeys) {
@@ -128,7 +128,7 @@ foreach ($key in $uninstallKeys) {
     }
 }
 if ($null -eq $uninstallEntry) {
-    throw "Missing WinCodexBar uninstall registry entry."
+    throw "Missing Quotalis uninstall registry entry."
 }
 
 Write-Step "registry display name: $($uninstallEntry.DisplayName)"
@@ -138,8 +138,8 @@ if ($ExpectedVersion -and $uninstallEntry.DisplayVersion -ne $ExpectedVersion) {
 
 $startMenu = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs"
 $shortcutCandidates = @(
-    (Join-Path $startMenu "CodexBar.lnk"),
-    (Join-Path $startMenu "CodexBar\CodexBar.lnk")
+    (Join-Path $startMenu "Quotalis.lnk"),
+    (Join-Path $startMenu "Quotalis\Quotalis.lnk")
 )
 $shortcut = $shortcutCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
 if (-not $shortcut) {

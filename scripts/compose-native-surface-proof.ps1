@@ -45,7 +45,7 @@ $evidence = [ordered]@{
     schemaVersion = 1
     generatedAtUtc = [DateTime]::UtcNow.ToString("o")
     runtime = "Windows DWM-composited native Tauri windows"
-    executable = "target/debug/QuotaArcDev.exe"
+    executable = "target/debug/QuotalisDev.exe"
     processId = $ProcessId
     display = [ordered]@{ physicalWidth = 3200; physicalHeight = 2136; devicePixelRatio = 2.5 }
     theme = "10-celestial-ice"

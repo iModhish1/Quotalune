@@ -1,15 +1,19 @@
 [package]
 name = "codexbar-desktop-tauri"
-version = "0.10.1"
+version = "0.11.0"
 edition = "2024"
 publish = false
 
 # Keep the executable identity aligned with the product in every profile.
 # Without this explicit target, Cargo emits the package name in debug builds
-# while Tauri emits QuotaArc only when bundling. That allowed an older
-# target\\debug\\QuotaArc.exe to be launched after a newer build completed.
+# while Tauri emits the productName only when bundling. That allowed an
+# older target\\debug\\QuotaArc.exe to be launched after a newer build
+# completed. Renamed from "QuotaArc" to "Quotalis" alongside
+# tauri.conf.json's productName/mainBinaryName (Quotalis rebrand, public
+# brand only -- the bundle identifier stays app.quotaarc.desktop, see
+# docs/validation/QUOTALIS_WINDOWS_IDENTITY_MIGRATION.md).
 [[bin]]
-name = "QuotaArc"
+name = "Quotalis"
 path = "src/main.rs"
 
 [features]

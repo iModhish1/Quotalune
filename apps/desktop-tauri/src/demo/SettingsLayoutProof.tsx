@@ -28,7 +28,7 @@ export default function SettingsLayoutProof(){
   return <div data-theme={theme} className="settings-surface--full">
     <main className="settings settings-studio" data-navigation={navigation}>
       <header className="settings-studio-toolbar">
-        <div className="settings-shell-brand"><span className="settings-shell-brand__mark"><QuotaArcMark size={32} label="QuotaArc"/></span><span className="settings-shell-brand__copy"><span className="settings-shell-brand__name">QuotaArc</span><h1>{tab}</h1></span></div>
+        <div className="settings-shell-brand"><span className="settings-shell-brand__mark"><QuotaArcMark size={32} label="Quotalis"/></span><span className="settings-shell-brand__copy"><span className="settings-shell-brand__name">Quotalis</span><h1>{tab}</h1></span></div>
         <div className="settings-shell-actions"><span>Responsive layout proof</span></div>
       </header>
       <nav className="settings-tabs" aria-label="Settings sections">

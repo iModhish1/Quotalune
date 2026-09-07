@@ -11,6 +11,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.11.0] — 2026-09-08
+
+### Changed
+- **Public rebrand: QuotaArc → Quotalis.** Product name, window titles, tray
+  labels, About screen, Settings header, error boundary, and all in-app
+  locale strings (9 languages) now say Quotalis. Packaging identity
+  followed: Tauri `productName`/`mainBinaryName` and the Cargo binary are
+  now `Quotalis`/`QuotalisDev`, with the stable Windows bundle identity
+  (`app.quotaarc.desktop`) intentionally preserved for seamless upgrade
+  continuity — no local data migration required or performed. Internal
+  Rust crate renamed `codexbar` → `quotalis_core`; internal runtime event
+  namespace renamed `codexbar:*` → `quotalis:*`. Both Windows release
+  pipelines (the primary Tauri NSIS/MSI bundler and the secondary Inno
+  Setup pipeline in `rust/installer/quotalis.iss`) now produce
+  Quotalis-branded artifacts; a pre-existing, rebrand-unrelated bug in the
+  Inno pipeline (`cargo build --bin codexbar`, referencing a bin target
+  that hadn't existed for some time) was found and fixed as part of
+  proving the pipeline end-to-end. See
+  `docs/validation/QUOTALIS_REBRAND_AUDIT.md`,
+  `docs/validation/QUOTALIS_WINDOWS_IDENTITY_MIGRATION.md`,
+  `docs/validation/QUOTALIS_INNO_RELEASE_AUDIT.md`, and
+  `docs/validation/QUOTALIS_PUBLIC_REBRAND.md` for the full record of what
+  changed, what was intentionally left as legacy-compatible (OS-keychain
+  credential-target strings, the `secure_file.rs` format tag, the
+  `app.quotaarc.desktop` bundle identity, the `%APPDATA%\QuotaArc` data
+  directory), and what remains open (Start Menu pin preservation, which
+  can only be verified against a real pinned shortcut going through a
+  real upgrade).
+- No local data migration was performed or is required: Personal's
+  existing settings, profiles, history, and secure-stored credentials
+  remain exactly where they are, verified compatible with the renamed
+  code via executable fixture-based tests (history reopen, DPAPI
+  round-trip, settings/profile deserialization) and a real install →
+  launch → uninstall cycle of a distinct "Quotalis Dev" identity that
+  left the real installed Personal QuotaArc byte-for-byte unchanged.
+- No credentials were lost, exported, or exposed at any point in this
+  rebrand.
+
+---
+
 ## [0.26.2] — 2026-05-16
 
 ### Added

@@ -718,6 +718,20 @@ pub fn cleanup_downloads() {
 mod tests {
     use super::*;
 
+    /// Quotalis rebrand regression guard (owner spec section 32): update
+    /// artifact matching is suffix-only ("-setup.exe"/".msi") and was never
+    /// keyed on the product-name prefix, so it recognizes a legacy
+    /// QuotaArc-branded release asset and a current Quotalis-branded one
+    /// identically -- no dual current/legacy branch was needed here.
+    #[test]
+    fn installer_asset_matching_recognizes_both_legacy_and_current_brand() {
+        assert!(is_installer_asset_name("QuotaArc-1.2.3-x64-Setup.exe"));
+        assert!(is_installer_asset_name("Quotalis-1.2.3-x64-Setup.exe"));
+        assert!(is_installer_asset_name("Quotalis-Dev-1.2.3-x64-Setup.exe"));
+        assert!(is_installer_asset_name("quotalis-1.2.3-x64-setup.exe"));
+        assert!(!is_installer_asset_name("Quotalis-1.2.3-x64.zip"));
+    }
+
     #[test]
     fn test_version_comparison() {
         assert!(is_newer_version("1.0.1", "1.0.0"));

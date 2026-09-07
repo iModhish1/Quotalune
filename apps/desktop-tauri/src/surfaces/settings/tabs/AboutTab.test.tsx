@@ -110,7 +110,7 @@ describe("AboutTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     tauriMocks.getAppInfo.mockResolvedValue({
-      name: "QuotaArc",
+      name: "Quotalis",
       version: "0.30.3",
       buildNumber: "dev",
       updateChannel: "stable",
