@@ -7,14 +7,15 @@ in the next session — do not ask the owner to re-scope.
 ## Branch / HEAD
 
 - Branch: `feature/v9-theme-runtime`
-- HEAD: `4596468e` — "Add a real first-class Profiles page (Wave 6 Phase 2)"
-- Prior checkpoint: `f902cec8` — "Make Collections a first-class Settings destination"
+- HEAD: `6ba4ae62` — "Wave 6 Phase 3: main navigation normalization"
+- Prior checkpoints: `fcd0938d` (Profiles regression fix), `4596468e`
+  (Profiles page, Phase 2), `f902cec8` (Collections first-class tab)
 
 ## Execution order (owner's 21-phase spec)
 
-1. ~~Profiles page~~ — **DONE** (this checkpoint)
-2. ~~Main navigation normalization~~ — **NOT STARTED**
-3. Structure Theme vs Icon/Provider Presentation UX — NOT STARTED
+1. ~~Profiles page~~ — **DONE**
+2. ~~Main navigation normalization~~ — **DONE** (this checkpoint)
+3. Structure Theme vs Icon/Provider Presentation UX — NOT STARTED (next)
 4. Follow Structure / Independent mode — NOT STARTED
 5. Visual theme-bleed investigation — NOT STARTED
 6. Theme Composer — NOT STARTED
@@ -34,163 +35,210 @@ in the next session — do not ask the owner to re-scope.
 20. Personal promotion — NOT STARTED
 21. Final verification — NOT STARTED
 
-(Numbering matches the owner's message verbatim; "Collections" from the
-prior checkpoint is phase 0/already-accepted-complete, not renumbered here.)
+(The owner's phase numbers in their latest message start at 1 = Profiles;
+Collections from the prior checkpoint predates that numbering and isn't
+renumbered here.)
 
 ## What's actually done and verified (not asserted)
 
-### Phase 1 — Collections (checkpoint `f902cec8`, accepted complete, not touched this session)
+### Phase 0 — Collections (checkpoint `f902cec8`, accepted complete)
 
-- `MainRoute::Collections` → `settings_tab() == "collections"`, first-class
-  tab, no more "Configure collections (experimental)" disclosure.
-- Native-verified: clicked "Collections" in the real sidebar, confirmed
-  direct render, screenshot sent to owner.
+Unchanged this session. First-class tab, native-verified.
 
-### Phase 2 — Profiles page (checkpoint `4596468e`, this session)
+### Phase 1 — Profiles page (checkpoint `4596468e`, + regression fix `fcd0938d`)
 
-- `MainRoute::Profiles` → `settings_tab() == "profiles"`, mirrors the
-  Collections routing pattern.
-- New Tauri command `set_account_profile_membership` (thin extension of
-  the existing `account_ids` field — no second membership model).
-- New `ProfilesTab.tsx`/`.css`: list, switch active, create, rename inline,
-  duplicate, delete (guarded — last profile cannot be deleted), assign
-  theme/structure theme, toggle per-profile surfaces, toggle account
-  membership. Reuses `useProfileStore` from `ProfileSwitcher.tsx` — no
-  duplicate store logic.
-- Tray: "Profiles" submenu now ends with a real "Manage Profiles..." item
-  (previously a documented dead end — the submenu comment literally said
-  "No dedicated manage profiles page exists in the main app yet").
-- **Not done**: reordering profiles has no UI (backend `reorder_profiles`
-  command exists but is unused by the new page — not required by the
-  owner's capability list, skipped deliberately, not an oversight).
-- **Not done**: per-profile usage thresholds (`highUsageThreshold`,
-  `criticalUsageThreshold`) have no editable UI — no backend command
-  exists to update them (`update_profile` doesn't take them), and the
-  owner's instruction was explicit: "Do not invent unsupported profile
-  fields." Left read-only-by-omission (not displayed at all, since a
-  read-only threshold with no way to change it would be confusing UI
-  clutter). If the owner wants these editable, `update_profile` needs a
-  new `high_usage_threshold`/`critical_usage_threshold` parameter first.
-- **Not done**: per-provider presentation override *within* a profile —
-  out of scope for Phase 2, belongs to Phase 3/4 (Structure vs
-  Icon/Provider Presentation UX).
+Real page, reuses the existing profile store/commands. **Regression found
+and fixed same-session**: the owner spotted (via a live screenshot) that
+profile row names weren't rendering — root-caused via CDP computed-style
+inspection to a flexbox collapse (name span squeezed to width:0 by
+competing action buttons in a ~200px column) plus several invented CSS
+variable names. Fixed: two-line row layout, real design tokens
+(`--qa-graphite-2/3`, `--qa-hairline`, `--qa-status-critical`, `--qa-accent`
+via `color-mix`). Native-verified the fix (row-name width 0px → ~152px).
 
-## Tests (all currently green)
+### Phase 2 — Main navigation normalization (checkpoint `6ba4ae62`, this session)
 
-- Frontend: `npx vitest run` → **672/672 passing** (120 → 121 files; new
-  `ProfilesTab.test.tsx` adds 11).
+**Dashboard investigation (done first, per explicit instruction not to
+invent a route)**: traced the real architecture before touching anything.
+Verdict — **A: a real Dashboard already exists.** It's `PopOutPanel.tsx`,
+rendered in the shared `main` window via `SurfaceMode::PopOut` +
+`SurfaceTarget::Dashboard` (already the cold-launch default target,
+`main.rs::primary_window_request()`). It was simply missing from the
+`MainRoute` vocabulary and the Settings sidebar — nothing was invented, an
+existing surface was given a proper route.
+
+**Also found**: the tray's "Pop Out Dashboard" item was a real naming
+mismatch — it opens the detached flyout window, which mounts `TrayPanel`
+(the compact tray popover), not `PopOutPanel`/the Dashboard at all. Fixed
+alongside adding the real Dashboard entry: old item relabeled "Pop Out
+Panel" (new `TrayPopOutPanel` key), old `TrayPopOutDashboard` key and its 7
+translated lines removed (mirrors the `TrayShowWindow` cleanup from the
+Collections slice).
+
+**What was built:**
+- `shell::MainRoute::Dashboard` — the one route targeting the main-window
+  Dashboard instead of a settings tab. `settings_tab()` now returns
+  `Option<&'static str>` (`None` for Dashboard) — explicit at the type
+  level.
+- `open_or_focus_main_window`'s Dashboard branch reuses
+  `main.rs::primary_window_request()` — same target cold launch uses, not
+  a second definition.
+- New `open_dashboard` Tauri command + `openDashboard()` JS wrapper
+  (mirrors `open_settings_window`/`open_flyout_window`).
+- New tray item "Dashboard" → `MenuAction::OpenMainRoute(MainRoute::Dashboard)`.
+- Sidebar: "Dashboard" is a distinct button (not `role="tab"`) rendered
+  before the settings tablist — correct ARIA, since activating it
+  navigates away to a different window rather than switching a tabpanel
+  here. Reuses `.settings-tab` styling exactly, one thin separating rule.
+- `TAB_META` reordered to the target hierarchy: primary product
+  (`providerDisplay`, `collections`) → organization (`profiles`,
+  `providers`) → customization (`themes`, `usageSpend`, `notifications`)
+  → system/config (`general`, `menuBar`, `menu`, `surfaces`, `advanced`,
+  `about`). No tabs removed, none duplicated.
+
+**Explicitly not done** (correctly out of scope, not an oversight):
+- No visual section-header/divider treatment for the four hierarchy
+  groups — that's a Phase 7 density/layout concern, not a Phase 3
+  route-ordering concern. Groups exist only in comment-documented order
+  right now.
+- No structural density redesign — only the one new element (Dashboard
+  button) follows the "no oversized cards / no dead space" principle;
+  existing tab/nav padding was left as-is per explicit scope ("only
+  remove clearly excessive shell/navigation spacing... do not start the
+  full density redesign yet").
+
+## Tests (all currently green, except one pre-existing unrelated flake)
+
+- Frontend: `npx vitest run` → **672/672 passing**, EXCEPT one
+  intermittently-flaky, pre-existing, unrelated test:
+  `src/hooks/useTrayPanelLayout.sizing.test.tsx` > "does not feed
+  measurement style changes back into another auto-fit pass" — confirmed
+  via git-stash A/B testing to fail at ~1-in-4 rate on BOTH the
+  pre-Phase-3 commit and the current commit, in isolation, with zero
+  relation to anything touched this session (tray-panel resize/auto-fit
+  timing, not navigation/Settings). Flagged as a separate background task
+  (`task_21a3501f`) rather than "fixed" as an incidental Phase-3 side
+  effect. Excluding that one file: 669/669.
 - Frontend typecheck: `npx tsc --noEmit` → clean.
-- Rust shell crate: `cargo test --manifest-path apps/desktop-tauri/src-tauri/Cargo.toml`
-  → **445/445 passing** (442 → 445; 3 new: `profiles_submenu_lists_each_
-  profile_and_ends_with_manage_profiles`, `membership_toggle_adds_and_
-  removes_without_duplicating`, `membership_toggle_rejects_unknown_
-  account_or_profile`).
-- Rust shared crate: `cargo test --manifest-path rust/Cargo.toml` →
-  **1474/1474 passing** (unchanged — `rust/src/profiles.rs` itself wasn't
-  touched this session, only its Tauri-layer consumers).
+- Rust shell crate: **447/447 passing** (445 → 447; new:
+  `dashboard_route_is_not_a_settings_tab_and_reopens_the_main_window`,
+  `dashboard_is_a_primary_entry_distinct_from_pop_out_panel`, plus an
+  added assertion in `open_main_app_and_named_routes_resolve_distinctly`).
+- Rust shared crate: **1474/1474 passing** (unchanged — nothing in
+  `rust/src/` itself was touched this phase, only its Tauri-layer
+  consumers and locale files).
 - `cargo clippy --all-targets -- -D warnings`: clean, both crates.
-- `cargo fmt --all -- --check`: clean, both crates (fmt found and this
-  session fixed real formatting drift in the new Rust code before commit).
-- Locale-drift check (`node apps/desktop-tauri/scripts/check-locale-drift.mjs`):
-  **970/970 keys matched** (967 → 970; 3 new keys: `TabProfiles`,
-  `ProfilesPageHelper`, `TrayManageProfiles` — English only; the other 8
-  locales fall back to English for these per existing, accepted policy).
-- Secret scan / skip-focus scan / `git diff --check`: clean on both commits
-  this session.
+- `cargo fmt --all -- --check`: clean, both crates.
+- Locale-drift check: **972/972 keys matched** (971 → 972 across the two
+  Profiles+Phase3 slices; new keys this phase: `TabDashboard`,
+  `TrayDashboard`, `TrayPopOutPanel`; removed: `TrayPopOutDashboard` and
+  its 7 translated lines).
+- Secret scan / skip-focus scan / `git diff --check`: clean (the two
+  `.skip(1)` matches in `main.rs` are `Iterator::skip`, not test-skip
+  directives — pre-existing, unrelated false positives).
 
 ## Native proof (real Dev binary + WebView2 IPC via CDP, not unit tests only)
 
-- Collections: clicked "Collections" in the real sidebar → renders the
-  live `CollectionSettings` editor directly, `stillHasExperimentalDisclosure:
-  false`. Screenshot sent to owner.
-- Profiles: clicked "Profiles" in the real sidebar → created "Native QA
-  Profile" through the actual create-profile form → clicked the real
-  "Switch" button → confirmed the "Active" badge moved to the new profile.
-  Screenshot sent to owner. **Cleanup performed**: test profile deleted,
-  "Default" restored active, `topArcEnabled` restored to `true` (it was
-  temporarily set `false` via IPC only to force the main workspace to
-  auto-open for the test — same technique used for the Collections proof —
-  and was verified restored via `get_surface_settings` before/after).
-- **Still not done** (and cannot be done in this sandbox): a physical
-  mouse click on the actual Windows system tray icon. This is the
-  pre-existing, owner-accepted "EXTERNAL MANUAL VERIFICATION REQUIRED"
-  limitation from the tray-integration wave — it does not block anything
-  else in this sequence. The tray→Profiles routing itself (`"manage_
-  profiles"` menu id → `MenuAction::OpenMainRoute(MainRoute::Profiles)`)
-  is verified at the Rust unit-test level.
+- Profiles regression fix: row-name width went from 0px (invisible) to
+  ~152px (real, screenshot-confirmed) after the CSS fix.
+- Dashboard nav: clicked "Dashboard" in the real sidebar → confirmed the
+  shared `main` window's body actually re-rendered as `PopOutPanel`
+  content (provider grid, quota meters, "Default" profile switcher, per
+  the captured DOM text) — not a stub or a no-op. Screenshot sent.
+- Dashboard nav at 480px narrow width: button still visible, correctly
+  sized (icon-only mode via existing `@media(max-width:560px)` rules),
+  no overlap. Screenshot sent.
+- Dashboard nav under `dir="rtl"`: border/margin sides swap as expected
+  (checked in "side" navigation mode — the `[data-navigation="top"/
+  "bottom"]` RTL branch specifically wasn't separately exercised in this
+  pass; the CSS mirrors the existing, already-correct `.settings-tabs`
+  RTL pattern by inspection, but a dedicated top/bottom+RTL native check
+  is still open if the owner wants full confidence there).
+- **Still not done** (accepted external blocker, unchanged from prior
+  checkpoints): a physical mouse click on the real Windows system tray
+  icon. Tray→Dashboard routing is verified at the Rust unit-test level
+  only.
 
-## Known defects found and fixed this session (not pre-existing bugs left in place)
+## Known defects found and fixed this session (not left in place)
 
-1. Missing Collections tab icon in `Settings.tsx`'s `TabIcons` record —
-   caught by `tsc` immediately after wiring the new tab; fixed.
-2. Stale `TrayShowWindow` locale key: deleted from the locale macro and
-   `en-US.ftl` during the earlier tray-restructuring wave, but the
-   translated lines were left behind in all 7 other locale files, which
-   Fluent's completeness check rejects. Removed the 7 stale lines.
-3. `cargo fmt` formatting drift in the new Rust code (a multi-line
-   `ProviderAccount::new(...)` call and a multi-line `.map()` closure) —
-   caught by `cargo fmt --check`, fixed by running `cargo fmt`.
-4. Accessible-name collision in the new `ProfilesTab`: the "Rename X"
-   trigger button and the resulting rename `<input>` both carried the
-   aria-label `"Rename X"`, which the test suite itself caught
-   (`getByLabelText` found two matches). Fixed by renaming the input's
-   label to `"New name for X"`.
+1. (Carried from Phase 1 checkpoint) Missing Collections tab icon, stale
+   `TrayShowWindow` locale key.
+2. Profiles page row-name collapsing to 0-width (the owner's screenshot
+   catch) — see above.
+3. Tray "Pop Out Dashboard" naming mismatch (opens `TrayPanel`, not the
+   Dashboard) — found during the Phase 3 Dashboard investigation, fixed
+   alongside adding the real Dashboard route.
 
-## Exact next step (Phase 3 — main navigation normalization)
+## Exact next step (Phase 3 in the owner's numbering — Structure Theme vs Icon/Provider Presentation UX)
 
-Files to start from:
-- `apps/desktop-tauri/src/surfaces/settings/settingsTabs.ts` — current
-  `TAB_META` order: general, providers, providerDisplay, collections,
-  profiles, notifications, menuBar, menu, usageSpend, surfaces, themes,
-  advanced, about. This is the thing to reorganize/re-group.
-- `apps/desktop-tauri/src/surfaces/Settings.tsx` — sidebar rendering +
-  `TabIcons` record.
-- The owner's target destination set: Provider Display, Dashboard,
-  Collections, Profiles, Providers, Themes, Usage, Notifications,
-  Settings/Advanced. Note "Dashboard" is not currently a `SettingsTabId`
-  at all — need to check whether `SurfaceMode::PopOut`/the flyout window
-  is what "Dashboard" refers to, or whether it needs to become a real tab.
-  Investigate `apps/desktop-tauri/src/surfaces/PopOutPanel.tsx` and
-  `SurfaceMode` before assuming.
-- Also apply the density complaint (large empty margins, oversized
-  cards) while touching navigation — the owner was explicit these two
-  are linked ("While normalizing navigation: inspect the actual layout
-  ... reduce ... unnecessary outer padding ... huge section gaps").
-  Consider whether to fold this into Phase 3 or keep it strictly for
-  Phase 7/8 (full density audit) — the owner's spec lists both a
-  navigation-density note under Phase 3 AND a full separate audit later;
-  do the full audit (Phase 7) as the systemic fix, but don't ignore
-  egregious cases spotted while doing Phase 3.
+Not started. Per the owner's spec:
+- Implement an explicit composition model: **Structure Theme** +
+  **Provider/Icon Presentation**, with a "Provider Presentation Source:
+  [Follow Structure] / [Independent]" control.
+- "Follow Structure" must show clear provenance ("Provider Presentation:
+  Following Solar Ember"), not present "Adaptive" as an unrelated theme
+  card.
+- "Independent" must not mutate the Structure Theme's background/
+  geometry/material/ornaments/macro-motion — only presentation changes.
+- Per-provider override on top, ONLY if the current Provider Identity
+  architecture supports it cleanly (owner: "Use current architecture...
+  do not add this if it requires duplicating the current identity
+  system").
+- Centralize resolution in one pure function, conceptually
+  `resolveVisualComposition({ structureTheme, providerPresentationSource,
+  selectedPresentation, providerIdentity, providerOverride, semanticState })`
+  — no mutable module globals, same input → same output, and the Settings
+  preview + production surfaces must both call it (not separate logic).
 
-## Personal status (must not be touched until Phase 19-20)
+Files to start from (not yet inspected this session — inspect before
+assuming shape, same discipline as the Dashboard investigation):
+- `apps/desktop-tauri/src/design-system/themeResolution.ts` — likely
+  where structure/identity resolution already partially lives; read it
+  first.
+- `apps/desktop-tauri/src/design-system/themeCatalog.ts` — `CatalogTheme`
+  shape (has both `identity` and `material` fields already — this may be
+  exactly the structure/presentation split, or may need one).
+- `apps/desktop-tauri/src/surfaces/settings/tabs/ProviderDisplayTab.tsx`
+  and its `ProviderIdentityGallery`/`UsageDisplaySection` children — the
+  existing Provider Identity configuration UI, to extend rather than
+  duplicate.
+- Provider Identity Rust-side storage: search for how `providerIdentity`/
+  accent overrides currently persist in `Settings` (likely
+  `provider_limit_presentation`/`global_limit_presentation` in
+  `rust/src/settings.rs`, already seen this session via
+  `command_profiles.rs`'s `set_provider_limit_presentation`/
+  `set_global_limit_presentation` commands — these may already BE most of
+  this system under a different name; confirm before building anything
+  new).
 
-- Personal is on **0.10.1**. Not touched this session. No backup taken
-  this session (not needed yet — Dev-profile-only native verification).
-- Version bump to **0.11.0** is the working assumption per the owner's
-  semver guidance, to be confirmed at Phase 18.
+## Personal status (must not be touched until Phase 19-20 in the owner's numbering)
 
-## Process note for the next session
+- Personal is on **0.10.1**. Not touched this session.
+- Version bump to **0.11.0** remains the working assumption, to be
+  confirmed at the version-decision phase.
 
-- The Dev debug binary (`target/debug/QuotaArc.exe`) was running under
-  `QuotaArc-Dev` profile with `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9223`
-  for native verification. A local `pnpm run dev` (vite on port 1420) must
-  also be running for the debug binary's `devUrl` to resolve — the debug
-  binary does NOT embed `frontendDist` the way a release build does.
-- The Dev profile's `topArcEnabled` is normally `true` (a Quota Island
-  surface is configured). This means a plain launch does NOT auto-open
-  the main workspace (`unattended_by_compact_surface` is false — see
-  `main.rs::launch_behavior`), which is correct product behavior, not a
-  bug — but it means native verification of "does X route open in the
-  main workspace" requires either using the actual tray/menu path or
-  temporarily toggling `topArcEnabled` false via `update_surface_settings`
-  IPC, relaunching, and restoring it afterward. Always restore it —
-  verified via `get_surface_settings` before/after both times this
-  session.
-- Scratch CDP verification scripts from this session live in `.local/`
-  (e.g. `.local/native-verify-profiles.mjs`) — not committed, safe to
-  delete or reuse as a template for the next phase's native checks.
+## Process notes for the next session
+
+- Dev binary + vite dev server pattern (unchanged from the Phase 1
+  checkpoint): `pnpm run dev` on port 1420, then
+  `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9223
+  target/debug/QuotaArc.exe`. Rust command/route changes require a real
+  rebuild + relaunch (`cargo build` then kill+relaunch the exe); pure
+  frontend/CSS changes hot-reload via vite without relaunching.
+- `topArcEnabled` toggle trick (to force the main workspace to auto-open
+  for testing) was used again this session and restored afterward each
+  time — verified via `get_surface_settings` before/after both times.
+- When `cargo build` fails with "Access is denied" removing
+  `QuotaArc.exe`, the previous Dev instance is still running — find and
+  kill it (`tasklist //FI "IMAGENAME eq QuotaArc.exe"` /
+  `taskkill //F //PID <pid>`) before rebuilding. `cargo check` (no
+  binary link) works fine while the exe is locked, for pure compile-error
+  iteration.
+- Scratch CDP verification scripts live in `.local/` (not committed,
+  reusable as templates for the next phase's native checks).
 
 ## Overall verdict so far
 
-**NOT PASSED** — 2 of 21 phases complete and verified. Continuing per the
-owner's explicit "do not stop, do not ask to re-scope" instruction.
+**NOT PASSED** — 2 of the owner's 21 phases complete and verified (plus
+the pre-numbered Collections slice). Continuing per the owner's explicit
+"do not stop, do not ask to re-scope" instruction.
