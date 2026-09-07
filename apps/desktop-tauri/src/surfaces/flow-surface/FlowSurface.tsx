@@ -235,33 +235,54 @@ export default function FlowSurface({
       {expanded && (
         <section id="quota-flow-details" className="flow-surface__details" role="dialog" aria-label={`${focused?.name ?? "QuotaArc"} quota details`}>
           <header className="flow-surface__detail-header">
-            {/* LEFT: the application anchor — always QuotaArc's own mark,
-                never swapped for a provider glyph (Wave 6 Phase 4
-                correction). */}
-            <span className="flow-surface__detail-title"><QuotaArcMark /> <strong>QuotaArc</strong></span>
-            {/* CENTER: the focused provider's own identity — a distinct
-                element from the app title above, not a replacement for it,
-                so the header reads "QuotaArc, currently showing Claude"
-                rather than "this app is Claude." */}
-            {focused && (
-              <span className="flow-surface__detail-provider">
-                <QaProviderIcon
-                  // The registry has no plain "openai" entry (only
-                  // "openaiapi"/"azureopenai" for the API-key provider) —
-                  // the ChatGPT/Codex CLI product's iconId is "openai" and
-                  // maps to the "codex" glyph, matching NotchDetails.tsx's
-                  // identical normalization.
-                  providerId={focused.iconId === "openai" ? "codex" : focused.iconId}
-                  size={15}
-                />
-                <strong>{focused.name}</strong>
-              </span>
-            )}
+            {/* LEFT: the application anchor — logo only (Wave 6 Phase 4
+                follow-up correction: the "QuotaArc" text label was removed
+                to free header space for the provider identity below; the
+                logo alone still reads as the app anchor, matching how the
+                compact rail's brand icon already works with no text). */}
+            <span className="flow-surface__detail-title" aria-label="QuotaArc"><QuotaArcMark /></span>
             <span className="flow-surface__detail-controls">
-              <button type="button" onClick={onTogglePinned} aria-pressed={state === "pinned"} aria-label={state === "pinned" ? "Unpin details" : "Pin details"}>⌖</button>
+              {/* A real pin glyph (Wave 6 Phase 4 follow-up correction —
+                  ⌖ read as an ambiguous abstract symbol). Filled when
+                  pinned, outline otherwise, matching the ⌖/× pair's
+                  existing icon-button sizing. */}
+              <button type="button" onClick={onTogglePinned} aria-pressed={state === "pinned"} aria-label={state === "pinned" ? "Unpin details" : "Pin details"}>
+                <svg aria-hidden viewBox="0 0 16 16" width="13" height="13" fill={state === "pinned" ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 1.5c-1.4 0-2.5 1.1-2.5 2.5 0 .9.3 1.9.7 2.7L4 9.8c-.3.4-.1 1 .4 1h3.1v3.2c0 .3.2.5.5.5s.5-.2.5-.5V10.8h3.1c.5 0 .7-.6.4-1l-2.2-3.1c.4-.8.7-1.8.7-2.7 0-1.4-1.1-2.5-2.5-2.5Z" />
+                </svg>
+              </button>
               <button type="button" onClick={onRequestCompact ?? onToggleExpanded} aria-label="Collapse details">×</button>
             </span>
           </header>
+          {/* Focused provider identity — its own row below the header line
+              (Wave 6 Phase 4 follow-up correction: previously shared the
+              header's top line with the app logo and controls; moved lower
+              and enlarged so it reads as the header's dominant content,
+              still visually below the primary usage value in
+              .flow-surface__detail-metrics). Two lines: the provider's own
+              short display name (already concise — "Claude"/"Codex"/
+              "Gemini", not a long account title, per the real StageProvider
+              data model), then its real plan/package label when the
+              provider snapshot reports one (StageProvider.planName,
+              threaded from ProviderUsageSnapshot.planName — never
+              fabricated; omitted entirely when absent). */}
+          {focused && (
+            <div className="flow-surface__detail-provider">
+              <QaProviderIcon
+                // The registry has no plain "openai" entry (only
+                // "openaiapi"/"azureopenai" for the API-key provider) — the
+                // ChatGPT/Codex CLI product's iconId is "openai" and maps
+                // to the "codex" glyph, matching NotchDetails.tsx's
+                // identical normalization.
+                providerId={focused.iconId === "openai" ? "codex" : focused.iconId}
+                size={20}
+              />
+              <span className="flow-surface__detail-provider-copy">
+                <strong>{focused.name}</strong>
+                {focused.planName && <small>{focused.planName}</small>}
+              </span>
+            </div>
+          )}
           <div className="flow-surface__detail-body">
             <div className="flow-surface__detail-metrics">
               {focused?.windows ? <div style={{"--provider-color":providerMeterFillColor(providerColor(theme,focused.id),focused.limitPresentation?.identity,theme)} as CSSProperties}><UsageWindowList providerId={focused.id} windows={focused.windows} hidden={focused.detailsHidden} presentation={focused.limitPresentation}/></div> : <div className="flow-surface__metric">

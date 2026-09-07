@@ -124,18 +124,55 @@ describe("FlowSurface", () => {
       expect(screen.getByText("OpenAI")).toBeInTheDocument();
     });
 
-    it("expanded detail header shows QuotaArc as the title (left) and the focused provider as a distinct chip (center), never merged", () => {
+    it("expanded detail header shows the QuotaArc logo alone (no text) and the focused provider as its own row below, never merged", () => {
       const { container } = render(
         <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={providers} />,
       );
       const title = container.querySelector(".flow-surface__detail-title");
-      expect(title).toHaveTextContent("QuotaArc");
+      // Wave 6 Phase 4 follow-up: the "QuotaArc" text label was
+      // deliberately removed to free header space — logo only now.
+      expect(title).toHaveTextContent("");
       expect(title?.querySelector(".flow-surface__mark")).toBeInTheDocument();
       expect(title?.querySelector(".provider-icon")).not.toBeInTheDocument();
 
       const providerChip = container.querySelector(".flow-surface__detail-provider");
       expect(providerChip).toHaveTextContent("OpenAI");
       expect(providerChip?.querySelector(".provider-icon")).toBeInTheDocument();
+      // The provider row is a sibling of the header, not nested inside it —
+      // it sits below the header line (moved lower, per the owner's
+      // explicit hierarchy correction).
+      expect(providerChip?.parentElement).not.toHaveClass("flow-surface__detail-header");
+    });
+
+    it("shows the provider's real plan/package label when present, and omits it cleanly when absent (never fabricated)", () => {
+      const withPlan = [{ ...providers[0], planName: "Pro-5x" }];
+      const { container: withPlanContainer } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={withPlan} />,
+      );
+      const copyWithPlan = withPlanContainer.querySelector(".flow-surface__detail-provider-copy");
+      expect(copyWithPlan).toHaveTextContent("OpenAI");
+      expect(copyWithPlan).toHaveTextContent("Pro-5x");
+
+      const withoutPlan = [{ ...providers[0], planName: null }];
+      const { container: withoutPlanContainer } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={withoutPlan} />,
+      );
+      const copyWithoutPlan = withoutPlanContainer.querySelector(".flow-surface__detail-provider-copy");
+      expect(copyWithoutPlan).toHaveTextContent("OpenAI");
+      expect(copyWithoutPlan?.querySelector("small")).not.toBeInTheDocument();
+    });
+
+    it("gives the pin button a real pin glyph and an accurate pinned/unpinned accessible label", () => {
+      const { rerender } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={providers} />,
+      );
+      const pinButton = screen.getByRole("button", { name: "Pin details" });
+      expect(pinButton.querySelector("svg")).toBeInTheDocument();
+      expect(pinButton).toHaveAttribute("aria-pressed", "false");
+
+      rerender(<FlowSurface catalog="01-obsidian-orbit" settings={settings} state="pinned" providers={providers} />);
+      const unpinButton = screen.getByRole("button", { name: "Unpin details" });
+      expect(unpinButton).toHaveAttribute("aria-pressed", "true");
     });
 
     it("never opens the expanded detail panel without quota data — the provider chip therefore never has a fake identity to fall back to", () => {
@@ -205,22 +242,23 @@ describe("FlowSurface", () => {
       },
     );
 
-    it("truncates a long focused provider name in the chip rather than leaving it unbounded (structural guard for the min-width:0 fix)", () => {
+    it("truncates a long focused provider name in the provider row rather than leaving it unbounded (structural guard for the min-width:0 fix)", () => {
       const { container } = render(
         <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={[longNameProvider]} />,
       );
-      const chipText = container.querySelector(".flow-surface__detail-provider strong");
+      const chipText = container.querySelector(".flow-surface__detail-provider-copy strong");
       expect(chipText).toHaveTextContent(longNameProvider.name);
       // The truncation CSS (overflow:hidden + text-overflow:ellipsis +
-      // white-space:nowrap) lives on this exact element — a regression
-      // that removed those rules, or the container's min-width:0, would
-      // not be caught here (jsdom can't compute layout) but IS caught by
-      // the native verification this class of change requires.
-      expect(chipText?.className).toBe("");
-      expect(chipText?.parentElement).toHaveClass("flow-surface__detail-provider");
+      // white-space:nowrap) lives on this exact element, and min-width:0
+      // on both .flow-surface__detail-provider and -copy — a regression
+      // that removed those rules would not be caught here (jsdom can't
+      // compute layout) but IS caught by the native verification this
+      // class of change requires.
+      expect(chipText?.parentElement).toHaveClass("flow-surface__detail-provider-copy");
+      expect(chipText?.closest(".flow-surface__detail-provider")).toBeInTheDocument();
     });
 
-    it("keeps the QuotaArc title, provider chip, and controls as three independent header children — never nested inside one another", () => {
+    it("keeps the header (logo + controls) and the provider row as independent siblings — the header never grows to contain provider content", () => {
       const { container } = render(
         <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={[longNameProvider]} />,
       );
@@ -228,9 +266,11 @@ describe("FlowSurface", () => {
       const directChildren = header ? Array.from(header.children) : [];
       expect(directChildren.map((el) => el.className)).toEqual([
         "flow-surface__detail-title",
-        "flow-surface__detail-provider",
         "flow-surface__detail-controls",
       ]);
+      // The provider row sits as the header's next sibling, not inside it.
+      const providerRow = container.querySelector(".flow-surface__detail-provider");
+      expect(providerRow?.previousElementSibling).toBe(header);
     });
   });
 });

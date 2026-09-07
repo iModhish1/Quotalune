@@ -48,6 +48,7 @@ export function toStageProviders(
     return {
       id: provider.providerId,
       name: provider.displayName,
+      planName: provider.planName,
       limitPresentation:resolveLimitPresentation(config?.globalLimitPresentation,config?.providerLimitPresentation?.[provider.providerId]),
       iconId: provider.providerId,
       resolvedMode: mode,

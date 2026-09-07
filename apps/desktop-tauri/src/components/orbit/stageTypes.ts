@@ -23,6 +23,12 @@ export interface StageProvider {
   reset: string;
   status: ProviderStatus;
   accountLabel?: string | null;
+  /** Real plan/package label from the provider snapshot (e.g. "Pro-5x",
+   *  "Plus", "Team") when the provider reports one — never fabricated.
+   *  Wave 6 Phase 4: threaded through from ProviderUsageSnapshot.planName,
+   *  which existing surfaces (MenuCard) already display; FlowSurface's
+   *  focused-provider identity previously had no access to it. */
+  planName?: string | null;
   windows?: StageUsageWindow[];
   detailsHidden?: boolean;
   limitPresentation?: import('../../design-system/limitPresentation').LimitPresentation;
