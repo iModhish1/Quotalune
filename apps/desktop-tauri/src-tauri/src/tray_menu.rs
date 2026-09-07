@@ -163,20 +163,24 @@ pub(crate) fn build_tray_menu_with(
         text(LocaleKey::TrayOpenCollectionsWindow),
     ));
     if !profiles.is_empty() {
-        // No dedicated "manage profiles" page exists in the main app yet —
-        // profile *switching* (this submenu) is the real, working feature;
-        // adding a "Manage Profiles" item routing to some other page would
-        // be misleading, so this stays a plain switch-profile list until a
-        // real Profiles destination exists.
+        // Profile *switching* entries, plus a trailing "Manage Profiles..."
+        // that opens the real first-class Profiles destination in the main
+        // app (see docs/validation/PROFILES_0_11_0.md) — no more dead end.
+        let mut profile_items: Vec<TrayMenuEntry> = profiles
+            .iter()
+            .map(|p| {
+                TrayMenuEntry::check_item(format!("switch_profile:{}", p.id), &p.name, p.active)
+            })
+            .collect();
+        profile_items.push(TrayMenuEntry::separator());
+        profile_items.push(TrayMenuEntry::item(
+            "manage_profiles",
+            text(LocaleKey::TrayManageProfiles),
+        ));
         menu.push(TrayMenuEntry::submenu(
             "profiles",
             text(LocaleKey::TrayProfiles),
-            profiles
-                .iter()
-                .map(|p| {
-                    TrayMenuEntry::check_item(format!("switch_profile:{}", p.id), &p.name, p.active)
-                })
-                .collect(),
+            profile_items,
         ));
     }
     if !providers.is_empty() {
@@ -343,6 +347,57 @@ mod tests {
             .find(|e| e.id.as_deref() == Some("toggle_float_bar"))
             .expect("float bar toggle present");
         assert_eq!(toggle.checked, Some(false));
+    }
+
+    #[test]
+    fn profiles_submenu_lists_each_profile_and_ends_with_manage_profiles() {
+        let menu = build_tray_menu_with(
+            &sample_provider_catalog(),
+            &[],
+            &both_enabled(),
+            SurfaceToggles::default(),
+            &[
+                ProfileMenuEntry {
+                    id: "p1".into(),
+                    name: "Default".into(),
+                    active: true,
+                },
+                ProfileMenuEntry {
+                    id: "p2".into(),
+                    name: "Night".into(),
+                    active: false,
+                },
+            ],
+            false,
+            Language::English,
+        );
+        let submenu = menu
+            .iter()
+            .find(|e| e.id.as_deref() == Some("profiles"))
+            .expect("profiles submenu present");
+
+        let default_item = submenu
+            .children
+            .iter()
+            .find(|e| e.id.as_deref() == Some("switch_profile:p1"))
+            .expect("Default switch item");
+        assert_eq!(default_item.checked, Some(true));
+        let night_item = submenu
+            .children
+            .iter()
+            .find(|e| e.id.as_deref() == Some("switch_profile:p2"))
+            .expect("Night switch item");
+        assert_eq!(night_item.checked, Some(false));
+
+        // Manage Profiles is the real destination for everything switching
+        // cannot do (create/rename/duplicate/delete/theme/account assignment)
+        // — it must always be present and trail after a separator, not
+        // interleaved with the switch list.
+        let last = submenu.children.last().expect("submenu has entries");
+        assert_eq!(last.id.as_deref(), Some("manage_profiles"));
+        assert_eq!(last.label, "Manage Profiles...");
+        let separator_before_manage = &submenu.children[submenu.children.len() - 2];
+        assert!(separator_before_manage.is_separator);
     }
 
     #[test]

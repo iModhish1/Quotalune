@@ -2,6 +2,7 @@
  * Typed bridge for QuotaArc Profiles / ProviderAccounts commands.
  */
 import { invoke } from "@tauri-apps/api/core";
+import type { ThemePreference } from "../types/bridge";
 
 export interface CredentialReference {
   source: string;
@@ -33,8 +34,8 @@ export interface ProfileDto {
   name: string;
   description?: string | null;
   enabled: boolean;
-  /** "system" | "light" | "dark" | null (inherit) */
-  theme?: string | null;
+  /** "auto" | "light" | "dark", or null to inherit the global theme. */
+  theme?: ThemePreference | null;
   catalogTheme?: string | null;
   accent?: string | null;
   surfaces: ProfileSurfacesDto;
@@ -82,7 +83,7 @@ export function reorderProfiles(profileIds: string[]): Promise<void> {
 
 export function updateProfile(patch: {
   profileId: string;
-  theme?: string | null | undefined;
+  theme?: ThemePreference | null | undefined;
   catalogTheme?: string | null | undefined;
   accent?: string | null | undefined;
   edgeArc?: boolean;
@@ -115,4 +116,12 @@ export function updateAccount(patch: {
 
 export function removeAccount(accountId: string): Promise<void> {
   return invoke("remove_account", { accountId });
+}
+
+export function setAccountProfileMembership(
+  accountId: string,
+  profileId: string,
+  member: boolean,
+): Promise<void> {
+  return invoke("set_account_profile_membership", { accountId, profileId, member });
 }

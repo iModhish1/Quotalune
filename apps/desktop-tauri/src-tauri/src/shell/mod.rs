@@ -43,6 +43,10 @@ pub enum MainRoute {
     /// "experimental" disclosure — see docs/validation/COLLECTIONS_0_10_1.md
     /// for that history).
     Collections,
+    /// A real first-class destination as of the Wave 6 UX pass — profile
+    /// management previously had no main-app page at all, only tray-menu
+    /// switching (see docs/validation/PROFILES_0_11_0.md).
+    Profiles,
     General,
     About,
 }
@@ -53,6 +57,7 @@ impl MainRoute {
             Self::ProviderDisplay => "providerDisplay",
             Self::Providers => "providers",
             Self::Collections => "collections",
+            Self::Profiles => "profiles",
             Self::General => "general",
             Self::About => "about",
         }

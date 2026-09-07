@@ -355,6 +355,61 @@ pub fn update_account(
     Ok(())
 }
 
+/// Pure mutation for `set_account_profile_membership`: add or remove one
+/// account from one profile's `account_ids`. Reuses the same field
+/// `add_account` seeds at creation time — no second membership model.
+fn apply_account_profile_membership(
+    store: &mut ProfileStore,
+    account_id: &str,
+    profile_id: &str,
+    member: bool,
+) -> Result<(), String> {
+    if !store.accounts.iter().any(|a| a.id == account_id) {
+        return Err("Account not found".to_string());
+    }
+    let Some(profile) = store.profiles.iter_mut().find(|p| p.id == profile_id) else {
+        return Err("Profile not found".to_string());
+    };
+    if member {
+        if !profile.account_ids.iter().any(|id| id == account_id) {
+            profile.account_ids.push(account_id.to_string());
+            profile.touch();
+        }
+    } else if profile.account_ids.iter().any(|id| id == account_id) {
+        profile.account_ids.retain(|id| id != account_id);
+        profile.touch();
+    }
+    store.normalize();
+    Ok(())
+}
+
+/// Add or remove an existing account from one profile's membership (the
+/// Profiles page's account checklist).
+#[tauri::command]
+pub fn set_account_profile_membership(
+    app: AppHandle,
+    account_id: String,
+    profile_id: String,
+    member: bool,
+) -> Result<(), String> {
+    let mut store = ProfileStore::load();
+    apply_account_profile_membership(&mut store, &account_id, &profile_id, member)?;
+
+    let is_active = store.active_profile_id == profile_id;
+    let mut settings = Settings::load();
+    if is_active {
+        apply_active_profile_to_settings(&store, &mut settings);
+        store.save()?;
+        save_settings(&settings)?;
+        crate::surfaces::reconcile_persisted_state_async(app.clone());
+        crate::tray_bridge::rebuild_tray_menu(&app);
+    } else {
+        store.save()?;
+    }
+    emit_changed(&app);
+    Ok(())
+}
+
 #[tauri::command]
 pub fn remove_account(app: AppHandle, account_id: String) -> Result<(), String> {
     let mut store = ProfileStore::load();
@@ -878,5 +933,53 @@ mod tests {
         store.normalize();
         apply_active_profile_to_settings(&store, &mut settings);
         assert!(settings.active_profile_catalog_theme.is_none());
+    }
+
+    fn store_with_second_profile_and_account() -> (ProfileStore, String, String, String) {
+        let mut store = ProfileStore::default();
+        let first_id = store.profiles[0].id.clone();
+        let second = QuotaArcProfile::new("Second");
+        let second_id = second.id.clone();
+        store.profiles.push(second);
+        let account =
+            codexbar::profiles::ProviderAccount::new(codexbar::core::ProviderId::Claude, "Work");
+        let account_id = account.id.clone();
+        store.accounts.push(account);
+        (store, first_id, second_id, account_id)
+    }
+
+    #[test]
+    fn membership_toggle_adds_and_removes_without_duplicating() {
+        let (mut store, first_id, second_id, account_id) = store_with_second_profile_and_account();
+
+        apply_account_profile_membership(&mut store, &account_id, &second_id, true).unwrap();
+        let second = store.profiles.iter().find(|p| p.id == second_id).unwrap();
+        assert_eq!(second.account_ids, vec![account_id.clone()]);
+
+        // Adding twice must not duplicate the id.
+        apply_account_profile_membership(&mut store, &account_id, &second_id, true).unwrap();
+        let second = store.profiles.iter().find(|p| p.id == second_id).unwrap();
+        assert_eq!(second.account_ids, vec![account_id.clone()]);
+
+        // The first profile is untouched by membership changes on the second.
+        let first = store.profiles.iter().find(|p| p.id == first_id).unwrap();
+        assert!(!first.account_ids.contains(&account_id));
+
+        apply_account_profile_membership(&mut store, &account_id, &second_id, false).unwrap();
+        let second = store.profiles.iter().find(|p| p.id == second_id).unwrap();
+        assert!(second.account_ids.is_empty());
+    }
+
+    #[test]
+    fn membership_toggle_rejects_unknown_account_or_profile() {
+        let (mut store, _first_id, second_id, account_id) = store_with_second_profile_and_account();
+        assert!(
+            apply_account_profile_membership(&mut store, "ghost-account", &second_id, true)
+                .is_err()
+        );
+        assert!(
+            apply_account_profile_membership(&mut store, &account_id, "ghost-profile", true)
+                .is_err()
+        );
     }
 }

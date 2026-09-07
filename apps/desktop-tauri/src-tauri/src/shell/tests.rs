@@ -28,6 +28,7 @@ fn every_main_route_resolves_to_a_distinct_settings_tab() {
         MainRoute::ProviderDisplay,
         MainRoute::Providers,
         MainRoute::Collections,
+        MainRoute::Profiles,
         MainRoute::General,
         MainRoute::About,
     ];
@@ -44,6 +45,9 @@ fn every_main_route_resolves_to_a_distinct_settings_tab() {
     // this assertion is what would catch a future regression back to the
     // old "nested inside Surfaces" indirection.
     assert_eq!(MainRoute::Collections.settings_tab(), "collections");
+    // Profiles is a real first-class destination as of Wave 6 — previously
+    // there was no MainRoute for it at all, only tray-menu switching.
+    assert_eq!(MainRoute::Profiles.settings_tab(), "profiles");
     assert_eq!(MainRoute::General.settings_tab(), "general");
     assert_eq!(MainRoute::About.settings_tab(), "about");
 }

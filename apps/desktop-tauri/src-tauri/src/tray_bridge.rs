@@ -215,6 +215,7 @@ fn resolve_menu_action(id: &str) -> Option<MenuAction> {
         "provider_display" => Some(MenuAction::OpenMainRoute(shell::MainRoute::ProviderDisplay)),
         "collections" => Some(MenuAction::OpenMainRoute(shell::MainRoute::Collections)),
         "manage_providers" => Some(MenuAction::OpenMainRoute(shell::MainRoute::Providers)),
+        "manage_profiles" => Some(MenuAction::OpenMainRoute(shell::MainRoute::Profiles)),
         "open_collections_window" => Some(MenuAction::OpenCollectionsWindow),
         "refresh" => Some(MenuAction::Refresh),
         "check_for_updates" => Some(MenuAction::CheckForUpdates),
@@ -965,6 +966,10 @@ mod tests {
         assert!(matches!(
             resolve_menu_action("manage_providers"),
             Some(MenuAction::OpenMainRoute(shell::MainRoute::Providers))
+        ));
+        assert!(matches!(
+            resolve_menu_action("manage_profiles"),
+            Some(MenuAction::OpenMainRoute(shell::MainRoute::Profiles))
         ));
         assert!(matches!(
             resolve_menu_action("open_collections_window"),

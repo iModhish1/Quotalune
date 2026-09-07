@@ -6,6 +6,7 @@ export const TAB_META: { id: SettingsTabId; labelKey: LocaleKey }[] = [
   { id: "providers", labelKey: "TabProviders" },
   { id: "providerDisplay", labelKey: "TabProviderDisplay" },
   { id: "collections", labelKey: "TabCollections" },
+  { id: "profiles", labelKey: "TabProfiles" },
   { id: "notifications", labelKey: "TabNotifications" },
   { id: "menuBar", labelKey: "TabMenuBar" },
   { id: "menu", labelKey: "TabMenu" },

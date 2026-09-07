@@ -5,6 +5,7 @@ export type SettingsTabId =
   | "providers"
   | "providerDisplay"
   | "collections"
+  | "profiles"
   | "notifications"
   | "menuBar"
   | "menu"

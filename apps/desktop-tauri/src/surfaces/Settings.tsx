@@ -20,6 +20,7 @@ import SurfacesTab from "./settings/tabs/SurfacesTab";
 import ThemeGallery from "./settings/tabs/ThemeGallery";
 import ProviderDisplayTab from "./settings/tabs/ProviderDisplayTab";
 import CollectionsTab from "./settings/tabs/CollectionsTab";
+import ProfilesTab from "./settings/tabs/ProfilesTab";
 import {horizontalNavigationScrollDelta,normalizeSettingsNavigation,SETTINGS_NAVIGATION_KEY,shouldTransitionIntoSettings} from "./settings/settingsNavigation";
 import NavigationPreference from "./settings/NavigationPreference";
 import "./settings/SettingsStudio.css";
@@ -78,6 +79,14 @@ const TabIcons: Record<SettingsTabId, ReactElement> = {
       <rect x="9.5" y="2" width="4.5" height="7" rx="1" />
       <rect x="2" y="8" width="6" height="6" rx="1" />
       <rect x="9.5" y="10.5" width="4.5" height="3.5" rx="1" />
+    </Svg>
+  ),
+  profiles: (
+    <Svg>
+      <circle cx="6" cy="5.5" r="2.2" />
+      <path d="M2.2 13.2c.4-2.4 2-3.6 3.8-3.6s3.4 1.2 3.8 3.6" />
+      <circle cx="11.5" cy="4.5" r="1.6" opacity=".55" />
+      <path d="M14 9.8c-.3-1.5-1.2-2.4-2.3-2.6" opacity=".55" />
     </Svg>
   ),
   notifications: (
@@ -298,6 +307,7 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
           />
         )}
         {activeTab === "collections" && <CollectionsTab />}
+        {activeTab === "profiles" && <ProfilesTab />}
         {activeTab === "notifications" && (
           <GeneralTab
             mode="notifications"

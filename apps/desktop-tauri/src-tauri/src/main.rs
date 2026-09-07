@@ -411,6 +411,7 @@ fn main() {
             command_profiles::update_profile,
             command_profiles::add_account,
             command_profiles::update_account,
+            command_profiles::set_account_profile_membership,
             command_profiles::remove_account,
             command_profiles::set_privacy_mode,
             command_profiles::set_catalog_theme,

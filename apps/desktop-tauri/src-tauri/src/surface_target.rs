@@ -12,6 +12,7 @@ const SETTINGS_TAB_IDS: &[&str] = &[
     "providers",
     "providerDisplay",
     "collections",
+    "profiles",
     "notifications",
     "menuBar",
     "menu",
