@@ -18,7 +18,7 @@ cd ../..
 pnpm --dir apps/desktop-tauri run tauri:build
 ```
 
-The release binary lands at `target/release/codexbar-desktop-tauri.exe`.
+The release binary lands at `target/release/Quotalis.exe`.
 
 For a debug build (faster compile, no optimisations):
 ```powershell
@@ -29,8 +29,8 @@ pnpm run tauri:build:debug
 ## Build the CLI Only
 
 ```powershell
-cargo build -p codexbar --release
-# Binary at: target/release/codexbar.exe
+cargo build --manifest-path rust/Cargo.toml --release --bin quotalis
+# Binary at: target/release/quotalis.exe
 ```
 
 ## Dev Mode (Hot Reload)
@@ -47,17 +47,40 @@ Or directly:
 cd apps/desktop-tauri && pnpm run tauri:dev
 ```
 
-## Fast Windows Release Build
+## Windows installer packaging — NSIS is the primary Personal installer
 
-For repeat release builds on a Windows server, prefer the cached release script:
+The Tauri-native NSIS/MSI bundler is the primary, actively-used Personal
+installer path:
+
+```powershell
+cd apps/desktop-tauri
+pnpm exec tauri build --bundles nsis,msi
+```
+
+Tauri fetches its own NSIS/WiX tooling automatically on first use — no
+manual toolchain install is required. This is what actually produces
+Personal's real installed build today (verified directly: the real
+installed Personal app's install path matches this pipeline's output
+shape, not the Inno Setup pipeline's — see
+`docs/validation/QUOTALIS_INNO_RELEASE_AUDIT.md`).
+
+### Legacy: Inno Setup release pipeline (`rust/installer/quotalis.iss`)
+
+`scripts/windows-release-build.ps1` drives a separate, older Inno Setup
+pipeline that also packages a standalone CLI binary and a portable zip.
+It requires Inno Setup 6 (`winget install JRSoftware.InnoSetup` — free,
+open-source) pre-installed, unlike the self-provisioning NSIS path. Treat
+this as the **secondary** packaging path (CLI/portable distribution), not
+the source of truth for what "the Quotalis Personal installer" is:
 
 ```powershell
 .\scripts\windows-release-build.ps1 -Ref v0.27.4
 ```
 
 It builds from a clean managed checkout but keeps Cargo output, the pnpm store,
-and signed installer bootstrapper downloads in `C:\code\QuotaArc-release\cache`.
-Release assets land in `C:\code\QuotaArc-release\assets`. Keep the
+and signed installer bootstrapper downloads in `C:\code\Win-CodexBar-release\cache`
+(the script's actual default `-WorkRoot`; pass `-WorkRoot` explicitly to use
+a different location). Release assets land in `<WorkRoot>\assets`. Keep the
 `.sha256` sidecars; they are the copy/paste source for Winget's
 `InstallerSha256`.
 
@@ -89,7 +112,7 @@ pnpm --dir apps/desktop-tauri run tauri:build:windows-cross
 ```
 
 This uses `cargo-xwin` plus Homebrew `llvm`/`lld` to build the Windows MSVC
-Tauri executable at `target/x86_64-pc-windows-msvc/release/codexbar-desktop-tauri.exe`.
+Tauri executable at `target/x86_64-pc-windows-msvc/release/Quotalis.exe`.
 It is useful for catching frontend, Tauri, and Windows-target Rust compile
 failures from a Mac. It does not replace the Windows server release path:
 installer packaging, tray behavior, WebView2, DPAPI, startup integration, and
@@ -98,7 +121,7 @@ smoke install validation still need a real Windows machine.
 ## Project Structure
 
 ```
-QuotaArc/
+Quotalis/
 ├── apps/desktop-tauri/          # Tauri desktop shell
 │   ├── src/                     # React frontend (TypeScript)
 │   └── src-tauri/               # Tauri/Rust backend
