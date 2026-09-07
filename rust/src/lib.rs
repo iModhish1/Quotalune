@@ -10,6 +10,7 @@ pub mod codex_accounts;
 pub mod codex_workspaces;
 pub mod core;
 pub mod cost_scanner;
+pub mod dashboard_data;
 pub mod history;
 pub mod host;
 pub mod locale;

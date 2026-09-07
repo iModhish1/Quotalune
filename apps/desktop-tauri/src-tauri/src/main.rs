@@ -286,6 +286,7 @@ fn main() {
             commands::get_bootstrap_state,
             commands::get_provider_catalog,
             commands::get_settings_snapshot,
+            commands::get_dashboard_snapshot,
             commands::list_agent_sessions,
             commands::focus_agent_session,
             commands::update_settings,

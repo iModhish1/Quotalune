@@ -1,0 +1,259 @@
+//! Dashboard data bridge: exposes `codexbar::dashboard_data::DashboardSnapshot`
+//! (the one normalized data contract every Dashboard widget should consume)
+//! to the frontend as a single typed command. No widget-specific commands
+//! -- one snapshot, targeted by range/timezone/provider filter.
+
+use codexbar::dashboard_data::{
+    self, DashboardRangeKind, DashboardSnapshot, DataAvailability, ProviderSummary,
+    SpendDailyPoint, UsageDailyPoint,
+};
+use codexbar::history::HistoryStore;
+use serde::Serialize;
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DataAvailabilityBridge {
+    pub first_sample_at: Option<i64>,
+    pub last_sample_at: Option<i64>,
+    pub sample_count: usize,
+    pub has_cost_data: bool,
+    pub has_token_data: bool,
+    pub has_request_data: bool,
+    pub has_model_data: bool,
+}
+
+impl From<DataAvailability> for DataAvailabilityBridge {
+    fn from(a: DataAvailability) -> Self {
+        Self {
+            first_sample_at: a.first_sample_at,
+            last_sample_at: a.last_sample_at,
+            sample_count: a.sample_count,
+            has_cost_data: a.has_cost_data,
+            has_token_data: a.has_token_data,
+            has_request_data: a.has_request_data,
+            has_model_data: a.has_model_data,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderSummaryBridge {
+    pub provider: String,
+    pub account_id: String,
+    pub used_percent: f64,
+    pub remaining_percent: f64,
+    /// Authoritative reset instant as an ISO-8601 string -- the Reset
+    /// Presentation system owns display formatting; this is the raw
+    /// instant only.
+    pub resets_at: Option<String>,
+    pub last_sample_at: i64,
+}
+
+impl From<ProviderSummary> for ProviderSummaryBridge {
+    fn from(p: ProviderSummary) -> Self {
+        Self {
+            provider: p.provider,
+            account_id: p.account_id,
+            used_percent: p.used_percent,
+            remaining_percent: p.remaining_percent,
+            resets_at: p.resets_at.and_then(epoch_to_iso),
+            last_sample_at: p.last_sample_at,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UsageTrendPointBridge {
+    pub provider: String,
+    pub account_id: String,
+    pub bucket_start: i64,
+    pub used_percent: f64,
+    pub remaining_percent: f64,
+    pub sample_count: u32,
+}
+
+impl From<UsageDailyPoint> for UsageTrendPointBridge {
+    fn from(p: UsageDailyPoint) -> Self {
+        Self {
+            provider: p.provider,
+            account_id: p.account_id,
+            bucket_start: p.bucket_start,
+            used_percent: p.used_percent,
+            remaining_percent: p.remaining_percent,
+            sample_count: p.sample_count,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpendTrendPointBridge {
+    pub provider: String,
+    pub account_id: String,
+    pub bucket_start: i64,
+    /// Always an estimate as reported by the provider itself -- never a
+    /// QuotaArc-computed figure (see the pricing-provenance phase for
+    /// that distinction).
+    pub cost_used: f64,
+}
+
+impl From<SpendDailyPoint> for SpendTrendPointBridge {
+    fn from(p: SpendDailyPoint) -> Self {
+        Self {
+            provider: p.provider,
+            account_id: p.account_id,
+            bucket_start: p.bucket_start,
+            cost_used: p.cost_used,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DashboardSnapshotBridge {
+    pub generated_at: i64,
+    pub range_since: i64,
+    pub range_until: i64,
+    pub grain: &'static str,
+    pub timezone: String,
+    pub availability: DataAvailabilityBridge,
+    pub providers: Vec<ProviderSummaryBridge>,
+    pub usage_trend: Vec<UsageTrendPointBridge>,
+    pub spend_trend: Vec<SpendTrendPointBridge>,
+}
+
+impl From<DashboardSnapshot> for DashboardSnapshotBridge {
+    fn from(s: DashboardSnapshot) -> Self {
+        Self {
+            generated_at: s.generated_at,
+            range_since: s.range.since,
+            range_until: s.range.until,
+            grain: match s.range.grain {
+                dashboard_data::Grain::Hourly => "hourly",
+                dashboard_data::Grain::Daily => "daily",
+            },
+            timezone: s.timezone,
+            availability: s.availability.into(),
+            providers: s.providers.into_iter().map(Into::into).collect(),
+            usage_trend: s.usage_trend.into_iter().map(Into::into).collect(),
+            spend_trend: s.spend_trend.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+fn epoch_to_iso(epoch: i64) -> Option<String> {
+    chrono::DateTime::<chrono::Utc>::from_timestamp(epoch, 0).map(|dt| dt.to_rfc3339())
+}
+
+fn parse_range_kind(range: &str) -> Result<DashboardRangeKind, String> {
+    match range {
+        "today" => Ok(DashboardRangeKind::Today),
+        "last7Days" => Ok(DashboardRangeKind::Last7Days),
+        "last30Days" => Ok(DashboardRangeKind::Last30Days),
+        "thisMonth" => Ok(DashboardRangeKind::ThisMonth),
+        "last3Months" => Ok(DashboardRangeKind::Last3Months),
+        "thisYear" => Ok(DashboardRangeKind::ThisYear),
+        other => Err(format!("unknown dashboard range: {other}")),
+    }
+}
+
+/// Fetch the normalized Dashboard data contract for `range` (one of
+/// "today"/"last7Days"/"last30Days"/"thisMonth"/"last3Months"/"thisYear",
+/// or "custom" with `customSince`/`customUntil` epoch seconds), in
+/// `timezone` (an IANA zone name, or omitted/"system" to use the
+/// currently-resolved system zone), optionally scoped to `providers`.
+/// Built entirely from real local history -- never fabricates a value.
+#[tauri::command]
+pub fn get_dashboard_snapshot(
+    range: String,
+    timezone: Option<String>,
+    custom_since: Option<i64>,
+    custom_until: Option<i64>,
+    providers: Option<Vec<String>>,
+) -> Result<DashboardSnapshotBridge, String> {
+    let timezone_name = match timezone.as_deref() {
+        None | Some("system") | Some("") => dashboard_data::resolve_system_timezone(),
+        Some(explicit) => explicit.to_string(),
+    };
+    let tz = dashboard_data::resolve_timezone(&timezone_name);
+    let now = chrono::Utc::now();
+
+    let resolved_range = if range == "custom" {
+        let since = custom_since.ok_or("custom range requires customSince")?;
+        let until = custom_until.unwrap_or_else(|| now.timestamp());
+        dashboard_data::resolve_custom_range(since, until)
+    } else {
+        dashboard_data::resolve_range(parse_range_kind(&range)?, tz, now)
+    };
+
+    let store = HistoryStore::open();
+    let providers = providers.unwrap_or_default();
+    let snapshot = dashboard_data::build_dashboard_snapshot(
+        &store,
+        resolved_range,
+        &timezone_name,
+        &providers,
+        &[],
+    )?;
+    Ok(snapshot.into())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_range_kind_accepts_every_named_range() {
+        for (name, expected) in [
+            ("today", DashboardRangeKind::Today),
+            ("last7Days", DashboardRangeKind::Last7Days),
+            ("last30Days", DashboardRangeKind::Last30Days),
+            ("thisMonth", DashboardRangeKind::ThisMonth),
+            ("last3Months", DashboardRangeKind::Last3Months),
+            ("thisYear", DashboardRangeKind::ThisYear),
+        ] {
+            assert_eq!(parse_range_kind(name), Ok(expected));
+        }
+    }
+
+    #[test]
+    fn parse_range_kind_rejects_unknown_values() {
+        assert!(parse_range_kind("nextWeek").is_err());
+        assert!(parse_range_kind("").is_err());
+    }
+
+    #[test]
+    fn epoch_to_iso_round_trips_a_known_instant() {
+        assert_eq!(
+            epoch_to_iso(1_788_307_200),
+            Some("2026-09-02T00:00:00+00:00".to_string())
+        );
+    }
+
+    /// Native/Dev verification (owner's spec section 35): reads the real,
+    /// already-populated `%APPDATA%\QuotaArc\history.db` on this machine
+    /// (written by the real running Dev/Personal instance's actual
+    /// provider refreshes, via `history_recorder.rs` -- not a fixture)
+    /// through the exact production `get_dashboard_snapshot` code path.
+    /// `#[ignore]`d so normal `cargo test` runs never touch a real user's
+    /// database; run explicitly with `--ignored` for manual verification.
+    #[test]
+    #[ignore = "reads the real on-disk history.db; run manually with --ignored"]
+    fn manual_verification_against_real_history_db() {
+        let snapshot = get_dashboard_snapshot(
+            "last30Days".to_string(),
+            None, // "system" timezone
+            None,
+            None,
+            None,
+        )
+        .expect("real history.db should be queryable");
+        println!("{snapshot:#?}");
+        assert!(
+            snapshot.availability.sample_count > 0,
+            "expected real history on this machine"
+        );
+    }
+}
