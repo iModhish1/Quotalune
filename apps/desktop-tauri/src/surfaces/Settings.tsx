@@ -8,7 +8,7 @@ import type {
 import { useSettings } from "../hooks/useSettings";
 import { useSurfaceTarget } from "../hooks/useSurfaceMode";
 import { useLocale } from "../hooks/useLocale";
-import { openDashboard, setSurfaceMode } from "../lib/tauri";
+import { setSurfaceMode } from "../lib/tauri";
 import { TAB_META, isSettingsTab } from "./settings/settingsTabs";
 import GeneralTab from "./settings/tabs/GeneralTab";
 import DisplayTab from "./settings/tabs/DisplayTab";
@@ -19,6 +19,8 @@ import UsageSpendTab from "./settings/tabs/UsageSpendTab";
 import SurfacesTab from "./settings/tabs/SurfacesTab";
 import ThemeGallery from "./settings/tabs/ThemeGallery";
 import ProviderDisplayTab from "./settings/tabs/ProviderDisplayTab";
+import DashboardTab from "./settings/tabs/DashboardTab";
+import ResetDisplaySection from "./settings/tabs/ResetDisplaySection";
 import CollectionsTab from "./settings/tabs/CollectionsTab";
 import ProfilesTab from "./settings/tabs/ProfilesTab";
 import {horizontalNavigationScrollDelta,normalizeSettingsNavigation,SETTINGS_NAVIGATION_KEY,shouldTransitionIntoSettings} from "./settings/settingsNavigation";
@@ -51,17 +53,14 @@ function Svg({ children }: { children: ReactNode }) {
   );
 }
 
-// Dashboard is not a SettingsTabId (it isn't a tab of this window at all —
-// see MainRoute::Dashboard) so its icon lives outside TabIcons.
-const DashboardIcon = (
-  <Svg>
-    <rect x="2" y="2" width="5" height="5" rx="1" />
-    <rect x="9" y="2" width="5" height="8" rx="1" />
-    <rect x="2" y="9" width="5" height="5" rx="1" />
-  </Svg>
-);
-
 const TabIcons: Record<SettingsTabId, ReactElement> = {
+  dashboard: (
+    <Svg>
+      <rect x="2" y="2" width="5" height="5" rx="1" />
+      <rect x="9" y="2" width="5" height="8" rx="1" />
+      <rect x="2" y="9" width="5" height="5" rx="1" />
+    </Svg>
+  ),
   general: (
     <Svg>
       <circle cx="8" cy="8" r="2" />
@@ -135,6 +134,12 @@ const TabIcons: Record<SettingsTabId, ReactElement> = {
     <Svg>
       <circle cx="8" cy="8" r="6" />
       <circle cx="8" cy="8" r="2.4" />
+    </Svg>
+  ),
+  resetDisplay: (
+    <Svg>
+      <circle cx="8" cy="8" r="6" />
+      <path d="M8 4.5V8l2.6 1.6" />
     </Svg>
   ),
   advanced: (
@@ -253,19 +258,6 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
         event.currentTarget.scrollLeft+=delta;
         event.preventDefault();
       }}>
-        {/* Dashboard is a real, pre-existing product surface (PopOutPanel.tsx
-            in the shared `main` window, MainRoute::Dashboard) but is not a
-            tab of this Settings window — clicking it opens/focuses that
-            other window instead of switching panels here, so it's a plain
-            button (not role="tab") sharing the tab list's layout/styling. */}
-        <button
-          type="button"
-          className="settings-tab settings-tab--dashboard"
-          onClick={() => { void openDashboard(); }}
-        >
-          <span className="settings-tab__icon">{DashboardIcon}</span>
-          <span className="settings-tab__label">{t("TabDashboard")}</span>
-        </button>
         {TAB_META.map((tab) => (
           <button
             type="button"
@@ -307,6 +299,9 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
 
       {/* tab panels */}
       <div ref={panelRef} id="settings-active-panel" role="tabpanel" aria-labelledby={`settings-tab-${activeTab}`} tabIndex={0} data-tab={activeTab} className={`settings-body${activeTab === "providers" ? " settings-body--providers" : ""}`}>
+        {activeTab === "dashboard" && (
+          <DashboardTab state={state} onOpenProviders={() => handleTabClick("providers")} />
+        )}
         {activeTab === "general" && (
           <><NavigationPreference value={navigation} error={navigationError} onChange={next=>{
             setNavigation(next);
@@ -331,6 +326,7 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
         )}
         {activeTab === "collections" && <CollectionsTab />}
         {activeTab === "profiles" && <ProfilesTab />}
+        {activeTab === "resetDisplay" && <ResetDisplaySection />}
         {activeTab === "notifications" && (
           <GeneralTab
             mode="notifications"

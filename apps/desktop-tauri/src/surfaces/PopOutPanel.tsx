@@ -1,21 +1,16 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import type { BootstrapState, ProviderUsageSnapshot } from "../types/bridge";
-import { openFlyoutWindow, openSettingsWindow, quitApp as quitApplication, reorderProviders } from "../lib/tauri";
+import type { BootstrapState } from "../types/bridge";
+import { openFlyoutWindow, openSettingsWindow, quitApp as quitApplication } from "../lib/tauri";
 import { useProviders } from "../hooks/useProviders";
 import { useSettings } from "../hooks/useSettings";
 import { useUpdateState } from "../hooks/useUpdateState";
 import { useLocale } from "../hooks/useLocale";
-import MenuCard from "../components/MenuCard";
+import { useDashboardState } from "../hooks/useDashboardState";
+import DashboardBody from "../components/DashboardBody";
 import PopOutTitleBar from "../components/PopOutTitleBar";
-import MenuSurface, {
-  MenuEmpty,
-  type MenuFooterRow,
-} from "../components/MenuSurface";
+import MenuSurface, { type MenuFooterRow } from "../components/MenuSurface";
 import UpdateBanner from "../components/UpdateBanner";
-import ProviderGrid from "../components/ProviderGrid";
-import { orderProviderSnapshots } from "../lib/providerOrder";
-import CatalogUsageHero from "../components/CatalogUsageHero";
 import {
   toStageProviders,
   usageConfigFromSnapshot,
@@ -24,9 +19,14 @@ import { resolveCatalogTheme } from "../design-system/themeResolution";
 import { useResetStageOptions } from "../hooks/useResetStageOptions";
 
 /**
- * Pop-out window — dashboard and provider deep-links both keep the full card
- * stack. A provider target only scrolls/focuses the requested card so the
- * layout stays consistent with the tray/menu surface.
+ * "Open Dashboard in Separate Window" -- the detached secondary surface.
+ * The in-shell Settings "Dashboard" tab (`DashboardTab.tsx`) is the
+ * first-class, default way to reach the Dashboard; this window remains as
+ * an explicit, separate path (reachable via `startupDestination` and the
+ * persistent global shortcut) for users who want a standalone compact
+ * window. Both share the exact same content (`DashboardBody.tsx` +
+ * `useDashboardState`) -- only the window chrome here (title bar, zoom
+ * scaling, footer actions, keyboard shortcuts) is unique to this surface.
  */
 export default function PopOutPanel({
   state,
@@ -47,19 +47,22 @@ export default function PopOutPanel({
     useUpdateState();
   const { t } = useLocale();
 
-  const sorted = useMemo(() => {
-    return orderProviderSnapshots(
-      providers,
-      state.providers,
-      settings.enabledProviders,
-      settings.providerOrder,
-    );
-  }, [providers, settings.enabledProviders, settings.providerOrder, state.providers]);
-  const [selectedProviderId, setSelectedProviderId] = useState<string | null>(
-    providerId ?? null,
-  );
-  const [gridExpanded, setGridExpanded] = useState(false);
-  const cardRefs = useRef(new Map<string, HTMLDivElement>());
+  const {
+    sorted,
+    visibleProviders,
+    selectedProviderId,
+    gridExpanded,
+    setGridExpanded,
+    handleGridClick,
+    handleReorder,
+    setCardRef,
+  } = useDashboardState({
+    providers,
+    bootstrapProviders: state.providers,
+    settings,
+    deepLinkProviderId: providerId,
+  });
+
   const windowScale = useMemo(() => {
     const scalePercent = Number(settings.windowScalePercent);
     return (
@@ -78,73 +81,6 @@ export default function PopOutPanel({
       void webview.setZoom(1).catch(() => {});
     };
   }, [windowScale]);
-
-  useEffect(() => {
-    setSelectedProviderId(providerId ?? null);
-  }, [providerId]);
-
-  const visibleProviders = useMemo(
-    () => {
-      if (selectedProviderId === null) {
-        if (sorted.length + 1 > 32 && !gridExpanded) {
-          return sorted.slice(0, 4);
-        }
-        return sorted;
-      }
-      const match = sorted.find((p) => p.providerId === selectedProviderId);
-      return match ? [match] : sorted;
-    },
-    [sorted, selectedProviderId, gridExpanded],
-  );
-  const providerOrderKey = useMemo(
-    () => sorted.map((provider) => provider.providerId).join(","),
-    [sorted],
-  );
-
-  const handleGridClick = useCallback((nextProviderId: string | null) => {
-    setSelectedProviderId(nextProviderId);
-  }, []);
-  const handleReorder = useCallback((orderedIds: string[]) => {
-    void reorderProviders(orderedIds).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (!providerId || selectedProviderId !== providerId || providerOrderKey.length === 0) return;
-
-    let cancelled = false;
-    const scrollToProvider = () => {
-      if (cancelled) return;
-      const target = cardRefs.current.get(providerId);
-      if (!target) return;
-
-      window.scrollTo(0, 0);
-      if (document.scrollingElement) {
-        document.scrollingElement.scrollTop = 0;
-      }
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-
-      for (const selector of [".menu-stack", ".menu-surface__body"]) {
-        const container = target.closest<HTMLElement>(selector);
-        if (!container) continue;
-        container.scrollTop = 0;
-        const targetRect = target.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-        container.scrollTop += targetRect.top - containerRect.top;
-      }
-    };
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(scrollToProvider);
-    });
-    const timer = window.setTimeout(scrollToProvider, 100);
-    const lateTimer = window.setTimeout(scrollToProvider, 350);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-      window.clearTimeout(lateTimer);
-    };
-  }, [providerId, selectedProviderId, providerOrderKey]);
 
   const [settingsLaunchError,setSettingsLaunchError]=useState<string|null>(null);
   const openSettingsTab=useCallback(async(tab:string)=>{
@@ -215,91 +151,37 @@ export default function PopOutPanel({
   const stageProviders = toStageProviders(sorted, usageConfigFromSnapshot(settings), resetOptions);
   const catalog = resolveCatalogTheme(settings, "dashboard").slug;
 
-  const surface = sorted.length === 0 ? (
-    <MenuSurface
-      variant="popout"
-      catalogTheme={catalog}
-      titleBar={<PopOutTitleBar />}
-      onRefresh={refresh}
-      isRefreshing={isRefreshing}
-      actions={headerActions}
-      banner={banner}
-      footerRows={footerRows}
-    >
-      <MenuEmpty
-        isLoading={isRefreshing && !hasCachedData}
-        onSettings={openSettings}
-      />
-    </MenuSurface>
-  ) : (
-    <MenuSurface
-      variant="popout"
-      catalogTheme={catalog}
-      titleBar={<PopOutTitleBar />}
-      onRefresh={refresh}
-      isRefreshing={isRefreshing}
-      actions={headerActions}
-      banner={banner}
-      footerRows={footerRows}
-    >
-      <ProviderGrid
-        providers={sorted}
-        selectedProviderId={selectedProviderId}
-        showAsUsed={settings.showAsUsed}
-        showProviderIcons={settings.switcherShowsIcons}
-        expanded={gridExpanded}
-        onExpandedChange={setGridExpanded}
-        onSelect={handleGridClick}
-        onReorder={handleReorder}
-      />
-      <CatalogUsageHero
-        variant="dashboard"
-        catalog={catalog}
-        providers={stageProviders}
-        selectedProviderId={selectedProviderId}
-        onSelectProvider={(providerId) => handleGridClick(providerId)}
-        showProviderIcons={settings.switcherShowsIcons}
-      />
-      <div className="provider-grid__divider" />
-      <div className="menu-stack">
-        {visibleProviders.map((p, idx) => (
-          <Fragment key={p.providerId}>
-            {idx > 0 && <div className="menu-stack__sep" />}
-            <div
-              className={`menu-stack__item${selectedProviderId === p.providerId ? " menu-stack__item--selected" : ""}`}
-              ref={(node) => {
-                if (node) {
-                  cardRefs.current.set(p.providerId, node);
-                } else {
-                  cardRefs.current.delete(p.providerId);
-                }
-              }}
-            >
-              <MenuCard
-                provider={p}
-                isRefreshing={refreshingProviderIds.has(p.providerId)}
-                display={{
-                  hideEmail: settings.hidePersonalInfo,
-                  resetTimeRelative: settings.resetTimeRelative,
-                  showResetWhenExhausted: settings.showResetWhenExhausted,
-            showPace: settings.showPace ?? true,
-                  showAsUsed: settings.showAsUsed,
-                  compactMetrics: selectedProviderId === null,
-                  costSummaryDisplayStyle: settings.costSummaryDisplayStyle,
-                }}
-                accentColor={settings.providerAccentColors[p.providerId]}
-              />
-            </div>
-          </Fragment>
-        ))}
-      </div>
-    </MenuSurface>
-  );
-
   return (
     <div className="popout-scale-shell">
       {settingsLaunchError && <p role="alert" style={{padding:12,color:"#ffb4ab"}}>{settingsLaunchError}</p>}
-      {surface}
+      <MenuSurface
+        variant="popout"
+        catalogTheme={catalog}
+        titleBar={<PopOutTitleBar />}
+        onRefresh={refresh}
+        isRefreshing={isRefreshing}
+        actions={headerActions}
+        banner={banner}
+        footerRows={footerRows}
+      >
+        <DashboardBody
+          allProviders={sorted}
+          visibleProviders={visibleProviders}
+          stageProviders={stageProviders}
+          isRefreshing={isRefreshing}
+          hasCachedData={hasCachedData}
+          refreshingProviderIds={refreshingProviderIds}
+          selectedProviderId={selectedProviderId}
+          gridExpanded={gridExpanded}
+          onExpandedChange={setGridExpanded}
+          onSelect={handleGridClick}
+          onReorder={handleReorder}
+          catalog={catalog}
+          settings={settings}
+          onSettings={openSettings}
+          cardRef={setCardRef}
+        />
+      </MenuSurface>
     </div>
   );
 }

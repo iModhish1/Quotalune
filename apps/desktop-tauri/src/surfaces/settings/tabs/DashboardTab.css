@@ -1,0 +1,2 @@
+.dashboard-tab{display:flex;flex-direction:column;gap:14px;min-width:0;padding:4px 2px 24px}
+.dashboard-tab .menu-surface__empty{padding:48px 16px}

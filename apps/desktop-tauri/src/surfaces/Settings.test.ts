@@ -3,8 +3,11 @@ import { resetSettingsPanelScroll } from "./Settings";
 import { TAB_META } from "./settings/settingsTabs";
 
 describe("Settings navigation", () => {
-  it("puts the primary product surfaces first (Wave 6 Phase 3 navigation order)", () => {
-    expect(TAB_META.slice(0, 4)).toEqual([
+  it("puts Dashboard and the primary product surfaces first (in-shell navigation order)", () => {
+    // Dashboard is now a real, first-class settings tab -- not a button
+    // that opens a separate window -- so it leads this list.
+    expect(TAB_META.slice(0, 5)).toEqual([
+      { id: "dashboard", labelKey: "TabDashboard" },
       { id: "providerDisplay", labelKey: "TabProviderDisplay" },
       { id: "collections", labelKey: "TabCollections" },
       { id: "profiles", labelKey: "TabProfiles" },

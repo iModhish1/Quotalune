@@ -5,14 +5,14 @@ import type { SettingsTabId } from "../../types/bridge";
 import { isSettingsTab, TAB_META } from "./settingsTabs";
 
 describe("isSettingsTab", () => {
-  it.each(["general", "providers", "providerDisplay", "notifications", "menuBar", "menu", "usageSpend", "advanced", "about"])(
+  it.each(["dashboard", "general", "providers", "providerDisplay", "resetDisplay", "notifications", "menuBar", "menu", "usageSpend", "advanced", "about"])(
     "returns true for a known tab id (%s)",
     (id) => {
       expect(isSettingsTab(id)).toBe(true);
     },
   );
 
-  it.each(["", "General", "usage", "providers ", "unknown", "dashboard"])(
+  it.each(["", "General", "usage", "providers ", "unknown", "Dashboard"])(
     "returns false for an unknown value (%s)",
     (id) => {
       expect(isSettingsTab(id)).toBe(false);
@@ -36,11 +36,13 @@ describe("TAB_META", () => {
     const declared = new Set(TAB_META.map((m) => m.id));
     // The union of all SettingsTabId literals must match the declared ids exactly.
     const expected: SettingsTabId[] = [
+      "dashboard",
       "general",
       "providers",
       "providerDisplay",
       "collections",
       "profiles",
+      "resetDisplay",
       "notifications",
       "menuBar",
       "menu",

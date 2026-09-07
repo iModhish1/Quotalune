@@ -466,6 +466,7 @@ locale_keys! {
     TrayShowEdgeArc,
     TabSurfaces,
     TabThemes,
+    TabResetDisplay,
     // Sidebar label for MainRoute::Dashboard — distinct from TrayDashboard
     // (same English text, kept as a separate key per this repo's convention
     // of one key per UI surface, so a future translation can diverge).

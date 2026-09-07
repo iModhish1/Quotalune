@@ -9,6 +9,7 @@ TabCookies = ملفات الارتباط
 TabUsageSpend = الاستخدام والتكلفة
 TabSurfaces = الواجهات العائمة
 TabThemes = السمات
+TabResetDisplay = عرض إعادة التعيين
 TabAdvanced = متقدم
 TabAbout = حول QuotaArc
 TabShortcuts = الاختصارات

@@ -236,6 +236,7 @@ export const ALL_LOCALE_KEYS = [
   "TrayShowEdgeArc",
   "TabSurfaces",
   "TabThemes",
+  "TabResetDisplay",
   "TabDashboard",
   "TabProviderDisplay",
   "TabCollections",

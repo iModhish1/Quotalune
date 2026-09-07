@@ -14,6 +14,7 @@ TabCookies = Cookies
 TabUsageSpend = Usage & Spend
 TabSurfaces = Surfaces
 TabThemes = Themes
+TabResetDisplay = Reset Display
 TabAdvanced = Advanced
 TabAbout = About
 TabShortcuts = Shortcuts

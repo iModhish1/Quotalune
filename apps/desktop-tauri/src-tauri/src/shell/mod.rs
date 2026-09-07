@@ -23,31 +23,32 @@ pub use position::{remember_current_geometry_if_eligible, tray_panel_position};
 pub use transition::{reopen_to_target, transition_to_target};
 pub use window::hide_to_tray_if_current;
 
-/// A named destination inside the QuotaArc product — either a tab of the
-/// detached `settings` window (which — despite the label — is where most
-/// real product surfaces live: Provider Display, Themes, Collections, ...)
-/// or the `Dashboard`, which is the one destination that instead lives in
-/// the shared `main` window as a `SurfaceMode::PopOut` transition (see
-/// `PopOutPanel.tsx` and `main.rs::primary_window_request`). This is the
+/// A named destination inside the QuotaArc product — a tab of the detached
+/// `settings` window, which is where every first-class product surface
+/// lives: Dashboard, Provider Display, Themes, Collections, ... This is the
 /// single reusable routing vocabulary for "open the app to X": tray
 /// actions, sidebar navigation, and (via `open_or_focus_main_window`) any
 /// future notification click or deep link. Cold launch / single-instance
 /// relaunch / "last opened" instead resolve an arbitrary settings tab
-/// string, OR the Dashboard, directly (see
+/// string, OR a `MainRoute`, directly (see
 /// `main.rs::resolve_startup_destination`/`activate_configured_destination`)
 /// since "last opened" can be any supported tab, not just this curated
-/// list — both paths bottom out in the same two primitives
-/// (`settings_window::open_or_focus`, `reopen_to_target`), so there is
-/// still only one place each kind of window actually gets
-/// created/shown/focused.
+/// list — both paths bottom out in the same primitive
+/// (`settings_window::open_or_focus`), so there is still only one place
+/// this window actually gets created/shown/focused.
+///
+/// Dashboard was originally routed to the separate `main`-window
+/// `SurfaceMode::PopOut` + `SurfaceTarget::Dashboard` surface
+/// (`PopOutPanel.tsx`) as a Wave 6 Phase 3 shortcut, reusing that
+/// pre-existing surface rather than inventing a placeholder page. The
+/// owner later rejected that: clicking Dashboard from the Settings sidebar
+/// must not spawn a separate window — it must behave like every other
+/// first-class destination and render in-shell. `PopOutPanel.tsx` is
+/// unchanged and still reachable as an explicit secondary "Open Dashboard
+/// in Separate Window" path (via `startupDestination` and the persistent
+/// global shortcut); only this named-route resolution changed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MainRoute {
-    /// The main-window `SurfaceMode::PopOut` + `SurfaceTarget::Dashboard`
-    /// surface (`PopOutPanel.tsx`) — the real, pre-existing Dashboard.
-    /// Confirmed via source investigation (Wave 6 Phase 3) before adding
-    /// this variant: it is not a settings tab, and no placeholder page was
-    /// invented for it — this only gives the pre-existing surface a proper
-    /// entry in the shared route vocabulary.
     Dashboard,
     ProviderDisplay,
     Providers,
@@ -65,12 +66,23 @@ pub enum MainRoute {
 }
 
 impl MainRoute {
-    /// The settings-window tab this route resolves to, or `None` when the
-    /// route targets the main-window Dashboard surface instead (the only
-    /// non-settings-window destination in this vocabulary).
+    /// The settings-window tab this route resolves to. Always `Some` --
+    /// every `MainRoute` is a real settings tab (see the type doc comment
+    /// for Dashboard's history). Kept as `Option` rather than a bare
+    /// `&'static str` so a future route that genuinely needs a
+    /// non-settings-window destination can still express that here.
     fn settings_tab(self) -> Option<&'static str> {
         match self {
-            Self::Dashboard => None,
+            // Dashboard is now a real, first-class tab of the `settings`
+            // window (in-shell, alongside Provider Display/Collections/...)
+            // rather than a separate `main`-window PopOut surface -- see
+            // the owner's explicit "Dashboard must open inside the main
+            // app" correction. `PopOutPanel.tsx` / `SurfaceTarget::Dashboard`
+            // still exist as the (unchanged) "Open Dashboard in Separate
+            // Window" secondary path, reachable via `startupDestination`
+            // and the persistent global shortcut -- only this named-route
+            // resolution (tray menu + Settings sidebar) changed.
+            Self::Dashboard => Some("dashboard"),
             Self::ProviderDisplay => Some("providerDisplay"),
             Self::Providers => Some("providers"),
             Self::Collections => Some("collections"),
@@ -81,21 +93,21 @@ impl MainRoute {
     }
 }
 
-/// Open (or focus) the QuotaArc destination `route`. Settings-tab routes
-/// show/focus the detached `settings` window on that tab (creating it if
-/// absent — see `settings_window::open_or_focus`'s lifecycle contract);
-/// `MainRoute::Dashboard` instead reopens the shared `main` window to the
-/// same `SurfaceMode::PopOut` + `SurfaceTarget::Dashboard` transition cold
-/// launch uses (`main.rs::primary_window_request`) — one definition of
-/// "the Dashboard target," reused rather than duplicated.
+/// Open (or focus) the QuotaArc destination `route`: shows/focuses the
+/// detached `settings` window on the route's tab, creating it if absent —
+/// see `settings_window::open_or_focus`'s lifecycle contract. Every
+/// `MainRoute` (Dashboard included) resolves to a real settings tab; the
+/// separate `main`-window PopOut Dashboard surface (`PopOutPanel.tsx`) is
+/// reached through a different path entirely now (`startupDestination`,
+/// the persistent global shortcut) — not through this named-route
+/// vocabulary.
 pub fn open_or_focus_main_window(app: &tauri::AppHandle, route: MainRoute) -> Result<(), String> {
-    match route.settings_tab() {
-        Some(tab) => settings_window::open_or_focus(app, tab),
-        None => {
-            let request = crate::primary_window_request();
-            reopen_to_target(app, request.mode, request.target, request.position).map(|_| ())
-        }
-    }
+    settings_window::open_or_focus(
+        app,
+        route
+            .settings_tab()
+            .expect("every MainRoute is a settings tab"),
+    )
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
