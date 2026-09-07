@@ -423,3 +423,74 @@ verified against real data); Dashboard Studio as a whole — NOT PASSED,
 correctly, this is Phase 1 of 13.
 
 ## Overall verdict so far
+
+Wave 6 (Reset-Time Presentation System) — NOT PASSED against the owner's
+full final checklist, real gaps reported honestly (see above). Dashboard
+Studio Phase 0/1 — PASS on their own scope. Dashboard Studio Phase 2 — see
+below; PASS on its own scope, native proof honestly not done.
+
+## Phase 2: Dashboard Registry + Dashboard Studio Settings
+
+Date: 2026-09-07. Branch `feature/v9-theme-runtime`. Starting HEAD:
+`52991e4e` (Phase 1, accepted PASS, not revisited). Full detail:
+[`docs/validation/DASHBOARD_STUDIO_ARCHITECTURE.md`](validation/DASHBOARD_STUDIO_ARCHITECTURE.md).
+
+**Built**: a typed `DashboardModeId`/`DashboardPerformancePreset` registry
+(`src/lib/dashboardRegistry.ts`) as the one authoritative source for the 3
+Dashboard modes; two new local-only settings persisted through the
+existing Rust settings system with lenient per-field migration (invalid
+stored value never crashes settings load, never silently switches a user
+into 3D); a new `dashboardStudio` Settings tab added to both the frontend
+whitelist and `SETTINGS_TAB_IDS` in the same change (the `0053e6dc`
+drift bug not repeated); `DashboardHost`, which mounts exactly one mode at
+a time via `React.lazy` + a keyed `Suspense`/error-boundary pair (proven
+by a real mount/unmount-tracking test, not just asserted); the existing
+Dashboard content extracted unchanged into `AnalyticsDashboard.tsx` as the
+2D baseline; two explicitly-labeled Dev-only placeholders for 3D/Hybrid
+that show real local history counts via a new `useDashboardSnapshot()`
+hook wrapping the Phase-1 `get_dashboard_snapshot` bridge command; a
+Dashboard Studio Settings page with selectable mode/performance cards and
+a read-only display (with "Change" links, not a rebuild) of the
+already-shipped Structure Theme / Provider Presentation settings.
+
+**Quality gates — all run fresh against this checkpoint, all green**:
+- `npx vitest run` (frontend): **130 files / 791 tests passed, 0 failed**.
+- `npx tsc --noEmit`: clean.
+- `npm run build` (`vite build`): succeeded; confirmed via chunk output
+  that `AnalyticsDashboard`, `Providers3DDashboard`, `HybridDashboard`
+  each ship as separate lazy chunks, not inlined into the main bundle.
+- `cargo test --workspace`: **454 passed, 0 failed, 1 ignored** (the
+  pre-existing `#[ignore]`d manual real-history test from Phase 1).
+- `cargo clippy --workspace --all-targets -- -D warnings`: clean.
+- `cargo fmt --all -- --check`: found real drift in the new Rust test
+  code (line-wrapping only), fixed with `cargo fmt --all`, re-verified
+  clean, re-ran the 86 affected dashboard/settings tests to confirm no
+  behavior change.
+- `node scripts/scan-secrets.mjs`: clean (1300 files).
+- `git diff --check`: no whitespace errors (only benign LF→CRLF
+  normalization notices, a pre-existing repo/editor convention, not
+  introduced by this phase).
+
+**NOT done** (honestly scoped): native Dev screenshots — no native
+Windows screenshot capability exists in this environment, so the 5
+requested `.png` files were not captured; this is reported as a gap, not
+fabricated. `dashboardPerformancePreset`'s effect on actual rendering
+(chart animation level, glass/shadow quality) is a dormant contract only
+— Phase 2 builds the enum and its persistence, not its consumption.
+Bitmap preview thumbnails were substituted with CSS-gradient swatches (no
+image-generation capability available).
+
+**Verdict**: PASS on Phase 2's own scope (registry, persistence,
+lazy-loaded single-mount host, error isolation, Dashboard Studio Settings
+UI, snapshot bridge, routing convergence unchanged and reconfirmed) — see
+[`docs/validation/DASHBOARD_STUDIO_ARCHITECTURE.md`](validation/DASHBOARD_STUDIO_ARCHITECTURE.md)
+for the item-by-item mapping. Native screenshot proof is the one
+explicitly NOT-satisfied item, reported honestly rather than claimed.
+
+**Phase 3 starting point**: 2D Analytics visual redesign. `DashboardHost`,
+the registry, and the settings persistence from this phase are stable
+building blocks — Phase 3 should replace `AnalyticsDashboard.tsx`'s
+internals (still the pre-`93d367b9` content, moved but not redesigned)
+without touching the host/registry/settings contracts built here. Do
+**not** start the 3D engine before Phase 3 and Phase 4 (pricing) are both
+complete, per the owner's explicit ordering.
