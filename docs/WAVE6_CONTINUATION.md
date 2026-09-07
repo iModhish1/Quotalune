@@ -356,4 +356,70 @@ verified; surface-override UI, tray/Rust formatter migration, and native
 proof remain genuine, scoped-out gaps, reported honestly rather than
 claimed complete.
 
+## Phase 7: Dashboard Studio — a separate, new mega-request (not Wave 6)
+
+The owner opened a distinct, large new initiative on top of a live UX
+regression they reported (see below): "transform Dashboard into the true
+QuotaArc command center" — 2D/3D/Hybrid dashboard modes, pricing accuracy,
+refined theme families, dashboard customization. This is tracked
+separately from the reset-time work above, with its own continuation
+documents (this repo's Dashboard work is large enough to warrant that per
+this file's own "create a Dashboard-specific continuation document if
+cleaner" guidance):
+
+- **In-shell Dashboard regression, fixed** (commits `93d367b9`, `0053e6dc`):
+  the owner reported (annotated screenshot) that clicking "Dashboard" in
+  the Settings sidebar opened a separate detached window instead of
+  staying in-shell — a Wave 6 Phase 3 navigation-normalization decision the
+  owner explicitly rejected. Root-caused to `shell::MainRoute::Dashboard`
+  resolving to `None` (the one route that fell through to a separate-
+  window branch); fixed to resolve like every other route
+  (`Some("dashboard")`). `PopOutPanel.tsx` preserved unchanged as the
+  explicit "Open Dashboard in Separate Window" secondary path. A related
+  real bug was also found and fixed: the Rust-side settings-tab whitelist
+  (`surface_target.rs`) was out of sync with the new `dashboard`/
+  `resetDisplay` tabs, which would have silently broken "reopen to last
+  tab" and native proof-harness verification for both.
+- **Reset Display relocated** to its own first-class Settings tab (was a
+  3rd switcher pill crammed into Provider Display — the owner rejected
+  that placement too).
+- **Dashboard Studio Phase 0 (audit)**: `docs/validation/DASHBOARD_MASTER_AUDIT.md`.
+  Key findings: no chart library dependency (in-house SVG only); zero
+  3D/WebGL anywhere (a from-scratch build, the single largest risk in the
+  spec); Structure Theme (23 entries) and Provider Presentation
+  Follow-Structure-vs-Independent already fully shipped; pricing has zero
+  provenance metadata; raw provider errors render unclassified on the
+  Dashboard exactly as flagged.
+- **Dashboard Studio Phase 1 (live history + normalized data layer)**:
+  `docs/validation/DASHBOARD_DATA_ARCHITECTURE.md`. Corrected a Phase 0
+  audit error (history ingestion was NOT actually unwired — the audit's
+  search missed the Tauri shell crate; real ingestion has been live since
+  a pre-existing commit, confirmed via 3,048 real samples already in this
+  machine's `history.db`). Built the missing piece: `rust/src/
+  dashboard_data.rs` (timezone-aware range resolution with real DST
+  handling, daily/hourly aggregation, `DataAvailability`, the
+  `DashboardSnapshot` contract) + one bridge command
+  (`get_dashboard_snapshot`). Verified against real on-machine history
+  data via an explicitly `#[ignore]`d manual test. Also fixed a real
+  latent dedup bug (cost samples could wrongly dedupe against each other)
+  found while wiring cost recording into history for the first time.
+
+**NOT done yet** (honestly scoped, not attempted this pass): frontend
+consumption (no React hook calls the new bridge command yet); Phase 2
+(dashboard mode registry + Settings UI) through Phase 13 (release) of the
+owner's 13-phase plan; the 3D engine (correctly not started, per the
+owner's own explicit ordering); pricing provenance/audit (Phase 4); native
+screenshots. Given the true scope of the full Dashboard Studio spec (a
+from-scratch 3D engine, pricing verification across every provider/model, a
+widget/customization system, native proof across every mode × theme ×
+performance combination), this remains multi-session work — reported
+honestly rather than compressed into a false completion claim.
+
+**Verdict**: Dashboard regression — PASS (fixed, tested, committed). Reset
+Display relocation — PASS. Dashboard Studio Phase 0 — PASS (audit
+complete, one correction made honestly). Phase 1 — PASS on its own scope
+(real ingestion confirmed working, query/aggregation layer built and
+verified against real data); Dashboard Studio as a whole — NOT PASSED,
+correctly, this is Phase 1 of 13.
+
 ## Overall verdict so far

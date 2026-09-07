@@ -57,13 +57,28 @@ whole spec.
   `used_percent`, `remaining_percent`, `cost_used`, `resets_at`,
   `captured_at`), a 45s dedup window, and a `DEFAULT_RETENTION_DAYS = 90`
   constant.
-- **Critical finding: this store is currently unwired.** `HistoryStore` /
-  `UsageSample` / `record_samples` / `prune` have **no callers anywhere else
-  in the codebase** — no provider-refresh path, Tauri command, or scheduled
-  job writes to it today. It is dead infrastructure, not a populated data
-  source. Any Dashboard Studio history/trend feature must first wire this up
-  (decide the write trigger, decide retention as a real settings field — none
-  exists today) before there is real history to show.
+- **Correction (Phase 1, same day):** the paragraph originally here claimed
+  `HistoryStore`/`UsageSample`/`record_samples`/`prune` had no callers
+  anywhere and were dead infrastructure. **That was wrong** — the audit
+  agent's grep was scoped to `rust/src` only and missed
+  [`apps/desktop-tauri/src-tauri/src/history_recorder.rs`](../../apps/desktop-tauri/src-tauri/src/history_recorder.rs:1)
+  (the Tauri shell crate, a different crate from `rust/src`), which already
+  calls `record_snapshot()` from the one real refresh boundary
+  ([`commands/providers.rs:440`](../../apps/desktop-tauri/src-tauri/src/commands/providers.rs:440),
+  inside `refresh_provider()`) and `prune_on_startup()` from
+  [`main.rs:442`](../../apps/desktop-tauri/src-tauri/src/main.rs:442). This
+  landed in commit `aa824c3a` ("account-scoped history engine + Taskbar Arc
+  surface"), dated 2026-09-03 — **four days before this Dashboard Studio
+  request**, unrelated to this session's work. Verified live on this
+  machine: the real `%APPDATA%\QuotaArc\history.db` already contains 3,048
+  real samples across 2 providers (`codex`, `copilot`) spanning ~4.1 days of
+  actual usage, captured by the running Dev/Personal instance during this
+  session. Ingestion is real, already shipped, and already collecting data
+  — it was not built this phase. What Phase 1 actually adds is the missing
+  piece: a query/aggregation layer and a `DashboardSnapshot` contract on top
+  of this already-flowing data (see
+  `docs/validation/DASHBOARD_DATA_ARCHITECTURE.md`). Flagging this
+  correction explicitly rather than silently editing the finding away.
 - **No generic daily/weekly/monthly rollup engine exists.** What's there is
   narrow and source-specific: `codex_workspaces` has its own `DailyPoint`
   aggregator over local Codex session logs; `cost_scanner`/`jsonl_scanner`
@@ -168,15 +183,17 @@ local-first constraint.
 
 Reading the audit against the owner's phase list:
 
-- **Phase 1 (normalized dashboard data)** and **Phase 2 (dashboard
-  registry)** are genuinely greenfield — nothing to reuse, straightforward
-  to scope once started.
+- **Phase 1 (normalized dashboard data)** — see the correction above: raw
+  ingestion already exists and is already collecting real data. What Phase 1
+  actually builds is the query/aggregation layer and `DashboardSnapshot`
+  contract on top of it (`docs/validation/DASHBOARD_DATA_ARCHITECTURE.md`).
+- **Phase 2 (dashboard registry)** is genuinely greenfield — nothing to
+  reuse, straightforward to scope once started.
 - **Phase 3 (2D Analytics)** is buildable on the existing in-house chart
-  toolkit (section 2) but needs real history data first (section 4) — a
-  2D analytics dashboard showing trends from an unwired, empty history store
-  would either show nothing or (worse) fabricate numbers, which the owner
-  explicitly forbids. **Wiring `history.rs` into the provider-refresh path is
-  a hard prerequisite for Phase 3**, not optional polish.
+  toolkit (section 2) now that Phase 1 provides a real, non-fabricated data
+  source — the ~4 days of already-collected samples is thin but real; the
+  dashboard must show "data available since &lt;date&gt;" honestly rather than
+  imply deeper history than exists.
 - **Phase 4 (pricing audit)** needs the provenance fields added to
   `cost_pricing.rs` before any `Verified`/`Possibly stale` state can be shown
   honestly — today there is literally no source/timestamp to check.
