@@ -1,12 +1,86 @@
 # Quotalis Public Rebrand — Validation
 
 Date: 2026-09-08. Worktree: `N:\QuotaArc\quotalis-rebrand`, branch
-`integration/quotalis-public-rebrand`. Covers all three rebrand passes on
-this branch: the active-UI text rename (`14f57d67`), the packaging-identity
-follow-up (`4ac69f55`..`0661f4c9`), and this installation/compatibility
-closure pass.
+`integration/quotalis-public-rebrand`, merged into `feature/v9-theme-runtime`
+at `e5a8af6a`. Covers all rebrand passes on this branch: the active-UI text
+rename (`14f57d67`), the packaging-identity follow-up (`4ac69f55`..`0661f4c9`),
+the installation/compatibility closure pass, and this final version-
+consistency closure.
 
-## Installation/compatibility closure (this pass)
+## FINAL 0.11.0 release evidence (authoritative — supersedes the 0.10.1
+## evidence further down this document)
+
+The version-consistency closure pass rebuilt every artifact fresh from
+`f2f722b9` (the commit that applied the 0.11.0 version bump) specifically
+because the artifacts hashed earlier in this document were built *before*
+that bump and therefore only proved the pipeline at 0.10.1, not the actual
+final version. This section is the real, current evidence; the "Real
+installer artifacts built and hashed" section below is kept for its
+investigative value (it's where the Inno-pipeline discovery and the
+install/uninstall-cycle test happened) but its version numbers are stale.
+
+### Tauri NSIS/MSI (Dev identity), rebuilt at 0.11.0
+
+| Artifact | Path | SHA-256 | Size |
+|---|---|---|---|
+| Dev binary | `target\debug\QuotalisDev.exe` | `30F874E1EAA6744DCB8ADBE7B4D1075F378D112A876E33002333D0030496EDE5` | 51,384,320 bytes |
+| NSIS installer | `Quotalis Dev_0.11.0_x64-setup.exe` | `8C4E95AE3C318871CEE45A6D5F38959CBE39DF863A311466F29C1542E30CC85E` | 10,143,612 bytes |
+| MSI installer (en-US) | `Quotalis Dev_0.11.0_x64_en-US.msi` | `00B104946619662C8A66D0C001568D89CEE9882B0910FCDA452D934855E9DB25` | 15,949,824 bytes |
+
+Embedded VersionInfo confirmed on the Dev binary and NSIS installer:
+`ProductName`/`FileDescription` = "Quotalis Dev", `CompanyName` = "Quotalis",
+**`FileVersion`/`ProductVersion` = 0.11.0** (both, not just one — checked
+explicitly this time).
+
+### Canonical Inno Setup pipeline, rebuilt at 0.11.0 (real end-to-end run)
+
+`windows-release-build.ps1` run again in full (fresh local clone of this
+branch at `f2f722b9`, the script's own documented invocation) — real,
+complete, successful run, not reused from the earlier pass:
+
+| Artifact | SHA-256 | Size |
+|---|---|---|
+| `Quotalis-0.11.0-Setup.exe` | `09ece9f581b159fdce575662df5230bdb9a02530d396c0ec11cf1e450351d5ab` | 42,284,558 bytes |
+| `Quotalis-0.11.0-portable.exe` | `420bd708070edf3287cff39ff89a4a5a2a02a4fd8c9bee491de1eb76ca1c033b` | 32,830,976 bytes |
+| `QuotalisCLI-v0.11.0-windows-x64.zip` | `288bfcbb31c1912c2f698e4d0737236ee015bf26a30069609c2ede51a2e113c2` | 6,874,477 bytes |
+
+Embedded metadata on `Quotalis-0.11.0-Setup.exe`: `ProductName` = "Quotalis",
+`FileDescription` = "Quotalis Setup", `CompanyName` = "Quotalis",
+`ProductVersion` = **0.11.0** (Inno's setup-wrapper resource does not set
+`FileVersion` separately — this is normal Inno behavior, not a gap).
+
+### Version sources, verified consistent at 0.11.0
+
+`rust/Cargo.toml`, `apps/desktop-tauri/src-tauri/Cargo.toml`,
+`apps/desktop-tauri/package.json`, `tauri.conf.json`, `Cargo.lock` (both
+workspace members) — all `0.11.0`. `tauri.dev.conf.json` has no version
+field of its own (inherits from the base config).
+
+### Final active-brand scan (post-version-bump)
+
+Config/installer files (`tauri.conf.json`, `tauri.dev.conf.json`,
+`package.json`, `quotalis.iss`) contain exactly one remaining old-brand
+string: `AppId=QuotaArcDesktop` in `quotalis.iss` — the intentionally
+preserved legacy Inno upgrade identity (Option A), not a leak.
+
+### Post-merge state
+
+Merged into `feature/v9-theme-runtime` at `e5a8af6a` with zero conflicts
+(verified via `git merge-tree` dry-run before merging). The pre-existing,
+untouched Phase-3 Dashboard analytics WIP (preserved as commit `9fdfa198`
+immediately before the merge) survived byte-for-byte — see
+`docs/WAVE6_CONTINUATION.md` or the session's own continuation notes for
+the exact remaining Phase-3 adaptation work (missing locale keys for
+`DashboardHeader.tsx`/`KpiRow.tsx`/`UsageTrendSection.tsx`, which is why
+`tsc --noEmit`/`npm run build` fail specifically on those three files —
+confirmed via a scoped check that zero tsc errors exist anywhere else in
+the frontend). Full workspace `cargo test` (1982 tests), frontend
+`vitest run` (810 tests, including the Phase-3 selectors' own 17 tests),
+clippy, fmt, secret scan, and locale-drift all pass post-merge.
+
+---
+
+## Installation/compatibility closure (earlier pass — 0.10.1 evidence, superseded above)
 
 ### Real installer artifacts built and hashed
 
@@ -188,17 +262,15 @@ This is real, on-disk, OS-verified evidence — not a config-file assumption.
   `paths.rs`'s `REGISTRY_RUN_VALUE` doc comment for why a bare rename would
   leave a stale registry entry for anyone who already enabled
   start-at-login.
-- **Version not bumped.** Current version is `0.10.1` everywhere
-  (`rust/Cargo.toml`, `apps/desktop-tauri/src-tauri/Cargo.toml`,
-  `tauri.conf.json`). Recommendation, not applied: **0.11.0** as the first
-  Quotalis-branded release — a real product rebrand plus packaging-identity
-  change is a minor bump under this project's existing semver practice
-  (patch bumps are reserved for the incremental fixes already documented
-  in `rust/CHANGELOG.md`'s recent history), and reusing `0.10.1` for a
-  materially renamed binary would make two different products share one
-  version string. Left for the owner/release process to apply when this
-  branch is actually promoted, per "do not bump version" discipline
-  established earlier in this project.
-- **Personal untouched.** No install, no version bump, no promotion — this
-  entire pass stayed in the `integration/quotalis-public-rebrand` worktree
-  and branch.
+- **Version bump: applied in the final closure pass, not this one.** This
+  section originally recommended 0.11.0 without applying it (see the
+  "FINAL 0.11.0 release evidence" section at the top of this document for
+  what actually happened once the recommendation was accepted): the bump
+  was applied only after confirming it wouldn't be premature, then every
+  release pipeline was rebuilt from the post-bump commit specifically to
+  avoid the mismatch of "reports 0.11.0 but the tested artifacts say
+  0.10.1."
+- **Personal untouched.** No install, no promotion, at any point across
+  every pass on this branch — verified by SHA-256 equality against the
+  original baseline both before and after the final merge into
+  `feature/v9-theme-runtime`.

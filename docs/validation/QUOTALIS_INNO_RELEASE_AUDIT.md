@@ -165,7 +165,14 @@ build-verified in the prior packaging pass, not live-installed.
 
 The full `windows-release-build.ps1` run (against this branch, via a local
 clone — the script's own documented, supported invocation, not bypassed)
-was executed to prove the canonical script itself, not just the `.iss` in
-isolation. See the closure report for its actual outcome (build succeeded/
-failed, artifact paths, hashes) — this audit document is the design/
-findings record; the report is the evidence record for what actually ran.
+was executed twice: once at `6bd17619` (proving the fix itself, at the
+pre-bump version 0.10.1) and again at `f2f722b9` (proving the final,
+version-bumped state). Both runs succeeded end-to-end (exit code 0),
+producing real `Quotalis-<version>-Setup.exe` / `-portable.exe` /
+`QuotalisCLI-v<version>-windows-x64.zip` artifacts with real SHA-256
+sidecars and correct embedded metadata (`ProductName: Quotalis`,
+`ProductVersion` matching the build). See
+`docs/validation/QUOTALIS_PUBLIC_REBRAND.md`'s "FINAL 0.11.0 release
+evidence" section for the exact final-run hashes — this audit document is
+the design/findings record; that document is the evidence record for what
+actually ran.
