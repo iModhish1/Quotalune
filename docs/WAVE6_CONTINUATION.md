@@ -7,13 +7,26 @@ in the next session — do not ask the owner to re-scope.
 ## Branch / HEAD
 
 - Branch: `feature/v9-theme-runtime`
-- HEAD: `78118900` — "fix(ui): FlowSurface header identity ownership + drag-handle idle visibility"
+- HEAD: `65fb400c` — "fix(ui): FlowSurface header follow-up - logo-only anchor, larger provider identity, real pin icon"
 - This session's commits (in order): `c93c6df8` (ownership investigation
   doc), `6522e5b3` (structure→provider-icon bleed fix), `ab3be623` (DEMO
   watermark overlap fix), `41880bd2` (resolveVisualComposition resolver),
   `14a02659` (checkpoint doc), `c19dce45` (Follow Structure UI wiring),
   `e44c29f4` (flowline height/clipping fix), `78118900` (header identity
-  ownership + drag-handle correction)
+  ownership + drag-handle correction), `1b25a4b8` (checkpoint doc),
+  `a91c8b48` (collision-safety fix + native RTL verification), `65fb400c`
+  (header follow-up: logo-only title, larger provider row w/ plan label,
+  real pin icon)
+
+### Header correction status (three rounds, all owner-reviewed and accepted)
+
+1. Provider icon shown where app logo was → corrected back (BLUE/RED/GREEN).
+2. Collision safety (long names), native RTL, bounds tests → done (`a91c8b48`).
+3. Text label removed, provider row enlarged + moved below header, plan
+   label added, real pin icon → done (`65fb400c`), including a **fresh
+   native RTL re-verification of this exact new 2-row layout** (not just
+   carried over from round 2) — confirmed mirroring correctly, screenshot
+   sent to owner.
 
 ## Execution order (owner's 21-phase spec, Phase 4 message numbering)
 
