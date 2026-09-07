@@ -698,4 +698,93 @@ mod tests {
         assert!(snapshot.availability.has_cost_data);
         assert!(!snapshot.spend_trend.is_empty());
     }
+
+    // ---- Quotalis rebrand: legacy QuotaArc history.db compatibility ----
+    //
+    // The Quotalis rebrand (docs/validation/QUOTALIS_WINDOWS_IDENTITY_MIGRATION.md,
+    // Option A) never changed the history.db schema, table names, or query
+    // logic -- only the crate name (codexbar -> quotalis_core) and product
+    // branding. This test proves that claim executably rather than by
+    // construction: it builds a fixture history.db exactly the way any real
+    // install (legacy QuotaArc or current Quotalis; the on-disk format is
+    // identical either way) would have via `HistoryStore::record_samples`,
+    // closes that handle, reopens the SAME file with a fresh `HistoryStore`
+    // (simulating a new process -- Quotalis -- opening a database an older
+    // process wrote), and verifies every field the owner's spec calls out
+    // (row count, first/last timestamp, provider/account counts) survives,
+    // plus that `build_dashboard_snapshot` can query it. No Personal data
+    // is read or written; this uses a synthetic tempdir fixture only.
+    #[test]
+    fn legacy_history_db_is_fully_readable_after_reopening_with_a_fresh_store() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("history.db");
+
+        let first_sample_at;
+        let last_sample_at;
+        {
+            // "Legacy" writer: a HistoryStore instance representing whatever
+            // process (QuotaArc or Quotalis -- the format is unchanged)
+            // originally created this file.
+            let legacy_writer = HistoryStore::open_at(path.clone());
+            let now = Utc::now().timestamp();
+            first_sample_at = now - 4 * 86_400; // 4 days of history
+            last_sample_at = now;
+            legacy_writer
+                .record_samples(&[
+                    sample("claude", "acct-a", "selected", 20.0, None, first_sample_at),
+                    sample("claude", "acct-a", "selected", 55.0, None, now - 2 * 86_400),
+                    sample("codex", "acct-b", "selected", 80.0, None, last_sample_at),
+                    sample("codex", "acct-b", "cost", 0.0, Some(4.25), last_sample_at),
+                ])
+                .unwrap();
+            assert_eq!(legacy_writer.row_count().unwrap(), 4);
+        } // legacy_writer dropped here -- its connection is closed.
+
+        // Fresh "Quotalis" reader: a brand-new HistoryStore over the exact
+        // same on-disk file, as if a different (renamed) process opened it.
+        let quotalis_reader = HistoryStore::open_at(path);
+        assert_eq!(
+            quotalis_reader.row_count().unwrap(),
+            4,
+            "row count must survive being reopened by a fresh store handle"
+        );
+
+        let now = Utc::now();
+        let range = resolve_range(DashboardRangeKind::Last7Days, resolve_timezone("UTC"), now);
+        let snapshot = build_dashboard_snapshot(&quotalis_reader, range, "UTC", &[], &[]).unwrap();
+
+        assert_eq!(
+            snapshot.availability.sample_count, 4,
+            "DataAvailability must report the real row count from the reopened db"
+        );
+        assert_eq!(
+            snapshot.availability.first_sample_at,
+            Some(first_sample_at),
+            "first sample timestamp must be preserved exactly, not truncated"
+        );
+        assert_eq!(
+            snapshot.availability.last_sample_at,
+            Some(last_sample_at),
+            "last sample timestamp must be preserved exactly, not truncated"
+        );
+        assert!(
+            snapshot.availability.has_cost_data,
+            "cost data recorded before reopening must still be visible after"
+        );
+
+        let providers: std::collections::HashSet<_> = snapshot
+            .providers
+            .iter()
+            .map(|p| (p.provider.as_str(), p.account_id.as_str()))
+            .collect();
+        assert_eq!(
+            providers,
+            std::collections::HashSet::from([("claude", "acct-a"), ("codex", "acct-b")]),
+            "both provider/account pairs recorded before reopening must survive"
+        );
+
+        // No migration/truncation event: the reopened store is queried with
+        // the exact same public API a brand-new process would use -- there
+        // is no separate "legacy import" code path to invoke.
+    }
 }

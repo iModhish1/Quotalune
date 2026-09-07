@@ -1,9 +1,84 @@
 # Quotalis Public Rebrand — Validation
 
 Date: 2026-09-08. Worktree: `N:\QuotaArc\quotalis-rebrand`, branch
-`integration/quotalis-public-rebrand`. Covers both rebrand passes on this
-branch: the active-UI text rename (`14f57d67`) and this packaging-identity
-follow-up.
+`integration/quotalis-public-rebrand`. Covers all three rebrand passes on
+this branch: the active-UI text rename (`14f57d67`), the packaging-identity
+follow-up (`4ac69f55`..`0661f4c9`), and this installation/compatibility
+closure pass.
+
+## Installation/compatibility closure (this pass)
+
+### Real installer artifacts built and hashed
+
+`pnpm --dir apps/desktop-tauri exec tauri build --config
+src-tauri/tauri.dev.conf.json --features dev-channel --bundles nsis`
+(then `--bundles msi`) — Tauri fetched its own NSIS/WiX tooling
+automatically (no manual toolchain install was needed or performed):
+
+| Artifact | Path | SHA-256 | Size |
+|---|---|---|---|
+| Dev binary | `target\debug\QuotalisDev.exe` | `607B2385695EF1D81E1911F024A0D3D4B3356B683927C333437BFA6F377E8D4A` | 51,310,080 bytes |
+| NSIS installer | `target\debug\bundle\nsis\Quotalis Dev_0.10.1_x64-setup.exe` | `B6AF32A2698BC924A125510EFFCAA2AE785DEBA4A3D5016FD64D2289A7400AF7` | 10,155,868 bytes |
+| MSI installer (en-US) | `target\debug\bundle\msi\Quotalis Dev_0.10.1_x64_en-US.msi` | `82D40EA7B9823D356FEFF26A1AB9683C949F908E7B1590BB7FB3F3C5B77B35AE` | 15,933,440 bytes |
+
+`QuotalisDev.exe`'s embedded VersionInfo: `ProductName`/`FileDescription`
+= "Quotalis Dev", `CompanyName` = "Quotalis", `FileVersion` = 0.10.1 — this
+resolves the prior report's open question: Tauri's bundler, invoked with
+the documented `--config tauri.dev.conf.json --features dev-channel`
+command from `docs/LOCAL_DEVELOPMENT.md`, does produce a distinctly-named
+`QuotalisDev.exe` (not merely `Quotalis.exe` compiled with the dev-channel
+feature, which is what a raw `cargo build` produces instead).
+
+7 additional localized MSI variants were also produced (zh-CN, zh-TW,
+ja-JP, ko-KR, es-ES, ru-RU, tr-TR) — not individually hashed.
+
+### Real Dev launch + isolation proof
+
+`QuotalisDev.exe` was launched directly (`Start-Process ... menubar`),
+producing PID 40020, confirmed running via `Get-Process`. Comparing
+`%APPDATA%\QuotaArc-Dev` and `%APPDATA%\QuotaArc` file timestamps before
+and after the launch showed only the Dev root's `history.db-wal`,
+`notification-dedupe.json`, and `window_geometry.json` updated — the
+Personal root's own near-simultaneous `settings.json` write was traced to
+an unrelated, already-running `QuotaArc.exe` process (PID 37408, from the
+original `N:\QuotaArc\quotaarc` worktree's own debug build, pre-existing
+and untouched by this session) rather than any cross-contamination from
+the Dev launch. The test process was then cleanly terminated
+(`Stop-Process`, confirmed not running afterward).
+
+### Secure-storage, history, and settings/profile compatibility — proven executably
+
+See `docs/validation/QUOTALIS_ROLLBACK_PLAN.md`'s "What was actually
+tested this pass" section for the full list of 4 new fixture-based Rust
+tests (history reopen, DPAPI-backed secure-file round-trip, settings
+fixture, profiles fixture) — all passing, all using synthetic data, no
+Personal secrets read or exposed.
+
+### New finding: a second, older packaging pipeline still says CodexBar
+
+While investigating the installer toolchain (owner spec section 7),
+`scripts/windows-release-build.ps1` — documented in `docs/BUILDING.md` and
+two ADRs as **the canonical release path** — was found to drive a
+completely separate Inno Setup pipeline
+(`rust/installer/codexbar.iss`, 9 occurrences of "CodexBar"/"codexbar")
+building the standalone `rust` crate's own CLI binary (`cargo build --bin
+quotaarc` — already renamed to `quotaarc` at some point in this project's
+history, predating this session, but never renamed further to `quotalis`).
+This is distinct from the Tauri NSIS/MSI bundler exercised above and
+**was not touched this pass** — it needs its own dedicated audit (Inno
+Setup toolchain availability, whether it's still the actual mechanism used
+for real releases or superseded by the Tauri bundler, and the same
+current/legacy dual-naming care applied everywhere else in this rebrand)
+before being renamed. Portable-package support (owner spec section 10)
+lives inside this same script (`CodexBar-$version-portable.exe`) and was
+not independently tested for the same reason.
+
+### Not attempted: actual installer execution
+
+No installer (NSIS or MSI) was run/installed — see
+`docs/validation/QUOTALIS_ROLLBACK_PLAN.md` for why this is treated as
+requiring explicit confirmation rather than being silently attempted or
+silently skipped.
 
 ## Before / after matrix
 

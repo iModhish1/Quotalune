@@ -4,6 +4,68 @@ Date: 2026-09-08. Applies to the packaging-identity changes on
 `integration/quotalis-public-rebrand` (HEAD at time of writing:
 see the branch's own `git log`; built on top of `6e935416`).
 
+## What was actually tested this pass (fixture-based, not a live install cycle)
+
+The claims below were verified **executably against synthetic/tempdir
+fixtures**, not by installing/uninstalling a real build on this machine:
+
+- **History compatibility**: `dashboard_data::tests::
+  legacy_history_db_is_fully_readable_after_reopening_with_a_fresh_store`
+  builds a fixture `history.db`, closes the writing handle, reopens it with
+  a brand-new `HistoryStore`, and proves row count / first-sample /
+  last-sample / provider-account pairs / cost-data visibility all survive,
+  plus that `build_dashboard_snapshot` queries it correctly.
+- **Secure storage compatibility**: `secure_file::tests::
+  legacy_format_tagged_secure_file_is_still_decryptable` builds a fixture
+  file using the literal, unrenamed `"codexbar.secure-file"` format tag and
+  the real Windows DPAPI `protect()` call, then proves the current
+  `read_string()` decrypts it via the real `CryptUnprotectData` Windows API
+  on this machine (not mocked).
+- **Settings/profile compatibility**: `settings::tests::
+  legacy_quotaarc_settings_fixture_survives_intact` and `...
+  _profiles_fixture_survives_intact` deserialize realistic legacy-shaped
+  `settings.json`/`profiles.json` fixtures and assert every named field
+  (provider config, theme, provider presentation, Reset Display, Dashboard
+  mode/preset, surface config, profile identity) survives.
+- **Exact Dev binary + real installers**: `pnpm --dir apps/desktop-tauri
+  exec tauri build --config src-tauri/tauri.dev.conf.json --features
+  dev-channel --bundles nsis` (then `--bundles msi`) produced real,
+  hash-verified artifacts — see
+  `docs/validation/QUOTALIS_PUBLIC_REBRAND.md` for the exact paths/hashes.
+  `QuotalisDev.exe` was launched (PID captured), confirmed to write only to
+  `%APPDATA%\QuotaArc-Dev` (not the Personal root), and cleanly terminated.
+
+## What was NOT tested this pass (and why)
+
+**No installer was actually executed/installed** — not the NSIS setup, not
+the MSI, not to a real location and not to a throwaway test directory.
+Running an installer writes real Windows Installed-Apps/uninstall registry
+entries and creates a real Start Menu shortcut on **this machine** (not a
+disposable VM) — that is a system-wide, hard-to-reverse mutation outside
+git's purview, materially different in kind from every other verification
+in this pass (which was either a fixture-based unit test or a foreground
+process this session started and cleanly terminated itself). Per this
+session's operating rules, changes in that category get executed only with
+explicit confirmation, which has not been given for this specific action.
+
+Concretely, still open, pending that confirmation:
+- **Simulated legacy install → Quotalis upgrade** (owner spec sections
+  11/12): would require actually running an installer.
+- **Start Menu shortcut / pin verification** (sections 14/15): requires an
+  actual install to inspect.
+- **Uninstall/upgrade registry metadata inspection** (section 16): same.
+- **Rollback tested against a live install** (this document's own section
+  18 ask): the *procedure* below is still just a procedure — the
+  fixture-based data-compatibility half of the rollback claim (data
+  survives) is now real evidence; the *installer* half (archived installer
+  reinstalls cleanly) is not.
+
+If the owner confirms it is acceptable to run an installer on this
+machine (understanding it will write real, harmless-but-real registry/
+Start Menu entries for a test "Quotalis Dev" identity, distinct from the
+real Personal QuotaArc install), that is the next concrete step to close
+this gap.
+
 ## Why rollback is unusually cheap under Option A
 
 The single biggest advantage of Option A
