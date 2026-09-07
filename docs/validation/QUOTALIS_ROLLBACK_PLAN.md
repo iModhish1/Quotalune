@@ -35,36 +35,59 @@ fixtures**, not by installing/uninstalling a real build on this machine:
   `QuotalisDev.exe` was launched (PID captured), confirmed to write only to
   `%APPDATA%\QuotaArc-Dev` (not the Personal root), and cleanly terminated.
 
-## What was NOT tested this pass (and why)
+## Real install/uninstall cycle — executed and verified (owner-authorized)
 
-**No installer was actually executed/installed** — not the NSIS setup, not
-the MSI, not to a real location and not to a throwaway test directory.
-Running an installer writes real Windows Installed-Apps/uninstall registry
-entries and creates a real Start Menu shortcut on **this machine** (not a
-disposable VM) — that is a system-wide, hard-to-reverse mutation outside
-git's purview, materially different in kind from every other verification
-in this pass (which was either a fixture-based unit test or a foreground
-process this session started and cleanly terminated itself). Per this
-session's operating rules, changes in that category get executed only with
-explicit confirmation, which has not been given for this specific action.
+After explicit owner authorization, the built NSIS installer was actually
+run on this machine. Full before/after evidence:
 
-Concretely, still open, pending that confirmation:
-- **Simulated legacy install → Quotalis upgrade** (owner spec sections
-  11/12): would require actually running an installer.
-- **Start Menu shortcut / pin verification** (sections 14/15): requires an
-  actual install to inspect.
-- **Uninstall/upgrade registry metadata inspection** (section 16): same.
-- **Rollback tested against a live install** (this document's own section
-  18 ask): the *procedure* below is still just a procedure — the
-  fixture-based data-compatibility half of the rollback claim (data
-  survives) is now real evidence; the *installer* half (archived installer
-  reinstalls cleanly) is not.
+| Check | Before | After install | After uninstall |
+|---|---|---|---|
+| `QuotaArc` uninstall entry | `InstallLocation: ...\AppData\Local\QuotaArc`, `UninstallString: ...\QuotaArc\uninstall.exe` | **identical, byte-for-byte unchanged** | **identical, byte-for-byte unchanged** |
+| `QuotaArc.lnk` Start Menu shortcut | `LastWriteTime: 9/7/2026 12:30:52 AM` | **same timestamp, untouched** | **same timestamp, untouched** |
+| `QuotaArc.exe` SHA-256 | `763E4F3228FD2CA08C16C2F55744BFE32336893133C3155B3AEF789501E78EFD` | not re-checked (see next row) | **identical hash** — confirms the file was never touched |
+| `Quotalis Dev` uninstall entry | absent | `InstallLocation: ...\AppData\Local\Quotalis Dev`, `Publisher: Quotalis`, `DisplayVersion: 0.10.1` | absent again (clean removal) |
+| `Quotalis Dev.lnk` shortcut | absent | present, target = `...\Quotalis Dev\QuotalisDev.exe` (correct, not target\debug) | absent again |
+| Install directory `...\Local\Quotalis Dev` | absent | present, contains `QuotalisDev.exe` (SHA-256 `4E97AD0CF1A5A7C517C3B2182F1D385F2C0CE0958EB9CDCCD0D9D56FB997593F`, ProductName/FileDescription "Quotalis Dev") | removed entirely |
 
-If the owner confirms it is acceptable to run an installer on this
-machine (understanding it will write real, harmless-but-real registry/
-Start Menu entries for a test "Quotalis Dev" identity, distinct from the
-real Personal QuotaArc install), that is the next concrete step to close
-this gap.
+Both the installer and uninstaller (`/S` — the standard, documented NSIS
+silent-mode flag, not an undocumented one) exited with code 0.
+
+The installed `QuotalisDev.exe` was also launched directly from its
+installed path (PID 32152, confirmed via `Get-Process`), and the same
+data-isolation check from the earlier Dev-build test was repeated: only
+`%APPDATA%\QuotaArc-Dev` received fresh writes (`history.db-shm`,
+`notification-dedupe.json`, `window_geometry.json`), never
+`%APPDATA%\QuotaArc`. The process was then stopped before running the
+uninstaller.
+
+Baseline evidence (registry/shortcut snapshots taken *before* the install)
+is saved under
+`.local/recovery/pre-install-baseline-20260908/` in this worktree for
+reference.
+
+## What was NOT tested (and why)
+
+- **A true side-by-side legacy-upgrade simulation** (installing an actual
+  *pre-rebrand* QuotaArc-branded installer first, then running the
+  Quotalis installer "over" it) was not performed — it would require
+  building a separate installer artifact from a pre-rebrand commit, which
+  was judged lower-value than the install/uninstall-cycle evidence above:
+  the bundle identity (what actually determines upgrade-vs-side-by-side
+  behavior in NSIS/Windows) is unchanged, and the fixture-based
+  compatibility tests already prove data survives across the rename. The
+  install/uninstall cycle above proves the *mechanics* (registry, shortcut,
+  install directory, Personal isolation) all work correctly.
+- **MSI install/uninstall** was not executed — only the NSIS path was
+  exercised end-to-end; the MSI artifact was built and hash-verified
+  (see `docs/validation/QUOTALIS_PUBLIC_REBRAND.md`) but not installed.
+- **Start Menu pin preservation** could not be tested: no shortcut was
+  pinned to Start before this test, so there was nothing to verify
+  survives. This remains a genuine **MANUAL PERSONAL VERIFICATION
+  REQUIRED** item — it can only be checked by someone with a real pinned
+  QuotaArc tile going through a real upgrade.
+- **Reinstall cycle** (install → uninstall → reinstall) was not performed;
+  the single install → verify → uninstall → verify cycle above was judged
+  sufficient evidence for this pass.
 
 ## Why rollback is unusually cheap under Option A
 
