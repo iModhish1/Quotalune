@@ -6,6 +6,7 @@ import {
 import type { ProviderUsageSnapshot, RateWindowSnapshot } from "../../types/bridge";
 import type { StageProvider } from "./stageTypes";
 import {isLimitPresentation,resolveLimitPresentation} from '../../design-system/limitPresentation';
+import { formatResetPresentation, type ResetTranslate } from "../../lib/resetPresentation";
 
 function remainingOf(provider: ProviderUsageSnapshot): number | null {
   const window = provider.selectedMetric ?? provider.primary;
@@ -22,17 +23,50 @@ function windowRemaining(window: RateWindowSnapshot | null): number | null {
   return Math.max(0, Math.min(1, 1 - window.usedPercent / 100));
 }
 
-function resetOf(provider: ProviderUsageSnapshot): string {
-  const window = provider.selectedMetric ?? provider.primary;
+/** Options threading the live UI locale into the one authoritative reset
+ *  formatter. Optional and English-default so every existing call site
+ *  (and its tests) keeps working unchanged; real surfaces pass the app's
+ *  actual locale via `useLocale()` to get correctly localized reset text. */
+export interface StageResetOptions {
+  locale?: string;
+  translate?: ResetTranslate;
+  now?: number;
+}
+
+/** The single reset-text pipeline for every stage-driven surface. Prefers
+ *  the authoritative `resetsAt` instant, live-formatted via
+ *  `formatResetPresentation`; falls back to the backend's pre-formatted
+ *  `resetDescription` (stripped of its own "Resets in " prefix, which the
+ *  caller supplies separately) when `resetsAt` is absent or unparseable --
+ *  never fabricates a value. */
+function formatWindowReset(window: RateWindowSnapshot | null | undefined, options?: StageResetOptions): string {
   const description = window?.resetDescription ?? "";
-  const shortened = description.replace(/^resets?\s+(in\s+)?/i, "").trim();
-  return shortened.length > 0 ? shortened : "—";
+  const fallback = () => {
+    const shortened = description.replace(/^resets?\s+(in\s+)?/i, "").trim();
+    return shortened.length > 0 ? shortened : "—";
+  };
+  if (!window?.resetsAt) return fallback();
+  const result = formatResetPresentation({
+    resetAt: window.resetsAt,
+    now: options?.now,
+    locale: options?.locale ?? "en-US",
+    translate: options?.translate,
+    config: { preset: "countdownOnly", modules: ["countdown"] },
+  });
+  if (!result.isValid || !result.countdown) return fallback();
+  return result.countdown.short;
+}
+
+function resetOf(provider: ProviderUsageSnapshot, options?: StageResetOptions): string {
+  const window = provider.selectedMetric ?? provider.primary;
+  return formatWindowReset(window, options);
 }
 
 /** Pure raw-snapshot → render contract used by all themed surfaces. */
 export function toStageProviders(
   providers: ProviderUsageSnapshot[],
   config: UsageDisplayConfig | undefined,
+  resetOptions?: StageResetOptions,
 ): StageProvider[] {
   return providers.slice(0, 7).map((provider) => {
     const limitOrder = config?.providerLimitOrder?.[provider.providerId];
@@ -56,7 +90,7 @@ export function toStageProviders(
       primaryValue: semantics.value,
       secondaryValue: semantics.secondary,
       primaryLabel: semantics.label,
-      reset: resetOf(provider),
+      reset: resetOf(provider, resetOptions),
       status: provider.error ? "offline" : "ok",
       detailsHidden: limitOrder === undefined
         ? config?.providerDetailWindows?.[provider.providerId] === "none"
@@ -78,7 +112,7 @@ export function toStageProviders(
         const resolved=applyUsageSemantics(mode,provider.error==null?windowRemaining(window):null);
         return [{id,label:label || (window.windowMinutes===300?"5-hour session":window.windowMinutes===10080?"Weekly":id==="primary"?"Primary limit":id==="secondary"?"Secondary limit":"Additional limit"),
           primaryValue:resolved.value,primaryLabel:resolved.label,arcFraction:resolved.arc,
-          reset:window.resetDescription?.replace(/^resets?\s+(in\s+)?/i,"").trim() || "—",resetsAt:window.resetsAt??null}];
+          reset:formatWindowReset(window,resetOptions),resetsAt:window.resetsAt??null}];
       }).sort((a,b) => ranks ? ranks.get(a.id)! - ranks.get(b.id)! : 0),
     };
   });

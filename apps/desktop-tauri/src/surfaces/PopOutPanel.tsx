@@ -21,6 +21,7 @@ import {
   usageConfigFromSnapshot,
 } from "../components/orbit/stageProviders";
 import { resolveCatalogTheme } from "../design-system/themeResolution";
+import { useResetStageOptions } from "../hooks/useResetStageOptions";
 
 /**
  * Pop-out window — dashboard and provider deep-links both keep the full card
@@ -210,7 +211,8 @@ export default function PopOutPanel({
     />
   );
 
-  const stageProviders = toStageProviders(sorted, usageConfigFromSnapshot(settings));
+  const resetOptions = useResetStageOptions();
+  const stageProviders = toStageProviders(sorted, usageConfigFromSnapshot(settings), resetOptions);
   const catalog = resolveCatalogTheme(settings, "dashboard").slug;
 
   const surface = sorted.length === 0 ? (

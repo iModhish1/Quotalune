@@ -20,6 +20,7 @@ import {
   usageConfigFromSnapshot,
 } from "../components/orbit/stageProviders";
 import { resolveCatalogTheme } from "../design-system/themeResolution";
+import { useResetStageOptions } from "../hooks/useResetStageOptions";
 
 /** Provider IDs that have a dashboard URL in the backend */
 const HAS_DASHBOARD = new Set([
@@ -115,7 +116,8 @@ export default function TrayPanel({ state }: { state: BootstrapState }) {
     />
   );
 
-  const stageProviders = toStageProviders(sorted, usageConfigFromSnapshot(settings));
+  const resetOptions = useResetStageOptions();
+  const stageProviders = toStageProviders(sorted, usageConfigFromSnapshot(settings), resetOptions);
   const catalog = resolveCatalogTheme(settings, "quick").slug;
 
   const renderProviderCard = (p: ProviderUsageSnapshot) => {

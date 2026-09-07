@@ -239,7 +239,7 @@ better done systematically later), then resume direction 2.
   the message contains backticks.
 - Scratch CDP verification scripts live in `.local/` (not committed).
 
-## Overall verdict so far
+## Overall verdict so far (pre-Reset-Presentation-System)
 
 **NOT PASSED** — significant real, verified progress this session (one
 planned architecture slice + three rounds of owner-reported live defects,
@@ -248,3 +248,52 @@ the header-ownership correction's fuller scope (shared components, bounds
 tests, corner geometry, RTL) and the entire rest of Phase 4 (Theme
 Composer) through Phase 21 (Personal promotion) remain. Continuing per the
 owner's explicit "do not stop, do not ask to re-scope" instruction.
+
+## Phase 5: Reset Time / Presentation System (this checkpoint)
+
+The owner sent a 50-section spec extending the Arabic RTL / reset-time
+work into a full international, adaptive time-presentation system. Full
+detail, test matrix, and the item-by-item acceptance checklist are in
+[`docs/validation/RESET_TIME_PRESENTATION_SYSTEM.md`](validation/RESET_TIME_PRESENTATION_SYSTEM.md)
+— summary here:
+
+**Built this pass**: the one authoritative formatter
+(`apps/desktop-tauri/src/lib/resetPresentation.ts`, `Intl`-only, pure,
+structured output per the owner's section-31 shape), wired into the single
+highest-leverage consumer (`stageProviders.ts::resetOf`, feeding ~20
+surfaces), backward-compatible (existing call sites/tests untouched, new
+`resetOptions` param optional). Fixed a real, previously-undiscovered bug
+along the way: `ar-SA.ftl` was missing `ResetsInDaysHours` /
+`ResetsInHoursMinutes` / `ResetsInMinutes` / `NextExpires*` /
+`TrayResets*` entirely, so Arabic users were silently seeing **English**
+reset-countdown text via Fluent's fallback — now has real Arabic
+translations. Added two new locale keys
+(`ResetLessThanMinuteShort/Long`) with translations in all 9 locale files.
+34 new tests (countdown tiering, DST, day-rollover across timezones,
+12h/24h, Latin-digit enforcement, structured output, ordering, ARIA).
+
+**Verified**: 737/737 frontend tests (703 pre-existing + 34 new), `tsc
+--noEmit` clean, `pnpm run build` succeeds, `cargo test --workspace` green
+(447 desktop-tauri-crate tests including all 17 locale tests + full
+codexbar crate), `cargo clippy --workspace --all-targets` clean, `cargo
+fmt --check` clean, `scripts/scan-secrets.mjs` clean, `git diff --check`
+clean.
+
+**NOT done this pass** (explicitly scoped out, see the validation doc's
+"Explicitly out of scope" section): the Settings "Reset Display Composer"
+UI; persisted timezone/clock-format/reset-preset settings in
+`rust/src/settings.rs` (no way for a user to change these yet — every real
+surface uses the safe defaults: countdown-only, adaptive, system
+timezone/clock); per-surface overrides; migrating the other duplicate
+formatters (`useFormattedResetTime.ts`, the Rust-side tray formatters in
+`apps/desktop-tauri/src-tauri/src/commands/bridge.rs`) onto this pipeline;
+fixing Claude's UTC-only `resetDescription` bug
+(`rust/src/providers/claude/web_api.rs:666-668`,
+`rust/src/providers/claude/oauth/mod.rs:640-642`); native CDP screenshots.
+
+**Verdict**: PASS on the core formatter/pipeline/locale-bug-fix slice this
+pass covers (item-by-item in the validation doc); NOT PASSED against the
+owner's full 50-section spec — the Settings UI, persistence, and
+full-surface migration are real, larger, separate work.
+
+## Overall verdict so far

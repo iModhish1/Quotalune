@@ -547,6 +547,8 @@ locale_keys! {
     NextExpiresInHoursMinutes,
     NextExpiresInMinutes,
     NextExpiresDueNow,
+    ResetLessThanMinuteShort,
+    ResetLessThanMinuteLong,
 
     // Provider detail - Tray Display
     TrayDisplayTitle,

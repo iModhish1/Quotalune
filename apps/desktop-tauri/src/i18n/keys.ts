@@ -299,6 +299,8 @@ export const ALL_LOCALE_KEYS = [
   "NextExpiresInHoursMinutes",
   "NextExpiresInMinutes",
   "NextExpiresDueNow",
+  "ResetLessThanMinuteShort",
+  "ResetLessThanMinuteLong",
   "TrayDisplayTitle",
   "ShowInTray",
   "CreditsLabel",

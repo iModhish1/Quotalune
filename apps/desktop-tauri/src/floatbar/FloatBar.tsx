@@ -31,6 +31,7 @@ import type {
   SettingsSnapshot,
 } from "../types/bridge";
 import { resolveCatalogTheme } from "../design-system/themeResolution";
+import { useResetStageOptions } from "../hooks/useResetStageOptions";
 import { FLOAT_BAR_CONFIG_CHANGED_EVENT, resizeFloatBar } from "./api";
 import FloatingHudStage from "./FloatingHudStage";
 import "./FloatBar.css";
@@ -338,9 +339,10 @@ export default function FloatBar({ state }: { state: BootstrapState }) {
         b.selectedMetric.usedPercent - a.selectedMetric.usedPercent,
     );
   }, [providers, settings.enabledProviders, filterIds]);
+  const resetOptions = useResetStageOptions();
   const stageProviders = useMemo(
-    () => toStageProviders(visible, usageConfigFromSnapshot(settings)),
-    [visible, settings.usageDisplayMode, settings.providerUsageOverrides],
+    () => toStageProviders(visible, usageConfigFromSnapshot(settings), resetOptions),
+    [visible, settings.usageDisplayMode, settings.providerUsageOverrides, resetOptions],
   );
   const hudCatalog = resolveCatalogTheme(settings, "hud").slug;
   const [focusedProviderId, setFocusedProviderId] = useState<string | null>(null);

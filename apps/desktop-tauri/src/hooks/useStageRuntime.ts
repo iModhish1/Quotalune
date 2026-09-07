@@ -8,6 +8,7 @@ import {
   toStageProviders,
   usageConfigFromSnapshot,
 } from "../components/orbit/stageProviders";
+import { useResetStageOptions } from "./useResetStageOptions";
 import {
   DEFAULT_CATALOG_THEME,
   resolveCatalogTheme,
@@ -53,9 +54,10 @@ export function useStageRuntime({
     };
   }, [enabled, reloadSettings]);
 
+  const resetOptions = useResetStageOptions();
   const providers = useMemo(
-    () => toStageProviders(live.providers ?? [], usageConfig),
-    [live.providers, usageConfig],
+    () => toStageProviders(live.providers ?? [], usageConfig, resetOptions),
+    [live.providers, usageConfig, resetOptions],
   );
 
   return {
