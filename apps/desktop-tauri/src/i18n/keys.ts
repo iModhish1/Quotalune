@@ -237,6 +237,7 @@ export const ALL_LOCALE_KEYS = [
   "TabSurfaces",
   "TabThemes",
   "TabResetDisplay",
+  "TabDashboardStudio",
   "TabDashboard",
   "TabProviderDisplay",
   "TabCollections",

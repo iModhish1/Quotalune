@@ -24,6 +24,7 @@ export const TAB_META: { id: SettingsTabId; labelKey: LocaleKey }[] = [
   // Its own first-class destination, not a sub-view switcher pill inside
   // Provider Display (the owner explicitly rejected that placement).
   { id: "resetDisplay", labelKey: "TabResetDisplay" },
+  { id: "dashboardStudio", labelKey: "TabDashboardStudio" },
   { id: "usageSpend", labelKey: "TabUsageSpend" },
   { id: "notifications", labelKey: "TabNotifications" },
   // System / configuration

@@ -5,7 +5,7 @@ import type { SettingsTabId } from "../../types/bridge";
 import { isSettingsTab, TAB_META } from "./settingsTabs";
 
 describe("isSettingsTab", () => {
-  it.each(["dashboard", "general", "providers", "providerDisplay", "resetDisplay", "notifications", "menuBar", "menu", "usageSpend", "advanced", "about"])(
+  it.each(["dashboard", "general", "providers", "providerDisplay", "resetDisplay", "dashboardStudio", "notifications", "menuBar", "menu", "usageSpend", "advanced", "about"])(
     "returns true for a known tab id (%s)",
     (id) => {
       expect(isSettingsTab(id)).toBe(true);
@@ -43,6 +43,7 @@ describe("TAB_META", () => {
       "collections",
       "profiles",
       "resetDisplay",
+      "dashboardStudio",
       "notifications",
       "menuBar",
       "menu",
