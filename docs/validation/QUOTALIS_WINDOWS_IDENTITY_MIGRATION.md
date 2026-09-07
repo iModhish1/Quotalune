@@ -1,12 +1,118 @@
-# Quotalis Windows Identity Migration — Decision
+# Quotalis Windows Identity Migration — Decision + Implementation
 
 Date: 2026-09-08. Worktree: `N:\QuotaArc\quotalis-rebrand`, branch
-`integration/quotalis-public-rebrand` (based on `b3ad28ed`).
+`integration/quotalis-public-rebrand` (based on `b3ad28ed`, then `6e935416`).
 
 This document is the required decision (owner spec section 10) before any
-executable/bundle-identifier/installer/Start-Menu work is attempted. **No
-code changes described as "Option B" below have been made** — this is the
-decision record, not the implementation.
+executable/bundle-identifier/installer/Start-Menu work is attempted, **now
+updated with the Option A implementation results** from the follow-up
+packaging-identity pass (HEAD `6e935416` → this pass). **No code changes
+described as "Option B" below have been made** — that section remains a
+decision record only.
+
+## Implemented (this pass)
+
+| Item | Before | After | Evidence |
+|---|---|---|---|
+| Tauri `productName` | `QuotaArc` | `Quotalis` | `tauri.conf.json:3` |
+| Tauri `mainBinaryName` | `QuotaArc` | `Quotalis` | `tauri.conf.json:84` |
+| Tauri Dev `productName` | `QuotaArc Dev` | `Quotalis Dev` | `tauri.dev.conf.json:3` |
+| Tauri Dev `mainBinaryName` | `QuotaArcDev` | `QuotalisDev` | `tauri.dev.conf.json:4` |
+| Bundle `publisher` | unset (derived "quotaarc" from the identifier) | `Quotalis` | `tauri.conf.json` bundle section |
+| Cargo `[[bin]] name` | `QuotaArc` | `Quotalis` | `apps/desktop-tauri/src-tauri/Cargo.toml` |
+| Bundle identifier | `app.quotaarc.desktop` / `.dev` | **unchanged** (Option A) | `tauri.conf.json:5`, `tauri.dev.conf.json:5` |
+| Data directory | `%APPDATA%\QuotaArc[-Dev]` | **unchanged** (Option A) | `rust/src/paths.rs::APP_DIR_NAME` |
+| Registry Run value / Toast AUMID | `QuotaArc` / `app.quotaarc.desktop` | **unchanged** (Option A, documented as `LEGACY_SECURITY_COMPATIBILITY`) | `rust/src/paths.rs` |
+| `paths::USER_AGENT` | `QuotaArc` | `Quotalis` | self-referential outbound header only |
+| `paths::INSTALLER_STEM` | `QuotaArc[-Dev]` | `Quotalis[-Dev]` | new `LEGACY_INSTALLER_STEM` constant preserves the old value for documentation |
+| `paths::CURRENT_EXE_NAME` (new) | — | `Quotalis.exe` / `QuotalisDev.exe` | new constant |
+| `paths::LEGACY_EXE_NAME` (new) | — | `QuotaArc.exe` / `QuotaArcDev.exe` | new constant, reference-only (see below) |
+
+### Real native evidence: a fresh Dev build
+
+```
+cargo build --features dev-channel -p codexbar-desktop-tauri
+```
+produced `target\debug\Quotalis.exe` directly — the renamed Cargo `[[bin]]`
+name took effect immediately, no manual file rename. Inspected with
+PowerShell `Get-Item ... | .VersionInfo` (real, on this machine, not
+simulated):
+
+```
+Path: N:\QuotaArc\quotalis-rebrand\target\debug\Quotalis.exe
+SHA256: 69FAF836E6810BD0A8D16040C5FA702E73114E9EF6FD64C097DB4DC328470A73
+ProductName: Quotalis
+FileDescription: Quotalis
+CompanyName: Quotalis   (was "quotaarc", derived from the identifier, until
+                          the "publisher" field was added — see above)
+FileVersion / ProductVersion: 0.10.1
+```
+
+This is Windows' own embedded VERSIONINFO resource (populated by
+`tauri-build` from `tauri.conf.json`), inspected via the real OS API — the
+strongest evidence available without launching the GUI and taking a
+screenshot (still not possible in this environment).
+
+### Audit result: no dual current/legacy detection logic was needed
+
+The follow-up audit (owner spec section 7/8/9) searched every site that
+matches `QuotaArc.exe`/`codexbar.exe`-shaped strings in production code
+(`rust/src/settings.rs`, `rust/src/updater.rs`,
+`apps/desktop-tauri/src-tauri/src/tray_visibility.rs`) and found:
+
+- **`updater.rs::is_installer_asset_name`** matches by suffix only
+  (`-setup.exe` / `.msi`), never by product-name prefix — it already
+  recognizes `QuotaArc-1.2.3-x64-Setup.exe` and `Quotalis-1.2.3-x64-Setup.exe`
+  identically. Proven by a new test,
+  `installer_asset_matching_recognizes_both_legacy_and_current_brand`.
+- **`updater.rs::windows_update_relaunch_path`** and
+  **`settings.rs::start_at_login_exe_path`** both resolve
+  `std::env::current_exe()` dynamically and only special-case an even
+  *older* legacy alias (`codexbar-cli.exe`/`codexbar-desktop.exe`, predating
+  QuotaArc itself) — neither hardcodes "QuotaArc.exe", so renaming the
+  built executable requires no changes here.
+- **`tray_visibility.rs::matches_current_exe`/`matches_exe_file_name`** are
+  generic path-comparison functions; their `QuotaArc.exe`/`codexbar.exe`
+  test fixtures are illustrative example data, not brand-dependent
+  production logic.
+
+Net result: `paths::LEGACY_EXE_NAME` was added for documentation/rollback
+reference (owner spec section 7's requested naming convention), but **no
+runtime code path actually needed to branch on it** — a genuinely lower-risk
+outcome than the original spec anticipated, verified by reading the real
+logic rather than assumed.
+
+### Not implemented this pass (real remaining work)
+
+- **NSIS/MSI installer build and inspection** (sections 13-16, 35): no
+  `makensis` on this machine's PATH; Tauri's bundler can fetch its own NSIS
+  tooling on first `cargo tauri build`, but actually running a full bundle
+  build, inspecting the resulting installer's display name/shortcut/
+  uninstall metadata, and packaging a Dev-branded test installer was not
+  attempted this pass — it needs its own dedicated pass with real installer
+  output to inspect, not assumed from config alone.
+- **Simulated legacy-upgrade fixture + installer run** (section 36): not
+  built — this requires the installer artifact above to exist first.
+- **Start Menu pin preservation test** (sections 11/12): requires an actual
+  install; not performed. The bundle-identity reasoning (preserved
+  AppUserModelID under Option A) is unchanged from the original decision,
+  but it is still a prediction, not yet verified against a real Windows
+  Start Menu pin.
+- **Secure-storage compatibility test with Dev fixtures** (sections 21/22,
+  33): not built this pass — no secure-storage identifier was touched
+  (confirmed unchanged), so there is nothing new to verify compatibility
+  against, but the owner's requested *positive* proof ("old secure files
+  still decrypt after rename") was not produced either, since no encrypted
+  fixture exists to test against without real user secrets.
+- **Registry Run value / Start-at-login rename**: intentionally left
+  as `QuotaArc`/`QuotaArc Dev` — out of this pass's scope (see
+  `LEGACY_SECURITY_COMPATIBILITY` doc comment in `paths.rs`); renaming it
+  would leave a stale registry entry for any user who already enabled
+  start-at-login under the old value, which needs its own toggle-time
+  migration logic, not a bare string rename.
+- **Version bump**: not performed — see
+  `docs/validation/QUOTALIS_PUBLIC_REBRAND.md` for the recorded
+  recommendation.
 
 ## Current identity (unchanged this pass)
 
