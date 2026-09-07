@@ -21,9 +21,15 @@
 .notch-host .notch-gauge,.reel-host .reel-gauge,.flow-surface .flow-surface__brand{border-radius:var(--surface-icon-radius);background:var(--surface-ornament),linear-gradient(145deg,var(--surface-raised),var(--surface-core));box-shadow:inset 0 1px var(--surface-sheen),var(--surface-accent-halo)}
 .notch-host .notch-body__rim{stroke-width:var(--surface-rim-size)}
 .notch-host .notch-connector rect{fill:var(--surface-connector)}
-.notch-host .notch-gauge .provider-icon,.notch-host .notch-detail .provider-icon{filter:var(--surface-icon-filter);color:var(--surface-text)!important}
-.reel-host .provider-icon,.flow-surface .provider-icon{filter:var(--surface-provider-filter)}
-.flow-surface .flow-surface__provider-gauge{filter:none}
+/* Provider icons keep their own brand-derived color inside every native
+   footprint (Notch/Reel/Flow-Surface) — this file used to force them
+   grayscale + overexposed via --surface-icon-filter/--surface-provider-filter
+   (and NotchSurface.css separately overwrote --provider-brand to white
+   outright), contradicting this file's own stated goal above ("provider
+   data stays independent") and matching the owner's Wave 6 Phase 4 bleed
+   report. The themed circular backing chip behind each icon (line 21,
+   .notch-gauge/.reel-gauge/.flow-surface__brand) already provides contrast
+   against the structure theme; the icon itself no longer needs recoloring. */
 .flow-surface .flow-surface__provider,.flow-surface .flow-surface__detail-header button,.notch-host .notch-detail-value,.notch-host .notch-detail-meta{color:var(--surface-text)}
 .flow-surface .flow-surface__summary-copy small,.flow-surface .flow-surface__metric span,.flow-surface .flow-surface__metric small,
 .reel-host .reel-caption small,.reel-host .reel-mode,.reel-host .reel-details header,.reel-host .reel-details footer,.reel-host .reel-details p,

@@ -14,7 +14,12 @@
 .notch-provider{position:absolute;top:0;left:0;display:flex;flex-direction:column;align-items:center;width:var(--gauge-size);gap:5px;z-index:1;transition:transform 280ms cubic-bezier(.2,.8,.2,1),width 220ms ease}
 .notch-gauge{width:var(--gauge-size);height:var(--gauge-size);display:grid;place-items:center;border-radius:50%;background:#242426;transition:box-shadow 180ms ease,transform 180ms ease;animation:notch-arrive 220ms ease-out}
 .notch-gauge>*{grid-area:1/1}
-.notch-gauge .provider-icon,.notch-detail .provider-icon{color:#fff!important;--provider-brand:#fff!important;filter:grayscale(1) brightness(3)}
+/* Wave 6 Phase 4: this used to force every provider icon to white and
+   grayscale it, overwriting the Provider Identity's own --provider-brand —
+   a confirmed structure-to-provider bleed (see
+   docs/validation/VISUAL_THEME_OWNERSHIP.md). The gauge's own dark chip
+   background (line 15) already provides contrast; the icon keeps its
+   brand-derived color. */
 .notch-provider:hover .notch-gauge,.notch-provider:focus-visible .notch-gauge{transform:translateY(-1px);box-shadow:0 0 0 3px #ffffff12}
 .notch-value{font-size:12px;line-height:14px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.2px}
 .notch-grip{position:absolute;bottom:2px;right:13px;width:30px;height:22px;display:grid;place-items:center;cursor:grab!important;z-index:2}

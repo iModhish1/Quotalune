@@ -28,8 +28,6 @@ export function surfaceMaterialStyle(theme: CatalogTheme): CSSProperties {
     "--surface-muted": theme.material?.muted ?? "#b1bcc7",
     "--surface-finish": theme.material?.finish ?? "linear-gradient(135deg, #ffffff0c, transparent 55%)",
     "--surface-sheen": theme.material?.sheen ?? "#ffffff28",
-    "--surface-icon-filter": theme.material?.light ? "grayscale(1) brightness(.25)" : "grayscale(1) brightness(3)",
-    "--surface-provider-filter": theme.material?.light ? "grayscale(1) brightness(.3)" : "none",
     "--surface-meter": theme.material?.light ? "#c0c9cf" : "#38424b",
   } as CSSProperties;
 }

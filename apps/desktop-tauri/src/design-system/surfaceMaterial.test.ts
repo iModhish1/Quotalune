@@ -52,4 +52,21 @@ describe("portable surface materials",()=>{
     }
     expect(new Set(THEME_CATALOG.filter(t=>t.material).map(t=>t.material!.finish)).size).toBe(THEME_CATALOG.filter(t=>t.material).length);
   });
+  it("never emits a provider-icon recoloring token for any theme (Wave 6 Phase 4 bleed fix)",()=>{
+    // surfaceMaterial.ts used to emit --surface-icon-filter/--surface-provider-filter,
+    // consumed by surfaceMaterial.css to grayscale + overexpose every provider icon
+    // inside the Notch/Reel/Flow-Surface hosts, and NotchSurface.css separately
+    // overwrote --provider-brand with a hardcoded white — a confirmed structure-to-
+    // provider-identity bleed (docs/validation/VISUAL_THEME_OWNERSHIP.md). Regression
+    // guard: no theme's emitted surface style should reintroduce icon-level color
+    // manipulation, whatever token name a future change might use.
+    for(const theme of THEME_CATALOG){
+      const style=surfaceMaterialStyle(theme) as Record<string,string>;
+      expect(style["--surface-icon-filter"]).toBeUndefined();
+      expect(style["--surface-provider-filter"]).toBeUndefined();
+      // --surface-icon-radius is legitimate (geometry, not color) — only
+      // filter/recolor-shaped keys targeting icons/providers are banned.
+      expect(Object.keys(style).some(key=>/provider/i.test(key) || /icon.*filter/i.test(key))).toBe(false);
+    }
+  });
 });
