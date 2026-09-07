@@ -111,7 +111,7 @@ strip = true
 panic = "abort"
 
 [[bin]]
-name = "quotaarc"
+name = "quotalis"
 path = "src/main.rs"
 
 [lints]

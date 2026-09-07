@@ -85,7 +85,7 @@ foreach ($nodeRoot in @($env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:LOCALA
 }
 if ($env:APPDATA) { Add-PathIfPresent (Join-Path $env:APPDATA 'npm') }
 if ($env:LOCALAPPDATA) { Add-PathIfPresent (Join-Path $env:LOCALAPPDATA 'pnpm') }
-if ($env:LOCALAPPDATA) { Add-PathIfPresent (Join-Path $env:LOCALAPPDATA 'CodexBar\release-toolchain\pnpm') }
+if ($env:LOCALAPPDATA) { Add-PathIfPresent (Join-Path $env:LOCALAPPDATA 'Quotalis\release-toolchain\pnpm') }
 
 function Require-Command {
     param([string]$Name)
@@ -290,7 +290,7 @@ try {
     }
     $env:PNPM_HOME = if ($env:PNPM_HOME) { $env:PNPM_HOME } else { Join-Path $CacheDir "pnpm-home" }
 
-    Write-Host "Building Win-CodexBar $version from $commit"
+    Write-Host "Building Quotalis $version from $commit"
     Write-Host "Source: $SourceDir"
     Write-Host "Cargo target cache: $DesktopCargoTargetDir"
     Write-Host "pnpm store cache: $PnpmStoreDir"
@@ -373,17 +373,22 @@ try {
         throw "pnpm tauri build exited with code $tauriExitCode"
     }
 
-    $desktopExe = Join-Path $releaseBinDir "codexbar.exe"
-    $legacyDesktopExe = Join-Path $releaseBinDir "codexbar-desktop.exe"
-    $releaseExe = Join-Path $releaseBinDir "codexbar-cli.exe"
+    # No post-build rename hack: the Tauri build already produces the
+    # correctly-named Quotalis.exe directly; package/verify that file under
+    # its own name rather than copying it to a legacy alias first.
+    $desktopExe = $sourceExe
+    $legacyDesktopExe = Join-Path $releaseBinDir "quotalis-desktop.exe"
+    $releaseExe = Join-Path $releaseBinDir "quotalis-cli.exe"
     if (-not (Test-Path $sourceExe)) {
         throw "Missing expected Tauri binary: $sourceExe"
     }
 
-    Copy-Item $sourceExe $desktopExe -Force
+    # A legacy-alias copy is still produced (not read by any current-
+    # generation code path -- see docs/validation/QUOTALIS_INNO_RELEASE_AUDIT.md
+    # -- but verify-windows-executables.ps1 expects a -LegacyDesktopExe arg).
     Copy-Item $sourceExe $legacyDesktopExe -Force
     if (Get-ObjdumpImportsWebView2Loader -ExePath $desktopExe) {
-        throw "codexbar.exe imports WebView2Loader.dll, but release builds are expected to statically link the loader."
+        throw "Quotalis.exe imports WebView2Loader.dll, but release builds are expected to statically link the loader."
     }
 
     $env:CARGO_TARGET_DIR = $CliCargoTargetDir
@@ -393,7 +398,7 @@ try {
         "build",
         "--manifest-path", "rust\Cargo.toml",
         "--release",
-        "--bin", "codexbar"
+        "--bin", "quotalis"
     )
     $env:CARGO_TARGET_DIR = $DesktopCargoTargetDir
 
@@ -402,7 +407,7 @@ try {
     } else {
         Join-Path $CliCargoTargetDir "release"
     }
-    $sourceCliExe = Join-Path $cliBinDir "codexbar.exe"
+    $sourceCliExe = Join-Path $cliBinDir "quotalis.exe"
     if (-not (Test-Path $sourceCliExe)) {
         throw "Missing expected CLI binary: $sourceCliExe"
     }
@@ -419,7 +424,7 @@ try {
         -CheckCliStdout
 
     if ($WarmCacheOnly) {
-        $warmExe = Join-Path $AssetsDir "CodexBar-$version-warm.exe"
+        $warmExe = Join-Path $AssetsDir "Quotalis-$version-warm.exe"
         Copy-Item $desktopExe $warmExe -Force
         Write-Host ""
         Write-Host "Warm build artifact: $warmExe"
@@ -454,17 +459,17 @@ try {
             "/DVCRedistPath=$vcRedistPath",
             "/DWebView2BootstrapperPath=$webView2BootstrapperPath",
             "/DOutputDir=$installerOut",
-            "/DOutputBaseFilename=CodexBar-$version-Setup",
-            "codexbar.iss"
+            "/DOutputBaseFilename=Quotalis-$version-Setup",
+            "quotalis.iss"
         )
     } finally {
         Pop-Location
     }
 
-    $installer = Join-Path $installerOut "CodexBar-$version-Setup.exe"
-    $portableExe = Join-Path $AssetsDir "CodexBar-$version-portable.exe"
-    $installerAsset = Join-Path $AssetsDir "CodexBar-$version-Setup.exe"
-    $cliZip = Join-Path $AssetsDir "CodexBarCLI-v$version-windows-x64.zip"
+    $installer = Join-Path $installerOut "Quotalis-$version-Setup.exe"
+    $portableExe = Join-Path $AssetsDir "Quotalis-$version-portable.exe"
+    $installerAsset = Join-Path $AssetsDir "Quotalis-$version-Setup.exe"
+    $cliZip = Join-Path $AssetsDir "QuotalisCLI-v$version-windows-x64.zip"
 
     foreach ($path in @($desktopExe, $releaseExe, $installer)) {
         if (-not (Test-Path $path)) {
@@ -476,10 +481,10 @@ try {
     Copy-Item $installer $installerAsset -Force
     Compress-Archive -Path $releaseExe -DestinationPath $cliZip -Force
 
-    $zipVerifyDir = Join-Path ([IO.Path]::GetTempPath()) ("codexbar-cli-zip-verify-" + [guid]::NewGuid().ToString('N'))
+    $zipVerifyDir = Join-Path ([IO.Path]::GetTempPath()) ("quotalis-cli-zip-verify-" + [guid]::NewGuid().ToString('N'))
     Expand-Archive -LiteralPath $cliZip -DestinationPath $zipVerifyDir -Force
-    $extractedCli = Join-Path $zipVerifyDir "codexbar-cli.exe"
-    if (-not (Test-Path -LiteralPath $extractedCli -PathType Leaf)) { throw "CLI zip missing codexbar-cli.exe entry: $cliZip" }
+    $extractedCli = Join-Path $zipVerifyDir "quotalis-cli.exe"
+    if (-not (Test-Path -LiteralPath $extractedCli -PathType Leaf)) { throw "CLI zip missing quotalis-cli.exe entry: $cliZip" }
     if ((Get-FileHash -LiteralPath $extractedCli -Algorithm SHA256).Hash -cne (Get-FileHash -LiteralPath $releaseExe -Algorithm SHA256).Hash) { throw "CLI zip entry hash mismatch: $cliZip" }
 
     foreach ($asset in @($installerAsset, $portableExe, $cliZip)) {
@@ -502,7 +507,7 @@ try {
 
     Write-Host ""
     Write-Host "Release assets:"
-    Get-ChildItem $AssetsDir -Filter "CodexBar*" |
+    Get-ChildItem $AssetsDir -Filter "Quotalis*" |
         Sort-Object Name |
         Select-Object Name, Length, LastWriteTime |
         Format-Table -AutoSize
