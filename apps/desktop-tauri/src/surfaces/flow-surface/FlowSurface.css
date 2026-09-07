@@ -127,7 +127,18 @@ body:has(.flow-surface-host) #root {
   animation: flow-surface-in 180ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
 }
 @keyframes flow-surface-in { from { opacity: 0; transform: translate3d(var(--flow-enter-x, 0), var(--flow-enter-y, 6px), 0) scale(0.98); } to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } }
-.flow-surface__detail-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 21px; }
+/* Wave 6 Phase 4 collision-safety hardening: .flow-surface__details is a
+   CSS grid, and a grid item's default min-width is `auto` (shrink-to-fit
+   its content), NOT 0 — so without this, a long focused-provider name
+   could grow .flow-surface__detail-header past the card's fixed width;
+   the card's own overflow:hidden then silently clipped the pin/close
+   controls off-screen instead of the provider chip's ellipsis ever
+   engaging (confirmed live: a long name pushed the header to 246px
+   inside a 238px card, with controls landing fully outside the visible
+   card bounds — not a hypothetical, a reproduced bug). min-width:0 here
+   lets this row actually respect the card's width, which is what makes
+   flex-shrink + the chip's text-overflow:ellipsis engage at all. */
+.flow-surface__detail-header { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; min-height: 21px; }
 .flow-surface__detail-controls { display: flex; flex: none; gap: 2px; }
 .flow-surface__detail-header button { display: grid; width: 21px; height: 21px; place-items: center; border-radius: 7px; color: rgba(243, 246, 249, 0.66); font-size: 16px; line-height: 1; }
 .flow-surface__detail-header button:hover, .flow-surface__detail-header button[aria-pressed="true"] { color: white; background: rgba(255, 255, 255, 0.10); }

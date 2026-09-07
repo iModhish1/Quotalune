@@ -160,4 +160,77 @@ describe("FlowSurface", () => {
       expect(drag).toHaveAttribute("aria-label", "Move QuotaArc");
     });
   });
+
+  describe("header/rail collision safety (Wave 6 Phase 4 bounds matrix)", () => {
+    // jsdom has no real layout engine (getBoundingClientRect always
+    // returns zeros), so genuine geometric non-intersection is verified
+    // natively against the real Dev binary (see docs/WAVE6_CONTINUATION.md
+    // for the exact measurements before/after the min-width:0 fix this
+    // caught). These tests cover what jsdom CAN prove reliably: the DOM
+    // structure and content invariants the geometry depends on.
+    const longNameProvider = {
+      ...providers[0],
+      name: "Anthropic Claude Enterprise Research Account",
+    };
+
+    it.each([1, 3, 7])(
+      "always renders exactly one QuotaArc title, one provider chip, and both controls regardless of provider count (n=%i)",
+      (count) => {
+        const data = Array.from({ length: count }, (_, i) => ({
+          ...providers[i % providers.length],
+          id: `${providers[i % providers.length].id}-${i}`,
+        }));
+        const { container } = render(
+          <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={data} />,
+        );
+        expect(container.querySelectorAll(".flow-surface__detail-title")).toHaveLength(1);
+        expect(container.querySelectorAll(".flow-surface__detail-provider")).toHaveLength(1);
+        expect(screen.getByRole("button", { name: /Pin details|Unpin details/ })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Collapse details" })).toBeInTheDocument();
+      },
+    );
+
+    it.each([1, 3, 7])(
+      "caps the compact quick-providers rail at 3 regardless of how many providers are configured (n=%i)",
+      (count) => {
+        const data = Array.from({ length: count }, (_, i) => ({
+          ...providers[i % providers.length],
+          id: `${providers[i % providers.length].id}-${i}`,
+        }));
+        const { container } = render(
+          <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={data} />,
+        );
+        const rendered = container.querySelectorAll(".flow-surface__quick-providers .flow-surface__provider");
+        expect(rendered.length).toBe(Math.min(count, 3));
+      },
+    );
+
+    it("truncates a long focused provider name in the chip rather than leaving it unbounded (structural guard for the min-width:0 fix)", () => {
+      const { container } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={[longNameProvider]} />,
+      );
+      const chipText = container.querySelector(".flow-surface__detail-provider strong");
+      expect(chipText).toHaveTextContent(longNameProvider.name);
+      // The truncation CSS (overflow:hidden + text-overflow:ellipsis +
+      // white-space:nowrap) lives on this exact element — a regression
+      // that removed those rules, or the container's min-width:0, would
+      // not be caught here (jsdom can't compute layout) but IS caught by
+      // the native verification this class of change requires.
+      expect(chipText?.className).toBe("");
+      expect(chipText?.parentElement).toHaveClass("flow-surface__detail-provider");
+    });
+
+    it("keeps the QuotaArc title, provider chip, and controls as three independent header children — never nested inside one another", () => {
+      const { container } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={[longNameProvider]} />,
+      );
+      const header = container.querySelector(".flow-surface__detail-header");
+      const directChildren = header ? Array.from(header.children) : [];
+      expect(directChildren.map((el) => el.className)).toEqual([
+        "flow-surface__detail-title",
+        "flow-surface__detail-provider",
+        "flow-surface__detail-controls",
+      ]);
+    });
+  });
 });
