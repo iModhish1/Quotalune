@@ -1,10 +1,11 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SettingsSnapshot } from "../../../types/bridge";
 
 const tauriMocks = vi.hoisted(() => ({
   getSettingsSnapshot: vi.fn(),
   setResetPresentation: vi.fn(),
+  setResetPresentationSurfaceOverride: vi.fn(),
 }));
 
 const eventMocks = vi.hoisted(() => ({
@@ -41,6 +42,7 @@ describe("ResetDisplaySection", () => {
   beforeEach(() => {
     tauriMocks.getSettingsSnapshot.mockReset().mockResolvedValue(baseSnapshot());
     tauriMocks.setResetPresentation.mockReset().mockResolvedValue(undefined);
+    tauriMocks.setResetPresentationSurfaceOverride.mockReset().mockResolvedValue(undefined);
   });
 
   it("loads the persisted preset and shows a live preview from the production formatter", async () => {
@@ -171,5 +173,67 @@ describe("ResetDisplaySection", () => {
     });
     // Reverted back to the last-known-good preset.
     expect((screen.getByLabelText("Preset") as HTMLSelectElement).value).toBe("countdownOnly");
+  });
+
+  describe("surface overrides", () => {
+    it("defaults to Global scope with no per-surface controls shown", async () => {
+      render(<ResetDisplaySection />);
+      await waitFor(() => expect(tauriMocks.getSettingsSnapshot).toHaveBeenCalled());
+      expect(screen.getByRole("button", { name: "Global" })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.queryByText("Taskbar")).not.toBeInTheDocument();
+    });
+
+    it("lists the real surface registry when switching to Customize by surface, all Following Global", async () => {
+      render(<ResetDisplaySection />);
+      await waitFor(() => expect(tauriMocks.getSettingsSnapshot).toHaveBeenCalled());
+      fireEvent.click(screen.getByRole("button", { name: "Customize by surface" }));
+
+      for (const surface of ["Taskbar", "Top", "Edge", "HUD", "Quick Panel", "Dashboard", "Provider Display", "Tray"]) {
+        expect(screen.getByText(surface)).toBeInTheDocument();
+      }
+      expect(screen.getAllByText("Follow Global")).toHaveLength(8);
+    });
+
+    it("customizing a surface seeds it from the global config and persists a real override", async () => {
+      render(<ResetDisplaySection />);
+      await waitFor(() => expect(tauriMocks.getSettingsSnapshot).toHaveBeenCalled());
+      fireEvent.click(screen.getByRole("button", { name: "Customize by surface" }));
+
+      const taskbarRow = screen.getByText("Taskbar").closest(".reset-display__surface-row")!;
+      fireEvent.click(within(taskbarRow).getByRole("button", { name: "Customize" }));
+
+      // Editing a surface presets its own field set (idPrefix scoped) --
+      // change its preset to prove a real, independent persisted override.
+      const surfacePreset = within(taskbarRow).getByLabelText("Preset") as HTMLSelectElement;
+      fireEvent.change(surfacePreset, { target: { value: "full" } });
+
+      await waitFor(() => {
+        expect(tauriMocks.setResetPresentationSurfaceOverride).toHaveBeenCalledWith(
+          "taskbar",
+          expect.objectContaining({ preset: "full" }),
+        );
+      });
+      // The global config is untouched by a surface-scoped edit.
+      expect(tauriMocks.setResetPresentation).not.toHaveBeenCalled();
+    });
+
+    it("Reset to Global clears a surface override", async () => {
+      tauriMocks.getSettingsSnapshot.mockResolvedValue({
+        ...baseSnapshot(),
+        resetPresentationOverrides: { taskbar: { ...baseSnapshot().resetPresentation!, preset: "full" } },
+      });
+      render(<ResetDisplaySection />);
+      await waitFor(() => expect(tauriMocks.getSettingsSnapshot).toHaveBeenCalled());
+      fireEvent.click(screen.getByRole("button", { name: "Customize by surface" }));
+
+      const taskbarRow = screen.getByText("Taskbar").closest(".reset-display__surface-row")!;
+      expect(within(taskbarRow).getByText("Custom")).toBeInTheDocument();
+
+      fireEvent.click(within(taskbarRow).getByRole("button", { name: "Reset to Global" }));
+
+      await waitFor(() => {
+        expect(tauriMocks.setResetPresentationSurfaceOverride).toHaveBeenCalledWith("taskbar", null);
+      });
+    });
   });
 });
