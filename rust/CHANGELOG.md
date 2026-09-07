@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **Public rebrand: QuotaArc → Quotalis.** Product name, window titles, tray
+  labels, About screen, Settings header, error boundary, and all in-app
+  locale strings (9 languages) now say Quotalis. Packaging identity
+  followed: Tauri `productName`/`mainBinaryName` and the Cargo binary are
+  now `Quotalis`/`QuotalisDev`, with the stable Windows bundle identity
+  (`app.quotaarc.desktop`) intentionally preserved for seamless upgrade
+  continuity — no local data migration required or performed. Internal
+  Rust crate renamed `codexbar` → `quotalis_core`; internal runtime event
+  namespace renamed `codexbar:*` → `quotalis:*`. See
+  `docs/validation/QUOTALIS_REBRAND_AUDIT.md`,
+  `docs/validation/QUOTALIS_WINDOWS_IDENTITY_MIGRATION.md`, and
+  `docs/validation/QUOTALIS_PUBLIC_REBRAND.md` for the full record of what
+  changed, what was intentionally left as legacy-compatible, and what
+  remains.
+
 ---
 
 ## [0.26.2] — 2026-05-16
