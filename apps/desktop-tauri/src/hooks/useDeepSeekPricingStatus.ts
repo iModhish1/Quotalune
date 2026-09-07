@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { getDeepSeekPricingStatus } from "../lib/tauri";
 import type { DeepSeekPricingStatus } from "../types/bridge";
 
-export const DEEPSEEK_PRICING_EVENT = "codexbar:deepseek-pricing";
+export const DEEPSEEK_PRICING_EVENT = "quotalis:deepseek-pricing";
 
 export function useDeepSeekPricingStatus(): void {
   useEffect(() => {

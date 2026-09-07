@@ -40,7 +40,7 @@ pub(super) fn monitor_work_area_rect(monitor: &tauri::Monitor) -> Rect {
         reason = "monitor pixel dimensions fit in i32"
     )]
     let size_height = size.height as i32;
-    if let Some(area) = codexbar::host::session::primary_work_area_pixels()
+    if let Some(area) = quotalis_core::host::session::primary_work_area_pixels()
         && area.width > 0
         && area.height > 0
         && area.x >= position.x

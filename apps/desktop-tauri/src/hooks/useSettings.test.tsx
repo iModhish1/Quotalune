@@ -72,11 +72,11 @@ describe("useSettings live sync", () => {
     tauriMocks.getSettingsSnapshot.mockResolvedValue(snapshot(100));
     const initial=snapshot(100);
     const {result,unmount}=renderHook(()=>useSettings(initial));
-    await waitFor(()=>expect(eventMocks.listeners['codexbar:settings-updated']).toBeTypeOf('function'));
+    await waitFor(()=>expect(eventMocks.listeners['quotalis:settings-updated']).toBeTypeOf('function'));
     tauriMocks.getSettingsSnapshot.mockResolvedValue(snapshot(125));
-    await act(async()=>eventMocks.listeners['codexbar:settings-updated']());
+    await act(async()=>eventMocks.listeners['quotalis:settings-updated']());
     expect(result.current.settings.windowScalePercent).toBe(125);
     unmount();
-    await waitFor(()=>expect(eventMocks.listeners['codexbar:settings-updated']).toBeUndefined());
+    await waitFor(()=>expect(eventMocks.listeners['quotalis:settings-updated']).toBeUndefined());
   });
 });

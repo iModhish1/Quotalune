@@ -112,7 +112,7 @@ mod tests {
                 "bottom-right",
             ] {
                 assert_eq!(
-                    codexbar::settings::normalize_flow_surface_anchor(form, anchor),
+                    quotalis_core::settings::normalize_flow_surface_anchor(form, anchor),
                     anchor
                 );
             }

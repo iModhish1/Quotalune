@@ -1,8 +1,8 @@
 //! InfiniClient API 测试
 
-use codexbar::providers::infini::{InfiniClient, InfiniError, InfiniUsage, UsagePeriod};
-use codexbar::providers::InfiniProvider;
-use codexbar::core::{Provider, ProviderId, FetchContext, SourceMode};
+use quotalis_core::providers::infini::{InfiniClient, InfiniError, InfiniUsage, UsagePeriod};
+use quotalis_core::providers::InfiniProvider;
+use quotalis_core::core::{Provider, ProviderId, FetchContext, SourceMode};
 
 #[tokio::test]
 async fn test_fetch_usage_success() {

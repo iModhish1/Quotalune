@@ -4,15 +4,17 @@ use std::sync::Mutex;
 
 use crate::commands::ProviderCatalogEntry;
 #[cfg(test)]
-use codexbar::core::ProviderId;
-use codexbar::settings::MetricPreference;
-use codexbar::settings::{Settings, TrayIconMode};
+use quotalis_core::core::ProviderId;
+use quotalis_core::settings::MetricPreference;
+use quotalis_core::settings::{Settings, TrayIconMode};
 use tauri::image::Image;
 use tauri::menu::{CheckMenuItemBuilder, IsMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager};
 
-use codexbar::tray::{apply_logo_identity_rgba, render_bar_icon_rgba, render_percent_icon_rgba};
+use quotalis_core::tray::{
+    apply_logo_identity_rgba, render_bar_icon_rgba, render_percent_icon_rgba,
+};
 
 use crate::shell;
 use crate::state::{AppState, TrayAnchor};
@@ -130,7 +132,7 @@ fn build_native_tray_menu(
 ) -> tauri::Result<Menu<tauri::Wry>> {
     let settings = Settings::load();
     let enabled = settings.enabled_providers.clone();
-    let store = codexbar::profiles::ProfileStore::load();
+    let store = quotalis_core::profiles::ProfileStore::load();
     let profile_entries: Vec<crate::tray_menu::ProfileMenuEntry> = store
         .profiles
         .iter()
@@ -272,9 +274,12 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let icon_bytes = include_bytes!("../../../../rust/icons/icon.png");
     let icon = Image::from_bytes(icon_bytes)?;
 
-    let _tray = TrayIconBuilder::with_id("codexbar-main")
+    let _tray = TrayIconBuilder::with_id("quotalis-main")
         .icon(icon)
-        .tooltip(format!("QuotaArc{}", codexbar::paths::channel_suffix()))
+        .tooltip(format!(
+            "QuotaArc{}",
+            quotalis_core::paths::channel_suffix()
+        ))
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_tray_icon_event(|tray, event| {
@@ -328,14 +333,14 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 /// successful NIM_ADD (and sometimes only after the icon is refreshed). A
 /// single immediate write is not enough after upgrades.
 fn schedule_tray_promotion_retries(app_handle: AppHandle) {
-    if !codexbar::settings::Settings::load().promote_tray_icon {
+    if !quotalis_core::settings::Settings::load().promote_tray_icon {
         return;
     }
     crate::tray_visibility::apply_promotion(true);
     tauri::async_runtime::spawn(async move {
         for secs in [1_u64, 3, 8] {
             tokio::time::sleep(std::time::Duration::from_secs(secs)).await;
-            if !codexbar::settings::Settings::load().promote_tray_icon {
+            if !quotalis_core::settings::Settings::load().promote_tray_icon {
                 break;
             }
             crate::tray_visibility::apply_promotion(true);
@@ -440,7 +445,7 @@ fn handle_menu_event(app: &AppHandle, id: &str) {
             }
             let _save = settings.save();
             use tauri::Emitter;
-            let _ = app.emit("codexbar:settings-updated", ());
+            let _ = app.emit("quotalis:settings-updated", ());
             rebuild_tray_menu(app);
         }
         Some(MenuAction::Quit) => {
@@ -463,7 +468,7 @@ pub(crate) fn rebuild_tray_menu(app: &AppHandle) {
         vec![]
     };
     if let Ok(menu) = build_native_tray_menu(app, &catalog, &status_labels)
-        && let Some(tray) = app.tray_by_id("codexbar-main")
+        && let Some(tray) = app.tray_by_id("quotalis-main")
     {
         let _ = tray.set_menu(Some(menu));
     }
@@ -480,7 +485,7 @@ pub fn update_tray_status_items(
     let status_labels = status_labels_for_settings(&settings, &snapshots, settings.ui_language);
 
     if let Ok(menu) = build_native_tray_menu(app, &catalog, &status_labels)
-        && let Some(tray) = app.tray_by_id("codexbar-main")
+        && let Some(tray) = app.tray_by_id("quotalis-main")
     {
         let _ = tray.set_menu(Some(menu));
     }
@@ -522,7 +527,7 @@ pub fn update_tray_icon_and_tooltip(
     app: &AppHandle,
     snapshots: &[crate::commands::ProviderUsageSnapshot],
 ) {
-    let Some(tray) = app.tray_by_id("codexbar-main") else {
+    let Some(tray) = app.tray_by_id("quotalis-main") else {
         return;
     };
 
@@ -565,7 +570,7 @@ pub fn update_tray_icon_and_tooltip(
 fn status_labels_for_settings(
     settings: &Settings,
     snapshots: &[crate::commands::ProviderUsageSnapshot],
-    lang: codexbar::settings::Language,
+    lang: quotalis_core::settings::Language,
 ) -> Vec<(String, String)> {
     let ordered_snapshots = ordered_snapshot_refs(settings, snapshots);
     let healthy: Vec<_> = ordered_snapshots
@@ -616,10 +621,10 @@ fn ordered_snapshot_refs<'a>(
 
 fn provider_status_label(
     snapshot: &crate::commands::ProviderUsageSnapshot,
-    lang: codexbar::settings::Language,
+    lang: quotalis_core::settings::Language,
 ) -> (String, String) {
     // MonthlyPlan metric (PAYG spend, e.g. Mistral): show formatted cost.
-    let provider = codexbar::core::ProviderId::from_cli_name(&snapshot.provider_id);
+    let provider = quotalis_core::core::ProviderId::from_cli_name(&snapshot.provider_id);
     let preference = provider
         .map(|id| Settings::load().get_provider_metric(id))
         .unwrap_or_default();
@@ -754,12 +759,12 @@ fn display_metric_percent(used_percent: f64, show_as_used: bool) -> f64 {
 /// Build a compact multi-line tooltip string from provider snapshots.
 fn build_tooltip(
     snapshots: &[crate::commands::ProviderUsageSnapshot],
-    lang: codexbar::settings::Language,
+    lang: quotalis_core::settings::Language,
 ) -> String {
-    use codexbar::locale::{LocaleKey, get_text};
+    use quotalis_core::locale::{LocaleKey, get_text};
 
     if snapshots.is_empty() {
-        return format!("QuotaArc{}", codexbar::paths::channel_suffix());
+        return format!("QuotaArc{}", quotalis_core::paths::channel_suffix());
     }
 
     let error_label = get_text(lang, LocaleKey::TrayStatusRowError);
@@ -1131,7 +1136,7 @@ mod tests {
             source_label: String::new(),
             updated_at: "2025-01-01T00:00:00Z".into(),
             error: None,
-            error_state: codexbar::core::ProviderStateKind::Ready,
+            error_state: quotalis_core::core::ProviderStateKind::Ready,
             pace: None,
             account_organization: None,
             tray_status_label: None,
@@ -1203,7 +1208,7 @@ mod tests {
     fn status_labels_per_provider_mode_lists_each_healthy_provider() {
         let settings = Settings {
             tray_icon_mode: TrayIconMode::PerProvider,
-            provider_order: codexbar::settings::normalize_provider_order(&[
+            provider_order: quotalis_core::settings::normalize_provider_order(&[
                 "claude".to_string(),
                 "codex".to_string(),
             ]),
@@ -1217,7 +1222,7 @@ mod tests {
         let labels = status_labels_for_settings(
             &settings,
             &snapshots,
-            codexbar::settings::Language::English,
+            quotalis_core::settings::Language::English,
         );
 
         assert_eq!(
@@ -1244,7 +1249,7 @@ mod tests {
         let labels = status_labels_for_settings(
             &settings,
             &snapshots,
-            codexbar::settings::Language::English,
+            quotalis_core::settings::Language::English,
         );
 
         assert_eq!(
@@ -1280,7 +1285,7 @@ mod tests {
         let mut codex = fake_snapshot("codex", "Codex", 8.0);
         codex.primary.reset_description = Some("4h 10m".to_string());
 
-        let tooltip = build_tooltip(&[claude, codex], codexbar::settings::Language::English);
+        let tooltip = build_tooltip(&[claude, codex], quotalis_core::settings::Language::English);
 
         assert_eq!(
             tooltip,
@@ -1298,7 +1303,7 @@ mod tests {
         codex.primary.reset_description = Some("No active 5h session".to_string());
         codex.secondary.as_mut().unwrap().reset_description = Some("3d 17h".to_string());
 
-        let tooltip = build_tooltip(&[codex], codexbar::settings::Language::English);
+        let tooltip = build_tooltip(&[codex], quotalis_core::settings::Language::English);
 
         assert_eq!(tooltip, "QuotaArc\nCodex: 16% • Resets in 3d 17h");
     }
@@ -1309,7 +1314,7 @@ mod tests {
         claude.primary.reset_description =
             Some("resets in Jun 10 at 3:00PM with extra noisy suffix".to_string());
 
-        let tooltip = build_tooltip(&[claude], codexbar::settings::Language::English);
+        let tooltip = build_tooltip(&[claude], quotalis_core::settings::Language::English);
 
         let line = tooltip.lines().nth(1).expect("provider tooltip line");
         assert!(line.starts_with("Claude: 13% • Resets in Jun 10 at 3:00PM"));
@@ -1322,7 +1327,7 @@ mod tests {
         let mut claude = fake_snapshot("claude", "Claude", 13.0);
         claude.error = Some("network timeout".to_string());
 
-        let tooltip = build_tooltip(&[claude], codexbar::settings::Language::Japanese);
+        let tooltip = build_tooltip(&[claude], quotalis_core::settings::Language::Japanese);
 
         assert!(tooltip.contains("エラー"), "{tooltip}");
         assert!(!tooltip.contains(": error ("), "{tooltip}");
@@ -1334,10 +1339,14 @@ mod tests {
         claude.primary.resets_at =
             Some((chrono::Utc::now() + chrono::Duration::hours(2)).to_rfc3339());
 
-        let english_tooltip =
-            build_tooltip(&[claude.clone()], codexbar::settings::Language::English);
-        let japanese_tooltip =
-            build_tooltip(&[claude.clone()], codexbar::settings::Language::Japanese);
+        let english_tooltip = build_tooltip(
+            &[claude.clone()],
+            quotalis_core::settings::Language::English,
+        );
+        let japanese_tooltip = build_tooltip(
+            &[claude.clone()],
+            quotalis_core::settings::Language::Japanese,
+        );
 
         assert!(english_tooltip.contains("Resets in"), "{english_tooltip}");
         assert!(
@@ -1350,9 +1359,9 @@ mod tests {
         );
 
         let (_, english_label) =
-            provider_status_label(&claude, codexbar::settings::Language::English);
+            provider_status_label(&claude, quotalis_core::settings::Language::English);
         let (_, japanese_label) =
-            provider_status_label(&claude, codexbar::settings::Language::Japanese);
+            provider_status_label(&claude, quotalis_core::settings::Language::Japanese);
         assert!(english_label.contains("Resets in"), "{english_label}");
         assert!(japanese_label.contains("リセットまで"), "{japanese_label}");
     }

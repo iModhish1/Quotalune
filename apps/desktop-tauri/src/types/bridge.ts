@@ -19,11 +19,11 @@ export type SettingsTabId =
   | "about";
 
 /** Which Dashboard experience is selected -- exactly one is ever mounted.
- *  Mirrors `codexbar::settings::DashboardModeId`. */
+ *  Mirrors `quotalis_core::settings::DashboardModeId`. */
 export type DashboardModeId = "analytics2d" | "providers3d" | "hybrid";
 
 /** Dashboard rendering performance budget, independent of provider-refresh
- *  power settings. Mirrors `codexbar::settings::DashboardPerformancePreset`. */
+ *  power settings. Mirrors `quotalis_core::settings::DashboardPerformancePreset`. */
 export type DashboardPerformancePreset = "lowCpu" | "balanced" | "highFidelity";
 
 // ── Narrowed string-literal unions (persisted settings enums) ─────────

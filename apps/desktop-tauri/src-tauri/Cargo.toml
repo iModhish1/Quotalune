@@ -14,13 +14,13 @@ path = "src/main.rs"
 
 [features]
 default = []
-dev-channel = ["codexbar/dev-channel"]
+dev-channel = ["quotalis_core/dev-channel"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-codexbar = { path = "../../../rust" }
+quotalis_core = { path = "../../../rust" }
 chrono = { version = "0.4", features = ["serde"] }
 raw-window-handle = "0.6"
 serde = { version = "1", features = ["derive"] }

@@ -13,7 +13,7 @@ pub use commands::*;
 pub use window::FLOAT_BAR_CONFIG_CHANGED_EVENT;
 pub use window::FLOATBAR_LABEL;
 
-use codexbar::settings::Settings;
+use quotalis_core::settings::Settings;
 use tauri::{Emitter, Manager};
 
 /// Install the native z-order guard and reopen the floating bar on app start
@@ -161,16 +161,17 @@ impl SettingsPatch {
             settings.float_bar_enabled = v;
         }
         if let Some(v) = self.opacity {
-            settings.float_bar_opacity = codexbar::settings::clamp_float_bar_opacity(v);
+            settings.float_bar_opacity = quotalis_core::settings::clamp_float_bar_opacity(v);
         }
         if let Some(v) = self.scale {
-            settings.float_bar_scale = codexbar::settings::clamp_float_bar_scale(v);
+            settings.float_bar_scale = quotalis_core::settings::clamp_float_bar_scale(v);
         }
         if let Some(v) = &self.orientation {
-            settings.float_bar_orientation = codexbar::settings::normalize_float_bar_orientation(v);
+            settings.float_bar_orientation =
+                quotalis_core::settings::normalize_float_bar_orientation(v);
         }
         if let Some(v) = &self.style {
-            settings.float_bar_style = codexbar::settings::normalize_float_bar_style(v);
+            settings.float_bar_style = quotalis_core::settings::normalize_float_bar_style(v);
         }
         if let Some(v) = self.click_through {
             settings.float_bar_click_through = v;

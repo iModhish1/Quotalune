@@ -7,12 +7,12 @@ use super::{
 use crate::state::AppState;
 use crate::surface::SurfaceMode;
 use crate::surface_target::SurfaceTarget;
-use codexbar::core::{
+use quotalis_core::core::{
     FetchContext, ProviderAccountData, ProviderFetchResult, ProviderId, SourceMode, TokenAccount,
     instantiate_provider,
 };
-use codexbar::host::session::launch_block_reason;
-use codexbar::settings::{ApiKeys, Language, ManualCookies, Settings};
+use quotalis_core::host::session::launch_block_reason;
+use quotalis_core::settings::{ApiKeys, Language, ManualCookies, Settings};
 
 #[test]
 fn validate_surface_target_accepts_matching_target() {
@@ -79,23 +79,29 @@ fn external_url_validation_allows_only_http_urls() {
 #[test]
 fn credential_status_labels_do_not_include_error_details() {
     assert_eq!(
-        super::credential_file_status_label(codexbar::secure_file::SecureFileStatus::Missing),
+        super::credential_file_status_label(quotalis_core::secure_file::SecureFileStatus::Missing),
         "missing"
     );
     assert_eq!(
-        super::credential_file_status_label(codexbar::secure_file::SecureFileStatus::Plaintext),
+        super::credential_file_status_label(
+            quotalis_core::secure_file::SecureFileStatus::Plaintext
+        ),
         "plaintext"
     );
     assert_eq!(
-        super::credential_file_status_label(codexbar::secure_file::SecureFileStatus::Protected(
-            "windows-dpapi-user".to_string(),
-        )),
+        super::credential_file_status_label(
+            quotalis_core::secure_file::SecureFileStatus::Protected(
+                "windows-dpapi-user".to_string(),
+            )
+        ),
         "protected:windows-dpapi-user"
     );
     assert_eq!(
-        super::credential_file_status_label(codexbar::secure_file::SecureFileStatus::Unreadable(
-            "secret path / token".to_string(),
-        )),
+        super::credential_file_status_label(
+            quotalis_core::secure_file::SecureFileStatus::Unreadable(
+                "secret path / token".to_string(),
+            )
+        ),
         "unreadable"
     );
 }
@@ -124,8 +130,10 @@ fn command_inputs_reject_unknown_cookie_source_and_region_values() {
 fn apply_provider_order_dedupes_and_appends_unknown_canonical() {
     // Request only "codex" and "claude" — remaining canonical ids should
     // be appended after, preserving canonical order.
-    let order =
-        codexbar::settings::normalize_provider_order(&["codex".to_string(), "claude".to_string()]);
+    let order = quotalis_core::settings::normalize_provider_order(&[
+        "codex".to_string(),
+        "claude".to_string(),
+    ]);
     assert_eq!(order[0], "codex");
     assert_eq!(order[1], "claude");
     // Every canonical id appears exactly once.
@@ -134,7 +142,7 @@ fn apply_provider_order_dedupes_and_appends_unknown_canonical() {
     sorted.dedup();
     assert_eq!(sorted.len(), order.len());
     // Every canonical id is present.
-    let canonical = codexbar::core::ProviderId::all()
+    let canonical = quotalis_core::core::ProviderId::all()
         .iter()
         .map(|p| p.cli_name().to_string())
         .collect::<Vec<_>>();
@@ -145,7 +153,7 @@ fn apply_provider_order_dedupes_and_appends_unknown_canonical() {
 
 #[test]
 fn apply_provider_order_ignores_unknown_ids() {
-    let order = codexbar::settings::normalize_provider_order(&[
+    let order = quotalis_core::settings::normalize_provider_order(&[
         "not-a-provider".to_string(),
         "codex".to_string(),
     ]);
@@ -158,7 +166,7 @@ fn provider_summaries_reflect_settings_order() {
     // Deprecated providers (KimiK2, CrossModel) are soft-removed from the
     // Settings catalog unless already enabled, so the default Settings
     // surface omits them (upstream #2254).
-    let canonical_len = codexbar::core::ProviderId::all()
+    let canonical_len = quotalis_core::core::ProviderId::all()
         .iter()
         .filter(|p| !p.is_deprecated())
         .count();
@@ -174,7 +182,7 @@ fn provider_summaries_reflect_settings_order() {
 #[test]
 fn provider_catalog_preserves_partial_config_order() {
     let settings = Settings {
-        provider_order: codexbar::settings::normalize_provider_order(&[
+        provider_order: quotalis_core::settings::normalize_provider_order(&[
             "gemini".to_string(),
             "claude".to_string(),
             "codex".to_string(),
@@ -201,7 +209,7 @@ fn settings_snapshot_preserves_partial_config_order_for_enabled_providers() {
             .into_iter()
             .map(str::to_string)
             .collect(),
-        provider_order: codexbar::settings::normalize_provider_order(&[
+        provider_order: quotalis_core::settings::normalize_provider_order(&[
             "gemini".to_string(),
             "claude".to_string(),
             "codex".to_string(),
@@ -770,7 +778,7 @@ fn provider_detail_roundtrips_through_serde() {
 
 #[test]
 fn pace_stage_serializes_to_snake_case_string() {
-    use codexbar::core::PaceStage;
+    use quotalis_core::core::PaceStage;
     assert_eq!(super::pace_stage_str(PaceStage::OnTrack), "on_track");
     assert_eq!(
         super::pace_stage_str(PaceStage::SlightlyAhead),
@@ -858,7 +866,7 @@ fn provider_fetch_timeout_respects_context_web_timeout_with_cap() {
 fn provider_cache_upsert_replaces_existing_provider() {
     let metadata = instantiate_provider(ProviderId::Codex).metadata().clone();
     let result = ProviderFetchResult {
-        usage: codexbar::core::UsageSnapshot::new(codexbar::core::RateWindow::new(10.0)),
+        usage: quotalis_core::core::UsageSnapshot::new(quotalis_core::core::RateWindow::new(10.0)),
         cost: None,
         wayfinder_usage: None,
         source_label: "CLI".to_string(),
@@ -881,7 +889,7 @@ fn provider_cache_upsert_replaces_existing_provider() {
 fn provider_cache_prunes_disabled_providers() {
     let metadata = instantiate_provider(ProviderId::Codex).metadata().clone();
     let result = ProviderFetchResult {
-        usage: codexbar::core::UsageSnapshot::new(codexbar::core::RateWindow::new(10.0)),
+        usage: quotalis_core::core::UsageSnapshot::new(quotalis_core::core::RateWindow::new(10.0)),
         cost: None,
         wayfinder_usage: None,
         source_label: "CLI".to_string(),
@@ -911,7 +919,7 @@ fn superseded_refresh_generation_is_not_current() {
 fn hiding_codex_spark_rows_preserves_other_extra_usage() {
     let metadata = instantiate_provider(ProviderId::Codex).metadata().clone();
     let result = ProviderFetchResult {
-        usage: codexbar::core::UsageSnapshot::new(codexbar::core::RateWindow::new(10.0)),
+        usage: quotalis_core::core::UsageSnapshot::new(quotalis_core::core::RateWindow::new(10.0)),
         cost: None,
         wayfinder_usage: None,
         source_label: "CLI".to_string(),
@@ -941,7 +949,7 @@ fn hiding_codex_spark_rows_preserves_other_extra_usage() {
 fn claude_transient_auth_failure_preserves_first_last_good_snapshot() {
     let metadata = instantiate_provider(ProviderId::Claude).metadata().clone();
     let result = ProviderFetchResult {
-        usage: codexbar::core::UsageSnapshot::new(codexbar::core::RateWindow::new(42.0)),
+        usage: quotalis_core::core::UsageSnapshot::new(quotalis_core::core::RateWindow::new(42.0)),
         cost: None,
         wayfinder_usage: None,
         source_label: "OAuth".to_string(),
@@ -952,7 +960,7 @@ fn claude_transient_auth_failure_preserves_first_last_good_snapshot() {
         ProviderId::Claude,
         &metadata,
         "Unauthorized".to_string(),
-        codexbar::core::ProviderStateKind::NeedsAuthentication,
+        quotalis_core::core::ProviderStateKind::NeedsAuthentication,
     );
     let mut state = crate::state::AppState::new();
     state.provider_cache.push(good.clone());
@@ -971,7 +979,7 @@ fn claude_transient_auth_failure_preserves_first_last_good_snapshot() {
 fn claude_repeated_auth_failure_surfaces_error() {
     let metadata = instantiate_provider(ProviderId::Claude).metadata().clone();
     let result = ProviderFetchResult {
-        usage: codexbar::core::UsageSnapshot::new(codexbar::core::RateWindow::new(42.0)),
+        usage: quotalis_core::core::UsageSnapshot::new(quotalis_core::core::RateWindow::new(42.0)),
         cost: None,
         wayfinder_usage: None,
         source_label: "OAuth".to_string(),
@@ -982,7 +990,7 @@ fn claude_repeated_auth_failure_surfaces_error() {
         ProviderId::Claude,
         &metadata,
         "Unauthorized".to_string(),
-        codexbar::core::ProviderStateKind::NeedsAuthentication,
+        quotalis_core::core::ProviderStateKind::NeedsAuthentication,
     );
     let second_error = first_error.clone();
     let mut state = crate::state::AppState::new();
@@ -1006,7 +1014,7 @@ fn claude_repeated_auth_failure_surfaces_error() {
 fn claude_cli_parse_failure_keeps_last_good_every_time() {
     let metadata = instantiate_provider(ProviderId::Claude).metadata().clone();
     let result = ProviderFetchResult {
-        usage: codexbar::core::UsageSnapshot::new(codexbar::core::RateWindow::new(17.0)),
+        usage: quotalis_core::core::UsageSnapshot::new(quotalis_core::core::RateWindow::new(17.0)),
         cost: None,
         wayfinder_usage: None,
         source_label: "CLI".to_string(),
@@ -1017,7 +1025,7 @@ fn claude_cli_parse_failure_keeps_last_good_every_time() {
         ProviderId::Claude,
         &metadata,
         "Parse error: Empty output from Claude CLI".to_string(),
-        codexbar::core::ProviderStateKind::Unknown,
+        quotalis_core::core::ProviderStateKind::Unknown,
     );
     let mut state = crate::state::AppState::new();
     state.provider_cache.push(good.clone());
@@ -1041,7 +1049,7 @@ fn claude_cli_parse_failure_keeps_last_good_every_time() {
 fn claude_hard_credentials_missing_does_not_preserve_stale() {
     let metadata = instantiate_provider(ProviderId::Claude).metadata().clone();
     let result = ProviderFetchResult {
-        usage: codexbar::core::UsageSnapshot::new(codexbar::core::RateWindow::new(17.0)),
+        usage: quotalis_core::core::UsageSnapshot::new(quotalis_core::core::RateWindow::new(17.0)),
         cost: None,
         wayfinder_usage: None,
         source_label: "OAuth".to_string(),
@@ -1053,7 +1061,7 @@ fn claude_hard_credentials_missing_does_not_preserve_stale() {
         &metadata,
         "OAuth error: Claude OAuth credentials not found. Run `claude` to authenticate."
             .to_string(),
-        codexbar::core::ProviderStateKind::NeedsAuthentication,
+        quotalis_core::core::ProviderStateKind::NeedsAuthentication,
     );
     let mut state = crate::state::AppState::new();
     state.provider_cache.push(good);
@@ -1063,7 +1071,7 @@ fn claude_hard_credentials_missing_does_not_preserve_stale() {
     assert!(out.error.is_some());
     assert_eq!(
         out.error_state,
-        codexbar::core::ProviderStateKind::NeedsAuthentication,
+        quotalis_core::core::ProviderStateKind::NeedsAuthentication,
         "hard auth failure must carry its classification on the snapshot"
     );
 }
@@ -1089,7 +1097,7 @@ fn claude_error_message_explains_missing_sign_in() {
 
     assert_eq!(
         message,
-        "Claude sign-in was not found. Run `claude` once to authenticate, then refresh Claude in Win-CodexBar."
+        "Claude sign-in was not found. Run `claude` once to authenticate, then refresh Claude in QuotaArc."
     );
 }
 
@@ -1188,8 +1196,8 @@ fn chart_data_for_unknown_provider_is_empty() {
 #[test]
 fn japanese_provider_snapshot_localizes_weekly_label() {
     let metadata = instantiate_provider(ProviderId::Claude).metadata().clone();
-    let usage = codexbar::core::UsageSnapshot::new(codexbar::core::RateWindow::new(10.0))
-        .with_secondary(codexbar::core::RateWindow::new(20.0));
+    let usage = quotalis_core::core::UsageSnapshot::new(quotalis_core::core::RateWindow::new(10.0))
+        .with_secondary(quotalis_core::core::RateWindow::new(20.0));
     let result = ProviderFetchResult {
         usage,
         cost: None,
@@ -1211,13 +1219,13 @@ fn japanese_provider_snapshot_localizes_pace_reserve_description() {
     let metadata = instantiate_provider(ProviderId::Claude).metadata().clone();
     let now = Utc::now();
     // 7-day window, half elapsed, 40% used → 10% ahead of pace, will last to reset.
-    let secondary = codexbar::core::RateWindow::with_details(
+    let secondary = quotalis_core::core::RateWindow::with_details(
         40.0,
         Some(7 * 24 * 60),
         Some(now + Duration::minutes(7 * 24 * 60 / 2)),
         None,
     );
-    let usage = codexbar::core::UsageSnapshot::new(codexbar::core::RateWindow::new(10.0))
+    let usage = quotalis_core::core::UsageSnapshot::new(quotalis_core::core::RateWindow::new(10.0))
         .with_secondary(secondary);
     let result = ProviderFetchResult {
         usage,

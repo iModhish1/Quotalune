@@ -119,7 +119,7 @@ pub fn plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
 ///
 /// Call this in the Tauri `setup` closure after the plugin is initialised.
 pub fn register(app: &AppHandle) {
-    let settings = codexbar::settings::Settings::load();
+    let settings = quotalis_core::settings::Settings::load();
     let shortcut_str = &settings.global_shortcut;
 
     let Some(shortcut) = parse_shortcut(shortcut_str) else {

@@ -1,13 +1,13 @@
-//! Dashboard data bridge: exposes `codexbar::dashboard_data::DashboardSnapshot`
+//! Dashboard data bridge: exposes `quotalis_core::dashboard_data::DashboardSnapshot`
 //! (the one normalized data contract every Dashboard widget should consume)
 //! to the frontend as a single typed command. No widget-specific commands
 //! -- one snapshot, targeted by range/timezone/provider filter.
 
-use codexbar::dashboard_data::{
+use quotalis_core::dashboard_data::{
     self, DashboardRangeKind, DashboardSnapshot, DataAvailability, ProviderSummary,
     SpendDailyPoint, UsageDailyPoint,
 };
-use codexbar::history::HistoryStore;
+use quotalis_core::history::HistoryStore;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]

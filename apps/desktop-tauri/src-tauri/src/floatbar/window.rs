@@ -261,7 +261,7 @@ pub fn show(
     let builder = tauri::WebviewWindowBuilder::new(app, FLOATBAR_LABEL, url)
         .title(format!(
             "QuotaArc Float Bar{}",
-            codexbar::paths::channel_suffix()
+            quotalis_core::paths::channel_suffix()
         ))
         .inner_size(w, h)
         .decorations(false)

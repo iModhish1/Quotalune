@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use codexbar::core::ProviderId;
+use quotalis_core::core::ProviderId;
 
 use crate::surface::SurfaceMode;
 

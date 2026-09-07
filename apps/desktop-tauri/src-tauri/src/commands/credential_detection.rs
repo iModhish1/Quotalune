@@ -33,15 +33,15 @@ pub struct KiroStatus {
 }
 
 fn gemini_cli_credentials_path() -> Option<std::path::PathBuf> {
-    codexbar::host::session::gemini_cli_credentials_path()
+    quotalis_core::host::session::gemini_cli_credentials_path()
 }
 
 fn vertexai_credentials_path_raw() -> Option<std::path::PathBuf> {
-    codexbar::host::session::vertexai_credentials_path()
+    quotalis_core::host::session::vertexai_credentials_path()
 }
 
 fn jetbrains_detected_ide_paths() -> Vec<std::path::PathBuf> {
-    codexbar::host::session::jetbrains_detected_ide_paths()
+    quotalis_core::host::session::jetbrains_detected_ide_paths()
 }
 
 #[tauri::command]
@@ -124,7 +124,7 @@ pub fn set_jetbrains_ide_path(path: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn get_kiro_status() -> Result<KiroStatus, String> {
-    if let Some(path) = codexbar::providers::kiro::find_kiro_cli() {
+    if let Some(path) = quotalis_core::providers::kiro::find_kiro_cli() {
         Ok(KiroStatus {
             available: true,
             hint: Some(path.to_string_lossy().into_owned()),

@@ -1,8 +1,8 @@
 //! Upstream 0.53 Usage & Spend accounting bridge.
 
-use codexbar::cost_scanner::CostScanner;
-use codexbar::settings::Settings;
-use codexbar::spend_contract::{SpendContract, build_local_spend_contract_from_summary};
+use quotalis_core::cost_scanner::CostScanner;
+use quotalis_core::settings::Settings;
+use quotalis_core::spend_contract::{SpendContract, build_local_spend_contract_from_summary};
 
 #[tauri::command]
 pub async fn get_spend_contract(

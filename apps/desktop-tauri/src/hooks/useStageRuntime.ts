@@ -53,7 +53,7 @@ export function useStageRuntime({
   useEffect(() => {
     if (!enabled) return;
     void reloadSettings();
-    const unlistenPromise = listen("codexbar:settings-updated", reloadSettings);
+    const unlistenPromise = listen("quotalis:settings-updated", reloadSettings);
     return () => {
       void unlistenPromise.then((unlisten) => unlisten()).catch(() => {});
     };

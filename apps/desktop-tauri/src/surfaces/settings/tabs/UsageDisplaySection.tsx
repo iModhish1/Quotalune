@@ -126,7 +126,7 @@ export default function UsageDisplaySection({
           setError(reason instanceof Error ? reason.message : String(reason));
         });
     load();
-    const unlisten = listen("codexbar:settings-updated", load).catch(
+    const unlisten = listen("quotalis:settings-updated", load).catch(
       () => (() => {}) as () => void,
     );
     return () => {

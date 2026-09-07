@@ -50,7 +50,7 @@ export function useSettings(initial: SettingsSnapshot): UseSettingsReturn {
     // `Promise.resolve` tolerates test mocks that return a bare unlisten fn (or
     // undefined) instead of a promise; the `active` flag handles unmounting
     // before the listener finishes registering.
-    for (const eventName of ["settings-changed", "codexbar:settings-updated"]) {
+    for (const eventName of ["settings-changed", "quotalis:settings-updated"]) {
     Promise.resolve(
       listen(eventName, () => {
         getSettingsSnapshot()
@@ -83,7 +83,7 @@ export function useSettings(initial: SettingsSnapshot): UseSettingsReturn {
       setSettings(next);
       if (typeof window !== "undefined") {
         window.dispatchEvent(
-          new CustomEvent<SettingsSnapshot>("codexbar:settings-updated", {
+          new CustomEvent<SettingsSnapshot>("quotalis:settings-updated", {
             detail: next,
           }),
         );

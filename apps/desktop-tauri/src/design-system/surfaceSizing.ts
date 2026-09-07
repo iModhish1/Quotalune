@@ -1,6 +1,6 @@
 /**
  * QuotaArc V9 — TypeScript contract for the Rust-authoritative surface
- * layout runtime (`codexbar::surface_layout`).
+ * layout runtime (`quotalis_core::surface_layout`).
  *
  * This module deliberately contains NO geometry algorithm. Rust owns the
  * monitor work area, scale factor, physical/logical conversion, and native
@@ -24,7 +24,7 @@ export type SurfaceKindToken =
 
 export type SurfaceStateToken = "compact" | "hover" | "expanded";
 
-/** Mirror of `codexbar::surface_layout::ResolvedSurfaceLayout` (camelCase). */
+/** Mirror of `quotalis_core::surface_layout::ResolvedSurfaceLayout` (camelCase). */
 export interface ResolvedSurfaceLayoutDto {
   surface: SurfaceKindToken;
   state: SurfaceStateToken;

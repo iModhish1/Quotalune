@@ -67,7 +67,7 @@ export function usePrivacyMode(): boolean {
         .then((s: { privacyMode?: boolean }) => setPrivacy(Boolean(s.privacyMode)))
         .catch(() => {});
     load();
-    const unlisten = listen("codexbar:settings-updated", load);
+    const unlisten = listen("quotalis:settings-updated", load);
     return () => {
       void unlisten.then((fn) => fn()).catch(() => {});
     };

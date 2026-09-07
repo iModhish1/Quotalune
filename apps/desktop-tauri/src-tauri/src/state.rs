@@ -1,4 +1,4 @@
-use codexbar::core::ProviderId;
+use quotalis_core::core::ProviderId;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -129,7 +129,7 @@ pub struct AppState {
     pub is_refreshing: bool,
     pub update_state: UpdateState,
     /// Full update metadata from the last successful check.
-    pub update_info: Option<codexbar::updater::UpdateInfo>,
+    pub update_info: Option<quotalis_core::updater::UpdateInfo>,
     /// Unix-ms timestamp of the last completed update check.
     pub last_update_check_ms: Option<i64>,
     /// Path to a downloaded installer ready to apply.
@@ -137,7 +137,7 @@ pub struct AppState {
     /// Proof-harness configuration (set when `CODEXBAR_PROOF_MODE` is active).
     pub proof_config: Option<ProofConfig>,
     /// Persistent notification manager — tracks which alerts have fired to prevent spam.
-    pub notification_manager: codexbar::notifications::NotificationManager,
+    pub notification_manager: quotalis_core::notifications::NotificationManager,
     /// Instant when the tray panel was last shown — used to suppress
     /// spurious blur-dismiss during the show animation on Windows.
     pub last_shown_at: Option<std::time::Instant>,
@@ -193,7 +193,7 @@ impl AppState {
             last_update_check_ms: None,
             installer_path: None,
             proof_config: None,
-            notification_manager: codexbar::notifications::NotificationManager::new(),
+            notification_manager: quotalis_core::notifications::NotificationManager::new(),
             last_shown_at: None,
             last_blur_dismissed_at: None,
             startup_tray_blur_grace_until: None,

@@ -2,8 +2,8 @@
 
 use std::cmp::Ordering;
 
-use codexbar::core::ProviderId;
-use codexbar::settings::{MetricPreference, Settings};
+use quotalis_core::core::ProviderId;
+use quotalis_core::settings::{MetricPreference, Settings};
 
 use crate::commands::{ProviderUsageSnapshot, RateWindowSnapshot};
 
@@ -213,7 +213,7 @@ mod tests {
             source_label: "test".to_string(),
             updated_at: "2026-08-16T00:00:00Z".to_string(),
             error: None,
-            error_state: codexbar::core::ProviderStateKind::Ready,
+            error_state: quotalis_core::core::ProviderStateKind::Ready,
             pace: None,
             account_organization: None,
             tray_status_label: None,

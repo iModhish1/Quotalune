@@ -54,7 +54,7 @@ pub fn reorder_providers(
     ids: Vec<String>,
 ) -> Result<Vec<ProviderSummary>, String> {
     let mut settings = Settings::load();
-    settings.provider_order = codexbar::settings::normalize_provider_order(&ids);
+    settings.provider_order = quotalis_core::settings::normalize_provider_order(&ids);
     settings.save().map_err(|e| e.to_string())?;
     crate::tray_bridge::refresh_tray_presentation(&app);
     // Notify open surfaces (tray flyout, pop-out window) so their provider grid
@@ -128,8 +128,8 @@ pub fn remove_openrouter_management_api_key() -> Result<(), String> {
 
 /// Map a CLI-name string to a `ProviderId` whose cookie source is exposed in
 /// the UI. Returns `None` for providers without a user-facing cookie source.
-fn cookie_source_provider(provider_id: &str) -> Option<codexbar::core::ProviderId> {
-    use codexbar::core::ProviderId;
+fn cookie_source_provider(provider_id: &str) -> Option<quotalis_core::core::ProviderId> {
+    use quotalis_core::core::ProviderId;
     Some(match provider_id {
         "codex" => ProviderId::Codex,
         "claude" => ProviderId::Claude,
@@ -187,8 +187,8 @@ pub fn set_provider_cookie_source(provider_id: String, source: String) -> Result
     settings.save().map_err(|e| e.to_string())
 }
 
-fn region_provider(provider_id: &str) -> Option<codexbar::core::ProviderId> {
-    use codexbar::core::ProviderId;
+fn region_provider(provider_id: &str) -> Option<quotalis_core::core::ProviderId> {
+    use quotalis_core::core::ProviderId;
     Some(match provider_id {
         "alibaba" => ProviderId::Alibaba,
         "alibabatokenplan" => ProviderId::AlibabaTokenPlan,
@@ -200,8 +200,8 @@ fn region_provider(provider_id: &str) -> Option<codexbar::core::ProviderId> {
 
 pub(crate) fn provider_region_lookup(settings: &Settings, provider_id: &str) -> Option<String> {
     region_provider(provider_id).map(|id| {
-        if id == codexbar::core::ProviderId::MiniMax {
-            codexbar::providers::MiniMaxProvider::region_from_settings(Some(
+        if id == quotalis_core::core::ProviderId::MiniMax {
+            quotalis_core::providers::MiniMaxProvider::region_from_settings(Some(
                 settings.api_region(id),
             ))
             .settings_value()
@@ -240,8 +240,8 @@ pub fn set_provider_region(provider_id: String, region: String) -> Result<(), St
     settings.save().map_err(|e| e.to_string())
 }
 
-fn workspace_provider(provider_id: &str) -> Option<codexbar::core::ProviderId> {
-    use codexbar::core::ProviderId;
+fn workspace_provider(provider_id: &str) -> Option<quotalis_core::core::ProviderId> {
+    use quotalis_core::core::ProviderId;
     Some(match provider_id {
         "openaiapi" => ProviderId::OpenAIApi,
         "litellm" => ProviderId::LiteLLM,
@@ -258,7 +258,8 @@ pub fn set_provider_workspace_id(provider_id: String, workspace_id: String) -> R
     let id = workspace_provider(&provider_id).ok_or_else(|| {
         format!("Provider '{provider_id}' does not expose a workspace/project id")
     })?;
-    let workspace_id = codexbar::settings::validate_provider_workspace_value(id, &workspace_id)?;
+    let workspace_id =
+        quotalis_core::settings::validate_provider_workspace_value(id, &workspace_id)?;
     let mut settings = Settings::load();
     prevent_litellm_key_retargeting(id, settings.workspace_id(id), &workspace_id)?;
     settings.set_workspace_id(id, workspace_id);
@@ -266,7 +267,7 @@ pub fn set_provider_workspace_id(provider_id: String, workspace_id: String) -> R
 }
 
 fn prevent_litellm_key_retargeting(
-    id: codexbar::core::ProviderId,
+    id: quotalis_core::core::ProviderId,
     current_workspace_id: &str,
     next_workspace_id: &str,
 ) -> Result<(), String> {
@@ -279,12 +280,12 @@ fn prevent_litellm_key_retargeting(
 }
 
 fn litellm_workspace_change_allowed(
-    id: codexbar::core::ProviderId,
+    id: quotalis_core::core::ProviderId,
     current_workspace_id: &str,
     next_workspace_id: &str,
     has_saved_api_key: bool,
 ) -> Result<(), String> {
-    if id != codexbar::core::ProviderId::LiteLLM || next_workspace_id.trim().is_empty() {
+    if id != quotalis_core::core::ProviderId::LiteLLM || next_workspace_id.trim().is_empty() {
         return Ok(());
     }
 
@@ -302,7 +303,7 @@ fn litellm_workspace_change_allowed(
 
 #[cfg(test)]
 mod tests {
-    use codexbar::core::ProviderId;
+    use quotalis_core::core::ProviderId;
 
     use super::{litellm_workspace_change_allowed, workspace_provider};
 
@@ -364,8 +365,8 @@ pub fn get_provider_workspace_id(provider_id: String) -> Result<Option<String>, 
     Ok((!value.is_empty()).then_some(value))
 }
 
-fn gateway_provider(provider_id: &str) -> Option<codexbar::core::ProviderId> {
-    (provider_id == "wayfinder").then_some(codexbar::core::ProviderId::Wayfinder)
+fn gateway_provider(provider_id: &str) -> Option<quotalis_core::core::ProviderId> {
+    (provider_id == "wayfinder").then_some(quotalis_core::core::ProviderId::Wayfinder)
 }
 
 #[tauri::command]
@@ -373,7 +374,7 @@ pub fn set_provider_gateway_url(provider_id: String, gateway_url: String) -> Res
     let id = gateway_provider(&provider_id)
         .ok_or_else(|| format!("Provider '{provider_id}' does not expose a gateway URL"))?;
     let gateway_url = gateway_url.trim();
-    codexbar::providers::wayfinder::parse_gateway_url(gateway_url)
+    quotalis_core::providers::wayfinder::parse_gateway_url(gateway_url)
         .map_err(|error| error.to_string())?;
 
     let mut settings = Settings::load();
@@ -661,7 +662,7 @@ pub fn cookie_source_options_for(provider_id: &str, lang: Language) -> Vec<Cooki
 /// Empty vec means the provider has no region picker.
 pub fn region_options_for(provider_id: &str) -> Vec<RegionOption> {
     match provider_id {
-        "alibaba" => codexbar::providers::AlibabaRegion::ALL
+        "alibaba" => quotalis_core::providers::AlibabaRegion::ALL
             .iter()
             .map(|region| RegionOption {
                 value: region.settings_value().to_string(),
@@ -681,18 +682,18 @@ pub fn region_options_for(provider_id: &str) -> Vec<RegionOption> {
         "minimax" => vec![
             RegionOption {
                 value: "global".to_string(),
-                label: codexbar::providers::MiniMaxRegion::Global
+                label: quotalis_core::providers::MiniMaxRegion::Global
                     .display_name()
                     .to_string(),
             },
             RegionOption {
                 value: "cn".to_string(),
-                label: codexbar::providers::MiniMaxRegion::ChinaMainland
+                label: quotalis_core::providers::MiniMaxRegion::ChinaMainland
                     .display_name()
                     .to_string(),
             },
         ],
-        "alibabatokenplan" => codexbar::providers::AlibabaTokenPlanRegion::ALL
+        "alibabatokenplan" => quotalis_core::providers::AlibabaTokenPlanRegion::ALL
             .iter()
             .copied()
             .map(|region| RegionOption {

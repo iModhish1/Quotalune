@@ -10,7 +10,7 @@ use tauri::Manager;
 use super::open_url_in_browser;
 use crate::events;
 use crate::state::{AppState, UpdateState, UpdateStatePayload};
-use codexbar::updater::UpdateInfo;
+use quotalis_core::updater::UpdateInfo;
 
 #[tauri::command]
 pub fn get_update_state(state: tauri::State<'_, Mutex<AppState>>) -> UpdateStatePayload {
@@ -45,11 +45,11 @@ pub async fn check_for_updates(
     };
     events::emit_update_state_changed(&app, &checking_payload);
 
-    let settings = codexbar::settings::Settings::load();
+    let settings = quotalis_core::settings::Settings::load();
 
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(15),
-        codexbar::updater::check_for_updates_with_channel(settings.update_channel),
+        quotalis_core::updater::check_for_updates_with_channel(settings.update_channel),
     )
     .await;
 
@@ -131,7 +131,7 @@ fn set_downloading_state(
 
 fn spawn_download_task(app_handle: tauri::AppHandle, info: UpdateInfo) {
     tokio::spawn(async move {
-        let (tx, rx) = tokio::sync::watch::channel(codexbar::updater::UpdateState::Available);
+        let (tx, rx) = tokio::sync::watch::channel(quotalis_core::updater::UpdateState::Available);
         let progress_handle = spawn_download_progress_task(app_handle.clone(), rx);
         let final_payload = run_download_task(app_handle.clone(), info, tx).await;
 
@@ -142,12 +142,12 @@ fn spawn_download_task(app_handle: tauri::AppHandle, info: UpdateInfo) {
 
 fn spawn_download_progress_task(
     app: tauri::AppHandle,
-    mut rx: tokio::sync::watch::Receiver<codexbar::updater::UpdateState>,
+    mut rx: tokio::sync::watch::Receiver<quotalis_core::updater::UpdateState>,
 ) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         while rx.changed().await.is_ok() {
             let backend_state = rx.borrow().clone();
-            if let codexbar::updater::UpdateState::Downloading(progress) = backend_state {
+            if let quotalis_core::updater::UpdateState::Downloading(progress) = backend_state {
                 emit_download_progress(&app, progress);
             }
         }
@@ -167,10 +167,10 @@ fn emit_download_progress(app: &tauri::AppHandle, progress: f32) {
 async fn run_download_task(
     app: tauri::AppHandle,
     info: UpdateInfo,
-    tx: tokio::sync::watch::Sender<codexbar::updater::UpdateState>,
+    tx: tokio::sync::watch::Sender<quotalis_core::updater::UpdateState>,
 ) -> UpdateStatePayload {
     let download_handle =
-        tokio::spawn(async move { codexbar::updater::download_update(&info, tx).await });
+        tokio::spawn(async move { quotalis_core::updater::download_update(&info, tx).await });
 
     match download_handle.await {
         Ok(Ok(path)) => finish_download(&app, UpdateState::Ready, Some(path)),
@@ -214,8 +214,8 @@ pub(crate) fn apply_ready_update(state: &Mutex<AppState>) -> Result<(), String> 
             .ok_or("Missing SHA256 digest for downloaded update")?;
         (path, expected_sha256)
     };
-    codexbar::updater::verify_installer_hash(&path, &expected_sha256)?;
-    codexbar::updater::apply_update(&path)
+    quotalis_core::updater::verify_installer_hash(&path, &expected_sha256)?;
+    quotalis_core::updater::apply_update(&path)
 }
 
 #[tauri::command]

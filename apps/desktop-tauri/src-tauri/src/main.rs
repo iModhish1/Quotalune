@@ -57,7 +57,7 @@ struct LaunchBehavior {
 /// no (or an unknown/stale) remembered tab, and for any value
 /// `normalize_startup_destination` wouldn't otherwise recognize.
 pub(crate) fn resolve_startup_destination(
-    settings: &codexbar::settings::Settings,
+    settings: &quotalis_core::settings::Settings,
 ) -> Option<String> {
     const DEFAULT_TAB: &str = "providerDisplay";
     match settings.startup_destination.as_str() {
@@ -84,7 +84,7 @@ pub(crate) fn resolve_startup_destination(
 /// commits). Reloads settings fresh so a change made after this process
 /// started (via the Settings UI) is honored immediately.
 pub(crate) fn activate_configured_destination(app: &tauri::AppHandle) {
-    let current = codexbar::settings::Settings::load();
+    let current = quotalis_core::settings::Settings::load();
     match resolve_startup_destination(&current) {
         Some(tab) => {
             let _ = shell::settings_window::open_or_focus(app, &tab);
@@ -215,13 +215,13 @@ fn main() {
     // its cached handle never blocks the CLI's rotation on Windows.
     // SAFETY: runs before any thread spawns; no concurrent env access exists.
     unsafe { std::env::set_var("CODEXBAR_PROCESS", "desktop") };
-    codexbar::logging::install_panic_hook();
-    codexbar::logging::init(false, false).expect("failed to initialize logging");
+    quotalis_core::logging::install_panic_hook();
+    quotalis_core::logging::init(false, false).expect("failed to initialize logging");
 
     let proof_config = proof_harness::ProofConfig::from_env();
     let is_proof_mode = proof_config.is_some();
     let force_start_visible = std::env::var_os("CODEXBAR_START_VISIBLE").is_some();
-    let settings = codexbar::settings::Settings::load();
+    let settings = quotalis_core::settings::Settings::load();
     let launch = launch_behavior(
         force_start_visible,
         settings.start_minimized,
@@ -231,7 +231,7 @@ fn main() {
 
     let mut initial_state = AppState::new();
     initial_state.notification_manager =
-        codexbar::notifications::NotificationManager::load_persisted();
+        quotalis_core::notifications::NotificationManager::load_persisted();
     initial_state.proof_config = proof_config;
     // Proof-harness seed: CODEXBAR_SEED_USAGE_JSON plants one synthetic Codex
     // ProviderUsageSnapshot before the event loop and any WebView read. The
@@ -430,7 +430,7 @@ fn main() {
                 .path()
                 .resolve("quotaarc-icon-128.png", BaseDirectory::Resource)
             {
-                codexbar::notifications::configure_toast_icon(icon_path);
+                quotalis_core::notifications::configure_toast_icon(icon_path);
             }
             if let Some(window) = app.get_webview_window("main") {
                 shell::dwm::force_dark_caption(&window);
@@ -753,11 +753,11 @@ mod tests {
     fn settings_with(
         startup_destination: &str,
         last_settings_tab: Option<&str>,
-    ) -> codexbar::settings::Settings {
-        codexbar::settings::Settings {
+    ) -> quotalis_core::settings::Settings {
+        quotalis_core::settings::Settings {
             startup_destination: startup_destination.to_string(),
             last_settings_tab: last_settings_tab.map(str::to_string),
-            ..codexbar::settings::Settings::default()
+            ..quotalis_core::settings::Settings::default()
         }
     }
 

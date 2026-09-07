@@ -83,7 +83,7 @@ export default function SurfacesTab() {
     let alive=true;
     const load=()=>getSettingsSnapshot().then(s=>{if(alive)setCatalog(resolveCatalogTheme(s,"top").slug);}).catch(()=>{});
     void load();
-    const subscription=listen("codexbar:settings-updated",()=>{void load();}).catch(()=>()=>{});
+    const subscription=listen("quotalis:settings-updated",()=>{void load();}).catch(()=>()=>{});
     return()=>{alive=false;void subscription.then(stop=>stop());};
   },[]);
   const demo = useSurfaceDemo();

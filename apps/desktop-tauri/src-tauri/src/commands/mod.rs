@@ -1,16 +1,16 @@
 use std::collections::HashSet;
 use std::sync::Mutex;
 
-use codexbar::core::{
+use quotalis_core::core::{
     FetchContext, ProviderAccountData, ProviderFetchResult, ProviderId, ProviderMetadata,
     RateWindow, SourceMode, TokenAccount, TokenAccountOverride, TokenAccountStore,
     instantiate_provider,
 };
-use codexbar::locale;
-use codexbar::login::{self, LoginOutcome, LoginPhase};
-use codexbar::providers::copilot::{CopilotApi, device_flow::CopilotDeviceFlow};
-use codexbar::secure_file::{self, SecureFileStatus};
-use codexbar::settings::{
+use quotalis_core::locale;
+use quotalis_core::login::{self, LoginOutcome, LoginPhase};
+use quotalis_core::providers::copilot::{CopilotApi, device_flow::CopilotDeviceFlow};
+use quotalis_core::secure_file::{self, SecureFileStatus};
+use quotalis_core::settings::{
     ApiKeys, Language, ManualCookies, MetricPreference, Settings, ThemePreference, TrayIconMode,
     UpdateChannel,
 };

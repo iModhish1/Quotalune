@@ -424,7 +424,7 @@ export default function ResetDisplaySection() {
         })
         .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : String(cause)));
     load();
-    const unlisten = listen("codexbar:settings-updated", load).catch(() => (() => {}) as () => void);
+    const unlisten = listen("quotalis:settings-updated", load).catch(() => (() => {}) as () => void);
     return () => {
       void unlisten.then((fn) => fn());
     };

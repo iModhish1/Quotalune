@@ -1,5 +1,5 @@
 use clap::Parser;
-use codexbar::{
+use quotalis_core::{
     cli::{self, Cli, Commands, exit_codes},
     logging, wsl,
 };

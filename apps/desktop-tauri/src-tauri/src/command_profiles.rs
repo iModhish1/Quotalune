@@ -1,19 +1,19 @@
-//! Profile management commands: the Tauri surface of `codexbar::profiles`.
+//! Profile management commands: the Tauri surface of `quotalis_core::profiles`.
 //!
 //! Switching a profile is atomic from the caller's perspective: the store is
 //! updated and persisted, enabled providers / theme / surfaces are reconciled
 //! into settings, surfaces windows are reconciled, and the tray menu is
 //! rebuilt — then a single `profiles-changed` event notifies the frontend.
 
-use codexbar::profiles::{ProfileStore, ProviderAccount, QuotaArcProfile};
-use codexbar::settings::{Settings, ThemePreference};
+use quotalis_core::profiles::{ProfileStore, ProviderAccount, QuotaArcProfile};
+use quotalis_core::settings::{Settings, ThemePreference};
 use tauri::{AppHandle, Emitter};
 
 fn emit_changed(app: &AppHandle) {
     let _ = app.emit("profiles-changed", ());
     // Active-profile fields are projected into Settings; detached orbital
     // windows listen to this event and must re-resolve their theme immediately.
-    let _ = app.emit("codexbar:settings-updated", ());
+    let _ = app.emit("quotalis:settings-updated", ());
 }
 
 /// Reconcile global settings with the active profile: enabled providers,
@@ -210,7 +210,7 @@ pub fn update_profile(
     if let Some(catalog_theme) = catalog_theme {
         profile.catalog_theme = match catalog_theme {
             Some(slug) => Some(
-                codexbar::settings::canonical_catalog_theme(slug.trim())
+                quotalis_core::settings::canonical_catalog_theme(slug.trim())
                     .ok_or_else(|| format!("Unknown catalog theme: {slug}"))?,
             ),
             None => None,
@@ -262,7 +262,7 @@ pub fn add_account(
     if display_name.is_empty() {
         return Err("Account name cannot be empty".to_string());
     }
-    let Some(provider_id) = codexbar::core::ProviderId::from_cli_name(provider.trim()) else {
+    let Some(provider_id) = quotalis_core::core::ProviderId::from_cli_name(provider.trim()) else {
         return Err("Unknown provider".to_string());
     };
     let mut store = ProfileStore::load();
@@ -439,7 +439,7 @@ pub fn set_privacy_mode(app: AppHandle, enabled: bool) -> Result<(), String> {
     settings.hide_personal_info = settings.hide_personal_info || enabled;
     settings.save().map_err(|e| e.to_string())?;
     use tauri::Emitter;
-    let _ = app.emit("codexbar:settings-updated", ());
+    let _ = app.emit("quotalis:settings-updated", ());
     Ok(())
 }
 
@@ -451,14 +451,14 @@ fn apply_catalog_theme_scope(
 ) -> Result<bool, String> {
     let requested = slug.trim();
     let normalized = || {
-        codexbar::settings::canonical_catalog_theme(requested)
+        quotalis_core::settings::canonical_catalog_theme(requested)
             .ok_or_else(|| format!("Unknown catalog theme: {slug}"))
     };
 
     match scope {
         "global" => {
             settings.catalog_theme = if requested.is_empty() {
-                codexbar::settings::normalize_catalog_theme("")
+                quotalis_core::settings::normalize_catalog_theme("")
             } else {
                 normalized()?
             };
@@ -518,7 +518,7 @@ pub fn set_catalog_theme(
     }
     settings.save().map_err(|e| e.to_string())?;
     use tauri::Emitter;
-    let _ = app.emit("codexbar:settings-updated", ());
+    let _ = app.emit("quotalis:settings-updated", ());
     Ok(())
 }
 
@@ -540,7 +540,7 @@ pub fn set_usage_settings(
     settings.provider_usage_overrides = normalized_overrides;
     settings.save().map_err(|e| e.to_string())?;
     use tauri::Emitter;
-    let _ = app.emit("codexbar:settings-updated", ());
+    let _ = app.emit("quotalis:settings-updated", ());
     Ok(())
 }
 
@@ -548,9 +548,9 @@ pub fn set_usage_settings(
 pub fn set_provider_limit_presentation(
     app: AppHandle,
     provider: String,
-    presentation: Option<codexbar::settings::LimitPresentation>,
+    presentation: Option<quotalis_core::settings::LimitPresentation>,
 ) -> Result<(), String> {
-    let id = codexbar::core::ProviderId::from_cli_name(&provider)
+    let id = quotalis_core::core::ProviderId::from_cli_name(&provider)
         .ok_or_else(|| format!("unknown provider: {provider}"))?;
     if presentation.as_ref().is_some_and(|value| !value.is_valid()) {
         return Err("invalid limit presentation".into());
@@ -564,7 +564,7 @@ pub fn set_provider_limit_presentation(
         settings.provider_limit_presentation.remove(id.cli_name());
     }
     settings.save().map_err(|e| e.to_string())?;
-    app.emit("codexbar:settings-updated", ())
+    app.emit("quotalis:settings-updated", ())
         .map_err(|e| e.to_string())
 }
 
@@ -573,7 +573,7 @@ pub fn set_provider_limit_presentation(
 #[tauri::command]
 pub fn set_global_limit_presentation(
     app: AppHandle,
-    presentation: codexbar::settings::LimitPresentation,
+    presentation: quotalis_core::settings::LimitPresentation,
 ) -> Result<(), String> {
     if !presentation.is_valid() {
         return Err("invalid global limit presentation".into());
@@ -581,7 +581,7 @@ pub fn set_global_limit_presentation(
     let mut settings = Settings::load();
     settings.global_limit_presentation = presentation;
     settings.save().map_err(|e| e.to_string())?;
-    app.emit("codexbar:settings-updated", ())
+    app.emit("quotalis:settings-updated", ())
         .map_err(|e| e.to_string())
 }
 
@@ -593,7 +593,7 @@ pub fn set_global_limit_presentation(
 #[tauri::command]
 pub fn set_reset_presentation(
     app: AppHandle,
-    config: codexbar::settings::ResetPresentationSettings,
+    config: quotalis_core::settings::ResetPresentationSettings,
 ) -> Result<(), String> {
     if !config.is_valid() {
         return Err("invalid reset presentation configuration".into());
@@ -601,7 +601,7 @@ pub fn set_reset_presentation(
     let mut settings = Settings::load();
     settings.reset_presentation = config;
     settings.save().map_err(|e| e.to_string())?;
-    app.emit("codexbar:settings-updated", ())
+    app.emit("quotalis:settings-updated", ())
         .map_err(|e| e.to_string())
 }
 
@@ -611,7 +611,7 @@ pub fn set_reset_presentation(
 pub fn set_reset_presentation_surface_override(
     app: AppHandle,
     surface: String,
-    config: Option<codexbar::settings::ResetPresentationSettings>,
+    config: Option<quotalis_core::settings::ResetPresentationSettings>,
 ) -> Result<(), String> {
     if surface.is_empty() || surface.len() > 64 || surface.chars().any(char::is_control) {
         return Err("invalid surface id".into());
@@ -629,7 +629,7 @@ pub fn set_reset_presentation_surface_override(
         }
     }
     settings.save().map_err(|e| e.to_string())?;
-    app.emit("codexbar:settings-updated", ())
+    app.emit("quotalis:settings-updated", ())
         .map_err(|e| e.to_string())
 }
 
@@ -638,7 +638,7 @@ fn apply_limit_order(
     provider: &str,
     order: Option<Vec<String>>,
 ) -> Result<(), String> {
-    let id = codexbar::core::ProviderId::from_cli_name(provider)
+    let id = quotalis_core::core::ProviderId::from_cli_name(provider)
         .ok_or_else(|| format!("unknown provider: {provider}"))?;
     if let Some(mut ids) = order {
         if ids.len() > 128
@@ -668,7 +668,7 @@ pub fn set_provider_limit_order(
     let mut settings = Settings::load();
     apply_limit_order(&mut settings, &provider, order)?;
     settings.save().map_err(|e| e.to_string())?;
-    app.emit("codexbar:settings-updated", ())
+    app.emit("quotalis:settings-updated", ())
         .map_err(|e| e.to_string())
 }
 
@@ -677,7 +677,7 @@ fn apply_detail_window(
     provider: &str,
     selection: &str,
 ) -> Result<(), String> {
-    let id = codexbar::core::ProviderId::from_cli_name(provider)
+    let id = quotalis_core::core::ProviderId::from_cli_name(provider)
         .ok_or_else(|| format!("unknown provider: {provider}"))?;
     if !matches!(selection, "all" | "session" | "weekly" | "both" | "none") {
         return Err(format!("invalid detail window selection: {selection}"));
@@ -701,7 +701,7 @@ pub fn set_provider_detail_window(
     let mut settings = Settings::load();
     apply_detail_window(&mut settings, &provider, &selection)?;
     settings.save().map_err(|e| e.to_string())?;
-    app.emit("codexbar:settings-updated", ())
+    app.emit("quotalis:settings-updated", ())
         .map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -762,7 +762,7 @@ fn ordered_limits_preserve_other_providers_and_validate_before_mutation() {
 #[cfg(test)]
 #[test]
 fn limit_presentation_round_trips_and_rejects_invalid_variants() {
-    let presentation = codexbar::settings::LimitPresentation {
+    let presentation = quotalis_core::settings::LimitPresentation {
         shape: "ring".into(),
         content: "both".into(),
         direction: "reverse".into(),
@@ -780,20 +780,21 @@ fn limit_presentation_round_trips_and_rejects_invalid_variants() {
         serde_json::from_str(&serde_json::to_string(&settings).unwrap()).unwrap();
     assert_eq!(loaded.provider_limit_presentation["claude"], presentation);
     assert_eq!(loaded.global_limit_presentation, presentation);
-    let legacy: codexbar::settings::LimitPresentation = serde_json::from_value(serde_json::json!({
-        "shape":"horizontal","content":"both","direction":"forward"
-    }))
-    .unwrap();
+    let legacy: quotalis_core::settings::LimitPresentation =
+        serde_json::from_value(serde_json::json!({
+            "shape":"horizontal","content":"both","direction":"forward"
+        }))
+        .unwrap();
     assert_eq!(legacy.identity, "adaptive");
     assert!(
-        !codexbar::settings::LimitPresentation {
+        !quotalis_core::settings::LimitPresentation {
             shape: "invalid".into(),
             ..presentation.clone()
         }
         .is_valid()
     );
     assert!(
-        !codexbar::settings::LimitPresentation {
+        !quotalis_core::settings::LimitPresentation {
             identity: "invisible".into(),
             ..presentation
         }
@@ -805,17 +806,18 @@ fn normalize_usage_settings_input(
     global_mode: &str,
     provider_overrides: &std::collections::HashMap<String, String>,
 ) -> Result<(String, std::collections::HashMap<String, String>), String> {
-    let normalized_global = codexbar::settings::normalize_usage_display_mode(global_mode.trim())
-        .ok_or_else(|| format!("invalid usage display mode: {global_mode}"))?;
+    let normalized_global =
+        quotalis_core::settings::normalize_usage_display_mode(global_mode.trim())
+            .ok_or_else(|| format!("invalid usage display mode: {global_mode}"))?;
 
     let mut normalized_overrides = std::collections::HashMap::new();
     for (provider, mode) in provider_overrides {
-        let provider_id = codexbar::core::ProviderId::from_cli_name(provider.trim())
+        let provider_id = quotalis_core::core::ProviderId::from_cli_name(provider.trim())
             .ok_or_else(|| format!("unknown provider: {provider}"))?;
         if mode == "global" || mode.trim().is_empty() {
             continue; // Follow-global = remove the stored override.
         }
-        let normalized = codexbar::settings::normalize_usage_display_mode(mode)
+        let normalized = quotalis_core::settings::normalize_usage_display_mode(mode)
             .ok_or_else(|| format!("invalid usage mode: {mode}"))?;
         normalized_overrides.insert(provider_id.cli_name().to_string(), normalized);
     }
@@ -875,7 +877,7 @@ mod tests {
     #[test]
     fn apply_profile_maps_enabled_accounts_to_providers() {
         let settings = Settings::default();
-        let mut store = codexbar::profiles::migrate_from_legacy(&settings);
+        let mut store = quotalis_core::profiles::migrate_from_legacy(&settings);
         let claude = store
             .accounts
             .iter()
@@ -901,7 +903,7 @@ mod tests {
     #[test]
     fn apply_profile_carries_theme_and_surfaces() {
         let settings = Settings::default();
-        let mut store = codexbar::profiles::migrate_from_legacy(&settings);
+        let mut store = quotalis_core::profiles::migrate_from_legacy(&settings);
         store.profiles[0].theme = Some(ThemePreference::Light);
         store.profiles[0].catalog_theme = Some("01-obsidian-orbit".to_string());
         store.profiles[0].surfaces.top_arc = true;
@@ -989,8 +991,10 @@ mod tests {
         let second = QuotaArcProfile::new("Second");
         let second_id = second.id.clone();
         store.profiles.push(second);
-        let account =
-            codexbar::profiles::ProviderAccount::new(codexbar::core::ProviderId::Claude, "Work");
+        let account = quotalis_core::profiles::ProviderAccount::new(
+            quotalis_core::core::ProviderId::Claude,
+            "Work",
+        );
         let account_id = account.id.clone();
         store.accounts.push(account);
         (store, first_id, second_id, account_id)

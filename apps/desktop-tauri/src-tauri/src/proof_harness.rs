@@ -346,7 +346,7 @@ pub fn parse_providers_bundle(json: &str) -> Result<Vec<ProviderUsageSnapshot>, 
     let mut seen = std::collections::HashSet::new();
     let mut out = Vec::with_capacity(bundle.providers.len());
     for entry in &bundle.providers {
-        let provider_id = codexbar::core::ProviderId::from_cli_name(entry.provider.trim())
+        let provider_id = quotalis_core::core::ProviderId::from_cli_name(entry.provider.trim())
             .ok_or_else(|| format!("unknown provider '{}'", entry.provider))?;
         let stable_id = entry
             .account_id
@@ -363,11 +363,11 @@ pub fn parse_providers_bundle(json: &str) -> Result<Vec<ProviderUsageSnapshot>, 
         }
         let (error, error_state) = match entry.status.as_deref() {
             None | Some("ok" | "ready" | "attention") => {
-                (None, codexbar::core::ProviderStateKind::Ready)
+                (None, quotalis_core::core::ProviderStateKind::Ready)
             }
             Some("offline" | "unavailable") => (
                 Some("Proof fixture: usage unavailable".to_string()),
-                codexbar::core::ProviderStateKind::LocalRuntimeOffline,
+                quotalis_core::core::ProviderStateKind::LocalRuntimeOffline,
             ),
             Some(other) => return Err(format!("unknown status '{other}'")),
         };
@@ -791,7 +791,7 @@ mod bundle_tests {
         assert!(out[0].error.is_some());
         assert_eq!(
             out[0].error_state,
-            codexbar::core::ProviderStateKind::LocalRuntimeOffline
+            quotalis_core::core::ProviderStateKind::LocalRuntimeOffline
         );
     }
 

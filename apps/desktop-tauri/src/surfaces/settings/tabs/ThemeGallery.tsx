@@ -26,7 +26,7 @@ export default function ThemeGallery() {
     let alive=true;
     const load=()=>getSettingsSnapshot().then(s=>{if(alive){setSnapshot(s);setReady(true);}}).catch(e=>{if(alive)setError(String(e));});
     void load();
-    const subscription=listen("codexbar:settings-updated",()=>{void load();}).catch(()=>()=>{});
+    const subscription=listen("quotalis:settings-updated",()=>{void load();}).catch(()=>()=>{});
     return()=>{alive=false;void subscription.then(stop=>stop());};
   },[]);
   async function apply(slug:string){

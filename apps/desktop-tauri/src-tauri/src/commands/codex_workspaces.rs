@@ -1,7 +1,7 @@
 //! Codex local Workspaces snapshot bridge.
 
-use codexbar::codex_workspaces::{CodexLocalProjectUsageSnapshot, CodexWorkspacesIndex};
-use codexbar::settings::Settings;
+use quotalis_core::codex_workspaces::{CodexLocalProjectUsageSnapshot, CodexWorkspacesIndex};
+use quotalis_core::settings::Settings;
 use tauri::State;
 
 use crate::state::AppState;

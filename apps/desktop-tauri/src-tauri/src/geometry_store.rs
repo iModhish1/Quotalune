@@ -63,7 +63,7 @@ pub struct GeometryFile {
 fn geometry_path() -> Option<PathBuf> {
     // Reuse the same CodexBar config directory as Settings, so remembered
     // geometry lives alongside `settings.json` on every platform.
-    codexbar::settings::Settings::settings_path()
+    quotalis_core::settings::Settings::settings_path()
         .and_then(|p| p.parent().map(|parent| parent.join(GEOMETRY_FILENAME)))
 }
 
@@ -150,7 +150,7 @@ pub fn save_entry(key: &str, geometry: StoredGeometry) {
     file.version = GEOMETRY_VERSION;
     file.entries.insert(key.to_string(), geometry);
     if let Err(err) = save_file(&file) {
-        tracing::warn!(target: "codexbar::geometry", %err, "failed to persist geometry");
+        tracing::warn!(target: "quotalis_core::geometry", %err, "failed to persist geometry");
     }
 }
 
@@ -163,7 +163,7 @@ pub fn remove_entry(key: &str) {
     }
     file.version = GEOMETRY_VERSION;
     if let Err(err) = save_file(&file) {
-        tracing::warn!(target: "codexbar::geometry", %err, "failed to remove remembered geometry");
+        tracing::warn!(target: "quotalis_core::geometry", %err, "failed to remove remembered geometry");
     }
 }
 
@@ -211,7 +211,7 @@ pub fn save_size(key: &str, size: StoredSize) {
     file.version = GEOMETRY_VERSION;
     file.size_entries.insert(key.to_string(), size);
     if let Err(err) = save_file(&file) {
-        tracing::warn!(target: "codexbar::geometry", %err, "failed to persist size");
+        tracing::warn!(target: "quotalis_core::geometry", %err, "failed to persist size");
     }
 }
 

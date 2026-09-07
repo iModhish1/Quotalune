@@ -4,7 +4,7 @@
 //! metadata flows through the bridge. Active-account selection is clamped
 //! against the current list size before each response.
 
-use codexbar::core::{ProviderId, TokenAccount, TokenAccountStore, TokenAccountSupport};
+use quotalis_core::core::{ProviderId, TokenAccount, TokenAccountStore, TokenAccountSupport};
 use serde::Serialize;
 
 /// Bridge-friendly token account support descriptor for a provider.

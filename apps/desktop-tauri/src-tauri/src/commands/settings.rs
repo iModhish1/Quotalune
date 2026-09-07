@@ -20,16 +20,16 @@ pub struct SettingsUpdate {
     pub startup_destination: Option<String>,
     pub last_settings_tab: Option<String>,
     pub show_notifications: Option<bool>,
-    pub notification_events: Option<codexbar::settings::NotificationEventPreferences>,
-    pub notification_quiet_hours: Option<codexbar::settings::NotificationQuietHours>,
+    pub notification_events: Option<quotalis_core::settings::NotificationEventPreferences>,
+    pub notification_quiet_hours: Option<quotalis_core::settings::NotificationQuietHours>,
     pub sound_enabled: Option<bool>,
-    pub notification_sound_theme: Option<codexbar::settings::NotificationSoundTheme>,
-    pub notification_sound_paths: Option<codexbar::settings::NotificationSoundPaths>,
+    pub notification_sound_theme: Option<quotalis_core::settings::NotificationSoundTheme>,
+    pub notification_sound_paths: Option<quotalis_core::settings::NotificationSoundPaths>,
     pub high_usage_threshold: Option<f64>,
     pub critical_usage_threshold: Option<f64>,
     pub usage_step_notification_percent: Option<u8>,
     pub provider_usage_thresholds:
-        Option<std::collections::HashMap<String, codexbar::settings::UsageThresholdOverride>>,
+        Option<std::collections::HashMap<String, quotalis_core::settings::UsageThresholdOverride>>,
     pub predictive_pace_warning_enabled: Option<bool>,
     pub show_pace: Option<bool>,
     pub tray_icon_mode: Option<String>,
@@ -175,23 +175,23 @@ impl SettingsUpdate {
         }
         if let Some(v) = self.low_power_mode {
             settings.low_power_mode_preference = if v {
-                codexbar::settings::LowPowerModePreference::On
+                quotalis_core::settings::LowPowerModePreference::On
             } else {
-                codexbar::settings::LowPowerModePreference::Off
+                quotalis_core::settings::LowPowerModePreference::Off
             };
         }
         if let Some(value) = self.low_power_mode_preference.as_deref()
-            && let Some(preference) = codexbar::settings::LowPowerModePreference::parse(value)
+            && let Some(preference) = quotalis_core::settings::LowPowerModePreference::parse(value)
         {
             settings.low_power_mode_preference = preference;
         }
         if let Some(value) = self.dashboard_mode.as_deref()
-            && let Some(mode) = codexbar::settings::DashboardModeId::parse(value)
+            && let Some(mode) = quotalis_core::settings::DashboardModeId::parse(value)
         {
             settings.dashboard_mode = mode;
         }
         if let Some(value) = self.dashboard_performance_preset.as_deref()
-            && let Some(preset) = codexbar::settings::DashboardPerformancePreset::parse(value)
+            && let Some(preset) = quotalis_core::settings::DashboardPerformancePreset::parse(value)
         {
             settings.dashboard_performance_preset = preset;
         }
@@ -214,7 +214,8 @@ impl SettingsUpdate {
             settings.start_minimized = v;
         }
         if let Some(v) = self.startup_destination.as_deref() {
-            settings.startup_destination = codexbar::settings::normalize_startup_destination(v);
+            settings.startup_destination =
+                quotalis_core::settings::normalize_startup_destination(v);
         }
         if let Some(v) = self.last_settings_tab.as_deref() {
             settings.last_settings_tab =
@@ -232,10 +233,10 @@ impl SettingsUpdate {
             settings.theme = v;
         }
         if let Some(v) = self.logo_variant.as_deref() {
-            settings.logo_variant = codexbar::settings::normalize_logo_variant(v);
+            settings.logo_variant = quotalis_core::settings::normalize_logo_variant(v);
         }
         if let Some(v) = self.logo_scale_percent {
-            settings.logo_scale_percent = codexbar::settings::clamp_logo_scale_percent(v);
+            settings.logo_scale_percent = quotalis_core::settings::clamp_logo_scale_percent(v);
         }
         Ok(self)
     }
@@ -254,10 +255,10 @@ impl SettingsUpdate {
             settings.menu_bar_display_mode = v;
         }
         if let Some(v) = self.window_scale_percent {
-            settings.window_scale_percent = codexbar::settings::clamp_window_scale_percent(v);
+            settings.window_scale_percent = quotalis_core::settings::clamp_window_scale_percent(v);
         }
         if let Some(v) = self.tray_scale_percent {
-            settings.tray_scale_percent = codexbar::settings::clamp_tray_scale_percent(v);
+            settings.tray_scale_percent = quotalis_core::settings::clamp_tray_scale_percent(v);
         }
         if let Some(v) = self.switcher_shows_icons {
             settings.switcher_shows_icons = v;
@@ -296,7 +297,7 @@ impl SettingsUpdate {
             settings.notification_sound_theme = v;
         }
         if let Some(v) = self.notification_sound_paths.clone() {
-            codexbar::sound::validate_custom_sound_path_updates(
+            quotalis_core::sound::validate_custom_sound_path_updates(
                 &settings.notification_sound_paths,
                 &v,
             )
@@ -314,7 +315,7 @@ impl SettingsUpdate {
         }
         if let Some(values) = self.provider_usage_thresholds.clone() {
             settings.provider_usage_thresholds =
-                codexbar::settings::normalize_usage_threshold_overrides(values);
+                quotalis_core::settings::normalize_usage_threshold_overrides(values);
         }
         if let Some(v) = self.predictive_pace_warning_enabled {
             settings.predictive_pace_warning_enabled = v;
@@ -350,7 +351,7 @@ impl SettingsUpdate {
         }
         if let Some(v) = self.agent_session_ssh_hosts.clone() {
             settings.agent_session_ssh_hosts =
-                codexbar::agent_sessions::RemoteSessionFetcher::sanitized_hosts(&v);
+                quotalis_core::agent_sessions::RemoteSessionFetcher::sanitized_hosts(&v);
         }
         if let Some(v) = self.hooks_enabled {
             settings.hooks_enabled = v;
@@ -392,9 +393,10 @@ impl SettingsUpdate {
             settings.claude_daily_routines_usage_visible = v;
         }
         if let Some(v) = self.alibaba_token_plan_region.as_deref() {
-            let region = codexbar::providers::AlibabaTokenPlanRegion::from_settings_value(Some(v));
+            let region =
+                quotalis_core::providers::AlibabaTokenPlanRegion::from_settings_value(Some(v));
             settings.set_api_region(
-                codexbar::core::ProviderId::AlibabaTokenPlan,
+                quotalis_core::core::ProviderId::AlibabaTokenPlan,
                 region.as_str(),
             );
         }
@@ -428,7 +430,7 @@ impl SettingsUpdate {
 
     fn apply_to(self, settings: &mut Settings) -> Result<crate::floatbar::SettingsPatch, String> {
         if let Some(value) = self.low_power_mode_preference.as_deref()
-            && codexbar::settings::LowPowerModePreference::parse(value).is_none()
+            && quotalis_core::settings::LowPowerModePreference::parse(value).is_none()
         {
             return Err(format!("Invalid low power mode preference: {value}"));
         }
@@ -695,7 +697,9 @@ mod tests {
         let mut settings = Settings::default();
 
         SettingsUpdate {
-            notification_sound_theme: Some(codexbar::settings::NotificationSoundTheme::CodexBar),
+            notification_sound_theme: Some(
+                quotalis_core::settings::NotificationSoundTheme::CodexBar,
+            ),
             ..Default::default()
         }
         .apply_notification_settings(&mut settings)
@@ -703,7 +707,7 @@ mod tests {
 
         assert_eq!(
             settings.notification_sound_theme,
-            codexbar::settings::NotificationSoundTheme::CodexBar
+            quotalis_core::settings::NotificationSoundTheme::CodexBar
         );
     }
 
@@ -712,7 +716,7 @@ mod tests {
         let mut settings = Settings::default();
 
         SettingsUpdate {
-            notification_quiet_hours: Some(codexbar::settings::NotificationQuietHours {
+            notification_quiet_hours: Some(quotalis_core::settings::NotificationQuietHours {
                 enabled: true,
                 start_minute: 1_500,
                 end_minute: 1_440,
@@ -731,7 +735,7 @@ mod tests {
     fn apply_notification_settings_rejects_invalid_custom_sound() {
         let mut settings = Settings::default();
         let result = SettingsUpdate {
-            notification_sound_paths: Some(codexbar::settings::NotificationSoundPaths {
+            notification_sound_paths: Some(quotalis_core::settings::NotificationSoundPaths {
                 high_usage: Some("relative.wav".to_string()),
                 ..Default::default()
             }),
@@ -742,7 +746,7 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(
             settings.notification_sound_paths,
-            codexbar::settings::NotificationSoundPaths::default()
+            quotalis_core::settings::NotificationSoundPaths::default()
         );
     }
 }

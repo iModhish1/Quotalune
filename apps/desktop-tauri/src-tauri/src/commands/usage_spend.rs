@@ -1,7 +1,7 @@
 //! Usage & Spend settings tab: 7-day / 30-day local cost aggregates.
 
-use codexbar::cost_scanner::{CostScanner, CostSummary};
-use codexbar::spend_contract::{
+use quotalis_core::cost_scanner::{CostScanner, CostSummary};
+use quotalis_core::spend_contract::{
     SpendContract, build_local_spend_contract, build_local_spend_contract_from_summary,
 };
 use serde::Serialize;
@@ -134,7 +134,7 @@ fn build_usage_spend_summary_cached(
 }
 
 fn usage_spend_cache_key(cached: &[ProviderUsageSnapshot], selected_days: u32) -> String {
-    let settings = codexbar::settings::Settings::load();
+    let settings = quotalis_core::settings::Settings::load();
     let mut revisions: Vec<String> = cached
         .iter()
         .map(|snapshot| {
@@ -175,12 +175,12 @@ fn build_usage_spend_summary(
     cached: &[ProviderUsageSnapshot],
     selected_days: u32,
 ) -> UsageSpendSummary {
-    let settings = codexbar::settings::Settings::load();
+    let settings = quotalis_core::settings::Settings::load();
     let include_opencodex = settings.open_codex_usage_logs_enabled;
     let hide_native = settings.hide_native_codex_cost_when_open_codex_present;
 
     let codex_cache =
-        codexbar::core::JsonlScanner::load_cache(codexbar::core::ProviderId::Codex, None);
+        quotalis_core::core::JsonlScanner::load_cache(quotalis_core::core::ProviderId::Codex, None);
     let codex_stale = !codex_cache.days.is_empty() && codex_cache.previous_report.is_some();
     let codex_stale_updated_at = codex_stale
         .then(|| {
@@ -261,8 +261,8 @@ fn build_usage_spend_summary(
             .filter(|name| !name.is_empty())
             .map(str::to_string)
             .or_else(|| {
-                codexbar::core::ProviderId::from_cli_name(&provider_id).map(|id| {
-                    codexbar::core::instantiate_provider(id)
+                quotalis_core::core::ProviderId::from_cli_name(&provider_id).map(|id| {
+                    quotalis_core::core::instantiate_provider(id)
                         .metadata()
                         .display_name
                         .to_string()
@@ -323,8 +323,8 @@ fn build_usage_spend_summary(
                 }
             }
             "cursor" => {
-                let seven = codexbar::providers::cursor::local_csv::summarize(7);
-                let thirty = codexbar::providers::cursor::local_csv::summarize(30);
+                let seven = quotalis_core::providers::cursor::local_csv::summarize(7);
+                let thirty = quotalis_core::providers::cursor::local_csv::summarize(30);
                 if thirty.row_count > 0 {
                     SpendValues {
                         seven_day: (seven.row_count > 0).then_some(seven.total_cost_usd),
@@ -340,8 +340,8 @@ fn build_usage_spend_summary(
                 }
             }
             "grok" => {
-                let seven = codexbar::providers::grok::local_sessions::summarize(7);
-                let thirty = codexbar::providers::grok::local_sessions::summarize(30);
+                let seven = quotalis_core::providers::grok::local_sessions::summarize(7);
+                let thirty = quotalis_core::providers::grok::local_sessions::summarize(30);
                 let mut spend = cached_spend(cached_snapshot);
                 spend.seven_day_tokens = (seven.session_count > 0).then_some(seven.total_tokens);
                 spend.thirty_day_tokens = (thirty.session_count > 0).then_some(thirty.total_tokens);
@@ -351,8 +351,8 @@ fn build_usage_spend_summary(
                 spend
             }
             "antigravity" => {
-                let seven = codexbar::providers::antigravity::local_sessions::summarize(7);
-                let thirty = codexbar::providers::antigravity::local_sessions::summarize(30);
+                let seven = quotalis_core::providers::antigravity::local_sessions::summarize(7);
+                let thirty = quotalis_core::providers::antigravity::local_sessions::summarize(30);
                 let mut spend = cached_spend(cached_snapshot);
                 spend.seven_day_tokens = (seven.session_count > 0).then_some(seven.total_tokens);
                 spend.thirty_day_tokens = (thirty.session_count > 0).then_some(thirty.total_tokens);
@@ -417,7 +417,7 @@ fn build_usage_spend_summary(
     UsageSpendSummary { rows, contract }
 }
 
-fn total_token_mix(mix: &codexbar::spend_contract::SpendTokenMix) -> Option<u64> {
+fn total_token_mix(mix: &quotalis_core::spend_contract::SpendTokenMix) -> Option<u64> {
     let values = [
         mix.input_tokens,
         mix.output_tokens,

@@ -9,8 +9,8 @@
 //! Recording is best-effort: history failures must never break the
 //! provider refresh path.
 
-use codexbar::history::{HistoryStore, UsageSample};
-use codexbar::profiles::ProfileStore;
+use quotalis_core::history::{HistoryStore, UsageSample};
+use quotalis_core::profiles::ProfileStore;
 
 use crate::commands::ProviderUsageSnapshot;
 
@@ -104,8 +104,10 @@ fn samples_for_snapshot(snapshot: &ProviderUsageSnapshot) -> Option<Vec<UsageSam
     });
 
     let mut samples = Vec::new();
-    let selected =
-        crate::usage_metric::selected_usage_window(snapshot, &codexbar::settings::Settings::load());
+    let selected = crate::usage_metric::selected_usage_window(
+        snapshot,
+        &quotalis_core::settings::Settings::load(),
+    );
     samples.push(sample_for_window(
         &account_key,
         &snapshot.provider_id,
@@ -171,7 +173,7 @@ pub(crate) fn record_snapshot(snapshot: &ProviderUsageSnapshot) {
 /// Best-effort retention prune at startup.
 pub(crate) fn prune_on_startup() {
     let store = store();
-    if let Err(error) = store.prune(codexbar::history::DEFAULT_RETENTION_DAYS) {
+    if let Err(error) = store.prune(quotalis_core::history::DEFAULT_RETENTION_DAYS) {
         tracing::warn!(%error, "history prune failed");
     }
 }

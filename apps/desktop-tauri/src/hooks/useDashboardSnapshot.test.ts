@@ -76,4 +76,26 @@ describe("useDashboardSnapshot", () => {
     refreshHandler?.();
     await waitFor(() => expect(tauriMocks.getDashboardSnapshot).toHaveBeenCalledTimes(2));
   });
+
+  it("threads a provider filter through to the bridge call", async () => {
+    tauriMocks.getDashboardSnapshot.mockResolvedValue(snapshot());
+    const { result } = renderHook(() => useDashboardSnapshot("last7Days", undefined, ["codex"]));
+    await waitFor(() => expect(result.current.snapshot).not.toBeNull());
+    expect(tauriMocks.getDashboardSnapshot).toHaveBeenCalledWith({
+      range: "last7Days",
+      timezone: undefined,
+      providers: ["codex"],
+    });
+  });
+
+  it("omits the provider filter when empty", async () => {
+    tauriMocks.getDashboardSnapshot.mockResolvedValue(snapshot());
+    const { result } = renderHook(() => useDashboardSnapshot("last7Days", undefined, []));
+    await waitFor(() => expect(result.current.snapshot).not.toBeNull());
+    expect(tauriMocks.getDashboardSnapshot).toHaveBeenCalledWith({
+      range: "last7Days",
+      timezone: undefined,
+      providers: undefined,
+    });
+  });
 });

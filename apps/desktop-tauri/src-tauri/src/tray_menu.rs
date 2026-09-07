@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use crate::commands::ProviderCatalogEntry;
-use codexbar::locale::{self, LocaleKey};
-use codexbar::settings::Language;
+use quotalis_core::locale::{self, LocaleKey};
+use quotalis_core::settings::Language;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct TrayMenuEntry {

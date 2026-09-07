@@ -1,8 +1,8 @@
-use codexbar::agent_sessions::{
+use quotalis_core::agent_sessions::{
     AgentSession, AgentSessionDiscovery, AgentSessionDiscoveryMode, AgentSessionDiscoveryResult,
     SessionFocusResult, focus_session,
 };
-use codexbar::settings::Settings;
+use quotalis_core::settings::Settings;
 
 #[tauri::command]
 pub async fn list_agent_sessions() -> AgentSessionDiscoveryResult {

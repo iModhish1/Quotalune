@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use uuid::Uuid;
 
-use codexbar::codex_accounts::{
+use quotalis_core::codex_accounts::{
     AccountStore, CodexAccount, CodexAccountApi, CodexAccountManager, CodexAccountManagerError,
     CodexApiError, CodexSwitchResult, SnapshotStore, restart_codex_desktop,
 };
@@ -221,7 +221,7 @@ pub async fn codex_account_switch(
 pub async fn codex_account_fetch(
     app: tauri::AppHandle,
     id: String,
-) -> Result<codexbar::codex_accounts::AccountUsageSnapshot, String> {
+) -> Result<quotalis_core::codex_accounts::AccountUsageSnapshot, String> {
     let accounts = load_codex_accounts()?;
     let target = accounts
         .iter()
@@ -254,7 +254,7 @@ pub async fn codex_account_fetch(
 
 #[tauri::command]
 pub fn codex_account_snapshots()
--> Result<HashMap<Uuid, codexbar::codex_accounts::AccountUsageSnapshot>, String> {
+-> Result<HashMap<Uuid, quotalis_core::codex_accounts::AccountUsageSnapshot>, String> {
     SnapshotStore::new().load().map_err(|e| e.to_string())
 }
 
@@ -310,7 +310,7 @@ fn into_api_message(error: CodexApiError) -> String {
 #[serde(rename_all = "camelCase")]
 pub struct CodexAccountsStateBridge {
     pub accounts: Vec<CodexAccount>,
-    pub snapshots: HashMap<Uuid, codexbar::codex_accounts::AccountUsageSnapshot>,
+    pub snapshots: HashMap<Uuid, quotalis_core::codex_accounts::AccountUsageSnapshot>,
 }
 
 #[tauri::command]
@@ -336,10 +336,10 @@ mod tests {
             Some("auth0|acct".to_string()),
             Some("acct".to_string()),
             std::path::PathBuf::from("/tmp/fake-home"),
-            codexbar::codex_accounts::CodexAccountSource::ManagedByApp,
-            codexbar::codex_accounts::utc_now(),
-            codexbar::codex_accounts::utc_now(),
-            Some(codexbar::codex_accounts::utc_now()),
+            quotalis_core::codex_accounts::CodexAccountSource::ManagedByApp,
+            quotalis_core::codex_accounts::utc_now(),
+            quotalis_core::codex_accounts::utc_now(),
+            Some(quotalis_core::codex_accounts::utc_now()),
         )
     }
 

@@ -2,10 +2,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
-use codexbar::core::{
+use quotalis_core::core::{
     AdaptiveRefreshInput, AdaptiveRefreshReason, ThermalPressure, next_delay as adaptive_next_delay,
 };
-use codexbar::settings::Settings;
+use quotalis_core::settings::Settings;
 
 const AUTO_REFRESH_POLL_INTERVAL: Duration = Duration::from_secs(15);
 
@@ -263,7 +263,7 @@ mod tests {
         assert_eq!(automatic_interval(None, true), None);
 
         let settings = Settings {
-            low_power_mode_preference: codexbar::settings::LowPowerModePreference::On,
+            low_power_mode_preference: quotalis_core::settings::LowPowerModePreference::On,
             adaptive_refresh: false,
             refresh_interval_secs: 300,
             ..Default::default()

@@ -48,7 +48,7 @@ export default function ProviderIdentityGallery(){
       setStructureThemeName(catalogBySlug(slug)?.name??slug);
     }).catch(cause=>{if(alive)setError(String(cause));});
     void load();
-    const subscription=listen("codexbar:settings-updated",()=>void load()).catch(()=>()=>{});
+    const subscription=listen("quotalis:settings-updated",()=>void load()).catch(()=>()=>{});
     return()=>{alive=false;void subscription.then(stop=>stop());};
   },[]);
   const composition=useMemo(()=>resolveVisualComposition({

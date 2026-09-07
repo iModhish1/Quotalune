@@ -32,7 +32,7 @@ pub struct ProviderDetail {
     // Error / state.
     pub last_error: Option<String>,
     /// Backend-classified availability state for the latest refresh.
-    pub error_state: Option<codexbar::core::ProviderStateKind>,
+    pub error_state: Option<quotalis_core::core::ProviderStateKind>,
 
     // URLs for quick-actions (button visibility).
     pub dashboard_url: Option<String>,
@@ -65,9 +65,9 @@ pub(crate) fn build_provider_detail(provider_id: &str) -> Result<ProviderDetail,
 
     let provider = instantiate_provider(id);
     let metadata = provider.metadata();
-    let dashboard_url = if id == codexbar::core::ProviderId::MiniMax {
+    let dashboard_url = if id == quotalis_core::core::ProviderId::MiniMax {
         Some(
-            codexbar::providers::MiniMaxProvider::dashboard_url_for_region(Some(
+            quotalis_core::providers::MiniMaxProvider::dashboard_url_for_region(Some(
                 settings.api_region(id),
             )),
         )

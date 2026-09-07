@@ -4,7 +4,7 @@
 //! changes keep persisted settings in sync, while the resize command applies a
 //! new size and the native interaction state together.
 
-use codexbar::settings::{Settings, clamp_float_bar_opacity, normalize_float_bar_orientation};
+use quotalis_core::settings::{Settings, clamp_float_bar_opacity, normalize_float_bar_orientation};
 use tauri::{AppHandle, Manager};
 
 use super::window as floatbar_window;

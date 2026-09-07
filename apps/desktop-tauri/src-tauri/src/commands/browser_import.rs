@@ -18,7 +18,7 @@ pub struct DetectedBrowserBridge {
 /// DPAPI is unavailable; the UI should hide/disable the import button in that case.
 #[tauri::command]
 pub fn list_detected_browsers() -> Vec<DetectedBrowserBridge> {
-    use codexbar::browser::detection::BrowserDetector;
+    use quotalis_core::browser::detection::BrowserDetector;
 
     BrowserDetector::detect_all()
         .into_iter()
@@ -42,15 +42,15 @@ pub fn import_browser_cookies(
     provider_id: String,
     browser_type: String,
 ) -> Result<Vec<CookieInfoBridge>, String> {
-    use codexbar::browser::cookies::{CookieError, CookieExtractor};
-    use codexbar::browser::detection::BrowserDetector;
+    use quotalis_core::browser::cookies::{CookieError, CookieExtractor};
+    use quotalis_core::browser::detection::BrowserDetector;
 
     // Resolve the provider to get its cookie domain.
     let pid = parse_provider_arg(&provider_id)?;
 
     let settings = Settings::load();
-    let domain = if pid == codexbar::core::ProviderId::MiniMax {
-        codexbar::providers::MiniMaxProvider::cookie_domain_for_region(Some(
+    let domain = if pid == quotalis_core::core::ProviderId::MiniMax {
+        quotalis_core::providers::MiniMaxProvider::cookie_domain_for_region(Some(
             settings.api_region(pid),
         ))
     } else {
@@ -90,8 +90,8 @@ pub fn import_browser_cookies(
 }
 
 /// Map `BrowserType` to a stable lowercase string key used in the IPC bridge.
-fn browser_type_key(bt: codexbar::browser::detection::BrowserType) -> &'static str {
-    use codexbar::browser::detection::BrowserType;
+fn browser_type_key(bt: quotalis_core::browser::detection::BrowserType) -> &'static str {
+    use quotalis_core::browser::detection::BrowserType;
     match bt {
         BrowserType::Chrome => "chrome",
         BrowserType::Edge => "edge",

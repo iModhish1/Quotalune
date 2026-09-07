@@ -10,7 +10,7 @@
 //! hides the surface and restores it afterwards. The watcher runs only while
 //! at least one surface is visible.
 
-use codexbar::settings::Settings;
+use quotalis_core::settings::Settings;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
@@ -51,12 +51,12 @@ fn current_surface_state(label: &str) -> SurfaceState {
         .unwrap_or(SurfaceState::Compact)
 }
 
-use codexbar::surface_layout::{
+use quotalis_core::surface_layout::{
     AnchorEdge, LayoutInput, ResolvedSurfaceLayout, SurfaceKind, SurfaceState,
 };
 
 /// THE sizing path: resolve a surface layout through the authoritative
-/// `codexbar::surface_layout` runtime using THIS window's monitor work area
+/// `quotalis_core::surface_layout` runtime using THIS window's monitor work area
 /// and scale factor. The webview never computes window geometry; it only
 /// sends state and provider-count data.
 fn resolved_layout(
@@ -80,7 +80,7 @@ fn resolved_layout(
         SurfaceKind::Taskbar => AnchorEdge::Bottom,
         SurfaceKind::Top => AnchorEdge::Top,
         SurfaceKind::Edge => {
-            let side = codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
+            let side = quotalis_core::settings::normalize_edge_arc_side(&settings.edge_arc_side);
             if side == "left" {
                 AnchorEdge::Left
             } else {
@@ -124,7 +124,7 @@ fn apply_surface_layout(
     let _ = resize_surface(window, w, h, click_through);
     match surface {
         SurfaceKind::Edge => {
-            let side = codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
+            let side = quotalis_core::settings::normalize_edge_arc_side(&settings.edge_arc_side);
             position_edge_arc(window, &side);
         }
         SurfaceKind::Top => {
@@ -348,7 +348,7 @@ fn position_edge_arc(window: &tauri::WebviewWindow, side: &str) {
 /// Show (or reapply attributes to) the Edge Arc window.
 pub fn show_edge_arc(app: &tauri::AppHandle) -> Result<(), String> {
     let settings = Settings::load();
-    let side = codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
+    let side = quotalis_core::settings::normalize_edge_arc_side(&settings.edge_arc_side);
 
     if let Some(window) = app.get_webview_window(EDGE_ARC_LABEL) {
         apply_edge_arc_attrs(&window, &settings);
@@ -630,7 +630,7 @@ fn position_top_arc_after_drag(window: &tauri::WebviewWindow) {
     let scale = window.scale_factor().unwrap_or(1.0).max(0.01);
     let w = size.width as f64 / scale;
     let h = size.height as f64 / scale;
-    let anchor = codexbar::settings::normalize_flow_surface_anchor(
+    let anchor = quotalis_core::settings::normalize_flow_surface_anchor(
         &settings.top_arc_form,
         &settings.top_arc_anchor,
     );
@@ -875,7 +875,7 @@ pub fn apply_state(app: &tauri::AppHandle, settings: &Settings) -> Result<(), St
         }
     } else if let Some(w) = app.get_webview_window(EDGE_ARC_LABEL) {
         apply_edge_arc_attrs(&w, settings);
-        let side = codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
+        let side = quotalis_core::settings::normalize_edge_arc_side(&settings.edge_arc_side);
         position_edge_arc(&w, &side);
         apply_always_on_top(&w);
     }
@@ -981,7 +981,8 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) -
             if let Some(webview) = window.app_handle().get_webview_window(label) {
                 let settings = Settings::load();
                 if label == EDGE_ARC_LABEL {
-                    let side = codexbar::settings::normalize_edge_arc_side(&settings.edge_arc_side);
+                    let side =
+                        quotalis_core::settings::normalize_edge_arc_side(&settings.edge_arc_side);
                     position_edge_arc(&webview, &side);
                     apply_edge_arc_attrs(&webview, &settings);
                 } else {
@@ -1186,7 +1187,7 @@ pub async fn update_surface_settings(
 #[derive(serde::Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SurfaceSettingsDto {
-    pub interactions: codexbar::settings::interactions::SurfaceInteractions,
+    pub interactions: quotalis_core::settings::interactions::SurfaceInteractions,
     pub edge_arc_enabled: bool,
     pub edge_arc_side: String,
     pub edge_arc_opacity: u8,
@@ -1241,7 +1242,7 @@ pub fn get_surface_settings() -> SurfaceSettingsDto {
 #[derive(serde::Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase", default)]
 pub struct SurfaceSettingsPatch {
-    pub interactions: Option<codexbar::settings::interactions::SurfaceInteractions>,
+    pub interactions: Option<quotalis_core::settings::interactions::SurfaceInteractions>,
     pub edge_arc_enabled: Option<bool>,
     pub edge_arc_side: Option<String>,
     pub edge_arc_opacity: Option<u8>,
@@ -1273,13 +1274,13 @@ impl SurfaceSettingsPatch {
             s.edge_arc_enabled = v;
         }
         if let Some(v) = &self.edge_arc_side {
-            s.edge_arc_side = codexbar::settings::normalize_edge_arc_side(v);
+            s.edge_arc_side = quotalis_core::settings::normalize_edge_arc_side(v);
         }
         if let Some(v) = self.edge_arc_opacity {
-            s.edge_arc_opacity = codexbar::settings::clamp_surface_opacity(v);
+            s.edge_arc_opacity = quotalis_core::settings::clamp_surface_opacity(v);
         }
         if let Some(v) = self.edge_arc_scale {
-            s.edge_arc_scale = codexbar::settings::clamp_surface_scale(v);
+            s.edge_arc_scale = quotalis_core::settings::clamp_surface_scale(v);
         }
         if let Some(v) = self.edge_arc_click_through {
             s.edge_arc_click_through = v;
@@ -1291,31 +1292,31 @@ impl SurfaceSettingsPatch {
             s.top_arc_enabled = v;
         }
         if let Some(v) = self.top_arc_opacity {
-            s.top_arc_opacity = codexbar::settings::clamp_surface_opacity(v);
+            s.top_arc_opacity = quotalis_core::settings::clamp_surface_opacity(v);
         }
         if let Some(v) = self.top_arc_scale {
-            s.top_arc_scale = codexbar::settings::clamp_surface_scale(v);
+            s.top_arc_scale = quotalis_core::settings::clamp_surface_scale(v);
         }
         if let Some(v) = &self.top_arc_placement {
-            s.top_arc_placement = codexbar::settings::normalize_top_arc_placement(v);
+            s.top_arc_placement = quotalis_core::settings::normalize_top_arc_placement(v);
         }
         if let Some(v) = &self.top_arc_form {
-            s.top_arc_form = codexbar::settings::normalize_flow_surface_form(v);
-            s.top_arc_anchor = codexbar::settings::normalize_flow_surface_anchor(
+            s.top_arc_form = quotalis_core::settings::normalize_flow_surface_form(v);
+            s.top_arc_anchor = quotalis_core::settings::normalize_flow_surface_anchor(
                 &s.top_arc_form,
                 &s.top_arc_anchor,
             );
         }
         if let Some(v) = &self.top_arc_anchor {
             s.top_arc_anchor =
-                codexbar::settings::normalize_flow_surface_anchor(&s.top_arc_form, v);
+                quotalis_core::settings::normalize_flow_surface_anchor(&s.top_arc_form, v);
         }
         if let Some(v) = self.top_arc_auto_hide {
             s.top_arc_auto_hide = v;
         }
         if let Some(v) = self.top_arc_auto_hide_delay_ms {
             s.top_arc_auto_hide_delay_ms =
-                codexbar::settings::clamp_flow_surface_auto_hide_delay(v);
+                quotalis_core::settings::clamp_flow_surface_auto_hide_delay(v);
         }
         if let Some(v) = self.top_arc_click_through {
             s.top_arc_click_through = v;
@@ -1327,7 +1328,7 @@ impl SurfaceSettingsPatch {
             s.taskbar_arc_enabled = v;
         }
         if let Some(v) = self.taskbar_arc_opacity {
-            s.taskbar_arc_opacity = codexbar::settings::clamp_surface_opacity(v);
+            s.taskbar_arc_opacity = quotalis_core::settings::clamp_surface_opacity(v);
         }
         if let Some(v) = self.taskbar_arc_click_through {
             s.taskbar_arc_click_through = v;

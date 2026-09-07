@@ -5,11 +5,11 @@
 //! the Codex / OpenAI dashboard cache and require an `account_email` to scope
 //! reads to the right cached bundle.
 
-use codexbar::core::OpenAIDashboardCacheStore;
-use codexbar::cost_scanner::{
+use quotalis_core::core::OpenAIDashboardCacheStore;
+use quotalis_core::cost_scanner::{
     CostScanner, CostSummary, get_daily_cost_history, get_daily_token_history,
 };
-use codexbar::locale::{self, LocaleKey};
+use quotalis_core::locale::{self, LocaleKey};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::{
@@ -304,8 +304,11 @@ pub(crate) async fn refresh_provider_local_usage_cache(provider_ids: Vec<String>
             _ => None,
         };
         if let Some(pricing_provider) = pricing_provider
-            && codexbar::core::refresh_unknown_models_if_needed(pricing_provider, &unknown_models)
-                .await
+            && quotalis_core::core::refresh_unknown_models_if_needed(
+                pricing_provider,
+                &unknown_models,
+            )
+            .await
         {
             let rescan_provider = provider_id.clone();
             summary = tauri::async_runtime::spawn_blocking(move || {
@@ -412,7 +415,7 @@ fn current_unix_ms() -> i64 {
         .unwrap_or(0)
 }
 
-fn localized_estimate_note(provider_id: &str, lang: codexbar::settings::Language) -> String {
+fn localized_estimate_note(provider_id: &str, lang: quotalis_core::settings::Language) -> String {
     match provider_id {
         "claude" => locale::get_text(lang, LocaleKey::PanelEstimatedFromLocalLogsClaude),
         _ => locale::get_text(lang, LocaleKey::PanelEstimatedFromLocalLogs),
@@ -525,7 +528,7 @@ mod tests {
         localized_estimate_note, token_cost_cache_is_fresh,
     };
     use crate::commands::is_provider_cache_fresh;
-    use codexbar::settings::Language;
+    use quotalis_core::settings::Language;
     use std::time::{Duration, Instant};
 
     #[test]

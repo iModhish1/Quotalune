@@ -189,7 +189,7 @@ function AppInner() {
           .catch(() => {});
       }
     };
-    window.addEventListener("codexbar:settings-updated", onSettingsUpdated);
+    window.addEventListener("quotalis:settings-updated", onSettingsUpdated);
 
     return () => {
       cancelled = true;
@@ -198,7 +198,7 @@ function AppInner() {
         .then((unlisten) => unlisten?.())
         .catch(() => {});
       window.clearTimeout(updateTimer);
-      window.removeEventListener("codexbar:settings-updated", onSettingsUpdated);
+      window.removeEventListener("quotalis:settings-updated", onSettingsUpdated);
     };
   }, [reloadBootstrapState]);
 

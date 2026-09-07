@@ -28,11 +28,11 @@ fn config_relative_path(path: &std::path::Path) -> String {
 #[tauri::command]
 pub fn get_safe_diagnostics() -> String {
     let settings = Settings::load();
-    let log_dir = codexbar::logging::log_file_path()
+    let log_dir = quotalis_core::logging::log_file_path()
         .map(|p| config_relative_path(&p))
         .unwrap_or_else(|| "unresolvable".to_string());
-    let log_tail =
-        codexbar::logging::read_log_tail().unwrap_or_else(|| "log file unavailable".to_string());
+    let log_tail = quotalis_core::logging::read_log_tail()
+        .unwrap_or_else(|| "log file unavailable".to_string());
 
     format!(
         "CodexBar diagnostics\n\

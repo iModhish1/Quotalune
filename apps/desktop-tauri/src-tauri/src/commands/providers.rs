@@ -82,7 +82,7 @@ pub(crate) fn build_fetch_context(
                 // On non-Windows this is a harmless no-op that returns an error.
                 let cookie_header = active_token_cookie.or(stored_cookie).or_else(|| {
                     provider_cookie_domain(id, settings).and_then(|domain| {
-                        codexbar::browser::cookies::get_cookie_header(domain)
+                        quotalis_core::browser::cookies::get_cookie_header(domain)
                             .ok()
                             .filter(|h| !h.is_empty())
                     })
@@ -107,7 +107,7 @@ pub(crate) fn build_fetch_context(
             .is_none_or(|s| s.is_empty())
         {
             cookie_header = provider_cookie_domain(id, settings).and_then(|domain| {
-                codexbar::browser::cookies::get_cookie_header(domain)
+                quotalis_core::browser::cookies::get_cookie_header(domain)
                     .ok()
                     .filter(|h| !h.is_empty())
             });
@@ -146,14 +146,14 @@ fn provider_uses_oauth_without_cookies(id: ProviderId, usage_source: SourceMode)
 pub(crate) fn provider_cookie_domain(id: ProviderId, settings: &Settings) -> Option<&'static str> {
     if id == ProviderId::MiniMax {
         return Some(
-            codexbar::providers::MiniMaxProvider::cookie_domain_for_region(Some(
+            quotalis_core::providers::MiniMaxProvider::cookie_domain_for_region(Some(
                 settings.api_region(id),
             )),
         );
     }
     if id == ProviderId::Alibaba {
         return Some(
-            codexbar::providers::AlibabaProvider::cookie_domain_for_region(Some(
+            quotalis_core::providers::AlibabaProvider::cookie_domain_for_region(Some(
                 settings.api_region(id),
             )),
         );
@@ -636,14 +636,14 @@ async fn fetch_provider_snapshot(
             Ok(Err(e)) => ProviderUsageSnapshot::from_error(
                 id,
                 &metadata,
-                codexbar::logging::safe_error_message(&e),
+                quotalis_core::logging::safe_error_message(&e),
                 provider.error_state_kind(&e),
             ),
             Err(_) => ProviderUsageSnapshot::from_error(
                 id,
                 &metadata,
                 "Timeout".to_string(),
-                codexbar::core::ProviderStateKind::Unknown,
+                quotalis_core::core::ProviderStateKind::Unknown,
             ),
         };
 
@@ -720,7 +720,7 @@ fn notify_usage_thresholds(
     token_accounts: &HashMap<ProviderId, ProviderAccountData>,
     cached: &[ProviderUsageSnapshot],
 ) {
-    let cli_map = codexbar::core::cli_name_map();
+    let cli_map = quotalis_core::core::cli_name_map();
     if let Ok(mut guard) = state.lock() {
         for snapshot in cached {
             if snapshot.error.is_none()
@@ -842,7 +842,7 @@ fn notify_usage_thresholds(
 }
 
 fn notify_threshold_window(
-    manager: &mut codexbar::notifications::NotificationManager,
+    manager: &mut quotalis_core::notifications::NotificationManager,
     provider: ProviderId,
     account: &str,
     window_key: &str,
@@ -917,7 +917,7 @@ fn dispatch_quota_hooks(
     } else {
         Some(account)
     };
-    codexbar::core::emit_quota_threshold_hooks(
+    quotalis_core::core::emit_quota_threshold_hooks(
         true,
         provider.cli_name(),
         window,
@@ -959,7 +959,7 @@ fn quota_notification_account_identity(
 }
 
 fn notify_predictive_pace(
-    manager: &mut codexbar::notifications::NotificationManager,
+    manager: &mut quotalis_core::notifications::NotificationManager,
     provider: ProviderId,
     snapshot: &ProviderUsageSnapshot,
     token_accounts: &HashMap<ProviderId, ProviderAccountData>,
@@ -989,12 +989,12 @@ fn notify_predictive_pace(
 
     for (warning_window, window, default_window_minutes) in [
         (
-            codexbar::notifications::PredictiveWarningWindow::Session,
+            quotalis_core::notifications::PredictiveWarningWindow::Session,
             Some(&snapshot.primary),
             300,
         ),
         (
-            codexbar::notifications::PredictiveWarningWindow::Weekly,
+            quotalis_core::notifications::PredictiveWarningWindow::Weekly,
             snapshot.secondary.as_ref(),
             10080,
         ),
@@ -1015,9 +1015,11 @@ fn notify_predictive_pace(
                 .map(|date| date.with_timezone(&chrono::Utc)),
             window.reset_description.clone(),
         );
-        let Some(pace) =
-            codexbar::core::UsagePace::weekly(&rate_window, observed_at, default_window_minutes)
-        else {
+        let Some(pace) = quotalis_core::core::UsagePace::weekly(
+            &rate_window,
+            observed_at,
+            default_window_minutes,
+        ) else {
             continue;
         };
         manager.check_predictive_pace(
@@ -1069,11 +1071,11 @@ pub fn get_deepseek_pricing_status(
         return None;
     }
     let now = Utc::now();
-    let schedule = codexbar::providers::deepseek::pricing::status_at(now);
+    let schedule = quotalis_core::providers::deepseek::pricing::status_at(now);
     let period = match schedule.period {
-        codexbar::providers::deepseek::pricing::PricingPeriod::Standard => "standard",
-        codexbar::providers::deepseek::pricing::PricingPeriod::Peak => "peak",
-        codexbar::providers::deepseek::pricing::PricingPeriod::OffPeak => "offPeak",
+        quotalis_core::providers::deepseek::pricing::PricingPeriod::Standard => "standard",
+        quotalis_core::providers::deepseek::pricing::PricingPeriod::Peak => "peak",
+        quotalis_core::providers::deepseek::pricing::PricingPeriod::OffPeak => "offPeak",
     };
     if let Ok(mut app_state) = state.lock() {
         app_state
@@ -1090,7 +1092,7 @@ pub fn get_deepseek_pricing_status(
         period,
         current_local_time: Local::now().format("%Y-%m-%d %H:%M:%S %Z").to_string(),
         next_transition_local_time: schedule.next_transition.map(local),
-        effective_local_time: local(codexbar::providers::deepseek::pricing::EFFECTIVE_AT),
+        effective_local_time: local(quotalis_core::providers::deepseek::pricing::EFFECTIVE_AT),
     })
 }
 
@@ -1177,14 +1179,14 @@ mod predictive_warning_tests {
     }
 
     fn empty_snapshot() -> ProviderUsageSnapshot {
-        let metadata = codexbar::core::instantiate_provider(ProviderId::Claude)
+        let metadata = quotalis_core::core::instantiate_provider(ProviderId::Claude)
             .metadata()
             .clone();
         ProviderUsageSnapshot::from_error(
             ProviderId::Claude,
             &metadata,
             "unused".to_string(),
-            codexbar::core::ProviderStateKind::Unknown,
+            quotalis_core::core::ProviderStateKind::Unknown,
         )
     }
 
@@ -1257,7 +1259,8 @@ mod predictive_warning_tests {
         use crate::commands::bridge::forecast_account_key;
 
         let token = uuid::Uuid::parse_str("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").unwrap();
-        let mut usage = codexbar::core::UsageSnapshot::new(codexbar::core::RateWindow::new(1.0));
+        let mut usage =
+            quotalis_core::core::UsageSnapshot::new(quotalis_core::core::RateWindow::new(1.0));
         let mut snapshot = empty_snapshot();
 
         for (email, org) in [
@@ -1321,7 +1324,7 @@ mod reset_backfill_tests {
             source_label: String::new(),
             updated_at: "2026-01-01T00:00:00Z".into(),
             error: None,
-            error_state: codexbar::core::ProviderStateKind::Ready,
+            error_state: quotalis_core::core::ProviderStateKind::Ready,
             pace: None,
             account_organization: None,
             tray_status_label: None,

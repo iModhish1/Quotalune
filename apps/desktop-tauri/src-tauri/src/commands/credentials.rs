@@ -61,7 +61,7 @@ pub fn get_api_keys() -> Vec<ApiKeyInfoBridge> {
 
 #[tauri::command]
 pub fn get_api_key_providers() -> Vec<ApiKeyProviderInfoBridge> {
-    codexbar::settings::get_api_key_providers()
+    quotalis_core::settings::get_api_key_providers()
         .into_iter()
         .map(|p| ApiKeyProviderInfoBridge {
             id: p.id.cli_name().to_string(),
@@ -80,7 +80,7 @@ pub fn set_api_key(
     label: Option<String>,
 ) -> Result<Vec<ApiKeyInfoBridge>, String> {
     let canonical_provider = canonical_provider_arg(&provider_id)?;
-    if !codexbar::settings::get_api_key_providers()
+    if !quotalis_core::settings::get_api_key_providers()
         .iter()
         .any(|p| p.id.cli_name() == canonical_provider)
     {

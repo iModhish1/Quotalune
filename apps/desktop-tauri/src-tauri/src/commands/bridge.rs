@@ -56,7 +56,7 @@ impl RateWindowSnapshot {
     /// delta_percent = actual - expected; negative means ahead (in reserve).
     /// Only meaningful for longer windows (weekly); skip if reserve rounds to 0.
     /// Localization happens at render time so cached snapshots stay language-neutral.
-    fn with_pace_reserve(mut self, pace: &codexbar::core::UsagePace) -> Self {
+    fn with_pace_reserve(mut self, pace: &quotalis_core::core::UsagePace) -> Self {
         let reserve = pace.delta_percent.abs().round();
         if pace.delta_percent < 0.0 && reserve > 0.0 {
             self.reserve_percent = Some(reserve);
@@ -195,7 +195,7 @@ pub struct ProviderUsageSnapshot {
     #[serde(default)]
     pub error: Option<String>,
     #[serde(default = "default_error_state")]
-    pub error_state: codexbar::core::ProviderStateKind,
+    pub error_state: quotalis_core::core::ProviderStateKind,
     #[serde(default)]
     pub pace: Option<PaceSnapshot>,
     #[serde(default)]
@@ -205,7 +205,7 @@ pub struct ProviderUsageSnapshot {
     #[serde(default)]
     pub fetch_duration_ms: Option<u128>,
     #[serde(default)]
-    pub wayfinder_usage: Option<codexbar::core::WayfinderUsageSnapshot>,
+    pub wayfinder_usage: Option<quotalis_core::core::WayfinderUsageSnapshot>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub session_equivalent_forecast: Option<SessionEquivalentForecastSnapshot>,
 }
@@ -218,8 +218,8 @@ fn default_source_label() -> String {
     "seed".to_string()
 }
 
-fn default_error_state() -> codexbar::core::ProviderStateKind {
-    codexbar::core::ProviderStateKind::Unknown
+fn default_error_state() -> quotalis_core::core::ProviderStateKind {
+    quotalis_core::core::ProviderStateKind::Unknown
 }
 
 /// Provider payload after applying settings-driven cross-surface presentation.
@@ -252,8 +252,8 @@ pub(crate) fn filter_hidden_codex_spark_rows(
     }
 }
 
-pub(crate) fn pace_stage_str(stage: codexbar::core::PaceStage) -> &'static str {
-    use codexbar::core::PaceStage;
+pub(crate) fn pace_stage_str(stage: quotalis_core::core::PaceStage) -> &'static str {
+    use quotalis_core::core::PaceStage;
     match stage {
         PaceStage::OnTrack => "on_track",
         PaceStage::SlightlyAhead => "slightly_ahead",
@@ -283,7 +283,7 @@ impl ProviderUsageSnapshot {
             Some(&usage.primary)
         };
         let primary_pace = primary_pace_window
-            .and_then(|window| codexbar::core::UsagePace::weekly(window, None, 10080));
+            .and_then(|window| quotalis_core::core::UsagePace::weekly(window, None, 10080));
 
         let pace = primary_pace.as_ref().map(|p| PaceSnapshot {
             stage: pace_stage_str(p.stage).to_string(),
@@ -298,7 +298,7 @@ impl ProviderUsageSnapshot {
         let secondary_pace = usage
             .secondary
             .as_ref()
-            .and_then(|sw| codexbar::core::UsagePace::weekly(sw, None, 10080));
+            .and_then(|sw| quotalis_core::core::UsagePace::weekly(sw, None, 10080));
 
         let primary_snap = RateWindowSnapshot::from_rate_window(&usage.primary);
 
@@ -344,8 +344,10 @@ impl ProviderUsageSnapshot {
             // so surfaces (MenuCard, CLI, tray) can show "Monthly" instead of the
             // generic "DetailWindowTertiary" slot key.
             tertiary_label: usage.tertiary.as_ref().map(|w| {
-                match codexbar::core::RateWindowCadence::from_minutes(w.window_minutes.unwrap_or(0))
-                    .label_key()
+                match quotalis_core::core::RateWindowCadence::from_minutes(
+                    w.window_minutes.unwrap_or(0),
+                )
+                .label_key()
                 {
                     "monthly" => "monthly".to_string(),
                     other => other.to_string(),
@@ -386,7 +388,7 @@ impl ProviderUsageSnapshot {
             source_label: result.source_label.clone(),
             updated_at: usage.updated_at.to_rfc3339(),
             error: None,
-            error_state: codexbar::core::ProviderStateKind::Ready,
+            error_state: quotalis_core::core::ProviderStateKind::Ready,
             pace,
             account_organization: usage.account_organization.clone(),
             tray_status_label: None,
@@ -400,7 +402,7 @@ impl ProviderUsageSnapshot {
         id: ProviderId,
         metadata: &ProviderMetadata,
         error: String,
-        state_kind: codexbar::core::ProviderStateKind,
+        state_kind: quotalis_core::core::ProviderStateKind,
     ) -> Self {
         let error = friendly_provider_error(id, &error);
         Self {
@@ -454,7 +456,7 @@ impl ProviderUsageSnapshot {
 /// `providers::tests::forecast_account_key_matches_notification_identity` pins them
 /// together.
 pub(super) fn forecast_account_key(
-    usage: &codexbar::core::UsageSnapshot,
+    usage: &quotalis_core::core::UsageSnapshot,
     token_account_id: Option<uuid::Uuid>,
 ) -> Option<String> {
     if let Some(id) = token_account_id {
@@ -491,9 +493,15 @@ fn session_equivalent_forecast_for(
     let weekly = weekly?;
     let now = chrono::Utc::now();
     let provider_id = id.cli_name();
-    codexbar::core::record_provider_windows(provider_id, account_key, session, Some(weekly), now);
+    quotalis_core::core::record_provider_windows(
+        provider_id,
+        account_key,
+        session,
+        Some(weekly),
+        now,
+    );
     let work_days = Settings::load().weekly_progress_work_days;
-    let forecast = codexbar::core::forecast_for_provider(
+    let forecast = quotalis_core::core::forecast_for_provider(
         provider_id,
         account_key,
         session,
@@ -515,7 +523,7 @@ fn session_equivalent_forecast_for(
 /// Localization is done at render time so cached snapshots stay language-neutral.
 pub(crate) fn compact_tray_status_label(
     window: &RateWindowSnapshot,
-    lang: codexbar::settings::Language,
+    lang: quotalis_core::settings::Language,
 ) -> String {
     if window.is_informational {
         return window
@@ -534,7 +542,7 @@ pub(crate) fn compact_tray_status_label(
 
 fn compact_reset_description(
     window: &RateWindowSnapshot,
-    lang: codexbar::settings::Language,
+    lang: quotalis_core::settings::Language,
 ) -> Option<String> {
     if let Some(ref resets_at) = window.resets_at {
         let dt = chrono::DateTime::parse_from_rfc3339(resets_at)
@@ -552,7 +560,7 @@ fn compact_reset_description(
 
 fn format_compact_reset_countdown(
     resets_at: chrono::DateTime<chrono::Utc>,
-    lang: codexbar::settings::Language,
+    lang: quotalis_core::settings::Language,
 ) -> String {
     let now = chrono::Utc::now();
     if resets_at <= now {
@@ -579,7 +587,7 @@ fn format_compact_reset_countdown(
     }
 }
 
-fn normalize_reset_description(desc: &str, lang: codexbar::settings::Language) -> String {
+fn normalize_reset_description(desc: &str, lang: quotalis_core::settings::Language) -> String {
     let trimmed = desc.trim();
     let lower = trimmed.to_ascii_lowercase();
     let prefix_len = ["resets in ", "reset in ", "in "]
@@ -610,15 +618,15 @@ pub(crate) fn friendly_provider_error(id: ProviderId, error: &str) -> String {
     }
 
     if lower.contains("claude oauth credentials not found") {
-        return "Claude sign-in was not found. Run `claude` once to authenticate, then refresh Claude in Win-CodexBar.".to_string();
+        return "Claude sign-in was not found. Run `claude` once to authenticate, then refresh Claude in QuotaArc.".to_string();
     }
 
     if lower.contains("oauth token expired") || lower.contains("token invalid or expired") {
-        return "Claude sign-in expired. Run `claude` to refresh your Claude Code login, then refresh Claude in Win-CodexBar.".to_string();
+        return "Claude sign-in expired. Run `claude` to refresh your Claude Code login, then refresh Claude in QuotaArc.".to_string();
     }
 
     if trimmed == "Authentication required" {
-        return "Claude needs sign-in before Win-CodexBar can read usage. Run `claude` once, or add Claude cookies in Provider settings.".to_string();
+        return "Claude needs sign-in before QuotaArc can read usage. Run `claude` once, or add Claude cookies in Provider settings.".to_string();
     }
 
     if lower.starts_with("claude usage failed from all configured sources.") {
@@ -680,15 +688,15 @@ pub struct SettingsSnapshot {
     startup_destination: String,
     last_settings_tab: Option<String>,
     show_notifications: bool,
-    notification_events: codexbar::settings::NotificationEventPreferences,
+    notification_events: quotalis_core::settings::NotificationEventPreferences,
     sound_enabled: bool,
-    notification_sound_theme: codexbar::settings::NotificationSoundTheme,
-    notification_sound_paths: codexbar::settings::NotificationSoundPaths,
+    notification_sound_theme: quotalis_core::settings::NotificationSoundTheme,
+    notification_sound_paths: quotalis_core::settings::NotificationSoundPaths,
     high_usage_threshold: f64,
     critical_usage_threshold: f64,
     usage_step_notification_percent: Option<u8>,
     provider_usage_thresholds:
-        std::collections::HashMap<String, codexbar::settings::UsageThresholdOverride>,
+        std::collections::HashMap<String, quotalis_core::settings::UsageThresholdOverride>,
     predictive_pace_warning_enabled: bool,
     show_pace: bool,
     tray_icon_mode: &'static str,
@@ -711,11 +719,11 @@ pub struct SettingsSnapshot {
     provider_detail_windows: std::collections::HashMap<String, String>,
     provider_limit_order: std::collections::HashMap<String, Vec<String>>,
     provider_limit_presentation:
-        std::collections::HashMap<String, codexbar::settings::LimitPresentation>,
-    global_limit_presentation: codexbar::settings::LimitPresentation,
-    reset_presentation: codexbar::settings::ResetPresentationSettings,
+        std::collections::HashMap<String, quotalis_core::settings::LimitPresentation>,
+    global_limit_presentation: quotalis_core::settings::LimitPresentation,
+    reset_presentation: quotalis_core::settings::ResetPresentationSettings,
     reset_presentation_overrides:
-        std::collections::HashMap<String, codexbar::settings::ResetPresentationSettings>,
+        std::collections::HashMap<String, quotalis_core::settings::ResetPresentationSettings>,
     update_channel: &'static str,
     auto_download_updates: bool,
     install_updates_on_quit: bool,
@@ -807,7 +815,7 @@ impl From<Settings> for SettingsSnapshot {
             adaptive_refresh: settings.adaptive_refresh,
             refresh_all_providers_on_menu_open: settings.refresh_all_providers_on_menu_open,
             low_power_mode: settings.low_power_mode_preference
-                == codexbar::settings::LowPowerModePreference::On,
+                == quotalis_core::settings::LowPowerModePreference::On,
             low_power_mode_preference: settings.low_power_mode_preference.as_str(),
             dashboard_mode: settings.dashboard_mode.as_str(),
             dashboard_performance_preset: settings.dashboard_performance_preset.as_str(),
@@ -953,19 +961,19 @@ fn theme_label(theme: ThemePreference) -> &'static str {
 }
 
 fn cost_summary_display_style_label(
-    style: codexbar::settings::CostSummaryDisplayStyle,
+    style: quotalis_core::settings::CostSummaryDisplayStyle,
 ) -> &'static str {
     match style {
-        codexbar::settings::CostSummaryDisplayStyle::Compact => "compact",
-        codexbar::settings::CostSummaryDisplayStyle::Detailed => "detailed",
-        codexbar::settings::CostSummaryDisplayStyle::Hidden => "hidden",
+        quotalis_core::settings::CostSummaryDisplayStyle::Compact => "compact",
+        quotalis_core::settings::CostSummaryDisplayStyle::Detailed => "detailed",
+        quotalis_core::settings::CostSummaryDisplayStyle::Hidden => "hidden",
     }
 }
 
 pub(crate) fn parse_cost_summary_display_style(
     s: &str,
-) -> Option<codexbar::settings::CostSummaryDisplayStyle> {
-    use codexbar::settings::CostSummaryDisplayStyle;
+) -> Option<quotalis_core::settings::CostSummaryDisplayStyle> {
+    use quotalis_core::settings::CostSummaryDisplayStyle;
     match s {
         "compact" => Some(CostSummaryDisplayStyle::Compact),
         "detailed" => Some(CostSummaryDisplayStyle::Detailed),
@@ -1065,7 +1073,7 @@ mod tests {
 
     #[test]
     fn japanese_tray_status_label_has_no_english_reset_text() {
-        use codexbar::settings::Language;
+        use quotalis_core::settings::Language;
 
         let window = snapshot_window_with(
             13.0,
@@ -1083,7 +1091,7 @@ mod tests {
 
     #[test]
     fn japanese_tray_status_strips_english_fallback_reset_prefix() {
-        use codexbar::settings::Language;
+        use quotalis_core::settings::Language;
 
         let window =
             snapshot_window_with(8.0, Some(300), None, Some("Resets in 2h 05m".to_string()));

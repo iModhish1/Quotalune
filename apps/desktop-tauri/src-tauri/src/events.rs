@@ -74,7 +74,7 @@ pub fn emit_surface_mode_changed(
 
 pub fn emit_provider_updated(app: &AppHandle, snapshot: &ProviderUsageSnapshot) {
     let mut snapshot = snapshot.clone();
-    let settings = codexbar::settings::Settings::load();
+    let settings = quotalis_core::settings::Settings::load();
     crate::commands::filter_hidden_codex_spark_rows(
         &mut snapshot,
         settings.codex_spark_usage_visible(),

@@ -137,7 +137,7 @@ pub fn get_work_area_rect(app: tauri::AppHandle) -> Result<WorkAreaRect, String>
     // Prefer the OS-native probe on Windows because it reliably excludes the
     // taskbar; Tauri's monitor API forwards to the same APIs but we keep the
     // direct path to preserve parity with the egui build.
-    if let Some(area) = codexbar::host::session::primary_work_area_pixels() {
+    if let Some(area) = quotalis_core::host::session::primary_work_area_pixels() {
         return Ok(WorkAreaRect {
             x: area.x,
             y: area.y,
@@ -172,11 +172,11 @@ pub fn get_work_area_rect(app: tauri::AppHandle) -> Result<WorkAreaRect, String>
 
 #[tauri::command]
 pub fn play_notification_sound(
-    event: codexbar::sound::NotificationSoundEvent,
+    event: quotalis_core::sound::NotificationSoundEvent,
 ) -> Result<(), String> {
     // Preview through the same settings resolution path used by real notifications.
     let settings = Settings::load();
-    codexbar::sound::play_alert(event, &settings).map_err(|error| error.to_string())
+    quotalis_core::sound::play_alert(event, &settings).map_err(|error| error.to_string())
 }
 
 /// Reposition the flyout window so its bottom-right corner stays anchored to
@@ -208,13 +208,13 @@ fn dashboard_url_for_provider(provider_id: &str) -> Option<String> {
     if provider_id == ProviderId::MiniMax.cli_name() {
         let settings = Settings::load();
         return Some(
-            codexbar::providers::MiniMaxProvider::dashboard_url_for_region(Some(
+            quotalis_core::providers::MiniMaxProvider::dashboard_url_for_region(Some(
                 settings.api_region(ProviderId::MiniMax),
             )),
         );
     }
 
-    if let Some(url) = codexbar::settings::get_api_key_providers()
+    if let Some(url) = quotalis_core::settings::get_api_key_providers()
         .into_iter()
         .find(|p| p.id.cli_name() == provider_id)
         .and_then(|p| p.dashboard_url.map(|s| s.to_string()))

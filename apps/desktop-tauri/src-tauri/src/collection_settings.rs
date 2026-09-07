@@ -1,4 +1,4 @@
-use codexbar::settings::{Settings, collections::CollectionLayout};
+use quotalis_core::settings::{Settings, collections::CollectionLayout};
 use std::sync::Mutex;
 use tauri::Emitter;
 
