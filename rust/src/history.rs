@@ -142,6 +142,12 @@ impl HistoryStore {
         self.with_conn(|conn| {
             let mut stored = 0usize;
             for sample in samples {
+                // `cost_used` is included in the dedup key (via `IS`, so two
+                // NULLs still match) alongside `used_percent`: a cost sample
+                // (window_id "cost") always carries `used_percent == 0.0`,
+                // so comparing only `used_percent` would treat any two
+                // different cost readings within the dedup window as
+                // duplicates of each other.
                 let duplicate: bool = conn
                     .query_row(
                         "SELECT EXISTS(
@@ -149,12 +155,14 @@ impl HistoryStore {
                              WHERE account_id = ?1
                                AND window_id IS ?2
                                AND used_percent = ?3
-                               AND captured_at >= ?4
+                               AND cost_used IS ?4
+                               AND captured_at >= ?5
                          )",
                         rusqlite::params![
                             sample.account_id,
                             sample.window_id,
                             sample.used_percent,
+                            sample.cost_used,
                             now_epoch() - DEDUP_WINDOW_SECS,
                         ],
                         |r| r.get::<_, i64>(0),
@@ -369,6 +377,33 @@ mod tests {
                 .unwrap(),
             1
         );
+    }
+
+    /// Regression test for the dedup key: a `used_percent`-only comparison
+    /// would treat two different cost readings (both carrying the
+    /// placeholder `used_percent: 0.0` a "cost" sample uses) as duplicates
+    /// of each other. `cost_used` must be part of the dedup key too.
+    #[test]
+    fn dedups_cost_samples_by_cost_value_not_placeholder_percent() {
+        let store = store();
+        let now = now_epoch();
+        let cost_sample = |cost: f64, at: i64| UsageSample {
+            account_id: "a1".to_string(),
+            provider: "codex".to_string(),
+            window_id: Some("cost".to_string()),
+            window_label: Some("month".to_string()),
+            used_percent: 0.0,
+            remaining_percent: 0.0,
+            cost_used: Some(cost),
+            resets_at: None,
+            captured_at: at,
+        };
+        assert_eq!(store.record_samples(&[cost_sample(12.34, now)]).unwrap(), 1);
+        // Same cost within the dedup window: skipped.
+        assert_eq!(store.record_samples(&[cost_sample(12.34, now)]).unwrap(), 0);
+        // Different cost within the dedup window: must still be stored --
+        // the bug this test guards against would have dropped this too.
+        assert_eq!(store.record_samples(&[cost_sample(15.00, now)]).unwrap(), 1);
     }
 
     #[test]

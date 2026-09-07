@@ -86,11 +86,14 @@ fn sample_for_window(
     }
 }
 
-/// Record a successfully-refreshed snapshot into history. Errors are logged,
-/// never propagated.
-pub(crate) fn record_snapshot(snapshot: &ProviderUsageSnapshot) {
+/// Build the history samples a snapshot would produce, without writing them
+/// -- pure and side-effect-free so it's directly testable (writing goes
+/// through the real, process-global store, which would otherwise mean a
+/// unit test contaminates the real on-disk `history.db`). Returns `None`
+/// for an error snapshot (nothing to record).
+fn samples_for_snapshot(snapshot: &ProviderUsageSnapshot) -> Option<Vec<UsageSample>> {
     if snapshot.error.is_some() {
-        return;
+        return None;
     }
     let account_key = account_key_for(&snapshot.provider_id);
     let captured_at = iso_to_epoch(&snapshot.updated_at).unwrap_or_else(|| {
@@ -132,7 +135,33 @@ pub(crate) fn record_snapshot(snapshot: &ProviderUsageSnapshot) {
             captured_at,
         ));
     }
+    // Cost is a distinct fact from quota percentage -- recorded as its own
+    // sample (window_id "cost") so dashboard spend queries never mix a
+    // dollar amount into a percentage aggregate, and so a provider with no
+    // cost data simply has no "cost" rows rather than a fabricated 0.
+    if let Some(cost) = &snapshot.cost {
+        samples.push(UsageSample {
+            account_id: account_key.clone(),
+            provider: snapshot.provider_id.clone(),
+            window_id: Some("cost".to_string()),
+            window_label: Some(cost.period.clone()),
+            used_percent: 0.0,
+            remaining_percent: 0.0,
+            cost_used: Some(cost.used),
+            resets_at: cost.resets_at.as_deref().and_then(iso_to_epoch),
+            captured_at,
+        });
+    }
 
+    Some(samples)
+}
+
+/// Record a successfully-refreshed snapshot into history. Errors are logged,
+/// never propagated.
+pub(crate) fn record_snapshot(snapshot: &ProviderUsageSnapshot) {
+    let Some(samples) = samples_for_snapshot(snapshot) else {
+        return;
+    };
     let store = store();
     if let Err(error) = store.record_samples(&samples) {
         tracing::warn!(%error, provider = %snapshot.provider_id, "history recording failed");
@@ -173,8 +202,46 @@ mod tests {
     fn error_snapshots_are_not_recorded() {
         let mut snapshot = test_snapshot();
         snapshot.error = Some("boom".to_string());
-        // Function returns silently; nothing to assert except no panic.
-        record_snapshot(&snapshot);
+        assert!(samples_for_snapshot(&snapshot).is_none());
+    }
+
+    #[test]
+    fn cost_present_produces_a_distinct_cost_sample() {
+        let mut snapshot = test_snapshot();
+        snapshot.cost = Some(crate::commands::CostSnapshotBridge {
+            used: 12.34,
+            limit: Some(100.0),
+            remaining: Some(87.66),
+            currency_code: "USD".to_string(),
+            currency_symbol: Some("$".to_string()),
+            period: "month".to_string(),
+            resets_at: Some("2026-10-01T00:00:00Z".to_string()),
+            formatted_used: "$12.34".to_string(),
+            formatted_limit: None,
+            balance: None,
+            formatted_balance: None,
+            daily: Vec::new(),
+        });
+        let samples = samples_for_snapshot(&snapshot).expect("non-error snapshot");
+        let cost_sample = samples
+            .iter()
+            .find(|s| s.window_id.as_deref() == Some("cost"))
+            .expect("a cost sample must be produced when snapshot.cost is present");
+        assert_eq!(cost_sample.cost_used, Some(12.34));
+        // Cost is never conflated with quota percentage.
+        assert_eq!(cost_sample.used_percent, 0.0);
+    }
+
+    #[test]
+    fn no_cost_data_produces_no_cost_sample() {
+        let snapshot = test_snapshot(); // cost: null
+        let samples = samples_for_snapshot(&snapshot).expect("non-error snapshot");
+        assert!(
+            !samples
+                .iter()
+                .any(|s| s.window_id.as_deref() == Some("cost")),
+            "must not fabricate a cost sample when the provider reports none"
+        );
     }
 
     fn test_snapshot() -> ProviderUsageSnapshot {
