@@ -35,6 +35,15 @@ export interface FlowSurfaceProps {
   onRequestCompact?: () => void;
   onStartDrag?: () => void;
   demoMode?: boolean;
+  /** Whether to show the "DEMO" watermark when `demoMode` is on. Defaults
+   *  to true for real live surfaces (SurfacesTab's "Temporary demo"
+   *  toggle) — set false for read-only preview contexts (StructurePreview,
+   *  used by ThemeGallery/SurfacesTab's structure picker), which already
+   *  use `demoMode` for synthetic fixture data but don't need a watermark
+   *  the surrounding preview-card copy already makes redundant, and whose
+   *  tiny scaled-down size made the watermark overlap the structure's own
+   *  content (Wave 6 Phase 4 — reported directly by the owner). */
+  showDemoBadge?: boolean;
 }
 
 function QuotaArcMark() {
@@ -104,9 +113,10 @@ export default function FlowSurface({
   onRequestCompact,
   onStartDrag,
   demoMode,
+  showDemoBadge = true,
 }: FlowSurfaceProps) {
-  if (isNotchForm(settings.form)) return <NotchSurface key={`${settings.form}:${settings.anchor}`} form={settings.form} {...{catalog, settings, state, providers, focusedIndex, onFocusProvider, onReveal, onToggleExpanded, onTogglePinned, onRequestCompact, onStartDrag, demoMode}} />;
-  if (settings.form === "reel") return <ReelSurface {...{catalog, settings, state, providers, focusedIndex, onFocusProvider, onReveal, onToggleExpanded, onTogglePinned, onRequestCompact, onStartDrag, demoMode}} />;
+  if (isNotchForm(settings.form)) return <NotchSurface key={`${settings.form}:${settings.anchor}`} form={settings.form} {...{catalog, settings, state, providers, focusedIndex, onFocusProvider, onReveal, onToggleExpanded, onTogglePinned, onRequestCompact, onStartDrag, demoMode, showDemoBadge}} />;
+  if (settings.form === "reel") return <ReelSurface {...{catalog, settings, state, providers, focusedIndex, onFocusProvider, onReveal, onToggleExpanded, onTogglePinned, onRequestCompact, onStartDrag, demoMode, showDemoBadge}} />;
   const theme = catalogBySlug(catalog) ?? CANONICAL_THEME;
   const visible = providers.filter(hasSurfaceQuotaValue).slice(0, 3);
   const focus = visible.length === 0 ? -1 : Math.min(Math.max(focusedIndex, 0), visible.length - 1);
@@ -169,7 +179,7 @@ export default function FlowSurface({
       aria-label={`${settings.form} provider selector`}
     >
       <div className="flow-surface__core">
-        {demoMode && <span className="flow-surface__demo" title="Synthetic data — not connected accounts">DEMO</span>}
+        {demoMode && showDemoBadge && <span className="flow-surface__demo" title="Synthetic data — not connected accounts">DEMO</span>}
         <button
           type="button"
           className="flow-surface__summary"

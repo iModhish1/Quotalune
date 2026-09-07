@@ -15,7 +15,7 @@ import QuotaArcMark from '../../components/QuotaArcMark';
 export default function NotchSurface(props:FlowSurfaceProps & {form:NotchForm}) {
   const theme=catalogBySlug(props.catalog) ?? CANONICAL_THEME;
   const providerAccent=(id:string)=>providerColor(theme,id);
-  const {form,settings,state,providers,focusedIndex=0,onFocusProvider,onToggleExpanded,onRequestCompact,onReveal,onStartDrag,onTogglePinned,demoMode}=props;
+  const {form,settings,state,providers,focusedIndex=0,onFocusProvider,onToggleExpanded,onRequestCompact,onReveal,onStartDrag,onTogglePinned,demoMode,showDemoBadge=true}=props;
   const root=useRef<HTMLElement>(null);
   const interactions=normalizeSurfaceInteractions(settings.interactions);
   const [fit,setFit]=useState(settings.scale/100);
@@ -71,9 +71,9 @@ export default function NotchSurface(props:FlowSurfaceProps & {form:NotchForm}) 
           {form==="deck" && selected && <div className="notch-deck-label"><strong title={selected.name}>{selected.name}</strong><span>{selected.primaryLabel}</span><div className="notch-page-dots" aria-hidden="true">{providers.map((p,i)=><i key={p.id} data-active={i===focus}/>)}</div></div>}
           {!selected && <span className="notch-empty">No data</span>}
           <button className="notch-grip" aria-label="Move QuotaArc" title="Drag to move" onMouseDown={e=>{if(e.button===0){e.preventDefault();onStartDrag?.();}}}><span/></button>
-          {demoMode && <span className="notch-demo">DEMO</span>}
+          {demoMode && showDemoBadge && <span className="notch-demo">DEMO</span>}
         </div>
-        {layout.detail && selected && <NotchDetails provider={selected} color={providerAccent(selected.id)} rect={layout.detail} demo={demoMode} pinned={state==="pinned"} onClose={onRequestCompact} onPin={onTogglePinned}/>}
+        {layout.detail && selected && <NotchDetails provider={selected} color={providerAccent(selected.id)} rect={layout.detail} demo={demoMode && showDemoBadge} pinned={state==="pinned"} onClose={onRequestCompact} onPin={onTogglePinned}/>}
         {layout.detail && <svg className="notch-connector" aria-hidden="true" style={{position:"absolute",pointerEvents:"none",
           left:settings.anchor==="top" || settings.anchor==="bottom" ? layout.width/2-8 : mirror?layout.core.width:layout.detail.width,
           top:settings.anchor==="top" ? layout.core.height : settings.anchor==="bottom" ? layout.detail.height : Math.max(layout.core.y+8,Math.min(layout.core.y+layout.core.height-8,layout.detail.y+layout.detail.height/2))-8}}

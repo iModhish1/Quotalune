@@ -9,9 +9,10 @@ import QuotaArcMark from '../../components/QuotaArcMark';
 import { CANONICAL_THEME, catalogBySlug, providerColor } from "../../design-system/themeCatalog";
 
 /** A curved provider selector, not a clock. No ticking or permanent animation. */
-export default function ReelSurface({ catalog, settings, state, providers, focusedIndex = 0, demoMode,
+export default function ReelSurface({ catalog, settings, state, providers, focusedIndex = 0, demoMode, showDemoBadge = true,
   onFocusProvider, onReveal, onToggleExpanded, onRequestCompact, onTogglePinned, onStartDrag,
 }: FlowSurfaceProps) {
+  const demoLabel = demoMode && showDemoBadge;
   const theme = catalogBySlug(catalog) ?? CANONICAL_THEME;
   const root = useRef<HTMLElement>(null);
   const wheel = useRef({ sum: 0, lastAt: -Infinity });
@@ -56,14 +57,14 @@ export default function ReelSurface({ catalog, settings, state, providers, focus
     <div className="reel-stage" data-anchor={settings.anchor} data-horizontal={horizontal}
       style={{ width: size.width, height: size.height, transform: `scale(${fit})` }}>
       {state === "hidden" || state === "peek" ? <button className="reel-reveal" onClick={onReveal}
-        aria-label="Reveal QuotaArc" title={demoMode ? "QuotaArc · Demo data" : "QuotaArc"}>
+        aria-label="Reveal QuotaArc" title={demoLabel ? "QuotaArc · Demo data" : "QuotaArc"}>
         <QuotaArcMark size={20}/>
       </button> : <>
         <div className="reel-core">
           <svg className="reel-track" viewBox={horizontal ? "0 0 208 112" : "0 0 112 208"} aria-hidden="true">
             <path d={horizontal ? "M22 82 C58 12 150 12 186 82" : "M82 22 C12 58 12 150 82 186"} />
           </svg>
-          <span className="reel-mode">{demoMode ? "DEMO" : "QUOTA"}</span>
+          <span className="reel-mode">{demoLabel ? "DEMO" : "QUOTA"}</span>
           {providers.map((provider, index) => {
             const offset = reelOffset(index, focus, providers.length);
             const visible = Math.abs(offset) <= 1;
@@ -94,7 +95,7 @@ export default function ReelSurface({ catalog, settings, state, providers, focus
             onMouseDown={e => { if (e.button === 0) { e.preventDefault(); onStartDrag?.(); } }}>⠿</button>
         </div>
         {expanded && selected && <section className="reel-details" role="dialog" aria-label={`${selected.name} quota details`}>
-          <header><span>{demoMode ? "DEMO · SYNTHETIC" : "USAGE"}</span><button onClick={onRequestCompact} aria-label="Collapse details">×</button></header>
+          <header><span>{demoLabel ? "DEMO · SYNTHETIC" : "USAGE"}</span><button onClick={onRequestCompact} aria-label="Collapse details">×</button></header>
           <strong className="reel-detail-name">{selected.name}</strong>
           {selected.windows ? <UsageWindowList providerId={selected.id} windows={selected.windows} hidden={selected.detailsHidden} presentation={selected.limitPresentation}/> : <><div className="reel-detail-value">{formatPercentage(selected.primaryValue)}<small>{selected.primaryLabel}</small></div>
           <div className="reel-progress" role="meter" aria-label={`${selected.name} ${selected.primaryLabel}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={selected.primaryValue ?? undefined}>

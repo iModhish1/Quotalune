@@ -19,8 +19,15 @@ export default function StructurePreview({form,anchor=flowSurfaceDefaultAnchor(f
     {showDimensions&&<span className="structure-preview__dimensions">{size.width} × {size.height} px</span>}
     <div className="structure-preview__viewport" style={{width:size.width*fit,height:size.height*fit}}>
       <div className="structure-preview__stage" data-expanded={expanded} style={{width:size.width,height:size.height,transform:`scale(${fit})`}}>
+        {/* demoMode supplies synthetic fixture data (no real accounts needed
+            for a Settings preview); showDemoBadge=false suppresses the
+            "DEMO" watermark each structure renders when demoMode is on —
+            redundant here (the surrounding preview-card copy already says
+            this doesn't affect the real desktop) and, at this card's small
+            scale, it overlapped the structure's own content (Wave 6 Phase 4,
+            reported directly by the owner). */}
         <FlowSurface catalog={catalog} state={state} settings={{form,anchor,scale:100,autoHide:false,autoHideDelayMs:500,
-          interactions:{hoverDetails:false,wheelCycle:false,autoFold:false,foldDelayMs:500}}} providers={providers} demoMode/>
+          interactions:{hoverDetails:false,wheelCycle:false,autoFold:false,foldDelayMs:500}}} providers={providers} demoMode showDemoBadge={false}/>
       </div>
     </div>
   </div>;
