@@ -13,10 +13,10 @@ export default function SettingsShellHeader({
     <header className="settings-studio-toolbar">
       <div className="settings-shell-brand">
         <span className="settings-shell-brand__mark">
-          <QuotaArcMark size={32} label="QuotaArc" />
+          <QuotaArcMark size={32} label="Quotalis" />
         </span>
         <span className="settings-shell-brand__copy">
-          <span className="settings-shell-brand__name">QuotaArc</span>
+          <span className="settings-shell-brand__name">Quotalis</span>
           <h1>{section}</h1>
         </span>
       </div>

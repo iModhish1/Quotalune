@@ -57,7 +57,7 @@ export default function ReelSurface({ catalog, settings, state, providers, focus
     <div className="reel-stage" data-anchor={settings.anchor} data-horizontal={horizontal}
       style={{ width: size.width, height: size.height, transform: `scale(${fit})` }}>
       {state === "hidden" || state === "peek" ? <button className="reel-reveal" onClick={onReveal}
-        aria-label="Reveal QuotaArc" title={demoLabel ? "QuotaArc · Demo data" : "QuotaArc"}>
+        aria-label="Reveal Quotalis" title={demoLabel ? "Quotalis · Demo data" : "Quotalis"}>
         <QuotaArcMark size={20}/>
       </button> : <>
         <div className="reel-core">
@@ -90,8 +90,8 @@ export default function ReelSurface({ catalog, settings, state, providers, focus
             </button>;
           })}
           {!selected && <span className="reel-empty">No quota data</span>}
-          <span className="reel-caption" aria-live="polite">{selected?.name ?? "QuotaArc"}<small>{providers.length ? `${focus + 1} / ${providers.length}` : "—"}</small></span>
-          <button className="reel-drag" aria-label="Move QuotaArc" title="Drag to move"
+          <span className="reel-caption" aria-live="polite">{selected?.name ?? "Quotalis"}<small>{providers.length ? `${focus + 1} / ${providers.length}` : "—"}</small></span>
+          <button className="reel-drag" aria-label="Move Quotalis" title="Drag to move"
             onMouseDown={e => { if (e.button === 0) { e.preventDefault(); onStartDrag?.(); } }}>⠿</button>
         </div>
         {expanded && selected && <section className="reel-details" role="dialog" aria-label={`${selected.name} quota details`}>

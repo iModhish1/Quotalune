@@ -39,7 +39,7 @@ export default function DashboardStudioTab({
     <div className="dashboard-studio">
       <header className="dashboard-studio__header">
         <span className="dashboard-studio__eyebrow">Dashboard Studio</span>
-        <h2>Choose how QuotaArc presents your data</h2>
+        <h2>Choose how Quotalis presents your data</h2>
         {saving && <span className="dashboard-studio__saving">Saving…</span>}
       </header>
 

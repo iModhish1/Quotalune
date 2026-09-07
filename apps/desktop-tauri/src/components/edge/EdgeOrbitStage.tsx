@@ -210,7 +210,7 @@ export default function EdgeOrbitStage({
         aria-label={expanded ? "Collapse right edge orbit" : "Expand right edge orbit"}
       >
         <span className="qa-edge-orbit__core-content">
-          <span className="qa-edge-orbit__core-name">{focused?.name ?? "QuotaArc"}</span>
+          <span className="qa-edge-orbit__core-name">{focused?.name ?? "Quotalis"}</span>
           <span className="qa-edge-orbit__core-value">{formatPercentage(focused?.primaryValue)}</span>
           <span className="qa-edge-orbit__core-mode">{focused?.primaryLabel ?? "unavailable"}</span>
           <span className="qa-edge-orbit__core-reset">↻ {focused?.reset ?? "—"}</span>

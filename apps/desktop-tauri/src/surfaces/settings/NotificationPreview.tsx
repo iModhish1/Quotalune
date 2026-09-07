@@ -10,7 +10,7 @@ export default function NotificationPreview({high,critical,enabled}:{high:number
   const thresholdText=(value:number)=>`${formatPercentage(value)} ${t("DetailCostUsed")} · ${formatPercentage(Math.max(0,100-value))} ${t("DetailCostRemaining")}`;
   return <section className="notification-overview" aria-label={t("NotificationPreviewTitle")}>
     <header className="notification-overview__header">
-      <span className="notification-overview__mark"><QuotaArcMark size={44} label="QuotaArc"/></span>
+      <span className="notification-overview__mark"><QuotaArcMark size={44} label="Quotalis"/></span>
       <div className="notification-overview__heading">
         <span>{t("NotificationCenterTitle")}</span>
         <h3>{t("NotificationPreviewTitle")}</h3>

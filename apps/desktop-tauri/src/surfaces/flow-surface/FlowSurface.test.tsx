@@ -36,7 +36,7 @@ describe("FlowSurface", () => {
   it("keeps the hidden state to one reachable reveal control", () => {
     render(<FlowSurface catalog="01-obsidian-orbit" settings={settings} state="hidden" providers={providers} />);
 
-    expect(screen.getByRole("button", { name: "Reveal QuotaArc" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reveal Quotalis" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
@@ -61,7 +61,7 @@ describe("FlowSurface", () => {
   it("keeps the compact surface quiet and honest when no provider data is available", () => {
     render(<FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={[]} />);
 
-    expect(screen.getByRole("button", { name: "QuotaArc is waiting for provider data" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Quotalis is waiting for provider data" })).toBeDisabled();
     expect(screen.getByText("Waiting for provider data")).toBeInTheDocument();
     expect(screen.getByTestId("flow-surface")).toHaveAttribute("data-empty", "true");
   });
@@ -113,7 +113,7 @@ describe("FlowSurface", () => {
   });
 
   describe("header identity ownership (Wave 6 Phase 4 correction)", () => {
-    it("keeps QuotaArc's own mark as the compact summary icon — never swapped for the focused provider's glyph", () => {
+    it("keeps Quotalis's own mark as the compact summary icon — never swapped for the focused provider's glyph", () => {
       const { container } = render(
         <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={providers} />,
       );
@@ -124,7 +124,7 @@ describe("FlowSurface", () => {
       expect(screen.getByText("OpenAI")).toBeInTheDocument();
     });
 
-    it("expanded detail header shows the QuotaArc logo alone (no text) and the focused provider as its own row below, never merged", () => {
+    it("expanded detail header shows the Quotalis logo alone (no text) and the focused provider as its own row below, never merged", () => {
       const { container } = render(
         <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={providers} />,
       );
@@ -194,7 +194,7 @@ describe("FlowSurface", () => {
       // handle still exists (for hover/focus/keyboard reachability) rather
       // than the actual opacity value — the opacity:0-by-default behavior
       // itself is verified natively (see docs/WAVE6_CONTINUATION.md).
-      expect(drag).toHaveAttribute("aria-label", "Move QuotaArc");
+      expect(drag).toHaveAttribute("aria-label", "Move Quotalis");
     });
   });
 
@@ -211,7 +211,7 @@ describe("FlowSurface", () => {
     };
 
     it.each([1, 3, 7])(
-      "always renders exactly one QuotaArc title, one provider chip, and both controls regardless of provider count (n=%i)",
+      "always renders exactly one Quotalis title, one provider chip, and both controls regardless of provider count (n=%i)",
       (count) => {
         const data = Array.from({ length: count }, (_, i) => ({
           ...providers[i % providers.length],

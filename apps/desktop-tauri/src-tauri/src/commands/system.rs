@@ -4,7 +4,7 @@ use super::*;
 pub fn get_app_info() -> AppInfoBridge {
     let settings = Settings::load();
     AppInfoBridge {
-        name: "QuotaArc".to_string(),
+        name: "Quotalis".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         build_number: option_env!("BUILD_NUMBER").unwrap_or("dev").to_string(),
         update_channel: update_channel_label(settings.update_channel).to_string(),

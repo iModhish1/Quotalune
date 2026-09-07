@@ -55,7 +55,7 @@ describe("live orbital surface expansion", () => {
   ])("does not turn %s expansion into a forced provider refresh", async (_name, Surface, label) => {
     render(<Surface />);
 
-    const reveal = screen.queryByRole("button", { name: "Reveal QuotaArc" });
+    const reveal = screen.queryByRole("button", { name: "Reveal Quotalis" });
     if (reveal) fireEvent.click(reveal);
     fireEvent.click(await screen.findByRole("button", { name: label }));
 

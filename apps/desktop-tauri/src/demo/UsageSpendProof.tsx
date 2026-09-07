@@ -9,7 +9,7 @@ export default function UsageSpendProof(){
   const theme=params.get('theme')==='light'?'light':'dark';
   return <div data-theme={theme} className="settings-surface--full">
     <main className="settings settings-studio" data-navigation="side">
-      <header className="settings-studio-toolbar"><div className="settings-shell-brand"><span className="settings-shell-brand__mark"><QuotaArcMark size={32} label="QuotaArc"/></span><span className="settings-shell-brand__copy"><span className="settings-shell-brand__name">QuotaArc</span><h1>Usage &amp; Spend</h1></span></div><span className="settings-shell-actions">Synthetic visual proof</span></header>
+      <header className="settings-studio-toolbar"><div className="settings-shell-brand"><span className="settings-shell-brand__mark"><QuotaArcMark size={32} label="Quotalis"/></span><span className="settings-shell-brand__copy"><span className="settings-shell-brand__name">Quotalis</span><h1>Usage &amp; Spend</h1></span></div><span className="settings-shell-actions">Synthetic visual proof</span></header>
       <nav className="settings-tabs" aria-label="Settings sections">{['General','Providers','Notifications','Menu Bar','Usage & Spend','Surfaces','Themes','Advanced','About'].map(label=><button type="button" className={`settings-tab${label==='Usage & Spend'?' settings-tab--active':''}`} key={label}><span className="settings-tab__icon">◦</span><span className="settings-tab__label">{label}</span></button>)}</nav>
       <div className="settings-body" data-tab="usageSpend">
         <section className="settings-section usage-spend">

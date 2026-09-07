@@ -48,7 +48,7 @@ export default function NotchSurface(props:FlowSurfaceProps & {form:NotchForm}) 
     onKeyDown={e=>{if(!["ArrowDown","ArrowUp","ArrowRight","ArrowLeft","Home","End","Escape"].includes(e.key))return;e.preventDefault();e.stopPropagation();
       clearHover();root.current?.focus({preventScroll:true});if(e.key==="Escape")onRequestCompact?.();else if(e.key==="Home")onFocusProvider?.(0);else if(e.key==="End")onFocusProvider?.(Math.max(0,providers.length-1));else cycle(["ArrowDown","ArrowRight"].includes(e.key)?1:-1);}}>
     <div className="notch-stage" data-form={form} data-rotated={rotated} data-folded={satelliteFolded} data-anchor={settings.anchor} style={{width:layout.width,height:layout.height,transform:`scale(${fit})`}}>
-      {hidden ? <button className="notch-reveal" onClick={onReveal} aria-label="Reveal QuotaArc"><QuotaArcMark size={18}/></button> : <>
+      {hidden ? <button className="notch-reveal" onClick={onReveal} aria-label="Reveal Quotalis"><QuotaArcMark size={18}/></button> : <>
         <div className="notch-core" style={{left:layout.core.x,top:layout.core.y,width:layout.core.width,height:layout.core.height}}>
           {satelliteFolded ? <svg className="notch-body" viewBox="0 0 64 84" aria-hidden="true"><rect width="64" height="84" rx="24" fill="#030303"/></svg> : <div style={{position:"absolute",width:rotated?layout.core.height:layout.core.width,height:rotated?layout.core.width:layout.core.height,transformOrigin:"0 0",transform:rotated?(clockwise?`matrix(0,1,-1,0,${layout.core.width},0)`:`matrix(0,-1,1,0,0,${layout.core.height})`):undefined}}><NotchBody form={form} empty={!providers.length} width={rotated?layout.core.height:layout.core.width} height={rotated?layout.core.width:layout.core.height} mirror={!rotated && mirror && form!=="ribbon"} flip={!rotated && ((form==="ribbon" && settings.anchor==="bottom") || (form==="cradle" && settings.anchor.startsWith("top")))}/></div>}
           {nodes.map((node,slot)=>{
@@ -70,7 +70,7 @@ export default function NotchSurface(props:FlowSurfaceProps & {form:NotchForm}) 
           })}
           {form==="deck" && selected && <div className="notch-deck-label"><strong title={selected.name}>{selected.name}</strong><span>{selected.primaryLabel}</span><div className="notch-page-dots" aria-hidden="true">{providers.map((p,i)=><i key={p.id} data-active={i===focus}/>)}</div></div>}
           {!selected && <span className="notch-empty">No data</span>}
-          <button className="notch-grip" aria-label="Move QuotaArc" title="Drag to move" onMouseDown={e=>{if(e.button===0){e.preventDefault();onStartDrag?.();}}}><span/></button>
+          <button className="notch-grip" aria-label="Move Quotalis" title="Drag to move" onMouseDown={e=>{if(e.button===0){e.preventDefault();onStartDrag?.();}}}><span/></button>
           {demoMode && showDemoBadge && <span className="notch-demo">DEMO</span>}
         </div>
         {layout.detail && selected && <NotchDetails provider={selected} color={providerAccent(selected.id)} rect={layout.detail} demo={demoMode && showDemoBadge} pinned={state==="pinned"} onClose={onRequestCompact} onPin={onTogglePinned}/>}

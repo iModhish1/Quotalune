@@ -359,7 +359,7 @@ pub fn show_edge_arc(app: &tauri::AppHandle) -> Result<(), String> {
     }
 
     let url = WebviewUrl::App("index.html?window=edge-arc".into());
-    let builder = crate::surface_kit::base_builder(app, EDGE_ARC_LABEL, "QuotaArc Edge Arc", url)
+    let builder = crate::surface_kit::base_builder(app, EDGE_ARC_LABEL, "Quotalis Edge Arc", url)
         // Provisional only: the authoritative layout is applied before show.
         .inner_size(110.0, 480.0)
         .visible(false);
@@ -672,7 +672,7 @@ pub fn show_top_arc(app: &tauri::AppHandle) -> Result<(), String> {
     }
 
     let url = WebviewUrl::App("index.html?window=top-arc".into());
-    let builder = crate::surface_kit::base_builder(app, TOP_ARC_LABEL, "QuotaArc Top Arc", url)
+    let builder = crate::surface_kit::base_builder(app, TOP_ARC_LABEL, "Quotalis Top Arc", url)
         // Provisional only: the authoritative layout is applied before show.
         .inner_size(56.0, 310.0)
         .visible(false);
@@ -807,7 +807,7 @@ pub fn show_taskbar_arc(app: &tauri::AppHandle) -> Result<(), String> {
 
     let url = WebviewUrl::App("index.html?window=taskbar-arc".into());
     let builder =
-        crate::surface_kit::base_builder(app, TASKBAR_ARC_LABEL, "QuotaArc Taskbar Arc", url)
+        crate::surface_kit::base_builder(app, TASKBAR_ARC_LABEL, "Quotalis Taskbar Arc", url)
             // Provisional only: the authoritative layout is applied before show.
             .inner_size(440.0, 140.0)
             .visible(false);

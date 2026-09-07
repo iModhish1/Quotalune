@@ -167,7 +167,7 @@ export default function SurfacesTab() {
           <SurfaceControl title="Show surface" description="Keep a compact quota control within reach without covering your work.">
           <Toggle
             checked={config.topArcEnabled}
-            ariaLabel="Show QuotaArc Surface"
+            ariaLabel="Show Quotalis Surface"
             disabled={false}
             onChange={(topArcEnabled) => patch({ topArcEnabled })}
           />
@@ -189,16 +189,16 @@ export default function SurfacesTab() {
 
         <div className="surface-settings__column surface-settings__column--behavior">
           <SurfaceControl title="Auto-hide" description="Retracts to a small reachable tab after the pointer leaves.">
-          <Toggle checked={config.topArcAutoHide} ariaLabel="Auto-hide QuotaArc surface" disabled={!config.topArcEnabled} onChange={(topArcAutoHide) => patch({ topArcAutoHide })} />
+          <Toggle checked={config.topArcAutoHide} ariaLabel="Auto-hide Quotalis surface" disabled={!config.topArcEnabled} onChange={(topArcAutoHide) => patch({ topArcAutoHide })} />
           </SurfaceControl>
           <SurfaceControl title="Hide delay" description="How long the compact surface stays visible after the pointer leaves.">
           <RangeControl label="Auto-hide delay" value={config.topArcAutoHideDelayMs} min={300} max={3000} step={100} disabled={!config.topArcEnabled || !config.topArcAutoHide} onChange={(topArcAutoHideDelayMs) => patch({ topArcAutoHideDelayMs })} />
           </SurfaceControl>
           <SurfaceControl title="Click-through" description="Mouse input passes through the compact surface.">
-          <Toggle checked={config.topArcClickThrough} ariaLabel="QuotaArc compact click-through" disabled={!config.topArcEnabled} onChange={(topArcClickThrough) => patch({ topArcClickThrough })} />
+          <Toggle checked={config.topArcClickThrough} ariaLabel="Quotalis compact click-through" disabled={!config.topArcEnabled} onChange={(topArcClickThrough) => patch({ topArcClickThrough })} />
           </SurfaceControl>
           <SurfaceControl title="Fullscreen privacy" description="Hide the surface while games and video use the whole screen.">
-          <Toggle checked={config.topArcHideFullscreen} ariaLabel="Hide QuotaArc surface during fullscreen apps" disabled={!config.topArcEnabled} onChange={(topArcHideFullscreen) => patch({ topArcHideFullscreen })} />
+          <Toggle checked={config.topArcHideFullscreen} ariaLabel="Hide Quotalis surface during fullscreen apps" disabled={!config.topArcEnabled} onChange={(topArcHideFullscreen) => patch({ topArcHideFullscreen })} />
           </SurfaceControl>
         </div>
 
@@ -232,7 +232,7 @@ export default function SurfacesTab() {
           <select
             value={config.topArcAnchor}
             disabled={!config.topArcEnabled}
-            aria-label="QuotaArc surface position"
+            aria-label="Quotalis surface position"
             onChange={(event) => patch({ topArcAnchor: event.target.value as SurfaceSettings["topArcAnchor"] })}
           >
             {flowSurfaceAnchorOptions(config.topArcForm).map((anchor) => (

@@ -253,7 +253,7 @@ export default function TaskbarStage({
         aria-label={stageState === "expanded" ? "Collapse quota instrument" : "Expand quota instrument"}
       >
         <span className="qa-taskbar-core__content">
-          <span className="qa-taskbar-core__name">{focused?.name ?? "QuotaArc"}</span>
+          <span className="qa-taskbar-core__name">{focused?.name ?? "Quotalis"}</span>
           <span className="qa-taskbar-core__value">{formatPercentage(focused?.primaryValue)}</span>
           <span className="qa-taskbar-core__mode">
             {focused?.resolvedMode === "hybrid" && focused.secondaryValue != null

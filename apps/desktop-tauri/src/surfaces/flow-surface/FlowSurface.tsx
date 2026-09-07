@@ -160,7 +160,7 @@ export default function FlowSurface({
         className={`flow-surface__reveal flow-surface__reveal--${settings.form} flow-surface__reveal--${settings.anchor}`}
         style={style}
         onClick={onReveal}
-        aria-label="Reveal QuotaArc"
+        aria-label="Reveal Quotalis"
       >
         <QuotaArcMark />
       </button>
@@ -188,8 +188,8 @@ export default function FlowSurface({
           aria-expanded={expanded}
           aria-controls="quota-flow-details"
           aria-label={hasQuotaData
-            ? `Expand ${focused?.name ?? "QuotaArc"} details`
-            : "QuotaArc is waiting for provider data"}
+            ? `Expand ${focused?.name ?? "Quotalis"} details`
+            : "Quotalis is waiting for provider data"}
         >
           {/* This icon is the application anchor — QuotaArc's own mark,
               never a provider glyph (Wave 6 Phase 4 correction: an earlier
@@ -199,7 +199,7 @@ export default function FlowSurface({
               element, not by replacing the app's). */}
           <span className="flow-surface__brand"><QuotaArcMark /></span>
           <span className="flow-surface__summary-copy">
-            <strong>{focused?.name ?? "QuotaArc"}</strong>
+            <strong>{focused?.name ?? "Quotalis"}</strong>
             <small>{focused ? `${formatPercentage(focused.primaryValue)} ${focused.primaryLabel}` : "Waiting for provider data"}</small>
           </span>
         </button>
@@ -225,7 +225,7 @@ export default function FlowSurface({
             event.preventDefault();
             onStartDrag?.();
           }}
-          aria-label="Move QuotaArc"
+          aria-label="Move Quotalis"
           title="Drag to move"
         >
           <span aria-hidden="true">⋮</span>
@@ -233,14 +233,14 @@ export default function FlowSurface({
       </div>
 
       {expanded && (
-        <section id="quota-flow-details" className="flow-surface__details" role="dialog" aria-label={`${focused?.name ?? "QuotaArc"} quota details`}>
+        <section id="quota-flow-details" className="flow-surface__details" role="dialog" aria-label={`${focused?.name ?? "Quotalis"} quota details`}>
           <header className="flow-surface__detail-header">
             {/* LEFT: the application anchor — logo only (Wave 6 Phase 4
                 follow-up correction: the "QuotaArc" text label was removed
                 to free header space for the provider identity below; the
                 logo alone still reads as the app anchor, matching how the
                 compact rail's brand icon already works with no text). */}
-            <span className="flow-surface__detail-title" aria-label="QuotaArc"><QuotaArcMark /></span>
+            <span className="flow-surface__detail-title" aria-label="Quotalis"><QuotaArcMark /></span>
             <span className="flow-surface__detail-controls">
               {/* A real pin glyph (Wave 6 Phase 4 follow-up correction —
                   ⌖ read as an ambiguous abstract symbol). Filled when
