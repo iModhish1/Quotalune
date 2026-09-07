@@ -199,7 +199,7 @@ describe("ResetDisplaySection", () => {
       await waitFor(() => expect(tauriMocks.getSettingsSnapshot).toHaveBeenCalled());
       fireEvent.click(screen.getByRole("button", { name: "Customize by surface" }));
 
-      const taskbarRow = screen.getByText("Taskbar").closest(".reset-display__surface-row")!;
+      const taskbarRow = screen.getByText("Taskbar").closest(".reset-display__surface-row") as HTMLElement;
       fireEvent.click(within(taskbarRow).getByRole("button", { name: "Customize" }));
 
       // Editing a surface presets its own field set (idPrefix scoped) --
@@ -226,7 +226,7 @@ describe("ResetDisplaySection", () => {
       await waitFor(() => expect(tauriMocks.getSettingsSnapshot).toHaveBeenCalled());
       fireEvent.click(screen.getByRole("button", { name: "Customize by surface" }));
 
-      const taskbarRow = screen.getByText("Taskbar").closest(".reset-display__surface-row")!;
+      const taskbarRow = screen.getByText("Taskbar").closest(".reset-display__surface-row") as HTMLElement;
       expect(within(taskbarRow).getByText("Custom")).toBeInTheDocument();
 
       fireEvent.click(within(taskbarRow).getByRole("button", { name: "Reset to Global" }));
