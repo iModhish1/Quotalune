@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocale } from "./useLocale";
+import { computeCountdownParts, countdownRefreshIntervalMs } from "../lib/resetPresentation";
 
 export type ResetTimeFormatMode = "reset" | "expires";
 
@@ -21,6 +22,15 @@ const absoluteResetFormatter = new Intl.DateTimeFormat(undefined, {
  *
  * Falls back to `fallback` (typically the backend's `resetDescription`) when
  * `resetsAt` is absent or unparseable.
+ *
+ * The day/hour/minute *tiering* is delegated to the same
+ * `computeCountdownParts` the production `resetPresentation.ts` pipeline
+ * uses -- this hook no longer buckets a duration into days/hours/minutes
+ * itself, so there is exactly one place that logic lives. What this hook
+ * still owns, and `resetPresentation.ts` does not, is the "reset" vs.
+ * "expires" sentence-wording choice (cost-window expiry uses different
+ * locale keys than a quota reset) -- that distinction is real product
+ * semantics specific to this hook's callers, not duplicated tiering logic.
  */
 export function useFormattedResetTime(
   resetsAt: string | null,
@@ -31,42 +41,52 @@ export function useFormattedResetTime(
   const { t } = useLocale();
   const [now, setNow] = useState(() => Date.now());
 
+  const target = resetsAt ? Date.parse(resetsAt) : Number.NaN;
+  const parts =
+    resetsAt && !Number.isNaN(target) ? computeCountdownParts(target - now, "adaptive") : null;
+
   useEffect(() => {
-    if (!resetsAt) return;
-    const id = window.setInterval(() => setNow(Date.now()), 30_000);
+    if (!resetsAt || !relative || !parts) return;
+    const intervalMs = countdownRefreshIntervalMs(parts.tier);
+    const id = window.setInterval(() => setNow(Date.now()), intervalMs);
     return () => window.clearInterval(id);
-  }, [resetsAt, relative]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-registers
+    // only when the countdown crosses into a new refresh tier, not on
+    // every `now` tick.
+  }, [resetsAt, relative, parts?.tier]);
 
   if (!resetsAt) {
     return fallback;
   }
-  const target = Date.parse(resetsAt);
-  if (Number.isNaN(target)) {
+  if (Number.isNaN(target) || !parts) {
     return fallback;
   }
 
   if (relative) {
-    const diffMs = target - now;
-    const dueNowKey = mode === "expires" ? "NextExpiresDueNow" : "TrayResetsDueNow";
-    if (diffMs <= 0) return t(dueNowKey);
-    const totalMinutes = Math.floor(diffMs / 60_000);
-    const days = Math.floor(totalMinutes / 1440);
-    const hours = Math.floor((totalMinutes % 1440) / 60);
-    const minutes = totalMinutes % 60;
-    if (days > 0) {
-      const key = mode === "expires" ? "NextExpiresInDaysHours" : "ResetsInDaysHours";
-      return t(key)
-        .replace("{}", String(days))
-        .replace("{}", String(hours));
+    switch (parts.tier) {
+      case "expired":
+        return t(mode === "expires" ? "NextExpiresDueNow" : "TrayResetsDueNow");
+      case "lessThanMinute": {
+        const key = mode === "expires" ? "NextExpiresInMinutes" : "ResetsInMinutes";
+        return t(key).replace("{}", "0");
+      }
+      case "day": {
+        const key = mode === "expires" ? "NextExpiresInDaysHours" : "ResetsInDaysHours";
+        return t(key)
+          .replace("{}", String(parts.days))
+          .replace("{}", String(parts.hours));
+      }
+      case "hour": {
+        const key = mode === "expires" ? "NextExpiresInHoursMinutes" : "ResetsInHoursMinutes";
+        return t(key)
+          .replace("{}", String(parts.hours))
+          .replace("{}", String(parts.minutes));
+      }
+      case "minute": {
+        const key = mode === "expires" ? "NextExpiresInMinutes" : "ResetsInMinutes";
+        return t(key).replace("{}", String(parts.minutes));
+      }
     }
-    if (hours === 0) {
-      const key = mode === "expires" ? "NextExpiresInMinutes" : "ResetsInMinutes";
-      return t(key).replace("{}", String(minutes));
-    }
-    const key = mode === "expires" ? "NextExpiresInHoursMinutes" : "ResetsInHoursMinutes";
-    return t(key)
-      .replace("{}", String(hours))
-      .replace("{}", String(minutes));
   }
 
   try {

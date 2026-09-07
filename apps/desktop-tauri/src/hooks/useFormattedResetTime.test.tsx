@@ -99,4 +99,20 @@ describe("useFormattedResetTime", () => {
     );
     expect(screen.getByTestId("reset")).toHaveTextContent("Next expires in 3h 42m");
   });
+
+  it("tiers days+hours the same way the shared countdown pipeline does", async () => {
+    const target = new Date("2024-06-06T13:00:00Z").toISOString(); // 5d 13h out
+    await mountWithLocale(
+      <Probe resetsAt={target} fallback="later" relative={true} />,
+    );
+    expect(screen.getByTestId("reset")).toHaveTextContent("Resets in 5d 13h");
+  });
+
+  it("reports a due-now state instead of a stale negative countdown once expired", async () => {
+    const target = new Date("2024-05-31T23:00:00Z").toISOString(); // already past
+    await mountWithLocale(
+      <Probe resetsAt={target} fallback="later" relative={true} />,
+    );
+    expect(screen.getByTestId("reset")).toHaveTextContent("Resetting");
+  });
 });
