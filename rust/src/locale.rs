@@ -1249,6 +1249,16 @@ locale_keys! {
     ProviderIdentityDarkHelper,
     ApplyProviderIdentity,
     SelectedProviderIdentity,
+    // Wave 6 Phase 4: "Adaptive" reframed as "Follow Structure" — a real
+    // existing mechanism, not a new one (see docs/validation/
+    // VISUAL_THEME_OWNERSHIP.md). These give it a distinct display name,
+    // a "Recommended" badge, and a provenance line rather than showing it
+    // as an unlabeled 24th equal-weight gallery card.
+    ProviderPresentationFollowStructureName,
+    ProviderPresentationRecommendedBadge,
+    ProviderPresentationSourceLabel,
+    ProviderPresentationFollowingPrefix,
+    ProviderPresentationIndependentLabel,
     MaximizeWindow,
     RestoreWindow,
     EnterFullScreen,

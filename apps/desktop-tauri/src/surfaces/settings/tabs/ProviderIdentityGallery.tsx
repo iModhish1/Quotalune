@@ -6,6 +6,9 @@ import {DEFAULT_LIMIT_PRESENTATION,PROVIDER_PRESENTATION_IDENTITIES,type LimitPr
 import {getSettingsSnapshot,setGlobalLimitPresentation} from "../../../lib/tauri";
 import {providerMeterFillColor} from "../../../design-system/meterFill";
 import {useLocale} from "../../../hooks/useLocale";
+import {resolveCatalogTheme} from "../../../design-system/themeResolution";
+import {catalogBySlug} from "../../../design-system/themeCatalog";
+import {resolveVisualComposition} from "../../../design-system/visualComposition";
 import "./ProviderIdentityGallery.css";
 
 const NAMES:Record<ProviderPresentationIdentity,string>={
@@ -29,14 +32,30 @@ export default function ProviderIdentityGallery(){
   const [saving,setSaving]=useState(false);
   const [ready,setReady]=useState(false);
   const [error,setError]=useState<string>();
+  // The active Structure Theme's display name — used only for the
+  // provenance line ("Following <name>"); does not otherwise affect
+  // resolution (Wave 6 Phase 4: resolveVisualComposition treats
+  // structureThemeId as opaque, since no per-theme recommended-identity
+  // mapping currently exists — see docs/validation/VISUAL_THEME_OWNERSHIP.md).
+  const [structureThemeName,setStructureThemeName]=useState<string>("");
   useEffect(()=>{
     let alive=true;
-    const load=()=>getSettingsSnapshot().then(snapshot=>{if(alive){setPresentation(snapshot.globalLimitPresentation??DEFAULT_LIMIT_PRESENTATION);setReady(true);}}).catch(cause=>{if(alive)setError(String(cause));});
+    const load=()=>getSettingsSnapshot().then(snapshot=>{
+      if(!alive)return;
+      setPresentation(snapshot.globalLimitPresentation??DEFAULT_LIMIT_PRESENTATION);
+      setReady(true);
+      const {slug}=resolveCatalogTheme(snapshot,"dashboard");
+      setStructureThemeName(catalogBySlug(slug)?.name??slug);
+    }).catch(cause=>{if(alive)setError(String(cause));});
     void load();
     const subscription=listen("codexbar:settings-updated",()=>void load()).catch(()=>()=>{});
     return()=>{alive=false;void subscription.then(stop=>stop());};
   },[]);
-  const identities=useMemo(()=>PROVIDER_PRESENTATION_IDENTITIES.filter(identity=>`${identity} ${NAMES[identity]}`.toLowerCase().includes(query.trim().toLowerCase())),[query]);
+  const composition=useMemo(()=>resolveVisualComposition({
+    structureThemeId:structureThemeName,
+    identity:presentation.identity,
+  }),[structureThemeName,presentation.identity]);
+  const identities=useMemo(()=>PROVIDER_PRESENTATION_IDENTITIES.filter(identity=>`${identity} ${NAMES[identity]} ${identity==="adaptive"?t("ProviderPresentationFollowStructureName"):""}`.toLowerCase().includes(query.trim().toLowerCase())),[query,t]);
   const previewWindows=useMemo(()=>WINDOWS.map((window,index)=>index===0?{...window,primaryValue:PREVIEW_REMAINING[previewState],arcFraction:PREVIEW_REMAINING[previewState]/100}:window),[previewState]);
   async function save(next:LimitPresentation){
     const previous=presentation;
@@ -44,8 +63,16 @@ export default function ProviderIdentityGallery(){
     try{await setGlobalLimitPresentation(next);}catch(cause){setPresentation(previous);setError(cause instanceof Error?cause.message:String(cause));}finally{setSaving(false);}
   }
   const directionLabels=presentation.shape==="ring"?[t("Clockwise"),t("Counterclockwise")]:presentation.shape==="vertical"?[t("BottomToTop"),t("TopToBottom")]:[t("LeftToRight"),t("RightToLeft")];
+  // Wave 6 Phase 4: "adaptive" displays as "Follow Structure" everywhere
+  // in this gallery — the stored identity value is unchanged, only the
+  // label a user sees.
+  const displayName=(identity:ProviderPresentationIdentity)=>identity==="adaptive"?t("ProviderPresentationFollowStructureName"):NAMES[identity];
+  const provenanceText=composition.presentationSource==="followStructure"
+    ?`${t("ProviderPresentationFollowingPrefix")} ${structureThemeName||"…"}`
+    :`${t("ProviderPresentationIndependentLabel")} — ${displayName(composition.resolvedProviderPresentationIdentity)}`;
   return <section className="settings-section provider-identity-gallery" aria-label={t("ProviderIdentityGalleryTitle")}>
     <div className="provider-identity-gallery__heading"><div><span>{t("ProviderIdentityGalleryEyebrow")}</span><h3 className="settings-section__title">{t("ProviderIdentityGalleryTitle")}</h3><p className="settings-section__description">{t("ProviderIdentityGalleryHelper")}</p></div><output>{PROVIDER_PRESENTATION_IDENTITIES.length} {t("ProviderIdentityCountLabel")}</output></div>
+    <p className="provider-identity-gallery__provenance"><strong>{t("ProviderPresentationSourceLabel")}:</strong> {provenanceText}</p>
     <div className="provider-identity-gallery__controls">
       <label>{t("ProviderIdentityPreviewShape")}<select disabled={saving||!ready} aria-label={t("ProviderIdentityPreviewShape")} value={presentation.shape} onChange={event=>void save({...presentation,shape:event.target.value as LimitPresentation["shape"]})}><option value="ring">{t("CircularRing")}</option><option value="horizontal">{t("HorizontalBar")}</option><option value="vertical">{t("VerticalBar")}</option></select></label>
       <label>{t("IndicatorContent")}<select disabled={saving||!ready} aria-label={t("IndicatorContent")} value={presentation.content} onChange={event=>void save({...presentation,content:event.target.value as LimitPresentation["content"]})}><option value="both">{t("BarAndPercentage")}</option><option value="bar">{t("BarOnly")}</option><option value="value">{t("PercentageOnly")}</option></select></label>
@@ -55,10 +82,10 @@ export default function ProviderIdentityGallery(){
     </div>
     {error&&<p className="provider-identity-gallery__error" role="alert">{error}</p>}
     <div className="provider-identity-gallery__grid">
-      {identities.map(identity=><article key={identity} data-selected={(presentation.identity??"adaptive")===identity}>
+      {identities.map(identity=><article key={identity} data-selected={(presentation.identity??"adaptive")===identity} data-follow-structure={identity==="adaptive"}>
         <div className="provider-identity-gallery__preview" style={{"--provider-color":providerMeterFillColor("#10a37f",identity)} as React.CSSProperties}><UsageWindowList providerId="codex" windows={previewWindows} presentation={{...presentation,identity}}/></div>
-        <div className="provider-identity-gallery__meta"><span><strong>{NAMES[identity]}</strong><small>{identity==="adaptive"?t("ProviderIdentityAdaptiveHelper"):LIGHT.has(identity)?t("ProviderIdentityLightHelper"):t("ProviderIdentityDarkHelper")}</small></span><i aria-hidden="true" data-tone={LIGHT.has(identity)?"light":"dark"}/></div>
-        <button type="button" aria-label={`${t("ApplyProviderIdentity")} ${NAMES[identity]}`} aria-pressed={(presentation.identity??"adaptive")===identity} disabled={saving||!ready} onClick={()=>void save({...presentation,identity})}>{(presentation.identity??"adaptive")===identity?t("SelectedProviderIdentity"):t("ApplyProviderIdentity")}</button>
+        <div className="provider-identity-gallery__meta"><span><strong>{displayName(identity)}</strong>{identity==="adaptive"&&<em className="provider-identity-gallery__recommended">{t("ProviderPresentationRecommendedBadge")}</em>}<small>{identity==="adaptive"?t("ProviderIdentityAdaptiveHelper"):LIGHT.has(identity)?t("ProviderIdentityLightHelper"):t("ProviderIdentityDarkHelper")}</small></span><i aria-hidden="true" data-tone={LIGHT.has(identity)?"light":"dark"}/></div>
+        <button type="button" aria-label={`${t("ApplyProviderIdentity")} ${displayName(identity)}`} aria-pressed={(presentation.identity??"adaptive")===identity} disabled={saving||!ready} onClick={()=>void save({...presentation,identity})}>{(presentation.identity??"adaptive")===identity?t("SelectedProviderIdentity"):t("ApplyProviderIdentity")}</button>
       </article>)}
     </div>
   </section>;

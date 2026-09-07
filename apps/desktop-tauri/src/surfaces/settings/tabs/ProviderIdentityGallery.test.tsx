@@ -7,7 +7,7 @@ const api=vi.hoisted(()=>({getSettingsSnapshot:vi.fn(),setGlobalLimitPresentatio
 vi.mock("../../../lib/tauri",()=>api);
 vi.mock("@tauri-apps/api/event",()=>({listen:vi.fn().mockResolvedValue(()=>{})}));
 vi.mock("../../../hooks/useLocale",()=>{
-  const locale={t:(key:string)=>({ProviderIdentityCountLabel:"identities",ProviderIdentityPreviewShape:"Preview shape",ProviderIdentityPreviewState:"Preview state",ProviderIdentityStateNormal:"Normal",HighUsageAlert:"Warning",CriticalUsageAlert:"Critical",NotificationSoundEventExhausted:"Exhausted",ProviderIdentitySearch:"Find identity",ProviderIdentitySearchPlaceholder:"Glass, light, royal…",ProviderIdentityAdaptiveHelper:"Inherits the active structure",ProviderIdentityLightHelper:"Light identity · protected contrast",ProviderIdentityDarkHelper:"Dark identity · protected contrast",ApplyProviderIdentity:"Apply identity",SelectedProviderIdentity:"Selected",CircularRing:"Circular",HorizontalBar:"Horizontal",VerticalBar:"Vertical"}[key]??key)};
+  const locale={t:(key:string)=>({ProviderIdentityCountLabel:"identities",ProviderIdentityPreviewShape:"Preview shape",ProviderIdentityPreviewState:"Preview state",ProviderIdentityStateNormal:"Normal",HighUsageAlert:"Warning",CriticalUsageAlert:"Critical",NotificationSoundEventExhausted:"Exhausted",ProviderIdentitySearch:"Find identity",ProviderIdentitySearchPlaceholder:"Glass, light, royal…",ProviderIdentityAdaptiveHelper:"Uses the provider presentation recommended by the active Structure Theme.",ProviderIdentityLightHelper:"Light identity · protected contrast",ProviderIdentityDarkHelper:"Dark identity · protected contrast",ApplyProviderIdentity:"Apply identity",SelectedProviderIdentity:"Selected",CircularRing:"Circular",HorizontalBar:"Horizontal",VerticalBar:"Vertical",ProviderPresentationFollowStructureName:"Follow Structure",ProviderPresentationRecommendedBadge:"Recommended",ProviderPresentationSourceLabel:"Provider Presentation",ProviderPresentationFollowingPrefix:"Following",ProviderPresentationIndependentLabel:"Independent"}[key]??key)};
   return {useLocale:()=>locale,useOptionalLocale:()=>locale};
 });
 
@@ -56,5 +56,25 @@ describe("ProviderIdentityGallery",()=>{
     fireEvent.change(screen.getByLabelText("Preview state"),{target:{value:"critical"}});
     expect(container.querySelectorAll('[data-usage-tone="critical"]')).toHaveLength(PROVIDER_PRESENTATION_IDENTITIES.length);
     expect(api.setGlobalLimitPresentation).not.toHaveBeenCalled();
+  });
+  it("shows 'Follow Structure' (not 'Adaptive') with a Recommended badge, and reframes the provenance line when adaptive is active (Wave 6 Phase 4)",async()=>{
+    api.getSettingsSnapshot.mockResolvedValue({globalLimitPresentation:{shape:"ring",content:"both",direction:"forward",identity:"adaptive"},catalogTheme:"01-obsidian-orbit"});
+    const {container}=render(<ProviderIdentityGallery/>);
+    await waitFor(()=>expect(screen.getByRole("button",{name:"Apply identity Follow Structure"})).toBeInTheDocument());
+    // "Adaptive" no longer appears anywhere as a user-facing label.
+    expect(screen.queryByText("Adaptive")).not.toBeInTheDocument();
+    expect(screen.getByText("Follow Structure")).toBeInTheDocument();
+    expect(screen.getByText("Recommended")).toBeInTheDocument();
+    const provenance=container.querySelector(".provider-identity-gallery__provenance");
+    expect(provenance?.textContent).toMatch(/Following/);
+    expect(provenance?.textContent).toMatch(/Provider Presentation/);
+  });
+  it("reports Independent provenance with the resolved identity's display name when a non-adaptive identity is active",async()=>{
+    api.getSettingsSnapshot.mockResolvedValue({globalLimitPresentation:{shape:"ring",content:"both",direction:"forward",identity:"precision"}});
+    const {container}=render(<ProviderIdentityGallery/>);
+    await waitFor(()=>expect(screen.getByRole("button",{name:"Apply identity Precision"})).toBeInTheDocument());
+    const provenance=container.querySelector(".provider-identity-gallery__provenance");
+    expect(provenance?.textContent).toMatch(/Independent/);
+    expect(provenance?.textContent).toMatch(/Precision/);
   });
 });
