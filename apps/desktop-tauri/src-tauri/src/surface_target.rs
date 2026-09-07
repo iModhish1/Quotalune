@@ -8,11 +8,13 @@ use crate::surface::SurfaceMode;
 // (apps/desktop-tauri/src/types/bridge.ts) and `TAB_META` in
 // apps/desktop-tauri/src/surfaces/Settings.tsx.
 const SETTINGS_TAB_IDS: &[&str] = &[
+    "dashboard",
     "general",
     "providers",
     "providerDisplay",
     "collections",
     "profiles",
+    "resetDisplay",
     "notifications",
     "menuBar",
     "menu",
@@ -188,5 +190,19 @@ mod tests {
         assert!(is_supported_settings_tab("about"));
         assert!(!is_supported_settings_tab("apiKeys"));
         assert!(!is_supported_settings_tab("security"));
+    }
+
+    /// Regression guard: this whitelist gates `lastSettingsTab` persistence
+    /// (`commands/settings.rs`), `resolve_startup_destination`
+    /// (`main.rs`), and the CUA proof harness's `settings:<tab>` parsing
+    /// (`proof_harness.rs`) -- a tab missing here silently falls back
+    /// elsewhere in all three, even though `shell::MainRoute` resolves it
+    /// successfully. Found out of sync with `shell::MainRoute` (which
+    /// added Dashboard and Reset Display as real settings tabs) during a
+    /// current-state audit; this test is what would have caught it.
+    #[test]
+    fn supported_settings_tabs_include_dashboard_and_reset_display() {
+        assert!(is_supported_settings_tab("dashboard"));
+        assert!(is_supported_settings_tab("resetDisplay"));
     }
 }
