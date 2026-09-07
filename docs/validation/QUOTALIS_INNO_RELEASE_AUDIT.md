@@ -134,6 +134,38 @@ Evidence, not preference:
 buildable (fixed and verified in this pass — see the closure report), kept
 for whatever the CLI-only distribution and portable-zip use cases it was
 originally built for, but not the path a fresh Personal release should
-depend on going forward. `docs/BUILDING.md` and the two ADRs referencing it
-as "canonical" are corrected in this pass to describe reality rather than
-this stale claim.
+depend on going forward. `docs/BUILDING.md` is corrected in this pass to
+describe reality rather than this stale claim (the two ADRs are left
+untouched — they describe their own historical period in the past tense
+and are accurate for it; per ADR convention a stale "current" claim gets
+superseded by a new ADR, not edited in place).
+
+## NSIS vs Inno vs MSI — feature comparison
+
+| | NSIS (Tauri) | Inno Setup | MSI (Tauri/WiX) |
+|---|---|---|---|
+| Upgrade continuity | Keyed on Tauri bundle identifier (`app.quotaarc.desktop`) | Keyed on its own `AppId=QuotaArcDesktop` — separate namespace, preserved unchanged | Keyed on WiX `UpgradeCode` (auto-managed by Tauri) |
+| Shortcut behavior | Start Menu shortcut via NSIS script, verified this session | Start Menu + optional desktop shortcut (its own `[Icons]` section) | Start Menu shortcut via WiX |
+| Install path | `{localAppData}\<ProductName>` (verified: matches Personal's real install) | `{localappdata}\Programs\<ProductName>` (a different shape — never matched Personal's real path) | MSI-standard `Program Files` by default |
+| Uninstall behavior | Standard Windows uninstall entry, verified end-to-end this session (install → verify → uninstall → verify clean) | Standard Inno uninstaller, not live-tested this session (static audit + fix only — see below) | Standard `msiexec` uninstall, not live-tested |
+| Portable support | None built in | Yes (`CodexBar-$version-portable.exe` → now `Quotalis-$version-portable.exe`, a plain exe copy) | No |
+| Bundle identity | Self-contained in `tauri.conf.json` | Separate `.iss` file, separate toolchain | Self-contained in `tauri.conf.json` |
+| Toolchain provisioning | Self-provisioning (Tauri fetches NSIS automatically) | Manual (`winget install JRSoftware.InnoSetup`, done this session) | Self-provisioning (Tauri fetches WiX automatically) |
+| Release-script authority | Not driven by `windows-release-build.ps1` today, but is what actually produces Personal's real installed binary | Driven by `windows-release-build.ps1`, documented (inaccurately, until this pass) as canonical | Not driven by `windows-release-build.ps1` |
+| Additional artifacts | None | Standalone CLI zip, portable exe | Locale-specific MSI variants (8 languages, built this session) |
+
+**Verdict**: NSIS = primary Personal installer (real evidence: it's what
+built Personal, it self-provisions, it was live-tested end-to-end this
+session). Inno = secondary, kept for its CLI-zip/portable artifacts, now
+fixed (the pre-existing `--bin codexbar` bug) and rebranded, but not
+live-installed this session (see below for why). MSI = tertiary,
+build-verified in the prior packaging pass, not live-installed.
+
+## Live installation test — result
+
+The full `windows-release-build.ps1` run (against this branch, via a local
+clone — the script's own documented, supported invocation, not bypassed)
+was executed to prove the canonical script itself, not just the `.iss` in
+isolation. See the closure report for its actual outcome (build succeeded/
+failed, artifact paths, hashes) — this audit document is the design/
+findings record; the report is the evidence record for what actually ran.
