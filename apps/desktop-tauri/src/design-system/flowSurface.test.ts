@@ -86,6 +86,21 @@ describe("Flow Surface contract", () => {
     expect(flowSurfaceEnvelope("horizon","compact",100,3,"left")).toEqual({width:58,height:350});
   });
 
+  it("gives the expanded Flowline (left/right anchor) enough height for 3 stacked satellite gauges (Wave 6 Phase 4 clipping fix)", () => {
+    // .flow-surface__quick-providers stacks vertically for left/right
+    // anchors (unrotated) — live measurement on real content found a
+    // ~42px top offset plus ~157px of gauges/gaps, so anything under
+    // ~200px clips the third satellite's percentage against the window's
+    // bottom edge (confirmed and root-caused live: height 160 clipped the
+    // third gauge by ~40px, reported by the owner as a provider's percent
+    // — "Gemini" in their screenshot — not showing clearly). 200 is the
+    // measured floor; this pins a safe minimum rather than the exact
+    // current value, so a deliberate future resize still passes as long
+    // as it doesn't regress back into clipping territory.
+    const envelope = flowSurfaceEnvelope("flowline", "expanded", 100, 3, "right");
+    expect(envelope.height).toBeGreaterThanOrEqual(200);
+  });
+
   it("keeps the orbital structure bounded and opens inward from its corner", () => {
     expect(flowSurfaceEnvelope("orbital", "compact", 100, 3)).toEqual({ width: 104, height: 104 });
     expect(flowSurfaceEnvelope("orbital", "compact", 100, 0)).toEqual({ width: 64, height: 64 });

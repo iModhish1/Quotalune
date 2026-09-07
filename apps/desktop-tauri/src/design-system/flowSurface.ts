@@ -187,7 +187,18 @@ const BASE_ENVELOPES: Record<Exclude<FlowSurfaceForm,NotchForm>, Record<Exclude<
   },
   flowline: {
     compact: { width: 56, height: 310 },
-    expanded: { width: 330, height: 160 },
+    // Wave 6 Phase 4 (owner-reported): 160 was too short for a left/right
+    // anchor — .flow-surface__quick-providers stacks its 3 satellite
+    // gauges in a vertical column here (flex-direction:column, unrotated),
+    // whose real content height (measured live: ~42px top offset + 157px
+    // of gauges/gaps) is ~200px, clipping the third gauge's percentage by
+    // ~40px against the window's bottom edge — the third satellite (which
+    // could be any provider position-wise, reported live as "Gemini") had
+    // its value text pushed past the window boundary. 210 leaves a small
+    // margin. Top/bottom anchors rotate width<->height and use a row
+    // layout for quick-providers instead, so the extra height (becoming
+    // width there) is harmless slack, not a new problem.
+    expanded: { width: 330, height: 210 },
   },
   horizon: {
     compact: { width: 350, height: 58 },
