@@ -46,15 +46,15 @@ Assert-Throws { Get-ReleaseVersionFromTag 'v0.48.0+build' } 'invalid version ext
 
 $assetNames = Get-RequiredReleaseAssets '0.48.0'
 Assert-Equal $assetNames.Count 6 'exactly six release asset names including sidecars'
-Assert-Equal $assetNames[0] 'CodexBar-0.48.0-Setup.exe' 'installer name'
-Assert-Equal $assetNames[3] 'CodexBar-0.48.0-portable.exe.sha256' 'portable sidecar name'
-Assert-Equal $assetNames[4] 'CodexBarCLI-v0.48.0-windows-x64.zip' 'CLI archive name'
-Assert-Equal $assetNames[5] 'CodexBarCLI-v0.48.0-windows-x64.zip.sha256' 'CLI sidecar name'
+Assert-Equal $assetNames[0] 'Quotalis-0.48.0-Setup.exe' 'installer name'
+Assert-Equal $assetNames[3] 'Quotalis-0.48.0-portable.exe.sha256' 'portable sidecar name'
+Assert-Equal $assetNames[4] 'QuotalisCLI-v0.48.0-windows-x64.zip' 'CLI archive name'
+Assert-Equal $assetNames[5] 'QuotalisCLI-v0.48.0-windows-x64.zip.sha256' 'CLI sidecar name'
 
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('win-codexbar-release-tests-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $testRoot | Out-Null
 try {
-    $asset = Join-Path $testRoot 'CodexBar-0.48.0-Setup.exe'
+    $asset = Join-Path $testRoot 'Quotalis-0.48.0-Setup.exe'
     [IO.File]::WriteAllText($asset, 'deterministic fixture')
     $hash = Get-AssetSha256 $asset
     [IO.File]::WriteAllText("$asset.sha256", "$hash  $(Split-Path $asset -Leaf)`n")

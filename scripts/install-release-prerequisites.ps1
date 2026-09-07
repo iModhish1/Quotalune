@@ -313,7 +313,7 @@ function Get-NodeInfoFallback {
 function Install-NodeMsiFallback {
     param([Parameter(Mandatory)][string]$Version)
 
-    $root = Join-Path ([IO.Path]::GetTempPath()) 'codexbar-node-bootstrap'
+    $root = Join-Path ([IO.Path]::GetTempPath()) 'quotalis-node-bootstrap'
     New-Item -ItemType Directory -Force -Path $root | Out-Null
     $fileName = "node-$Version-x64.msi"
     $installer = Join-Path $root $fileName
@@ -335,9 +335,9 @@ function Install-NodeMsiFallback {
 function Install-NodeZipFallback {
     param([Parameter(Mandatory)][string]$Version)
 
-    $root = Join-Path $env:LOCALAPPDATA 'CodexBar\release-toolchain\node'
+    $root = Join-Path $env:LOCALAPPDATA 'Quotalis\release-toolchain\node'
     New-Item -ItemType Directory -Force -Path $root | Out-Null
-    $staging = Join-Path ([IO.Path]::GetTempPath()) 'codexbar-node-bootstrap'
+    $staging = Join-Path ([IO.Path]::GetTempPath()) 'quotalis-node-bootstrap'
     New-Item -ItemType Directory -Force -Path $staging | Out-Null
     $fileName = "node-$Version-win-x64.zip"
     $archive = Join-Path $staging $fileName
@@ -440,7 +440,7 @@ function Install-InnoSetupFallback {
     $innoMaxAttempts = 3
     for ($innoAttempt = 1; $innoAttempt -le $innoMaxAttempts; $innoAttempt++) {
         try {
-            $root = Join-Path ([IO.Path]::GetTempPath()) 'codexbar-inno-bootstrap'
+            $root = Join-Path ([IO.Path]::GetTempPath()) 'quotalis-inno-bootstrap'
             New-Item -ItemType Directory -Force -Path $root | Out-Null
             $installer = Join-Path $root 'innosetup.exe'
             Invoke-PrerequisiteDownload 'https://jrsoftware.org/download.php/is.exe' $installer
@@ -513,7 +513,7 @@ if (-not $corepack) {
 if (-not $corepack) {
     throw "Corepack is required with Node $requiredNodeMajor to activate pinned pnpm $expectedPnpm."
 }
-$pnpmShimDir = Join-Path $env:LOCALAPPDATA 'CodexBar\release-toolchain\pnpm'
+$pnpmShimDir = Join-Path $env:LOCALAPPDATA 'Quotalis\release-toolchain\pnpm'
 if (-not $AssertOnly) {
     New-Item -ItemType Directory -Force -Path $pnpmShimDir | Out-Null
     Invoke-Native $corepack @('enable', '--install-directory', $pnpmShimDir)

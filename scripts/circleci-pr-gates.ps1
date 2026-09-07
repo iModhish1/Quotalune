@@ -101,7 +101,7 @@ if ($isMainPush) {
             throw 'CIRCLE_PROJECT_USERNAME/REPONAME unavailable for pulls API fallback.'
         }
         $repo = "$($env:CIRCLE_PROJECT_USERNAME)/$($env:CIRCLE_PROJECT_REPONAME)"
-        $pr = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/pulls/$prNumber" -Headers @{ 'User-Agent' = 'codexbar-pr-check' }
+        $pr = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/pulls/$prNumber" -Headers @{ 'User-Agent' = 'quotalis-pr-check' }
         $baseSha = [string]$pr.base.sha
         if ([string]::IsNullOrWhiteSpace($baseSha)) { throw 'pulls API returned no base.sha.' }
         & git fetch origin $baseSha --depth=1

@@ -203,9 +203,9 @@ function Assert-ManifestAndAssets {
             throw "Manifest byte count mismatch for $name."
         }
     }
-    Assert-AssetMatchesSidecar (Join-Path $AssetsDir "CodexBar-$ExpectedVersion-Setup.exe")
-    Assert-AssetMatchesSidecar (Join-Path $AssetsDir "CodexBar-$ExpectedVersion-portable.exe")
-    Assert-AssetMatchesSidecar (Join-Path $AssetsDir "CodexBarCLI-v$ExpectedVersion-windows-x64.zip")
+    Assert-AssetMatchesSidecar (Join-Path $AssetsDir "Quotalis-$ExpectedVersion-Setup.exe")
+    Assert-AssetMatchesSidecar (Join-Path $AssetsDir "Quotalis-$ExpectedVersion-portable.exe")
+    Assert-AssetMatchesSidecar (Join-Path $AssetsDir "QuotalisCLI-v$ExpectedVersion-windows-x64.zip")
     Write-Host '[ok] manifest, exact six asset names, SHA-256 values, and sidecars verified before API access'
 }
 
