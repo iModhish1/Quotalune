@@ -191,6 +191,12 @@ export default function FlowSurface({
             ? `Expand ${focused?.name ?? "QuotaArc"} details`
             : "QuotaArc is waiting for provider data"}
         >
+          {/* This icon is the application anchor — QuotaArc's own mark,
+              never a provider glyph (Wave 6 Phase 4 correction: an earlier
+              pass swapped this to the focused provider's icon, which read
+              as "this app IS Claude/Gemini" instead of "QuotaArc, currently
+              showing Gemini" — the provider's identity belongs in its own
+              element, not by replacing the app's). */}
           <span className="flow-surface__brand"><QuotaArcMark /></span>
           <span className="flow-surface__summary-copy">
             <strong>{focused?.name ?? "QuotaArc"}</strong>
@@ -229,8 +235,29 @@ export default function FlowSurface({
       {expanded && (
         <section id="quota-flow-details" className="flow-surface__details" role="dialog" aria-label={`${focused?.name ?? "QuotaArc"} quota details`}>
           <header className="flow-surface__detail-header">
-            <span className="flow-surface__detail-title"><QuotaArcMark /> <strong>{focused?.name ?? "QuotaArc"}</strong></span>
-            <span>
+            {/* LEFT: the application anchor — always QuotaArc's own mark,
+                never swapped for a provider glyph (Wave 6 Phase 4
+                correction). */}
+            <span className="flow-surface__detail-title"><QuotaArcMark /> <strong>QuotaArc</strong></span>
+            {/* CENTER: the focused provider's own identity — a distinct
+                element from the app title above, not a replacement for it,
+                so the header reads "QuotaArc, currently showing Claude"
+                rather than "this app is Claude." */}
+            {focused && (
+              <span className="flow-surface__detail-provider">
+                <QaProviderIcon
+                  // The registry has no plain "openai" entry (only
+                  // "openaiapi"/"azureopenai" for the API-key provider) —
+                  // the ChatGPT/Codex CLI product's iconId is "openai" and
+                  // maps to the "codex" glyph, matching NotchDetails.tsx's
+                  // identical normalization.
+                  providerId={focused.iconId === "openai" ? "codex" : focused.iconId}
+                  size={15}
+                />
+                <strong>{focused.name}</strong>
+              </span>
+            )}
+            <span className="flow-surface__detail-controls">
               <button type="button" onClick={onTogglePinned} aria-pressed={state === "pinned"} aria-label={state === "pinned" ? "Unpin details" : "Pin details"}>⌖</button>
               <button type="button" onClick={onRequestCompact ?? onToggleExpanded} aria-label="Collapse details">×</button>
             </span>

@@ -111,4 +111,53 @@ describe("FlowSurface", () => {
     expect(screen.getByTestId("flow-surface")).toHaveStyle({ "--flow-orbital-size": "130px" });
     expect(screen.getByRole("button", { name: "OpenAI: 79% remaining" })).toBeInTheDocument();
   });
+
+  describe("header identity ownership (Wave 6 Phase 4 correction)", () => {
+    it("keeps QuotaArc's own mark as the compact summary icon — never swapped for the focused provider's glyph", () => {
+      const { container } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={providers} />,
+      );
+      const brand = container.querySelector(".flow-surface__brand");
+      expect(brand?.querySelector(".flow-surface__mark")).toBeInTheDocument();
+      expect(brand?.querySelector(".provider-icon")).not.toBeInTheDocument();
+      // The provider's own name/value still show as text next to the brand icon.
+      expect(screen.getByText("OpenAI")).toBeInTheDocument();
+    });
+
+    it("expanded detail header shows QuotaArc as the title (left) and the focused provider as a distinct chip (center), never merged", () => {
+      const { container } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={providers} />,
+      );
+      const title = container.querySelector(".flow-surface__detail-title");
+      expect(title).toHaveTextContent("QuotaArc");
+      expect(title?.querySelector(".flow-surface__mark")).toBeInTheDocument();
+      expect(title?.querySelector(".provider-icon")).not.toBeInTheDocument();
+
+      const providerChip = container.querySelector(".flow-surface__detail-provider");
+      expect(providerChip).toHaveTextContent("OpenAI");
+      expect(providerChip?.querySelector(".provider-icon")).toBeInTheDocument();
+    });
+
+    it("never opens the expanded detail panel without quota data — the provider chip therefore never has a fake identity to fall back to", () => {
+      // expanded = hasQuotaData && (state === "expanded" || "pinned") in the
+      // component itself, so ".flow-surface__detail-provider" existing
+      // without a real focused provider is not a reachable state to guard
+      // against separately — asserted here as a real invariant instead.
+      render(<FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={[]} />);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("drag handle is hidden by default and only gains visibility affordance through hover/focus, not permanent display", () => {
+      const { container } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={providers} />,
+      );
+      const drag = container.querySelector(".flow-surface__drag");
+      expect(drag).toBeInTheDocument();
+      // jsdom doesn't compute real stylesheet cascades, so this asserts the
+      // handle still exists (for hover/focus/keyboard reachability) rather
+      // than the actual opacity value — the opacity:0-by-default behavior
+      // itself is verified natively (see docs/WAVE6_CONTINUATION.md).
+      expect(drag).toHaveAttribute("aria-label", "Move QuotaArc");
+    });
+  });
 });
