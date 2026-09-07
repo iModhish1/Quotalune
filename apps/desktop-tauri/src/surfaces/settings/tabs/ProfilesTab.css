@@ -4,23 +4,30 @@
 .profiles-page__header{display:flex;flex-direction:column;gap:2px}
 .profiles-page__header h2{margin:0;color:var(--qa-ink-1);font-size:15px;font-weight:600}
 .profiles-page__header p{margin:0;color:var(--qa-ink-2);font-size:12px}
-.profiles-page__error{margin:0;padding:6px 10px;border-radius:6px;background:var(--qa-danger-bg,rgba(220,50,50,.12));color:var(--qa-danger-ink,#c0392b);font-size:12px}
+.profiles-page__error{margin:0;padding:6px 10px;border-radius:6px;background:color-mix(in srgb,var(--qa-status-critical) 16%,transparent);color:var(--qa-status-critical);font-size:12px}
 
 .profiles-page__layout{display:grid;grid-template-columns:minmax(200px,260px) 1fr;gap:14px;align-items:start;min-width:0}
 @media (max-width:640px){.profiles-page__layout{grid-template-columns:1fr}}
 
 .profiles-page__list{display:flex;flex-direction:column;gap:4px;min-width:0}
-.profiles-page__row{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 6px;border-radius:6px;background:var(--qa-surface-2,transparent)}
-.profiles-page__row[data-selected="true"]{background:var(--qa-accent-bg,rgba(120,140,255,.14))}
-.profiles-page__row-select{display:flex;align-items:center;gap:6px;flex:1;min-width:0;border:none;background:none;padding:2px 0;cursor:pointer;text-align:left;color:var(--qa-ink-1);font:inherit}
-.profiles-page__row-mark{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--qa-surface-3,rgba(120,120,120,.2));font-size:11px;font-weight:600;flex-shrink:0}
-.profiles-page__row-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
-.profiles-page__row input{font-size:12.5px;padding:1px 4px;min-width:0}
-.profiles-page__badge{font-size:10px;padding:1px 5px;border-radius:999px;background:var(--qa-accent,#5b7cfa);color:#fff;flex-shrink:0}
-.profiles-page__row-actions{display:flex;gap:2px;flex-wrap:wrap;justify-content:flex-end}
-.profiles-page__row-actions button{font-size:10.5px;padding:2px 6px;border-radius:5px;border:1px solid var(--qa-border,rgba(120,120,120,.3));background:transparent;color:var(--qa-ink-2);cursor:pointer}
+
+/* Two-line row: the name/mark/badge line always gets the row's full width
+   on its own line, and the action buttons sit on their own line below —
+   fighting both for one line at a 200-260px sidebar width was squeezing
+   the name span down to 0 width (a real layout bug caught by native
+   inspection: the flex-shrink:1 name collapsed while the fixed-size mark
+   and badge kept their width, leaving the profile name invisible). */
+.profiles-page__row{display:flex;flex-direction:column;gap:4px;padding:6px;border-radius:6px;background:var(--qa-graphite-2)}
+.profiles-page__row[data-selected="true"]{background:color-mix(in srgb,var(--qa-accent) 14%,var(--qa-graphite-2))}
+.profiles-page__row-select{display:flex;align-items:center;gap:6px;min-width:0;width:100%;border:none;background:none;padding:2px 0;cursor:pointer;text-align:left;color:var(--qa-ink-1);font:inherit}
+.profiles-page__row-mark{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--qa-graphite-3);font-size:11px;font-weight:600;flex-shrink:0}
+.profiles-page__row-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
+.profiles-page__row input{font-size:12.5px;padding:1px 4px;min-width:0;flex:1 1 auto}
+.profiles-page__badge{flex-shrink:0;font-size:10px;padding:1px 6px;border-radius:999px;background:var(--qa-accent);color:#04120f}
+.profiles-page__row-actions{display:flex;gap:4px;flex-wrap:wrap}
+.profiles-page__row-actions button{font-size:10.5px;padding:2px 6px;border-radius:5px;border:1px solid var(--qa-hairline);background:transparent;color:var(--qa-ink-2);cursor:pointer}
 .profiles-page__row-actions button:disabled{opacity:.4;cursor:not-allowed}
-.profiles-page__row--new{justify-content:flex-start;color:var(--qa-ink-2);font-size:12px;border:1px dashed var(--qa-border,rgba(120,120,120,.3));background:none;cursor:pointer}
+.profiles-page__row--new{align-items:center;justify-content:flex-start;color:var(--qa-ink-2);font-size:12px;border:1px dashed var(--qa-hairline);background:none;cursor:pointer}
 .profiles-page__create{display:flex;gap:4px;align-items:center}
 .profiles-page__create input{flex:1;min-width:0;font-size:12px;padding:3px 6px}
 .profiles-page__create button{font-size:11px;padding:3px 8px}
@@ -32,10 +39,10 @@
 .profiles-page__field select{font-size:12.5px;padding:4px 6px;border-radius:6px;max-width:320px}
 
 .profiles-page__surfaces{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
-.profiles-page__surface-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 8px;border-radius:6px;background:var(--qa-surface-2,rgba(120,120,120,.08));font-size:12px}
+.profiles-page__surface-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 8px;border-radius:6px;background:var(--qa-graphite-2);font-size:12px}
 
 .profiles-page__accounts{display:flex;flex-direction:column;gap:2px;max-height:220px;overflow-y:auto}
 .profiles-page__account-row{display:flex;align-items:center;gap:8px;padding:3px 4px;font-size:12px;cursor:pointer}
-.profiles-page__account-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.profiles-page__account-provider{color:var(--qa-ink-2);font-size:10.5px}
+.profiles-page__account-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.profiles-page__account-provider{flex-shrink:0;color:var(--qa-ink-2);font-size:10.5px}
 .profiles-page__empty-hint{margin:0;font-size:11.5px;color:var(--qa-ink-2)}
