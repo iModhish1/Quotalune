@@ -15,6 +15,7 @@ const SETTINGS_TAB_IDS: &[&str] = &[
     "collections",
     "profiles",
     "resetDisplay",
+    "dashboardStudio",
     "notifications",
     "menuBar",
     "menu",
@@ -204,5 +205,12 @@ mod tests {
     fn supported_settings_tabs_include_dashboard_and_reset_display() {
         assert!(is_supported_settings_tab("dashboard"));
         assert!(is_supported_settings_tab("resetDisplay"));
+    }
+
+    /// Same regression class as above, for the tab Dashboard Studio
+    /// (Phase 2) added.
+    #[test]
+    fn supported_settings_tabs_include_dashboard_studio() {
+        assert!(is_supported_settings_tab("dashboardStudio"));
     }
 }

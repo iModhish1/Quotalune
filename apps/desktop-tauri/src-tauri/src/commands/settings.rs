@@ -13,6 +13,8 @@ pub struct SettingsUpdate {
     pub refresh_all_providers_on_menu_open: Option<bool>,
     pub low_power_mode: Option<bool>,
     pub low_power_mode_preference: Option<String>,
+    pub dashboard_mode: Option<String>,
+    pub dashboard_performance_preset: Option<String>,
     pub start_at_login: Option<bool>,
     pub start_minimized: Option<bool>,
     pub startup_destination: Option<String>,
@@ -182,6 +184,16 @@ impl SettingsUpdate {
             && let Some(preference) = codexbar::settings::LowPowerModePreference::parse(value)
         {
             settings.low_power_mode_preference = preference;
+        }
+        if let Some(value) = self.dashboard_mode.as_deref()
+            && let Some(mode) = codexbar::settings::DashboardModeId::parse(value)
+        {
+            settings.dashboard_mode = mode;
+        }
+        if let Some(value) = self.dashboard_performance_preset.as_deref()
+            && let Some(preset) = codexbar::settings::DashboardPerformancePreset::parse(value)
+        {
+            settings.dashboard_performance_preset = preset;
         }
         if let Some(ref s) = self.tray_icon_mode
             && let Some(mode) = parse_tray_icon_mode(s)

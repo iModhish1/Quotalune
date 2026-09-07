@@ -673,6 +673,8 @@ pub struct SettingsSnapshot {
     refresh_all_providers_on_menu_open: bool,
     low_power_mode: bool,
     low_power_mode_preference: &'static str,
+    dashboard_mode: &'static str,
+    dashboard_performance_preset: &'static str,
     start_at_login: bool,
     start_minimized: bool,
     startup_destination: String,
@@ -807,6 +809,8 @@ impl From<Settings> for SettingsSnapshot {
             low_power_mode: settings.low_power_mode_preference
                 == codexbar::settings::LowPowerModePreference::On,
             low_power_mode_preference: settings.low_power_mode_preference.as_str(),
+            dashboard_mode: settings.dashboard_mode.as_str(),
+            dashboard_performance_preset: settings.dashboard_performance_preset.as_str(),
             start_at_login: settings.start_at_login,
             start_minimized: settings.start_minimized,
             startup_destination: settings.startup_destination,

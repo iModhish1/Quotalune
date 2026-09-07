@@ -638,6 +638,131 @@ impl LowPowerModePreference {
     }
 }
 
+/// Which Dashboard experience is currently selected. Exactly one mode is
+/// ever active at a time -- the frontend `DashboardHost` lazily mounts only
+/// the matching implementation and disposes the previous one on switch, so
+/// this field is purely "which one," never "which ones are enabled."
+///
+/// Distinct from [`LowPowerModePreference`]/`adaptive_refresh`, which
+/// govern provider *network polling* cadence, not Dashboard *rendering*
+/// work (see [`DashboardPerformancePreset`] for that).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum DashboardModeId {
+    /// The safest default: lowest rendering overhead, no 3D engine, and
+    /// the only mode with a real (non-placeholder) implementation today.
+    #[default]
+    Analytics2d,
+    Providers3d,
+    Hybrid,
+}
+
+impl DashboardModeId {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Analytics2d => "analytics2d",
+            Self::Providers3d => "providers3d",
+            Self::Hybrid => "hybrid",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value.trim() {
+            "analytics2d" => Some(Self::Analytics2d),
+            "providers3d" => Some(Self::Providers3d),
+            "hybrid" => Some(Self::Hybrid),
+            _ => None,
+        }
+    }
+}
+
+/// Dashboard *rendering* performance preset -- animation/visual-quality
+/// budget for whichever `DashboardModeId` is mounted. Independent of
+/// provider-refresh power settings.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum DashboardPerformancePreset {
+    LowCpu,
+    #[default]
+    Balanced,
+    HighFidelity,
+}
+
+impl DashboardPerformancePreset {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::LowCpu => "lowCpu",
+            Self::Balanced => "balanced",
+            Self::HighFidelity => "highFidelity",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value.trim() {
+            "lowCpu" => Some(Self::LowCpu),
+            "balanced" => Some(Self::Balanced),
+            "highFidelity" => Some(Self::HighFidelity),
+            _ => None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod dashboard_mode_tests {
+    use super::{DashboardModeId, DashboardPerformancePreset};
+
+    #[test]
+    fn dashboard_mode_defaults_to_analytics2d() {
+        assert_eq!(DashboardModeId::default(), DashboardModeId::Analytics2d);
+    }
+
+    #[test]
+    fn dashboard_mode_round_trips_every_variant() {
+        for mode in [
+            DashboardModeId::Analytics2d,
+            DashboardModeId::Providers3d,
+            DashboardModeId::Hybrid,
+        ] {
+            assert_eq!(DashboardModeId::parse(mode.as_str()), Some(mode));
+        }
+    }
+
+    #[test]
+    fn dashboard_mode_rejects_unknown_strings() {
+        assert_eq!(DashboardModeId::parse("3d"), None);
+        assert_eq!(DashboardModeId::parse(""), None);
+        assert_eq!(DashboardModeId::parse("Analytics2d"), None); // case-sensitive: exact wire value only
+    }
+
+    #[test]
+    fn performance_preset_defaults_to_balanced() {
+        assert_eq!(
+            DashboardPerformancePreset::default(),
+            DashboardPerformancePreset::Balanced
+        );
+    }
+
+    #[test]
+    fn performance_preset_round_trips_every_variant() {
+        for preset in [
+            DashboardPerformancePreset::LowCpu,
+            DashboardPerformancePreset::Balanced,
+            DashboardPerformancePreset::HighFidelity,
+        ] {
+            assert_eq!(
+                DashboardPerformancePreset::parse(preset.as_str()),
+                Some(preset)
+            );
+        }
+    }
+
+    #[test]
+    fn performance_preset_rejects_unknown_strings() {
+        assert_eq!(DashboardPerformancePreset::parse("ultra"), None);
+        assert_eq!(DashboardPerformancePreset::parse(""), None);
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(from = "RawSettings", default)]
 pub struct Settings {
@@ -659,6 +784,16 @@ pub struct Settings {
     /// Off/On/Automatic background-work power preference (upstream 0.53).
     #[serde(default)]
     pub low_power_mode_preference: LowPowerModePreference,
+
+    /// Which Dashboard experience (2D Analytics / 3D Providers / Hybrid) is
+    /// currently selected. Exactly one is ever mounted.
+    #[serde(default)]
+    pub dashboard_mode: DashboardModeId,
+
+    /// Dashboard rendering performance budget, independent of
+    /// `low_power_mode_preference` (which governs provider polling).
+    #[serde(default)]
+    pub dashboard_performance_preset: DashboardPerformancePreset,
 
     /// Whether to start minimized
     pub start_minimized: bool,
@@ -1495,6 +1630,8 @@ impl Default for Settings {
             adaptive_refresh: false,
             refresh_all_providers_on_menu_open: false,
             low_power_mode_preference: LowPowerModePreference::Off,
+            dashboard_mode: DashboardModeId::default(),
+            dashboard_performance_preset: DashboardPerformancePreset::default(),
             start_minimized: false,
             startup_destination: default_startup_destination(),
             last_settings_tab: None,

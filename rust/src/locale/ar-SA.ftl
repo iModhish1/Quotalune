@@ -10,6 +10,7 @@ TabUsageSpend = الاستخدام والتكلفة
 TabSurfaces = الواجهات العائمة
 TabThemes = السمات
 TabResetDisplay = عرض إعادة التعيين
+TabDashboardStudio = استوديو لوحة المعلومات
 TabAdvanced = متقدم
 TabAbout = حول QuotaArc
 TabShortcuts = الاختصارات

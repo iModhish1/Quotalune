@@ -1,5 +1,37 @@
 use super::*;
 
+/// Deserialize a `dashboardMode` value leniently: a wrong-typed or unknown
+/// value falls back to the default variant instead of failing the whole
+/// settings file. Real typed enums like [`DashboardModeId`] normally hard-
+/// error on an unrecognized serialized value (unlike the free-`String` +
+/// `.normalized()` pattern `ResetPresentationSettings` uses); a corrupt
+/// single field here must not throw away the rest of a user's settings.
+fn deserialize_dashboard_mode_lenient<'de, D>(
+    deserializer: D,
+) -> Result<super::DashboardModeId, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    match String::deserialize(deserializer) {
+        Ok(value) => Ok(super::DashboardModeId::parse(&value).unwrap_or_default()),
+        Err(_) => Ok(super::DashboardModeId::default()),
+    }
+}
+
+/// Same leniency as [`deserialize_dashboard_mode_lenient`], for
+/// `dashboardPerformancePreset`.
+fn deserialize_dashboard_performance_preset_lenient<'de, D>(
+    deserializer: D,
+) -> Result<super::DashboardPerformancePreset, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    match String::deserialize(deserializer) {
+        Ok(value) => Ok(super::DashboardPerformancePreset::parse(&value).unwrap_or_default()),
+        Err(_) => Ok(super::DashboardPerformancePreset::default()),
+    }
+}
+
 /// Raw on-disk shape of [`Settings`] used purely for deserialization.
 ///
 /// It mirrors the canonical `Settings` fields but ALSO accepts the legacy
@@ -23,6 +55,13 @@ pub(super) struct RawSettings {
     low_power_mode: bool,
     #[serde(default)]
     low_power_mode_preference: Option<LowPowerModePreference>,
+    #[serde(default, deserialize_with = "deserialize_dashboard_mode_lenient")]
+    dashboard_mode: super::DashboardModeId,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_dashboard_performance_preset_lenient"
+    )]
+    dashboard_performance_preset: super::DashboardPerformancePreset,
 
     start_minimized: bool,
     startup_destination: String,
@@ -271,6 +310,8 @@ impl Default for RawSettings {
             refresh_all_providers_on_menu_open: s.refresh_all_providers_on_menu_open,
             low_power_mode: s.low_power_mode_preference == LowPowerModePreference::On,
             low_power_mode_preference: Some(s.low_power_mode_preference),
+            dashboard_mode: s.dashboard_mode,
+            dashboard_performance_preset: s.dashboard_performance_preset,
             start_minimized: s.start_minimized,
             startup_destination: s.startup_destination,
             last_settings_tab: s.last_settings_tab,
@@ -636,6 +677,8 @@ impl From<RawSettings> for Settings {
             adaptive_refresh: raw.adaptive_refresh,
             refresh_all_providers_on_menu_open: raw.refresh_all_providers_on_menu_open,
             low_power_mode_preference,
+            dashboard_mode: raw.dashboard_mode,
+            dashboard_performance_preset: raw.dashboard_performance_preset,
             start_minimized: raw.start_minimized,
             startup_destination: raw.startup_destination,
             last_settings_tab: raw.last_settings_tab,

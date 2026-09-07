@@ -15,6 +15,7 @@ TabUsageSpend = Usage & Spend
 TabSurfaces = Surfaces
 TabThemes = Themes
 TabResetDisplay = Reset Display
+TabDashboardStudio = Dashboard Studio
 TabAdvanced = Advanced
 TabAbout = About
 TabShortcuts = Shortcuts

@@ -924,6 +924,72 @@ fn test_settings_roundtrip_with_language() {
 }
 
 #[test]
+fn test_settings_load_missing_dashboard_fields_defaults_to_analytics2d_balanced() {
+    // A settings.json saved before Dashboard Studio existed has neither
+    // field at all -- must migrate to the safest default (2D, lowest
+    // rendering overhead) rather than surprise a user into 3D.
+    let legacy_json = r#"{
+            "enabled_providers": ["claude", "codex"],
+            "refresh_interval_secs": 300,
+            "start_minimized": false
+        }"#;
+    let settings: Settings = serde_json::from_str(legacy_json)
+        .expect("legacy settings without dashboard fields must still load");
+    assert_eq!(settings.dashboard_mode, DashboardModeId::Analytics2d);
+    assert_eq!(
+        settings.dashboard_performance_preset,
+        DashboardPerformancePreset::Balanced
+    );
+    assert!(settings.enabled_providers.contains("claude"));
+}
+
+#[test]
+fn test_settings_dashboard_fields_roundtrip() {
+    use std::io::Write;
+    use tempfile::NamedTempFile;
+
+    let settings = Settings {
+        dashboard_mode: DashboardModeId::Providers3d,
+        dashboard_performance_preset: DashboardPerformancePreset::HighFidelity,
+        ..Settings::default()
+    };
+    let mut temp_file = NamedTempFile::new().expect("failed to create temp file");
+    let json = serde_json::to_string_pretty(&settings).expect("failed to serialize settings");
+    temp_file
+        .write_all(json.as_bytes())
+        .expect("failed to write settings");
+    let content = std::fs::read_to_string(temp_file.path()).expect("failed to read settings");
+    let loaded: Settings = serde_json::from_str(&content).expect("failed to deserialize settings");
+
+    assert_eq!(loaded.dashboard_mode, DashboardModeId::Providers3d);
+    assert_eq!(
+        loaded.dashboard_performance_preset,
+        DashboardPerformancePreset::HighFidelity
+    );
+}
+
+#[test]
+fn test_settings_corrupt_dashboard_mode_value_falls_back_without_crashing() {
+    // A hand-edited or corrupted value (wrong type, or an unrecognized
+    // string) must not take down the rest of the settings file.
+    let corrupt_json = r#"{
+            "enabled_providers": ["claude"],
+            "refresh_interval_secs": 300,
+            "start_minimized": false,
+            "dashboard_mode": "quantum3d",
+            "dashboard_performance_preset": 42
+        }"#;
+    let settings: Settings = serde_json::from_str(corrupt_json)
+        .expect("corrupt dashboard fields must still deserialize");
+    assert_eq!(settings.dashboard_mode, DashboardModeId::Analytics2d);
+    assert_eq!(
+        settings.dashboard_performance_preset,
+        DashboardPerformancePreset::Balanced
+    );
+    assert!(settings.enabled_providers.contains("claude"));
+}
+
+#[test]
 fn test_settings_load_missing_reset_presentation_field_defaults_to_countdown_only() {
     // Simulate loading a settings.json saved before the Reset Presentation
     // system existed -- must not wipe or corrupt the rest of the file, and
