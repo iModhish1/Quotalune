@@ -466,11 +466,21 @@ locale_keys! {
     TrayShowEdgeArc,
     TabSurfaces,
     TabThemes,
+    // Sidebar label for MainRoute::Dashboard — distinct from TrayDashboard
+    // (same English text, kept as a separate key per this repo's convention
+    // of one key per UI surface, so a future translation can diverge).
+    TabDashboard,
     TabProviderDisplay,
     TabCollections,
     CollectionsPageHelper,
     TrayShowTopArc,
-    TrayPopOutDashboard,
+    // Opens the detached compact tray popover (TrayPanel.tsx) in its own
+    // window — replaces the old TrayPopOutDashboard key, whose English text
+    // and all 7 translations said "dashboard" while the item actually
+    // opened the compact quick panel, not the real Dashboard
+    // (MainRoute::Dashboard / PopOutPanel.tsx). See
+    // docs/WAVE6_CONTINUATION.md Phase 3 for the investigation.
+    TrayPopOutPanel,
     TrayShowFloatBar,
     TrayRefreshAll,
     TrayProviders,
@@ -479,6 +489,10 @@ locale_keys! {
     TrayCheckForUpdates,
     TrayQuit,
     TrayOpenMainApp,
+    // The real Dashboard (MainRoute::Dashboard / PopOutPanel.tsx) as an
+    // explicit deep link, distinct from "Open QuotaArc" (which follows
+    // startup_destination) — mirrors TrayProviderDisplayRoute below.
+    TrayDashboard,
     TrayProviderDisplayRoute,
     TrayCollections,
     TrayOpenCollectionsWindow,

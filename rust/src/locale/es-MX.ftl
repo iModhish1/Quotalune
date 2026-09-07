@@ -208,7 +208,6 @@ TodayCost = Hoy: ${ "{:.2}" }
 Last30DaysCost = Últimos 30 días: ${ "{:.2}" }
 StatusLabel = Estado: { "{}" }
 TrayOpenQuotaArc = Abrir panel
-TrayPopOutDashboard = Abrir panel
 TrayShowFloatBar = Mostrar barra flotante
 TrayShowEdgeArc = Mostrar Edge Arc
 TrayShowTopArc = Mostrar Top Arc

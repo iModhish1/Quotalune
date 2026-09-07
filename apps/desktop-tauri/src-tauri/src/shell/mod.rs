@@ -23,19 +23,32 @@ pub use position::{remember_current_geometry_if_eligible, tray_panel_position};
 pub use transition::{reopen_to_target, transition_to_target};
 pub use window::hide_to_tray_if_current;
 
-/// A named destination inside the main QuotaArc workspace (the detached
-/// `settings` window, which — despite the label — is where the real product
-/// surfaces live: Provider Display, Themes, Collections, ...). The single
-/// reusable routing vocabulary for "open the app to X": tray actions, and
-/// (via `open_or_focus_main_window`) any future notification click or deep
-/// link. Cold launch / single-instance relaunch / "last opened" instead
-/// resolve an arbitrary settings tab string directly (see
-/// `main.rs::resolve_startup_destination`) since "last opened" can be any
-/// supported tab, not just this curated list — both paths bottom out in the
-/// same `settings_window::open_or_focus` primitive, so there is still only
-/// one place a window actually gets created/shown/focused.
+/// A named destination inside the QuotaArc product — either a tab of the
+/// detached `settings` window (which — despite the label — is where most
+/// real product surfaces live: Provider Display, Themes, Collections, ...)
+/// or the `Dashboard`, which is the one destination that instead lives in
+/// the shared `main` window as a `SurfaceMode::PopOut` transition (see
+/// `PopOutPanel.tsx` and `main.rs::primary_window_request`). This is the
+/// single reusable routing vocabulary for "open the app to X": tray
+/// actions, sidebar navigation, and (via `open_or_focus_main_window`) any
+/// future notification click or deep link. Cold launch / single-instance
+/// relaunch / "last opened" instead resolve an arbitrary settings tab
+/// string, OR the Dashboard, directly (see
+/// `main.rs::resolve_startup_destination`/`activate_configured_destination`)
+/// since "last opened" can be any supported tab, not just this curated
+/// list — both paths bottom out in the same two primitives
+/// (`settings_window::open_or_focus`, `reopen_to_target`), so there is
+/// still only one place each kind of window actually gets
+/// created/shown/focused.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MainRoute {
+    /// The main-window `SurfaceMode::PopOut` + `SurfaceTarget::Dashboard`
+    /// surface (`PopOutPanel.tsx`) — the real, pre-existing Dashboard.
+    /// Confirmed via source investigation (Wave 6 Phase 3) before adding
+    /// this variant: it is not a settings tab, and no placeholder page was
+    /// invented for it — this only gives the pre-existing surface a proper
+    /// entry in the shared route vocabulary.
+    Dashboard,
     ProviderDisplay,
     Providers,
     /// A real first-class destination as of the tray/UX-reset wave (was
@@ -52,24 +65,37 @@ pub enum MainRoute {
 }
 
 impl MainRoute {
-    fn settings_tab(self) -> &'static str {
+    /// The settings-window tab this route resolves to, or `None` when the
+    /// route targets the main-window Dashboard surface instead (the only
+    /// non-settings-window destination in this vocabulary).
+    fn settings_tab(self) -> Option<&'static str> {
         match self {
-            Self::ProviderDisplay => "providerDisplay",
-            Self::Providers => "providers",
-            Self::Collections => "collections",
-            Self::Profiles => "profiles",
-            Self::General => "general",
-            Self::About => "about",
+            Self::Dashboard => None,
+            Self::ProviderDisplay => Some("providerDisplay"),
+            Self::Providers => Some("providers"),
+            Self::Collections => Some("collections"),
+            Self::Profiles => Some("profiles"),
+            Self::General => Some("general"),
+            Self::About => Some("about"),
         }
     }
 }
 
-/// Open (or focus) the main QuotaArc workspace on `route`. If the window is
-/// absent this creates it; if hidden/minimized/behind other windows,
-/// `settings_window::open_or_focus` already shows, unminimizes and
-/// forefronts it — see that function for the exact lifecycle contract.
+/// Open (or focus) the QuotaArc destination `route`. Settings-tab routes
+/// show/focus the detached `settings` window on that tab (creating it if
+/// absent — see `settings_window::open_or_focus`'s lifecycle contract);
+/// `MainRoute::Dashboard` instead reopens the shared `main` window to the
+/// same `SurfaceMode::PopOut` + `SurfaceTarget::Dashboard` transition cold
+/// launch uses (`main.rs::primary_window_request`) — one definition of
+/// "the Dashboard target," reused rather than duplicated.
 pub fn open_or_focus_main_window(app: &tauri::AppHandle, route: MainRoute) -> Result<(), String> {
-    settings_window::open_or_focus(app, route.settings_tab())
+    match route.settings_tab() {
+        Some(tab) => settings_window::open_or_focus(app, tab),
+        None => {
+            let request = crate::primary_window_request();
+            reopen_to_target(app, request.mode, request.target, request.position).map(|_| ())
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

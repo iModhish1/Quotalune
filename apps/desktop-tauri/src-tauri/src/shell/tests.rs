@@ -23,7 +23,12 @@ use crate::surface_target::SurfaceTarget;
 use crate::window_positioner::{self, Rect};
 
 #[test]
-fn every_main_route_resolves_to_a_distinct_settings_tab() {
+fn every_settings_tab_route_resolves_to_a_distinct_tab() {
+    // Dashboard deliberately excluded here: it's the one route that does
+    // NOT resolve to a settings tab at all (see the dedicated Dashboard
+    // test below) — including it in this "distinct tab" set would be
+    // comparing a None against Some(&str) values, which isn't what this
+    // test is checking.
     let routes = [
         MainRoute::ProviderDisplay,
         MainRoute::Providers,
@@ -32,24 +37,39 @@ fn every_main_route_resolves_to_a_distinct_settings_tab() {
         MainRoute::General,
         MainRoute::About,
     ];
-    let tabs: Vec<&str> = routes.iter().map(|route| route.settings_tab()).collect();
+    let tabs: Vec<&str> = routes
+        .iter()
+        .map(|route| route.settings_tab().expect("non-Dashboard route"))
+        .collect();
     let unique: std::collections::HashSet<&str> = tabs.iter().copied().collect();
     assert_eq!(
         unique.len(),
         tabs.len(),
-        "every MainRoute must resolve to its own tab: {tabs:?}"
+        "every settings-tab MainRoute must resolve to its own tab: {tabs:?}"
     );
-    assert_eq!(MainRoute::ProviderDisplay.settings_tab(), "providerDisplay");
-    assert_eq!(MainRoute::Providers.settings_tab(), "providers");
+    assert_eq!(
+        MainRoute::ProviderDisplay.settings_tab(),
+        Some("providerDisplay")
+    );
+    assert_eq!(MainRoute::Providers.settings_tab(), Some("providers"));
     // Collections is now its own first-class tab (tray/UX-reset wave) —
     // this assertion is what would catch a future regression back to the
     // old "nested inside Surfaces" indirection.
-    assert_eq!(MainRoute::Collections.settings_tab(), "collections");
+    assert_eq!(MainRoute::Collections.settings_tab(), Some("collections"));
     // Profiles is a real first-class destination as of Wave 6 — previously
     // there was no MainRoute for it at all, only tray-menu switching.
-    assert_eq!(MainRoute::Profiles.settings_tab(), "profiles");
-    assert_eq!(MainRoute::General.settings_tab(), "general");
-    assert_eq!(MainRoute::About.settings_tab(), "about");
+    assert_eq!(MainRoute::Profiles.settings_tab(), Some("profiles"));
+    assert_eq!(MainRoute::General.settings_tab(), Some("general"));
+    assert_eq!(MainRoute::About.settings_tab(), Some("about"));
+}
+
+#[test]
+fn dashboard_route_is_not_a_settings_tab_and_reopens_the_main_window() {
+    // Dashboard is the one MainRoute that targets the shared `main` window
+    // (SurfaceMode::PopOut + SurfaceTarget::Dashboard / PopOutPanel.tsx)
+    // instead of a settings-window tab — confirmed via source investigation
+    // before wiring this (Wave 6 Phase 3), not invented.
+    assert_eq!(MainRoute::Dashboard.settings_tab(), None);
 }
 
 #[test]

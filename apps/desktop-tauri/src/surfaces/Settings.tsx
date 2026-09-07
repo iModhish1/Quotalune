@@ -8,7 +8,7 @@ import type {
 import { useSettings } from "../hooks/useSettings";
 import { useSurfaceTarget } from "../hooks/useSurfaceMode";
 import { useLocale } from "../hooks/useLocale";
-import { setSurfaceMode } from "../lib/tauri";
+import { openDashboard, setSurfaceMode } from "../lib/tauri";
 import { TAB_META, isSettingsTab } from "./settings/settingsTabs";
 import GeneralTab from "./settings/tabs/GeneralTab";
 import DisplayTab from "./settings/tabs/DisplayTab";
@@ -50,6 +50,16 @@ function Svg({ children }: { children: ReactNode }) {
     </svg>
   );
 }
+
+// Dashboard is not a SettingsTabId (it isn't a tab of this window at all —
+// see MainRoute::Dashboard) so its icon lives outside TabIcons.
+const DashboardIcon = (
+  <Svg>
+    <rect x="2" y="2" width="5" height="5" rx="1" />
+    <rect x="9" y="2" width="5" height="8" rx="1" />
+    <rect x="2" y="9" width="5" height="5" rx="1" />
+  </Svg>
+);
 
 const TabIcons: Record<SettingsTabId, ReactElement> = {
   general: (
@@ -243,6 +253,19 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
         event.currentTarget.scrollLeft+=delta;
         event.preventDefault();
       }}>
+        {/* Dashboard is a real, pre-existing product surface (PopOutPanel.tsx
+            in the shared `main` window, MainRoute::Dashboard) but is not a
+            tab of this Settings window — clicking it opens/focuses that
+            other window instead of switching panels here, so it's a plain
+            button (not role="tab") sharing the tab list's layout/styling. */}
+        <button
+          type="button"
+          className="settings-tab settings-tab--dashboard"
+          onClick={() => { void openDashboard(); }}
+        >
+          <span className="settings-tab__icon">{DashboardIcon}</span>
+          <span className="settings-tab__label">{t("TabDashboard")}</span>
+        </button>
         {TAB_META.map((tab) => (
           <button
             type="button"

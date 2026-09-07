@@ -295,6 +295,7 @@ fn main() {
             commands::end_flyout_gesture,
             commands::reveal_tray_panel_window,
             commands::open_settings_window,
+            commands::open_dashboard,
             commands::open_flyout_window,
             commands::close_settings_window,
             commands::open_collections_window,

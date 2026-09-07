@@ -13,6 +13,12 @@
 .settings-studio .settings-tabs{grid-column:1;grid-row:3/5;display:flex;flex-direction:column;align-items:stretch;gap:5px;padding:14px 10px;overflow:auto;background:#151719;border:0;border-right:1px solid #303238;min-height:0}
 .settings-studio .settings-tab{display:flex;align-items:center;justify-content:flex-start;flex-direction:row;gap:11px;min-height:40px;min-width:0;flex:none;padding:10px 12px;border:1px solid transparent;border-radius:11px;background:transparent;color:#aeb4be;box-shadow:none;text-align:start;font-size:12px;transition:background 140ms ease,color 140ms ease}
 .settings-studio .settings-tab:hover{background:#25282e;color:#fff}.settings-studio .settings-tab--active{background:linear-gradient(120deg,#363b44,#252a31);border-color:#505762;color:#f8fafc;box-shadow:inset 0 1px #ffffff0d}
+/* Dashboard: a distinct primary destination, not a tab of this window —
+   set apart from the tab list with a thin rule rather than extra margin,
+   so it doesn't read as dead space (Wave 6 Phase 3 navigation pass). */
+.settings-studio .settings-tab--dashboard{margin-bottom:6px;padding-bottom:calc(10px + 6px);border-bottom:1px solid #303238}
+.settings-studio[data-navigation="top"] .settings-tab--dashboard,.settings-studio[data-navigation="bottom"] .settings-tab--dashboard{margin-bottom:0;margin-right:6px;padding-bottom:10px;padding-right:calc(12px + 6px);border-bottom:0;border-right:1px solid #303238}
+[dir="rtl"] .settings-studio[data-navigation="top"] .settings-tab--dashboard,[dir="rtl"] .settings-studio[data-navigation="bottom"] .settings-tab--dashboard{margin-right:0;margin-left:6px;padding-right:12px;padding-left:calc(12px + 6px);border-right:0;border-left:1px solid #303238}
 .settings-studio .settings-status{grid-column:2;grid-row:3;margin:0}.settings-studio .settings-body{grid-column:2;grid-row:4;min-width:0;min-height:0;overflow:auto;padding:20px;background:#101113}
 .settings-studio .settings-section{background:#181b20;border:1px solid #30363f;border-radius:16px;padding:18px;margin:0 0 16px}.settings-studio .settings-section__title{color:#e8ebf1;font-size:12px;letter-spacing:.8px}.settings-studio .settings-field{padding:12px 0;border-bottom:1px solid #2a2e35}.settings-studio .settings-field:last-child{border-bottom:0}.settings-studio .settings-section__description,.settings-studio .settings-field__description{color:#a7afb9;line-height:1.55}
 .settings-studio :is(button,select,input):focus-visible{outline:2px solid #bec8d8;outline-offset:3px}
@@ -151,6 +157,7 @@
 [data-theme="light"] .settings-studio .settings-tabs{background:#e9edf2;border-color:#c6ced8;scrollbar-color:#8d9baa #e9edf2}
 [data-theme="light"] .settings-studio .settings-tab{color:#425365}
 [data-theme="light"] .settings-studio .settings-tab:hover{background:#dce4ec;color:#202a35}
+[data-theme="light"] .settings-studio .settings-tab--dashboard{border-color:#c6ced8}
 [data-theme="light"] .settings-studio .settings-tab--active{background:linear-gradient(120deg,#ffffff,#dbe5ee);border-color:#9fafc0;color:#172a3a}
 [data-theme="light"] .settings-studio .settings-section{background:#ffffff;border-color:#c6ced8}
 [data-theme="light"] .settings-studio .settings-field{border-color:#dde3ea}

@@ -208,7 +208,6 @@ TodayCost = 今日：${ "{:.2}" }
 Last30DaysCost = 近 30 天：${ "{:.2}" }
 StatusLabel = 狀態：{ "{}" }
 TrayOpenQuotaArc = 彈出儀表板
-TrayPopOutDashboard = 彈出儀表板
 TrayShowFloatBar = 顯示浮動欄
 TrayShowEdgeArc = 顯示 Edge Arc
 TrayShowTopArc = 顯示 Top Arc

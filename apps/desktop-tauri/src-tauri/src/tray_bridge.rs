@@ -166,7 +166,7 @@ fn build_native_tray_menu(
 
 fn resolve_menu_target(id: &str) -> Option<shell::ShellTransitionRequest> {
     match id {
-        // NOTE: "pop_out" ("Pop Out Dashboard") is NOT handled here — it opens
+        // NOTE: "pop_out" ("Pop Out Panel") is NOT handled here — it opens
         // the dedicated flyout window (MenuAction::OpenFlyout in
         // resolve_menu_action below), not a `shell::ShellTransitionRequest`
         // against the `main`-window surface-mode machine. `SurfaceMode::TrayPanel`
@@ -189,7 +189,7 @@ enum MenuAction {
     /// Open/focus the main workspace on one specific, named route —
     /// unambiguous regardless of the user's configured startup destination.
     OpenMainRoute(shell::MainRoute),
-    /// Open (or focus) the dedicated flyout ("Pop Out Dashboard") window —
+    /// Open (or focus) the dedicated flyout ("Pop Out Panel") window —
     /// a distinct, still-supported compact-window feature, not the main app.
     OpenFlyout,
     /// Open (or focus) the dedicated detached Collections window — a
@@ -212,6 +212,7 @@ enum MenuAction {
 fn resolve_menu_action(id: &str) -> Option<MenuAction> {
     match id {
         "open_main_app" => Some(MenuAction::OpenMainApp),
+        "dashboard" => Some(MenuAction::OpenMainRoute(shell::MainRoute::Dashboard)),
         "provider_display" => Some(MenuAction::OpenMainRoute(shell::MainRoute::ProviderDisplay)),
         "collections" => Some(MenuAction::OpenMainRoute(shell::MainRoute::Collections)),
         "manage_providers" => Some(MenuAction::OpenMainRoute(shell::MainRoute::Providers)),
@@ -292,10 +293,10 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                     // the same "activate the app" action a cold launch and a
                     // single-instance relaunch use, per `startup_destination`
                     // (tray/UX reset wave). Previously toggled the compact
-                    // Pop Out Dashboard flyout instead, which is exactly the
+                    // Pop Out Panel flyout instead, which is exactly the
                     // "mini tray dashboard on click" behavior product review
                     // flagged; the flyout remains reachable explicitly via
-                    // its own "Pop Out Dashboard" menu item. Called directly
+                    // its own "Pop Out Panel" menu item. Called directly
                     // (not spawned): native tray-icon event callbacks run on
                     // the same main-thread event-loop context as
                     // `on_menu_event` below, where `settings_window::
@@ -932,7 +933,7 @@ mod tests {
 
     #[test]
     fn pop_out_menu_routes_to_open_flyout_action() {
-        // "Pop Out Dashboard" opens the dedicated flyout window — a distinct,
+        // "Pop Out Panel" opens the dedicated flyout window — a distinct,
         // still-supported compact-window feature, deliberately separate from
         // "Open QuotaArc" (the main workspace). The old ambiguous "Show
         // Window" item (which duplicated this by reshaping `main` into the
@@ -954,6 +955,10 @@ mod tests {
         assert!(matches!(
             resolve_menu_action("open_main_app"),
             Some(MenuAction::OpenMainApp)
+        ));
+        assert!(matches!(
+            resolve_menu_action("dashboard"),
+            Some(MenuAction::OpenMainRoute(shell::MainRoute::Dashboard))
         ));
         assert!(matches!(
             resolve_menu_action("provider_display"),

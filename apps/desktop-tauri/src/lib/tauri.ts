@@ -135,7 +135,16 @@ export function openSettingsWindow(tab: string): Promise<void> {
   return invoke<void>("open_settings_window", { tab });
 }
 
-/** Open (or focus) the detached flyout ("Pop Out Dashboard") window. */
+/**
+ * Open (or focus) the real Dashboard (PopOutPanel, MainRoute::Dashboard) in
+ * the shared `main` window — the same destination sidebar navigation, tray
+ * deep-links, and cold launch all converge on (Wave 6 Phase 3).
+ */
+export function openDashboard(): Promise<void> {
+  return invoke<void>("open_dashboard");
+}
+
+/** Open (or focus) the detached flyout ("Pop Out Panel") window. */
 export function openFlyoutWindow(): Promise<void> {
   return invoke<void>("open_flyout_window");
 }

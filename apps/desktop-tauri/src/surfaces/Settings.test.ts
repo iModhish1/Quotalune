@@ -3,11 +3,12 @@ import { resetSettingsPanelScroll } from "./Settings";
 import { TAB_META } from "./settings/settingsTabs";
 
 describe("Settings navigation", () => {
-  it("keeps provider accounts and provider presentation in separate adjacent pages", () => {
-    expect(TAB_META.slice(0, 3)).toEqual([
-      { id: "general", labelKey: "TabGeneral" },
-      { id: "providers", labelKey: "TabProviders" },
+  it("puts the primary product surfaces first (Wave 6 Phase 3 navigation order)", () => {
+    expect(TAB_META.slice(0, 4)).toEqual([
       { id: "providerDisplay", labelKey: "TabProviderDisplay" },
+      { id: "collections", labelKey: "TabCollections" },
+      { id: "profiles", labelKey: "TabProfiles" },
+      { id: "providers", labelKey: "TabProviders" },
     ]);
   });
 

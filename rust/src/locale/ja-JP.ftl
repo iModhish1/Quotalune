@@ -208,7 +208,6 @@ TodayCost = 今日：${ "{:.2}" }
 Last30DaysCost = 過去30日間：${ "{:.2}" }
 StatusLabel = ステータス: { "{}" }
 TrayOpenQuotaArc = ダッシュボードを開く
-TrayPopOutDashboard = ダッシュボードを開く
 TrayShowFloatBar = フロートバーを表示
 TrayShowEdgeArc = Edge Arc を表示
 TrayShowTopArc = Top Arc を表示

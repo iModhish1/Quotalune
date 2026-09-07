@@ -128,15 +128,20 @@ pub(crate) fn build_tray_menu_with(
     }
 
     // "Open QuotaArc" is the single primary entry point — same action as
-    // left-click and a cold/relaunch, per startup_destination. Distinct from
-    // "Provider Display" (an explicit, unambiguous deep link some users may
-    // prefer over whatever "Opens to" currently resolves to) and from the
-    // detached "Pop Out Dashboard" (a genuinely separate, still-supported
-    // compact-window feature, kept clearly named rather than merged with
-    // the main workspace).
+    // left-click and a cold/relaunch, per startup_destination. "Dashboard"
+    // and "Provider Display" are explicit, unambiguous deep links some
+    // users may prefer over whatever "Opens to" currently resolves to —
+    // both route through MainRoute, the same vocabulary sidebar navigation
+    // and cold launch use (Wave 6 Phase 3). Distinct from "Pop Out Panel"
+    // below, a genuinely separate, still-supported compact tray-popover
+    // window (TrayPanel.tsx) — not the Dashboard.
     menu.push(TrayMenuEntry::item(
         "open_main_app",
         text(LocaleKey::TrayOpenMainApp),
+    ));
+    menu.push(TrayMenuEntry::item(
+        "dashboard",
+        text(LocaleKey::TrayDashboard),
     ));
     menu.push(TrayMenuEntry::item(
         "provider_display",
@@ -220,7 +225,7 @@ pub(crate) fn build_tray_menu_with(
     ));
     menu.push(TrayMenuEntry::item(
         "pop_out",
-        text(LocaleKey::TrayPopOutDashboard),
+        text(LocaleKey::TrayPopOutPanel),
     ));
     menu.push(TrayMenuEntry::separator());
 
@@ -282,6 +287,30 @@ mod tests {
     fn check_for_updates_item_is_present() {
         let menu = build_tray_menu(&sample_provider_catalog(), &[], &both_enabled());
         assert!(menu_contains(&menu, "check_for_updates"));
+    }
+
+    #[test]
+    fn dashboard_is_a_primary_entry_distinct_from_pop_out_panel() {
+        // Wave 6 Phase 3: "Dashboard" is a real, unambiguous deep link to
+        // MainRoute::Dashboard (PopOutPanel.tsx), alongside "Open QuotaArc"
+        // and "Provider Display" — not to be confused with "pop_out", which
+        // opens the separate compact tray-popover flyout (TrayPanel.tsx).
+        let menu = build_tray_menu(&sample_provider_catalog(), &[], &both_enabled());
+        let dashboard = menu
+            .iter()
+            .find(|e| e.id.as_deref() == Some("dashboard"))
+            .expect("dashboard item present");
+        assert_eq!(dashboard.label, "Dashboard");
+
+        let pop_out = menu
+            .iter()
+            .find(|e| e.id.as_deref() == Some("pop_out"))
+            .expect("pop_out item present");
+        // Regression guard: this item previously carried the label
+        // "Pop Out Dashboard" while actually opening TrayPanel, not the
+        // Dashboard — a naming mismatch fixed alongside adding the real
+        // "Dashboard" entry above.
+        assert_eq!(pop_out.label, "Pop Out Panel");
     }
 
     #[test]

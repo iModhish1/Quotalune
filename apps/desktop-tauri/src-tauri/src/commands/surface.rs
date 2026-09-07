@@ -59,7 +59,20 @@ pub async fn open_settings_window(app: tauri::AppHandle, tab: String) -> Result<
     crate::shell::settings_window::open_or_focus(&app, &tab)
 }
 
-/// Open (or focus) the detached flyout ("Pop Out Dashboard") window.
+/// Open (or focus) the real Dashboard (`MainRoute::Dashboard` /
+/// `PopOutPanel.tsx`) in the shared `main` window — the same target sidebar
+/// navigation, tray deep-links, and cold launch all converge on (Wave 6
+/// Phase 3's single central route vocabulary). Not `async`: unlike the
+/// window-creating commands below, this only transitions an
+/// already-existing window (`main` is created hidden at startup and never
+/// torn down), so it doesn't hit the `WebviewWindowBuilder::build`
+/// deadlock-on-sync-command issue.
+#[tauri::command]
+pub fn open_dashboard(app: tauri::AppHandle) -> Result<(), String> {
+    crate::shell::open_or_focus_main_window(&app, crate::shell::MainRoute::Dashboard)
+}
+
+/// Open (or focus) the detached flyout ("Pop Out Panel") window.
 ///
 /// Used by `PopOutPanel`'s "back to tray" action, which previously called
 /// `set_surface_mode("trayPanel", ...)` on the shared window — now that the
