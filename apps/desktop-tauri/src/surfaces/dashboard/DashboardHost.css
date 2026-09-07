@@ -1,0 +1,7 @@
+.dashboard-host__skeleton{display:flex;flex-direction:column;gap:10px;padding:4px 2px}
+.dashboard-host__skeleton-bar{height:64px;border-radius:14px;background:linear-gradient(90deg,color-mix(in srgb,var(--qa-material-raised) 60%,transparent),color-mix(in srgb,var(--qa-material-raised) 40%,transparent),color-mix(in srgb,var(--qa-material-raised) 60%,transparent));background-size:200% 100%;animation:dashboard-host-shimmer 1.6s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){.dashboard-host__skeleton-bar{animation:none}}
+@keyframes dashboard-host-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.dashboard-host__error{display:flex;flex-direction:column;gap:10px;align-items:flex-start;padding:32px 24px;margin:4px 2px;border:1px solid color-mix(in srgb,#e5484d 46%,var(--qa-hairline));border-radius:14px;background:color-mix(in srgb,#e5484d 10%,transparent)}
+.dashboard-host__error p{margin:0;color:var(--qa-ink-1);font-size:13px}
+.dashboard-host__error button{min-height:32px;padding:0 14px;border:1px solid var(--qa-hairline-strong);border-radius:9px;background:var(--qa-material-raised);color:var(--qa-ink-1);cursor:pointer;font:inherit;font-size:12px}

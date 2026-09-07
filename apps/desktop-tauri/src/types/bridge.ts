@@ -8,6 +8,7 @@ export type SettingsTabId =
   | "collections"
   | "profiles"
   | "resetDisplay"
+  | "dashboardStudio"
   | "notifications"
   | "menuBar"
   | "menu"
@@ -16,6 +17,14 @@ export type SettingsTabId =
   | "themes"
   | "advanced"
   | "about";
+
+/** Which Dashboard experience is selected -- exactly one is ever mounted.
+ *  Mirrors `codexbar::settings::DashboardModeId`. */
+export type DashboardModeId = "analytics2d" | "providers3d" | "hybrid";
+
+/** Dashboard rendering performance budget, independent of provider-refresh
+ *  power settings. Mirrors `codexbar::settings::DashboardPerformancePreset`. */
+export type DashboardPerformancePreset = "lowCpu" | "balanced" | "highFidelity";
 
 // ── Narrowed string-literal unions (persisted settings enums) ─────────
 
@@ -209,6 +218,8 @@ export interface SettingsSnapshot {
   refreshAllProvidersOnMenuOpen: boolean;
   lowPowerMode: boolean;
   lowPowerModePreference?: "off" | "on" | "automatic";
+  dashboardMode?: DashboardModeId;
+  dashboardPerformancePreset?: DashboardPerformancePreset;
   startAtLogin: boolean;
   startMinimized: boolean;
   startupDestination?: "dashboard" | "providerDisplay" | "lastOpened";
@@ -325,6 +336,8 @@ export interface SettingsUpdate {
   refreshAllProvidersOnMenuOpen?: boolean;
   lowPowerMode?: boolean;
   lowPowerModePreference?: "off" | "on" | "automatic";
+  dashboardMode?: DashboardModeId;
+  dashboardPerformancePreset?: DashboardPerformancePreset;
   startAtLogin?: boolean;
   startMinimized?: boolean;
   startupDestination?: "dashboard" | "providerDisplay" | "lastOpened";
@@ -1013,4 +1026,72 @@ export interface CodexSwitchResult {
 export interface CodexAccountsStateBridge {
   accounts: CodexAccount[];
   snapshots: Record<string, CodexAccountUsageSnapshot>;
+}
+
+// ── Dashboard data (Phase 1: docs/validation/DASHBOARD_DATA_ARCHITECTURE.md) ──
+
+/** What real data actually exists for a query. The last three are always
+ *  `false` today -- the local history schema has no columns for token
+ *  counts, request counts, or model attribution. */
+export interface DataAvailability {
+  firstSampleAt: number | null;
+  lastSampleAt: number | null;
+  sampleCount: number;
+  hasCostData: boolean;
+  hasTokenData: boolean;
+  hasRequestData: boolean;
+  hasModelData: boolean;
+}
+
+/** Named distinctly from the pre-existing `ProviderSummary` (provider
+ *  ordering/enablement DTO, unrelated) to avoid TS interface-merging
+ *  colliding two structurally different shapes under the same name. */
+export interface DashboardProviderSummary {
+  provider: string;
+  accountId: string;
+  usedPercent: number;
+  remainingPercent: number;
+  /** Authoritative reset instant (ISO-8601) -- the Reset Presentation
+   *  system owns display formatting, not this contract. */
+  resetsAt: string | null;
+  lastSampleAt: number;
+}
+
+export interface UsageTrendPoint {
+  provider: string;
+  accountId: string;
+  bucketStart: number;
+  usedPercent: number;
+  remainingPercent: number;
+  sampleCount: number;
+}
+
+export interface SpendTrendPoint {
+  provider: string;
+  accountId: string;
+  bucketStart: number;
+  /** Always an estimate as reported by the provider itself. */
+  costUsed: number;
+}
+
+export type DashboardRangeKind =
+  | "today"
+  | "last7Days"
+  | "last30Days"
+  | "thisMonth"
+  | "last3Months"
+  | "thisYear"
+  | "custom";
+
+/** The one normalized data contract every Dashboard widget consumes. */
+export interface DashboardSnapshot {
+  generatedAt: number;
+  rangeSince: number;
+  rangeUntil: number;
+  grain: "hourly" | "daily";
+  timezone: string;
+  availability: DataAvailability;
+  providers: DashboardProviderSummary[];
+  usageTrend: UsageTrendPoint[];
+  spendTrend: SpendTrendPoint[];
 }

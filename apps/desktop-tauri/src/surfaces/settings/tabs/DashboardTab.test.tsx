@@ -164,7 +164,10 @@ describe("DashboardTab", () => {
 
   it("renders the provider stack in-shell, with no window chrome", async () => {
     renderDashboardTab([provider("claude", "Claude"), provider("codex", "Codex")]);
-    expect((await screen.findAllByText("Claude")).length).toBeGreaterThan(0);
+    // DashboardTab now routes through DashboardHost's React.lazy-loaded
+    // AnalyticsDashboard, adding a real async module-resolution tick before
+    // content appears -- allow more time than the default findBy timeout.
+    expect((await screen.findAllByText("Claude", {}, { timeout: 5000 })).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Codex").length).toBeGreaterThan(0);
     // No detached-window chrome: no title bar restore/close controls, no
     // footer Settings/About/Quit rows -- those are PopOutPanel-only.

@@ -40,6 +40,8 @@ import type {
   CodexAccountsStateBridge,
   CodexSwitchResult,
   DeepSeekPricingStatus,
+  DashboardSnapshot,
+  DashboardRangeKind,
 } from "../types/bridge";
 import type { CatalogSurfaceId } from "../design-system/themeResolution";
 
@@ -57,6 +59,22 @@ export function reorderProviders(ids: string[]): Promise<ProviderSummary[]> {
 
 export function getSettingsSnapshot(): Promise<SettingsSnapshot> {
   return invoke<SettingsSnapshot>("get_settings_snapshot");
+}
+
+export function getDashboardSnapshot(options: {
+  range: DashboardRangeKind;
+  timezone?: string;
+  customSince?: number;
+  customUntil?: number;
+  providers?: string[];
+}): Promise<DashboardSnapshot> {
+  return invoke<DashboardSnapshot>("get_dashboard_snapshot", {
+    range: options.range,
+    timezone: options.timezone,
+    customSince: options.customSince,
+    customUntil: options.customUntil,
+    providers: options.providers,
+  });
 }
 
 export function updateSettings(
