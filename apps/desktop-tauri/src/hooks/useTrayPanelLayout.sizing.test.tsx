@@ -163,29 +163,75 @@ describe("useTrayPanelLayout sizing", () => {
     );
   }
 
-  it("does not feed measurement style changes back into another auto-fit pass", async () => {
-    vi.stubGlobal("ResizeObserver", StyleFeedbackResizeObserver);
-    setScrollHeight(1_200);
+  /**
+   * Poll (real timers, small slices) until `revealTrayPanelWindow`'s call
+   * count has stopped changing for a full `quietWindowMs` in a row, then
+   * return that settled count.
+   *
+   * A fixed early sleep here used to race a second, legitimate startup
+   * pass: mount always does an initial pass while `layoutReadyRef` is
+   * still false, and that pass's OWN constraint-removal style mutations
+   * (clearing height/overflow to measure natural content size) are not
+   * yet covered by the in-flight suppression guard — it only starts
+   * suppressing once `layoutReadyRef.current` is true — so the observer
+   * legitimately schedules a second pass (see the "two competing initial
+   * passes" comment on the layoutKey effect above, which fixed one source
+   * of this and left this one). That second pass's own async chain
+   * (100ms requestLayout debounce + up to 25ms resize scheduling + two
+   * animation frames + a 200ms trailing in-flight-suppression window)
+   * can take a couple hundred milliseconds, and under load (a busy test
+   * run, a loaded CI box) it can still be in flight past a fixed 300ms
+   * mark — which is exactly what made this test intermittently see one
+   * MORE reveal in its "quiet" window than the early snapshot expected,
+   * without any real feedback-loop bug. Waiting for genuine quiescence
+   * instead of a fixed clock mark removes that race.
+   */
+  async function waitForRevealCountToSettle(
+    quietWindowMs: number,
+  ): Promise<number> {
+    let lastCount = tauriMocks.revealTrayPanelWindow.mock.calls.length;
+    let quietSince = Date.now();
+    while (Date.now() - quietSince < quietWindowMs) {
+      await act(async () => {
+        await new Promise((resolve) => window.setTimeout(resolve, 50));
+      });
+      const current = tauriMocks.revealTrayPanelWindow.mock.calls.length;
+      if (current !== lastCount) {
+        lastCount = current;
+        quietSince = Date.now();
+      }
+    }
+    return lastCount;
+  }
 
-    const { result } = renderHook(() => useTrayPanelLayout(hookProps()));
-    await waitFor(() => expect(result.current.layoutReady).toBe(true), {
-      timeout: 3000,
-    });
-    await waitFor(() => expect(feedbackObserverCallbacks).toBeGreaterThan(0));
+  it(
+    "does not feed measurement style changes back into another auto-fit pass",
+    async () => {
+      vi.stubGlobal("ResizeObserver", StyleFeedbackResizeObserver);
+      setScrollHeight(1_200);
 
-    await act(async () => {
-      await new Promise((resolve) => window.setTimeout(resolve, 300));
-    });
-    const settledRevealCount =
-      tauriMocks.revealTrayPanelWindow.mock.calls.length;
-    await act(async () => {
-      await new Promise((resolve) => window.setTimeout(resolve, 500));
-    });
+      const { result } = renderHook(() => useTrayPanelLayout(hookProps()));
+      await waitFor(() => expect(result.current.layoutReady).toBe(true), {
+        timeout: 3000,
+      });
+      await waitFor(() => expect(feedbackObserverCallbacks).toBeGreaterThan(0));
 
-    expect(tauriMocks.revealTrayPanelWindow.mock.calls.length).toBe(
-      settledRevealCount,
-    );
-  });
+      // 500ms of true quiet is safely longer than the hook's worst-case
+      // single-pass async chain (~350ms, see helper doc above), so this
+      // reliably lands after any still-in-flight startup pass completes,
+      // not before it.
+      const settledRevealCount = await waitForRevealCountToSettle(500);
+
+      await act(async () => {
+        await new Promise((resolve) => window.setTimeout(resolve, 500));
+      });
+
+      expect(tauriMocks.revealTrayPanelWindow.mock.calls.length).toBe(
+        settledRevealCount,
+      );
+    },
+    10_000,
+  );
 
   it("commits stable small changes, locks the reporter pair on the larger member, tracks retained height in the DOM", async () => {
     setScrollHeight(535); // → 539 logical → 674 physical
