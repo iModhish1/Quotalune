@@ -43,6 +43,25 @@ function NextResetValue({ resetsAt, relative }: { resetsAt: string; relative: bo
   return <bdi>{formatted}</bdi>;
 }
 
+// Mirrors MenuCardDetails.tsx's formatCurrency (module-private there) --
+// the reported-spend KPI must render in whatever real currency
+// `costContract.currencyCode` proved, never a hardcoded "$" prefix (a
+// real bug the old `$${amount.toFixed(2)}` had: it would mislabel a
+// EUR/GBP/etc. provider-reported total as dollars).
+const kpiCurrencyFormatters = new Map<string, Intl.NumberFormat>();
+function formatKpiCurrency(amount: number, code: string): string {
+  try {
+    let formatter = kpiCurrencyFormatters.get(code);
+    if (!formatter) {
+      formatter = new Intl.NumberFormat("en-US", { style: "currency", currency: code });
+      kpiCurrencyFormatters.set(code, formatter);
+    }
+    return formatter.format(amount);
+  } catch {
+    return `${code} ${amount.toFixed(2)}`;
+  }
+}
+
 /**
  * The KPI summary row (owner section 8/9, refined Phase 3.5 section 6).
  * Only renders metrics genuinely supported by real data -- a metric with
@@ -69,7 +88,10 @@ export default function KpiRow({
   const nextResetValue = kpis.nextReset ? (
     <NextResetValue resetsAt={kpis.nextReset.resetsAt} relative={resetTimeRelative} />
   ) : null;
-  const spendValue = kpis.estimatedSpendTotal !== null ? `$${kpis.estimatedSpendTotal.toFixed(2)}` : null;
+  const spendValue =
+    kpis.reportedSpendTotal !== null && kpis.reportedSpendCurrency !== null
+      ? formatKpiCurrency(kpis.reportedSpendTotal, kpis.reportedSpendCurrency)
+      : null;
 
   const primary: KpiCardProps[] = [
     // Active Providers is always primary: even 0 is a meaningful, real

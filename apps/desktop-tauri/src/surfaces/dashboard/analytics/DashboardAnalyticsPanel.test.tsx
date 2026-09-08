@@ -58,8 +58,10 @@ const LOCALE_ENTRIES = {
   DashboardDataStatusTitle: "Data Status",
   DashboardDataStatusHistoryActive: "Local history: active",
   DashboardDataStatusHistoryCollecting: "Local history: collecting",
-  DashboardDataStatusCostEstimated: "Cost: estimated (provider-reported)",
+  DashboardDataStatusCostProviderReported: "Cost: provider-reported",
+  DashboardDataStatusCostLegacyAmbiguous: "Cost: legacy data, semantics unknown",
   DashboardDataStatusPricingNotVerified: "Pricing: not yet verified",
+  DashboardDataStatusPricingNotRequired: "Pricing: not required for provider-reported cost",
   DashboardDataAvailableSince: "Data available since {}",
   DashboardDataSamples: "{} samples",
 };
@@ -122,6 +124,14 @@ function snapshot(overrides: Partial<DashboardSnapshot> = {}): DashboardSnapshot
     providers: [],
     usageTrend: [],
     spendTrend: [],
+    costContract: {
+      origin: "unavailable",
+      measurementKind: "unknown",
+      currencyCode: null,
+      period: "unknown",
+      availability: "unavailable",
+      pricingStatus: "notRequired",
+    },
     ...overrides,
   };
 }

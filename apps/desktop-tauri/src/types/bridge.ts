@@ -1066,12 +1066,66 @@ export interface UsageTrendPoint {
   sampleCount: number;
 }
 
+/** Phase 4A: what kind of number `costUsed` actually is -- never infer
+ *  this from the field name. "cumulative" = a running total for the
+ *  provider's current billing period (must not be summed across time
+ *  buckets of the same series); "pointInTime" = a prepaid balance (can
+ *  legitimately decrease as money is spent); "delta" = a genuine
+ *  per-bucket incremental amount (safe to sum -- not produced by any
+ *  provider today); "unknown" = semantics could not be established
+ *  (legacy row, or a provider with proven ambiguous/dual-path
+ *  semantics like Codex) -- must not be aggregated into a trusted total.
+ *  See `docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md`. */
+export type CostMeasurementKind = "cumulative" | "delta" | "pointInTime" | "unknown";
+
 export interface SpendTrendPoint {
   provider: string;
   accountId: string;
   bucketStart: number;
-  /** Always an estimate as reported by the provider itself. */
+  /** A reading in whatever `measurementKind` says it is -- always
+   *  provider-reported (see `DashboardSnapshot.costContract.origin`),
+   *  never a Quotalis-computed figure. */
   costUsed: number;
+  /** ISO 4217 currency code, `null` for a legacy (pre-Phase-4A) sample --
+   *  never assume USD. */
+  currencyCode: string | null;
+  measurementKind: CostMeasurementKind;
+}
+
+/** Where a monetary figure came from. Quotalis today only ever produces
+ *  "providerReported" (real) or "unavailable" (no usable figure) --
+ *  "locallyEstimated"/"userConfigured" exist in the contract but nothing
+ *  constructs them yet (the history schema lacks the token/model billing
+ *  inputs a trustworthy local estimate would require). */
+export type CostOrigin = "providerReported" | "locallyEstimated" | "userConfigured" | "unavailable";
+
+/** Whether a trustworthy monetary total exists, distinct from
+ *  `DataAvailability.hasCostData` (which only says *some* cost row
+ *  exists, not whether it can be safely aggregated). "legacyAmbiguous" =
+ *  real numeric rows exist but predate the currency/measurement-kind
+ *  columns, so their semantics cannot be proven. */
+export type CostAvailability = "available" | "legacyAmbiguous" | "unavailable";
+
+/** Whether Quotalis's own pricing catalog needs to be (or has been)
+ *  verified for the shown figure. "notRequired" is what every
+ *  provider-reported figure carries -- pricing-catalog verification does
+ *  not apply to a number Quotalis didn't compute. */
+export type PricingStatus = "notRequired" | "unverified" | "verified";
+
+/** Phase 4A: the formal, structured description of what `spendTrend`
+ *  (and any KPI/total derived from it) actually means. Nothing may infer
+ *  monetary semantics from a naked number any more -- read this instead. */
+export interface CostContract {
+  origin: CostOrigin;
+  measurementKind: CostMeasurementKind;
+  /** Only set when every relevant sample shares one unambiguous currency
+   *  -- `null` when currencies differ or are unknown; never guessed. */
+  currencyCode: string | null;
+  /** Human-readable period/scope ("Monthly", a provider-defined string,
+   *  or "unknown" when the aggregated set mixes periods). */
+  period: string;
+  availability: CostAvailability;
+  pricingStatus: PricingStatus;
 }
 
 export type DashboardRangeKind =
@@ -1094,4 +1148,5 @@ export interface DashboardSnapshot {
   providers: DashboardProviderSummary[];
   usageTrend: UsageTrendPoint[];
   spendTrend: SpendTrendPoint[];
+  costContract: CostContract;
 }

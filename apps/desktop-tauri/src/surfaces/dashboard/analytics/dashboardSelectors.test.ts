@@ -9,9 +9,11 @@ import {
   resolveDataStatus,
 } from "./dashboardSelectors";
 import type {
+  CostContract,
   DashboardProviderSummary,
   DashboardSnapshot,
   ProviderUsageSnapshot,
+  SpendTrendPoint,
   UsageTrendPoint,
 } from "../../../types/bridge";
 
@@ -81,6 +83,30 @@ function trendPoint(overrides: Partial<UsageTrendPoint> = {}): UsageTrendPoint {
   };
 }
 
+function costContract(overrides: Partial<CostContract> = {}): CostContract {
+  return {
+    origin: "unavailable",
+    measurementKind: "unknown",
+    currencyCode: null,
+    period: "unknown",
+    availability: "unavailable",
+    pricingStatus: "notRequired",
+    ...overrides,
+  };
+}
+
+function spendPoint(overrides: Partial<SpendTrendPoint> = {}): SpendTrendPoint {
+  return {
+    provider: "claude",
+    accountId: "acct-1",
+    bucketStart: 0,
+    costUsed: 0,
+    currencyCode: "USD",
+    measurementKind: "cumulative",
+    ...overrides,
+  };
+}
+
 function snapshot(overrides: Partial<DashboardSnapshot> = {}): DashboardSnapshot {
   return {
     generatedAt: 1000,
@@ -100,6 +126,7 @@ function snapshot(overrides: Partial<DashboardSnapshot> = {}): DashboardSnapshot
     providers: [],
     usageTrend: [],
     spendTrend: [],
+    costContract: costContract(),
     ...overrides,
   };
 }
@@ -247,17 +274,17 @@ describe("buildAlerts", () => {
 });
 
 describe("resolveDataStatus", () => {
-  it("reports collecting/unavailable/not-verified when there is no real data yet", () => {
-    const status = resolveDataStatus(snapshot().availability);
+  it("reports collecting/unavailable/not-required when there is no real data yet", () => {
+    const status = resolveDataStatus(snapshot());
     expect(status).toEqual({
       historyState: "collecting",
       quotaState: "live",
       costState: "unavailable",
-      pricingState: "notVerified",
+      pricingState: "notRequired",
     });
   });
 
-  it("never reports pricing as verified -- that is Phase 4's job", () => {
+  it("PHASE 4A: real provider-reported cost data is labeled providerReported, never estimated/verified", () => {
     const status = resolveDataStatus(
       snapshot({
         availability: {
@@ -269,10 +296,35 @@ describe("resolveDataStatus", () => {
           hasRequestData: false,
           hasModelData: false,
         },
-      }).availability,
+        costContract: costContract({
+          origin: "providerReported",
+          measurementKind: "cumulative",
+          currencyCode: "USD",
+          period: "Monthly",
+          availability: "available",
+        }),
+      }),
     );
-    expect(status.pricingState).toBe("notVerified");
-    expect(status.costState).toBe("estimated");
+    expect(status.pricingState).toBe("notRequired");
+    expect(status.costState).toBe("providerReported");
+  });
+
+  it("PHASE 4A: legacy-ambiguous cost rows never report as providerReported", () => {
+    const status = resolveDataStatus(
+      snapshot({
+        availability: {
+          firstSampleAt: 0,
+          lastSampleAt: 1000,
+          sampleCount: 500,
+          hasCostData: true,
+          hasTokenData: false,
+          hasRequestData: false,
+          hasModelData: false,
+        },
+        costContract: costContract({ availability: "legacyAmbiguous" }),
+      }),
+    );
+    expect(status.costState).toBe("legacyAmbiguous");
   });
 });
 
@@ -311,7 +363,8 @@ describe("computeKpis", () => {
     expect(kpis.activeProviderCount).toBe(0);
     expect(kpis.highestUsageProvider).toBeNull();
     expect(kpis.nextReset).toBeNull();
-    expect(kpis.estimatedSpendTotal).toBeNull();
+    expect(kpis.reportedSpendTotal).toBeNull();
+    expect(kpis.reportedSpendCurrency).toBeNull();
   });
 
   it("computes real highest-usage and next-reset from connected providers", () => {
@@ -331,25 +384,34 @@ describe("computeKpis", () => {
     expect(kpis.nextReset?.providerId).toBe("b");
   });
 
-  it("only totals estimated spend when the snapshot actually has cost data", () => {
+  it("only totals reported spend when the snapshot's cost contract says a total can be trusted", () => {
     const withoutCost = computeKpis({
       liveProviders: [],
       snapshot: snapshot({ spendTrend: [] }),
       settings,
     });
-    expect(withoutCost.estimatedSpendTotal).toBeNull();
+    expect(withoutCost.reportedSpendTotal).toBeNull();
+    expect(withoutCost.reportedSpendCurrency).toBeNull();
   });
 
-  it("PHASE 4 regression: never sums a cumulative-period reading across time buckets of the same series (would double/triple count the same running total)", () => {
-    const availability = {
-      firstSampleAt: 0,
-      lastSampleAt: 100,
-      sampleCount: 5,
-      hasCostData: true,
-      hasTokenData: false,
-      hasRequestData: false,
-      hasModelData: false,
-    };
+  const cumulativeAvailability = {
+    firstSampleAt: 0,
+    lastSampleAt: 100,
+    sampleCount: 5,
+    hasCostData: true,
+    hasTokenData: false,
+    hasRequestData: false,
+    hasModelData: false,
+  };
+  const cumulativeContract = costContract({
+    origin: "providerReported",
+    measurementKind: "cumulative",
+    currencyCode: "USD",
+    period: "Monthly",
+    availability: "available",
+  });
+
+  it("PHASE 4A regression: never sums a cumulative-period reading across time buckets of the same series (would double/triple count the same running total)", () => {
     // Same provider+account, three buckets -- each is the provider's own
     // running month-to-date total at that point in time, NOT a delta.
     // The pre-Phase-4 bug summed all three (1.5 + 2.25 + 3.0 = 6.75),
@@ -358,42 +420,161 @@ describe("computeKpis", () => {
     const kpis = computeKpis({
       liveProviders: [],
       snapshot: snapshot({
-        availability,
+        availability: cumulativeAvailability,
+        costContract: cumulativeContract,
         spendTrend: [
-          { provider: "claude", accountId: "a1", bucketStart: 0, costUsed: 1.5 },
-          { provider: "claude", accountId: "a1", bucketStart: 86400, costUsed: 2.25 },
-          { provider: "claude", accountId: "a1", bucketStart: 172800, costUsed: 3.0 },
+          spendPoint({ bucketStart: 0, costUsed: 1.5 }),
+          spendPoint({ bucketStart: 86400, costUsed: 2.25 }),
+          spendPoint({ bucketStart: 172800, costUsed: 3.0 }),
         ],
       }),
       settings,
     });
-    expect(kpis.estimatedSpendTotal).toBeCloseTo(3.0);
+    expect(kpis.reportedSpendTotal).toBeCloseTo(3.0);
+    expect(kpis.reportedSpendCurrency).toBe("USD");
   });
 
   it("sums the latest reading across genuinely independent provider/account series (legitimate -- these are different real totals, not the same one counted twice)", () => {
-    const availability = {
-      firstSampleAt: 0,
-      lastSampleAt: 100,
-      sampleCount: 5,
-      hasCostData: true,
-      hasTokenData: false,
-      hasRequestData: false,
-      hasModelData: false,
-    };
     const kpis = computeKpis({
       liveProviders: [],
       snapshot: snapshot({
-        availability,
+        availability: cumulativeAvailability,
+        costContract: cumulativeContract,
         spendTrend: [
           // Claude a1: two buckets, only the latest (2.25) should count.
-          { provider: "claude", accountId: "a1", bucketStart: 0, costUsed: 1.5 },
-          { provider: "claude", accountId: "a1", bucketStart: 86400, costUsed: 2.25 },
+          spendPoint({ provider: "claude", accountId: "a1", bucketStart: 0, costUsed: 1.5 }),
+          spendPoint({ provider: "claude", accountId: "a1", bucketStart: 86400, costUsed: 2.25 }),
           // Codex a1: one bucket, counts in full.
-          { provider: "codex", accountId: "a1", bucketStart: 86400, costUsed: 4.0 },
+          spendPoint({ provider: "codex", accountId: "a1", bucketStart: 86400, costUsed: 4.0 }),
         ],
       }),
       settings,
     });
-    expect(kpis.estimatedSpendTotal).toBeCloseTo(6.25);
+    expect(kpis.reportedSpendTotal).toBeCloseTo(6.25);
+    expect(kpis.reportedSpendCurrency).toBe("USD");
+  });
+
+  it("PHASE 4A: a point-in-time balance is never shown as Spend -- returns unavailable, not the balance number", () => {
+    const kpis = computeKpis({
+      liveProviders: [],
+      snapshot: snapshot({
+        availability: { ...cumulativeAvailability },
+        costContract: costContract({
+          origin: "providerReported",
+          measurementKind: "pointInTime",
+          currencyCode: "USD",
+          period: "balance",
+          availability: "available",
+        }),
+        spendTrend: [
+          spendPoint({ provider: "zenmux", bucketStart: 0, costUsed: 30, measurementKind: "pointInTime" }),
+        ],
+      }),
+      settings,
+    });
+    expect(kpis.reportedSpendTotal).toBeNull();
+    expect(kpis.reportedSpendCurrency).toBeNull();
+  });
+
+  it("PHASE 4A: mixed measurement kinds across providers collapse to unavailable, never a combined guess", () => {
+    const kpis = computeKpis({
+      liveProviders: [],
+      snapshot: snapshot({
+        availability: cumulativeAvailability,
+        // The Rust side already collapses a mixed set to "unknown" --
+        // this proves the TS selector respects that verdict rather than
+        // re-deriving its own (wrong) answer from the raw points.
+        costContract: costContract({
+          origin: "providerReported",
+          measurementKind: "unknown",
+          currencyCode: null,
+          period: "unknown",
+          availability: "available",
+        }),
+        spendTrend: [
+          spendPoint({ provider: "claude", bucketStart: 0, costUsed: 12, measurementKind: "cumulative" }),
+          spendPoint({ provider: "zenmux", bucketStart: 0, costUsed: 30, measurementKind: "pointInTime" }),
+        ],
+      }),
+      settings,
+    });
+    expect(kpis.reportedSpendTotal).toBeNull();
+  });
+
+  it("PHASE 4A: mixed currencies collapse to unavailable rather than summing USD + EUR", () => {
+    const kpis = computeKpis({
+      liveProviders: [],
+      snapshot: snapshot({
+        availability: cumulativeAvailability,
+        costContract: costContract({
+          origin: "providerReported",
+          measurementKind: "cumulative",
+          currencyCode: null, // Rust already proved currencies differ
+          period: "Monthly",
+          availability: "available",
+        }),
+        spendTrend: [
+          spendPoint({ provider: "claude", bucketStart: 0, costUsed: 12, currencyCode: "USD" }),
+          spendPoint({ provider: "mistral", bucketStart: 0, costUsed: 9, currencyCode: "EUR" }),
+        ],
+      }),
+      settings,
+    });
+    expect(kpis.reportedSpendTotal).toBeNull();
+    expect(kpis.reportedSpendCurrency).toBeNull();
+  });
+
+  it("PHASE 4A: legacy-ambiguous cost data (pre-Phase-4A rows) never contributes to the total", () => {
+    const kpis = computeKpis({
+      liveProviders: [],
+      snapshot: snapshot({
+        availability: cumulativeAvailability,
+        costContract: costContract({
+          origin: "unavailable",
+          measurementKind: "unknown",
+          currencyCode: null,
+          period: "unknown",
+          availability: "legacyAmbiguous",
+        }),
+        spendTrend: [spendPoint({ bucketStart: 0, costUsed: 5 })],
+      }),
+      settings,
+    });
+    expect(kpis.reportedSpendTotal).toBeNull();
+  });
+
+  // ── Phase 4A owner section 9: quota % must never feed a monetary
+  // calculation. Hard regression: an extreme (98%) quota usage figure
+  // must leave the reported-spend total completely unaffected -- it is
+  // computed exclusively from `spendTrend`'s own dollar readings, never
+  // from `usedPercent`/`remainingPercent`, a subscription price, or any
+  // rate-limit/reset figure. If a future change wired usedPercent into
+  // the spend calculation (e.g. `spend = usedPercent * planPrice`), this
+  // test would catch it: the two providers below have identical spend
+  // data and wildly different quota usage, so the totals MUST be equal.
+  it("PHASE 4A hard regression: quota %/subscription usage/reset data never feeds the monetary total", () => {
+    const lowQuotaProvider = provider({
+      providerId: "claude",
+      primary: rateWindow({ usedPercent: 2, resetsAt: null }),
+    });
+    const highQuotaProvider = provider({
+      providerId: "claude",
+      primary: rateWindow({ usedPercent: 98, resetsAt: null }),
+    });
+    const spendSnapshot = snapshot({
+      availability: cumulativeAvailability,
+      costContract: cumulativeContract,
+      spendTrend: [spendPoint({ provider: "claude", accountId: "acct-1", bucketStart: 0, costUsed: 12.5 })],
+    });
+
+    const atLowQuota = computeKpis({ liveProviders: [lowQuotaProvider], snapshot: spendSnapshot, settings });
+    const atHighQuota = computeKpis({ liveProviders: [highQuotaProvider], snapshot: spendSnapshot, settings });
+
+    // Same underlying spend data, wildly different quota% -- the reported
+    // spend total must be identical in both cases (12.5), never
+    // 98% * anything or 2% * anything.
+    expect(atLowQuota.reportedSpendTotal).toBe(12.5);
+    expect(atHighQuota.reportedSpendTotal).toBe(12.5);
+    expect(atLowQuota.reportedSpendTotal).toBe(atHighQuota.reportedSpendTotal);
   });
 });

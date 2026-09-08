@@ -41,8 +41,16 @@ DashboardReconnect = Reconnect
 DashboardDataStatusTitle = Data Status
 DashboardDataStatusHistoryActive = Local history: active
 DashboardDataStatusHistoryCollecting = Local history: collecting
-DashboardDataStatusCostEstimated = Cost: estimated (provider-reported)
+# Phase 4A: never call this "estimated" -- it is always the provider's
+# own reported figure, never a Quotalis computation.
+DashboardDataStatusCostProviderReported = Cost: provider-reported
+# Real numeric cost data exists, but it predates Phase 4A's currency/
+# measurement-kind columns, so its semantics can't be proven.
+DashboardDataStatusCostLegacyAmbiguous = Cost: legacy data, semantics unknown
 DashboardDataStatusPricingNotVerified = Pricing: not yet verified
+# Provider-reported cost never touches Quotalis's own pricing catalog --
+# never implies a provider-reported number came from Quotalis pricing.
+DashboardDataStatusPricingNotRequired = Pricing: not required for provider-reported cost
 DashboardDataAvailableSince = Data available since { "{}" }
 DashboardDataSamples = { "{}" } samples
 DashboardResetScheduleTitle = Reset Schedule

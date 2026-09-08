@@ -187,21 +187,45 @@ export function rankProvidersByResetTime(
 export interface DataStatus {
   historyState: "active" | "collecting";
   quotaState: "live";
-  costState: "estimated" | "unavailable";
-  pricingState: "notVerified";
+  /**
+   * Phase 4A (owner section 16): distinguishes real, trustworthy
+   * provider-reported cost from legacy rows whose semantics can't be
+   * proven, from no cost data at all. Never "estimated" -- Quotalis
+   * performs no local estimation today (see `costContract.origin`).
+   */
+  costState: "providerReported" | "legacyAmbiguous" | "unavailable";
+  /**
+   * Phase 4A: "notRequired" for provider-reported cost (Quotalis pricing
+   * verification does not apply to a number it didn't compute) --
+   * "unverified" only once a locally-estimated figure with the Phase 4
+   * pricing catalog behind it exists (not produced anywhere today).
+   * Never implies a provider-reported number came from Quotalis pricing.
+   */
+  pricingState: "notRequired" | "unverified";
 }
 
 /**
- * Honest data-status classification (owner section 26). Never reports
- * "verified" pricing -- that requires the Phase 4 pricing audit, not yet
- * done, so `pricingState` is always `"notVerified"` today.
+ * Honest data-status classification (owner section 26, revised Phase
+ * 4A section 16). Reads the snapshot's proven `costContract` instead of
+ * inferring cost semantics from `hasCostData` alone -- a legacy
+ * (pre-Phase-4A) row and a real provider-reported figure both set
+ * `hasCostData: true`, but only one of them is safe to call "Cost data:
+ * Provider reported".
  */
-export function resolveDataStatus(availability: DashboardSnapshot["availability"]): DataStatus {
+export function resolveDataStatus(snapshot: DashboardSnapshot | null): DataStatus {
+  const availability = snapshot?.availability;
+  const contract = snapshot?.costContract;
+  const costState: DataStatus["costState"] =
+    contract?.availability === "available" && contract.origin === "providerReported"
+      ? "providerReported"
+      : contract?.availability === "legacyAmbiguous"
+        ? "legacyAmbiguous"
+        : "unavailable";
   return {
-    historyState: availability.sampleCount > 0 ? "active" : "collecting",
+    historyState: (availability?.sampleCount ?? 0) > 0 ? "active" : "collecting",
     quotaState: "live",
-    costState: availability.hasCostData ? "estimated" : "unavailable",
-    pricingState: "notVerified",
+    costState,
+    pricingState: contract?.pricingStatus === "unverified" ? "unverified" : "notRequired",
   };
 }
 
@@ -225,7 +249,20 @@ export interface KpiValues {
   highestUsageProvider: { providerId: string; providerName: string; usedPercent: number } | null;
   nextReset: { providerId: string; providerName: string; resetsAt: string } | null;
   alertCount: number;
-  estimatedSpendTotal: number | null;
+  /**
+   * Phase 4A: renamed from `estimatedSpendTotal` -- this is always a
+   * provider-reported figure, never a Quotalis-computed estimate (see
+   * `docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md`). `null` whenever a
+   * trustworthy combined total cannot be proven (no cost data, mixed
+   * measurement kinds/currencies, or a provider with ambiguous
+   * semantics) -- never a fabricated 0. Pair with `reportedSpendCurrency`
+   * before rendering; a KPI showing a bare number with no currency is a
+   * bug.
+   */
+  reportedSpendTotal: number | null;
+  /** ISO 4217 currency code for `reportedSpendTotal`, or `null` exactly
+   *  when `reportedSpendTotal` is `null`. */
+  reportedSpendCurrency: string | null;
 }
 
 /**
@@ -257,39 +294,63 @@ export function computeKpis({ liveProviders, snapshot, settings }: KpiInputs): K
     }
   }
 
+  const spend = totalReportedSpend(snapshot);
+
   return {
     activeProviderCount: connected.length,
     highestUsageProvider: highest,
     nextReset,
     alertCount: buildAlerts(liveProviders, settings).length,
-    estimatedSpendTotal: totalReportedSpend(snapshot),
+    reportedSpendTotal: spend?.total ?? null,
+    reportedSpendCurrency: spend?.currencyCode ?? null,
   };
 }
 
 /**
- * Phase 4 fix (docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md, defect #1):
- * `SpendTrendPoint.costUsed` is a point-in-time/period-cumulative reading
- * -- "whatever the provider reported as its own dollar-usage figure" for
- * that bucket (see `SpendDailyPoint`'s doc comment in
- * `rust/src/dashboard_data.rs`), NOT a per-bucket delta. Summing every
- * bucket in the trend (the old behavior) summed the same running total
- * N times over and inflated the KPI roughly Nx -- exactly the "never sum
- * cumulative snapshots" mistake the owner's Phase 4 spec calls out.
+ * Phase 4A (docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md "Phase 4A"
+ * section): `SpendTrendPoint.costUsed` does not mean the same thing for
+ * every provider -- a real provider-adapter audit proved several
+ * providers write a point-in-time prepaid BALANCE into this field, not
+ * period spend, and Codex has two code paths with genuinely different,
+ * historically-indistinguishable semantics. `snapshot.costContract` is
+ * the proven, structured answer for the whole snapshot (Rust already
+ * collapses it to `"unknown"` the moment more than one measurement kind
+ * or currency is mixed in) -- this function trusts that contract instead
+ * of re-deriving semantics from the raw trend data itself.
  *
- * The correct total is: for each independent (provider, accountId)
- * series, take only its MOST RECENT bucket (that series' current
- * cumulative reading) -- then sum those latest-per-series values across
- * providers/accounts. Summing *across independent series* is legitimate
- * (each provider/account reports its own real total, and totals from
- * genuinely different sources are additive); summing *across time within
- * one series* is not (that's the same total counted repeatedly).
+ * A combined total is produced ONLY when the contract says every
+ * relevant sample is a genuine period-cumulative ("cumulative") reading
+ * in one unambiguous currency: for each independent (provider,
+ * accountId) series, take only its MOST RECENT bucket (that series'
+ * current cumulative reading), then sum those latest-per-series values
+ * across providers/accounts. Summing across independent Cumulative
+ * series is legitimate (each is its own real period total, and totals
+ * from genuinely different sources are additive); summing across time
+ * within one series never is (that was the original bug -- the same
+ * running total counted repeatedly). Any other measurement kind
+ * (point-in-time balance, unknown/ambiguous, or a mix) returns
+ * `null` -- a balance is not spend, and mixed semantics cannot be
+ * combined into one honest number (owner Phase 4A section 15: accuracy
+ * wins over feature completeness).
  */
-function totalReportedSpend(snapshot: DashboardSnapshot | null): number | null {
+function totalReportedSpend(
+  snapshot: DashboardSnapshot | null,
+): { total: number; currencyCode: string } | null {
   const spendPoints = snapshot?.spendTrend ?? [];
-  if (!snapshot?.availability.hasCostData || spendPoints.length === 0) return null;
+  const contract = snapshot?.costContract;
+  if (!contract || spendPoints.length === 0) return null;
+  if (contract.availability !== "available") return null;
+  if (contract.measurementKind !== "cumulative") return null;
+  if (!contract.currencyCode) return null;
 
   const latestBySeries = new Map<string, (typeof spendPoints)[number]>();
   for (const point of spendPoints) {
+    // Belt-and-suspenders: even though the contract already proved a
+    // uniform kind/currency for the snapshot as a whole, never let an
+    // individual point that disagrees (a bug elsewhere, or a future
+    // provider not yet classified) silently join the total.
+    if (point.measurementKind !== "cumulative") continue;
+    if (point.currencyCode !== contract.currencyCode) continue;
     const key = `${point.provider}::${point.accountId}`;
     const existing = latestBySeries.get(key);
     if (!existing || point.bucketStart > existing.bucketStart) {
@@ -297,5 +358,6 @@ function totalReportedSpend(snapshot: DashboardSnapshot | null): number | null {
     }
   }
   if (latestBySeries.size === 0) return null;
-  return Array.from(latestBySeries.values()).reduce((sum, p) => sum + p.costUsed, 0);
+  const total = Array.from(latestBySeries.values()).reduce((sum, p) => sum + p.costUsed, 0);
+  return { total, currencyCode: contract.currencyCode };
 }

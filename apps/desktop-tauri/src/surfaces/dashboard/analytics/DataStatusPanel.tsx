@@ -4,11 +4,15 @@ import { resolveDataStatus } from "./dashboardSelectors";
 import type { DashboardSnapshot } from "../../../types/bridge";
 
 /**
- * Pricing/Data Status shell (owner section 26): honest state only --
- * never "pricing verified" or "all up to date" until the Phase 4 pricing
- * audit actually proves it, so `pricingState` from `resolveDataStatus` is
- * always "not yet verified" today. This widget exists to communicate
- * that honestly, not to imply completeness the app hasn't earned yet.
+ * Pricing/Data Status shell (owner section 26, revised Phase 4A section
+ * 16): honest state only. Cost state distinguishes real
+ * provider-reported figures from legacy (pre-Phase-4A) rows whose
+ * semantics can't be proven from unavailable data -- never a blanket
+ * "estimated". Pricing state reads "not required" for provider-reported
+ * cost (Quotalis's own pricing catalog never touches it) rather than
+ * implying a provider-reported number came from Quotalis pricing;
+ * "unverified" is reserved for a future locally-estimated figure, not
+ * produced anywhere today.
  */
 /**
  * Compact system/data-health strip (owner section 11 of the Phase 3.5
@@ -19,7 +23,7 @@ import type { DashboardSnapshot } from "../../../types/bridge";
 export default function DataStatusPanel({ snapshot }: { snapshot: DashboardSnapshot | null }) {
   const { t, language } = useLocale();
   if (!snapshot) return null;
-  const status = resolveDataStatus(snapshot.availability);
+  const status = resolveDataStatus(snapshot);
   const firstSample = snapshot.availability.firstSampleAt;
   const uiLocale = resolveIntlLocale(language);
 
@@ -41,11 +45,17 @@ export default function DataStatusPanel({ snapshot }: { snapshot: DashboardSnaps
     String(snapshot.availability.sampleCount),
   );
   const costText = t(
-    status.costState === "estimated"
-      ? "DashboardDataStatusCostEstimated"
-      : "DashboardDataStatusCostUnavailable",
+    status.costState === "providerReported"
+      ? "DashboardDataStatusCostProviderReported"
+      : status.costState === "legacyAmbiguous"
+        ? "DashboardDataStatusCostLegacyAmbiguous"
+        : "DashboardDataStatusCostUnavailable",
   );
-  const pricingText = t("DashboardDataStatusPricingNotVerified");
+  const pricingText = t(
+    status.pricingState === "unverified"
+      ? "DashboardDataStatusPricingNotVerified"
+      : "DashboardDataStatusPricingNotRequired",
+  );
 
   return (
     <section className="dashboard-analytics__data-status" aria-label={t("DashboardDataStatusTitle")}>

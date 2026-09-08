@@ -33,6 +33,14 @@ function snapshot(overrides: Partial<DashboardSnapshot> = {}): DashboardSnapshot
     providers: [],
     usageTrend: [],
     spendTrend: [],
+    costContract: {
+      origin: "unavailable",
+      measurementKind: "unknown",
+      currencyCode: null,
+      period: "unknown",
+      availability: "unavailable",
+      pricingStatus: "notRequired",
+    },
     ...overrides,
   };
 }
