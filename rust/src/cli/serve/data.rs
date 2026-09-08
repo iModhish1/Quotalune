@@ -78,13 +78,21 @@ pub async fn cost_response(provider: Option<&str>) -> String {
                 provider_id.cli_name(),
                 30,
             ));
+            // Phase 4C: gate every dollar figure through the shared
+            // billing-channel eligibility rule (see cost_scanner.rs's
+            // module doc comment) -- `get_daily_cost_history` already
+            // returns an empty series in this case. Token/session data
+            // stays real regardless.
+            let cost_eligible = summary.cost_eligible();
             results.push(json!({
                 "provider": provider_id.cli_name(),
                 "supported": true,
                 "days_scanned": 30,
                 "cost": {
-                    "total_usd": summary.total_cost_usd,
-                    "currency": "USD"
+                    "total_usd": summary.eligible_total_cost_usd(),
+                    "currency": "USD",
+                    "eligible": cost_eligible,
+                    "unavailableReason": if cost_eligible { serde_json::Value::Null } else { json!("billingChannelUnknown") },
                 },
                 "daily": daily,
                 "tokens": {
@@ -93,7 +101,7 @@ pub async fn cost_response(provider: Option<&str>) -> String {
                     "cached": summary.cached_tokens
                 },
                 "sessions_count": summary.sessions_count,
-                "by_model": summary.by_model,
+                "by_model": summary.eligible_by_model().cloned().unwrap_or_default(),
             }));
         } else {
             results.push(json!({

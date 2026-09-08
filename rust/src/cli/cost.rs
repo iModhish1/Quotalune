@@ -193,20 +193,29 @@ fn print_text_output(results: &[CostResult], use_color: bool, days: u32, group_b
             // Sessions
             println!("  Sessions: {}", result.summary.sessions_count);
 
-            // Cost by model
-            if !result.summary.by_model.is_empty() {
+            // Phase 4C: billing-channel eligibility not established for any
+            // local CLI-log-derived observation -- never show a dollar
+            // figure that hasn't cleared the shared eligibility gate, even
+            // though the underlying token/model data is fully real. (The
+            // "Total:" line above already reads "Unavailable" via
+            // `format_total()`'s own gate when ineligible.)
+            if let Some(by_model) = result.summary.eligible_by_model()
+                && !by_model.is_empty()
+            {
                 println!("  By model:");
-                let mut models: Vec<_> = result.summary.by_model.iter().collect();
+                let mut models: Vec<_> = by_model.iter().collect();
                 models.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap_or(std::cmp::Ordering::Equal));
                 for (model, cost) in models {
                     println!("    {}: ${:.2}", model, cost);
                 }
             }
 
-            if !result.summary.by_speed.is_empty() {
+            if let Some(by_speed) = result.summary.eligible_by_speed()
+                && !by_speed.is_empty()
+            {
                 println!("  Codex speed:");
                 for bucket in ["standard", "fast"] {
-                    if let Some(cost) = result.summary.by_speed.get(bucket) {
+                    if let Some(cost) = by_speed.get(bucket) {
                         let tokens = result
                             .summary
                             .by_speed_tokens
@@ -326,11 +335,23 @@ fn build_json_payloads(results: &[CostResult], days: u32) -> Vec<serde_json::Val
                         settings.hide_native_codex_cost_when_open_codex_present && r.provider == "codex",
                         r.summary.clone(),
                     ));
+                // Phase 4C: billing-channel eligibility is not established
+                // for any local CLI-log-derived observation (see
+                // cost_scanner.rs's module doc comment) -- `total_usd`/
+                // `by_model`/`by_speed` are `null`/`{}` rather than a
+                // computed dollar figure until it is. Token counts are
+                // never gated by this -- they remain real, usable data.
+                let cost_eligible = r.summary.cost_eligible();
                 serde_json::json!({
                     "provider": r.provider,
                     "supported": true,
                     "days_scanned": days,
-                    "cost": {"total_usd": r.summary.total_cost_usd, "currency": "USD"},
+                    "cost": {
+                        "total_usd": r.summary.eligible_total_cost_usd(),
+                        "currency": "USD",
+                        "eligible": cost_eligible,
+                        "unavailableReason": if cost_eligible { serde_json::Value::Null } else { serde_json::Value::String("billingChannelUnknown".to_string()) },
+                    },
                     "tokens": {"input": r.summary.input_tokens, "output": r.summary.output_tokens, "cached": r.summary.cached_tokens},
                     "sessions_count": r.summary.sessions_count,
                     "historyCoverageIsEstablished": if r.provider == "codex" { serde_json::Value::Bool(r.summary.history_coverage_established) } else { serde_json::Value::Null },
@@ -339,8 +360,8 @@ fn build_json_payloads(results: &[CostResult], days: u32) -> Vec<serde_json::Val
                         crate::cost_scanner::ModelPricingCompleteness::Complete => serde_json::Value::String("complete".to_string()),
                         crate::cost_scanner::ModelPricingCompleteness::Partial { unpriced_models } => serde_json::json!({"partial": {"unpriced_models": unpriced_models}}),
                     },
-                    "by_model": r.summary.by_model,
-                    "by_speed": r.summary.by_speed,
+                    "by_model": r.summary.eligible_by_model().cloned().unwrap_or_default(),
+                    "by_speed": r.summary.eligible_by_speed().cloned().unwrap_or_default(),
                     "by_speed_tokens": r.summary.by_speed_tokens.iter().map(|(bucket, counts)| {
                         (bucket.clone(), serde_json::json!({"input": counts.input_tokens, "output": counts.output_tokens, "cached": counts.cached_tokens, "total": counts.total()}))
                     }).collect::<serde_json::Map<_, _>>(),
@@ -388,6 +409,7 @@ fn is_terminal() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     #[test]
     fn json_output_emits_a16_and_f18_fields() {
@@ -407,27 +429,10 @@ mod tests {
             supported: true,
         };
 
-        // Capture stdout
-        // Build the JSON payload directly to assert field presence.
-        let payload = serde_json::json!({
-            "provider": "codex",
-            "supported": true,
-            "days_scanned": 7,
-            "cost": { "total_usd": 0.0, "currency": "USD" },
-            "tokens": { "input": 0, "output": 0, "cached": 0 },
-            "sessions_count": 1,
-            "historyCoverageIsEstablished": true,
-            "knownZero": false,
-            "modelPricingCompleteness": {
-                "partial": { "unpriced_models": ["codex-auto-review"] }
-            },
-            "by_model": {},
-            "by_speed": {},
-            "by_speed_tokens": {},
-            "period": { "start": null, "end": null }
-        });
-
-        let s = serde_json::to_string(&payload).unwrap();
+        // Build the REAL JSON payload (not a hand-copied mock) so this test
+        // actually exercises `build_json_payloads`.
+        let payloads = build_json_payloads(std::slice::from_ref(&result), 7);
+        let s = serde_json::to_string(&payloads[0]).unwrap();
         assert!(
             s.contains("historyCoverageIsEstablished"),
             "A16 field present"
@@ -435,11 +440,49 @@ mod tests {
         assert!(s.contains("modelPricingCompleteness"), "F18 field present");
         assert!(s.contains("codex-auto-review"), "unpriced model listed");
         assert!(s.contains("\"partial\""), "partial branch emitted");
-        // Verify backward-compat: original fields still present
         assert!(s.contains("\"total_usd\""));
         assert!(s.contains("\"sessions_count\""));
-        // drop the unused result
-        let _ = result;
+    }
+
+    /// Phase 4C: no local CLI-log-derived observation has an established
+    /// billing channel today, so the JSON `cost` block must read
+    /// `total_usd: null`, `eligible: false`, and an explicit reason --
+    /// never a computed dollar figure, even when the scanner found real
+    /// per-model cost data internally.
+    #[test]
+    fn json_output_cost_is_null_and_ineligible_when_billing_channel_unknown() {
+        let mut by_model = HashMap::new();
+        by_model.insert("gpt-5".to_string(), 12.34);
+        let summary = CostSummary {
+            sessions_count: 3,
+            total_cost_usd: 12.34,
+            by_model,
+            ..Default::default()
+        };
+        let result = CostResult {
+            provider: "codex".to_string(),
+            display_name: "Codex".to_string(),
+            summary,
+            supported: true,
+        };
+
+        let payloads = build_json_payloads(std::slice::from_ref(&result), 30);
+        let cost = &payloads[0]["cost"];
+        assert!(
+            cost["total_usd"].is_null(),
+            "total_usd must be null, not 12.34"
+        );
+        assert_eq!(cost["eligible"], serde_json::json!(false));
+        assert_eq!(
+            cost["unavailableReason"],
+            serde_json::json!("billingChannelUnknown")
+        );
+        // by_model must be empty in the gated output even though the
+        // scanner internally computed a real per-model figure.
+        assert_eq!(payloads[0]["by_model"], serde_json::json!({}));
+        // Token/session data must remain fully present -- only the
+        // monetary figure is gated.
+        assert_eq!(payloads[0]["sessions_count"], serde_json::json!(3));
     }
 
     #[test]

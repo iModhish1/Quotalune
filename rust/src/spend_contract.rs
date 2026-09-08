@@ -324,12 +324,30 @@ pub fn build_local_spend_contract_from_summary(
         summary.known_zero && imports.is_empty()
     };
 
+    // Phase 4C: every dollar figure in this contract is LOCALLY ESTIMATED
+    // from local JSONL/CodexWorkspacesIndex/OpenCodex-import token data --
+    // never provider-reported (that pipeline is entirely separate; see
+    // Phase 4A.1's DashboardSnapshot/CostContract). None of the sources
+    // feeding this function carry evidence distinguishing a subscription-
+    // covered session from a per-token-metered API session (see
+    // cost_scanner.rs's module doc comment), so the shared eligibility
+    // rule gates every monetary field here to `None` -- token/model/
+    // session/coverage facts are left completely untouched.
+    let known_cost_usd = if summary.cost_eligible() {
+        resolved.known_cost_usd
+    } else {
+        None
+    };
+    let models = strip_model_costs(resolved.models, summary.cost_eligible());
+    let daily = strip_daily_costs(resolved.daily, summary.cost_eligible());
+    let imports = strip_import_costs(imports, summary.cost_eligible());
+
     SpendContract {
         provider_id: provider_id.to_string(),
         history_days,
-        known_cost_usd: resolved.known_cost_usd,
+        known_cost_usd,
         known_zero,
-        provenance: if resolved.known_cost_usd.is_some() {
+        provenance: if known_cost_usd.is_some() {
             CostProvenance::ListPriceEstimate
         } else {
             CostProvenance::Unknown
@@ -339,15 +357,63 @@ pub fn build_local_spend_contract_from_summary(
         history_coverage_established: summary.history_coverage_established,
         token_mix: resolved.token_mix,
         conversation_count,
-        models: resolved.models,
+        models,
         projects: native.projects,
         conversations: native.conversations,
-        daily: resolved.daily,
+        daily,
         hourly_activity: resolved.hourly_activity,
         project_source_status: native.project_source_status,
         custom_pricing_active: !custom.entries.is_empty(),
         imports,
     }
+}
+
+/// Phase 4C: strips `cost_usd`/`known_cost_usd` from every locally-
+/// estimated monetary field when billing-channel eligibility could not be
+/// established -- token/request/model-identity facts on each row are
+/// left exactly as they were; only the dollar figure is hidden.
+fn strip_model_costs(models: Vec<SpendModelRow>, eligible: bool) -> Vec<SpendModelRow> {
+    if eligible {
+        return models;
+    }
+    models
+        .into_iter()
+        .map(|mut row| {
+            row.cost_usd = None;
+            row
+        })
+        .collect()
+}
+
+fn strip_daily_costs(daily: Vec<SpendDailyPoint>, eligible: bool) -> Vec<SpendDailyPoint> {
+    if eligible {
+        return daily;
+    }
+    daily
+        .into_iter()
+        .map(|mut point| {
+            point.cost_usd = None;
+            point
+        })
+        .collect()
+}
+
+fn strip_import_costs(
+    imports: Vec<ImportedSpendSource>,
+    eligible: bool,
+) -> Vec<ImportedSpendSource> {
+    if eligible {
+        return imports;
+    }
+    imports
+        .into_iter()
+        .map(|mut source| {
+            source.known_cost_usd = None;
+            source.models = strip_model_costs(source.models, false);
+            source.daily = strip_daily_costs(source.daily, false);
+            source
+        })
+        .collect()
 }
 
 fn load_native_spend(provider_id: &str, history_days: u32) -> NativeSpendData {

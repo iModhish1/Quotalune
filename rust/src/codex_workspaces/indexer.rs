@@ -230,7 +230,12 @@ impl CodexWorkspacesIndex {
                 day,
                 total_tokens: acc.total_tokens,
                 cached_input_tokens: acc.cached_input_tokens,
-                estimated_cost_usd: if acc.unknown_tokens == 0 || acc.known_usd > 0.0 {
+                // Phase 4C: gated by billing-channel eligibility (see
+                // types.rs's CostEstimate doc comment), never just by
+                // whether pricing resolved a nonzero value.
+                estimated_cost_usd: if crate::cost_scanner::cli_log_cost_available()
+                    && (acc.unknown_tokens == 0 || acc.known_usd > 0.0)
+                {
                     Some(acc.known_usd)
                 } else {
                     None

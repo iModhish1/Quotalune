@@ -7,6 +7,37 @@
 //! partial files from `parsed_bytes`, honors [`crate::core::CostScanOptions`]
 //! debounce (default 60s; `app_driven` forces a fresh inspection), and checks
 //! cancel flags between files.
+//!
+//! ## Phase 4C: billing-channel eligibility gate
+//!
+//! `total_cost_usd`/`by_model`/`by_speed` are computed from local JSONL
+//! session logs via [`crate::core::CostUsagePricing`]'s official DirectApi
+//! (per-token, metered) price tables. But neither the Codex session format
+//! (`CodexUsageRecord`: day/model/input/cached/output only) nor the Claude
+//! transcript format (`ClaudeEvent`/`ClaudeMessage`/`ClaudeUsage`: type/
+//! timestamp/requestId/model/token counts only) carries ANY field that
+//! distinguishes a session run under a flat-fee SUBSCRIPTION (ChatGPT
+//! Plus/Pro/Team, Claude Pro/Max -- usage included, not itself metered
+//! per-token) from one run under a raw, per-token-metered API key --
+//! confirmed by a full field-by-field trace of both formats (see
+//! `docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md` "Phase 4C"). Live
+//! official-source research confirmed subscription-covered Claude Code
+//! usage is not itself billed per-token; `codex/api.rs`'s own `auth.json`
+//! parsing proves Codex CLI genuinely supports both modes, yet nothing
+//! here can tell which one produced a given session file.
+//!
+//! Per the Phase 4B/4C hard rule (a `SubscriptionQuota`/`Unknown`
+//! observation may never be priced with `DirectApi` pricing, even when
+//! the model name matches), `cost_eligible()` reports whether
+//! `total_cost_usd`/`by_model`/`by_speed` may be shown as a trustworthy
+//! dollar figure. It routes through the single shared
+//! [`crate::pricing_eligibility::can_locally_estimate_cost`] rule --
+//! today it is always `false` (billing channel `Unknown` can never match
+//! the `DirectApi` channel these price tables actually price), so every
+//! caller that surfaces a dollar amount to a user MUST check this first
+//! (or use [`CostSummary::eligible_total_cost_usd`]/
+//! [`CostSummary::eligible_by_model`]) -- token/model/session counts
+//! remain fully valid and are never hidden by this gate.
 
 use chrono::{DateTime, Duration, Local, NaiveDate, Utc};
 use serde::Deserialize;
@@ -16,6 +47,48 @@ use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+use crate::pricing_eligibility::{
+    BillingChannel, Eligibility, ObservationCapabilities, PricingRequirements,
+    can_locally_estimate_cost,
+};
+
+/// The billing-channel eligibility verdict for every local CLI-log-derived
+/// cost observation (Codex + Claude session scanning, and the pi/OMP
+/// mirrors and OpenCodex import that feed the same summaries) -- see this
+/// module's doc comment. `model_known` only affects which
+/// [`crate::pricing_eligibility::IneligibilityReason`] is reported; the
+/// verdict itself is always `NotEligible` today because the billing
+/// channel can never be established.
+pub fn cli_log_cost_eligibility(model_known: bool) -> Eligibility {
+    can_locally_estimate_cost(
+        &ObservationCapabilities {
+            billing_channel: BillingChannel::Unknown,
+            canonical_model_known: model_known,
+            has_input_tokens: true,
+            has_output_tokens: true,
+            has_cached_input_tokens: true,
+            has_cache_write_tokens: true,
+            has_request_count: false,
+            currency_or_unit_known: true,
+        },
+        &PricingRequirements {
+            priceable_channel: BillingChannel::DirectApi,
+            requires_input_tokens: true,
+            requires_output_tokens: true,
+            requires_cached_input_tokens: false,
+            requires_cache_write_tokens: false,
+            requires_request_count: false,
+            pricing_verified: true,
+        },
+    )
+}
+
+/// Convenience boolean form of [`cli_log_cost_eligibility`] for a summary
+/// that (like every real scan today) has at least one known model.
+pub fn cli_log_cost_available() -> bool {
+    matches!(cli_log_cost_eligibility(true), Eligibility::Eligible)
+}
 
 #[cfg(test)]
 use crate::codex_costs::scan_codex_file_cost;
@@ -112,8 +185,45 @@ impl ModelTokenCounts {
 }
 
 impl CostSummary {
+    /// Phase 4C: whether `total_cost_usd`/`by_model`/`by_speed` may be
+    /// shown to a user as a trustworthy dollar figure -- see this module's
+    /// doc comment. Always `false` today. Not stored as a field (avoids
+    /// needing to thread it through every internal scratch-`CostSummary`
+    /// construction site); it is a pure, cheap, deterministic function of
+    /// the shared eligibility rule, not of anything scan-specific.
+    pub fn cost_eligible(&self) -> bool {
+        cli_log_cost_available()
+    }
+
+    /// The trustworthy total, or `None` when billing-channel eligibility
+    /// could not be established (owner Phase 4C section 8: unavailable,
+    /// never a fabricated `$0`). `total_cost_usd` itself remains computed
+    /// and readable for internal diagnostics/tests that need to prove the
+    /// underlying token-pricing math is still correct -- it is just not,
+    /// on its own, proof that showing it to a user is billing-channel-safe.
+    pub fn eligible_total_cost_usd(&self) -> Option<f64> {
+        self.cost_eligible().then_some(self.total_cost_usd)
+    }
+
+    /// Same gate as [`Self::eligible_total_cost_usd`], for the per-model
+    /// cost breakdown.
+    pub fn eligible_by_model(&self) -> Option<&HashMap<String, f64>> {
+        self.cost_eligible().then_some(&self.by_model)
+    }
+
+    /// Same gate, for the Codex speed/tier cost breakdown.
+    pub fn eligible_by_speed(&self) -> Option<&HashMap<String, f64>> {
+        self.cost_eligible().then_some(&self.by_speed)
+    }
+
+    /// Formats the total for display, honoring the eligibility gate --
+    /// `"Unavailable"` rather than a dollar amount when billing-channel
+    /// eligibility could not be established.
     pub fn format_total(&self) -> String {
-        format!("${:.2}", self.total_cost_usd)
+        match self.eligible_total_cost_usd() {
+            Some(usd) => format!("${usd:.2}"),
+            None => "Unavailable".to_string(),
+        }
     }
 }
 
@@ -989,7 +1099,19 @@ pub fn has_cost_usage_sources() -> bool {
 
 /// Get daily cost history for the last N days
 /// Returns Vec of (date_string, cost_usd) sorted by date
+///
+/// Phase 4C: for `codex`/`claude` (the two local-JSONL-derived pipelines
+/// with no established billing channel -- see this module's doc comment),
+/// returns an EMPTY series rather than a flat all-zero one when billing-
+/// channel eligibility fails. A flat `$0.00` line would misread as "known
+/// zero spend"; an empty series matches this codebase's existing "never
+/// fabricate, show unavailable" convention. `opencodego`'s branch reads a
+/// cost OpenCode's own local database already computed (not derived here
+/// via `CostUsagePricing`), so it is unaffected by this gate.
 pub fn get_daily_cost_history(provider: &str, days: u32) -> Vec<(String, f64)> {
+    if matches!(provider, "codex" | "claude") && !cli_log_cost_available() {
+        return Vec::new();
+    }
     let scanner = CostScanner::new(days);
     let today = Local::now().date_naive();
     let mut daily_costs: HashMap<String, f64> = HashMap::new();
@@ -1747,5 +1869,60 @@ mod tests {
         assert!(summary.history_coverage_established);
         assert_eq!(summary.sessions_count, 1);
         assert!(!summary.known_zero, "scan with results is not known-zero");
+    }
+
+    // ── Phase 4C: billing-channel eligibility gate ──────────────────────
+    // docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md "Phase 4C" section.
+    // No local CLI-log observation (Codex or Claude session JSONL) carries
+    // evidence distinguishing a subscription-covered session from a
+    // per-token-metered API session, so billing channel is always Unknown
+    // and can never match the DirectApi channel CODEX_PRICING/
+    // CLAUDE_PRICING actually price -- these tests prove that verdict is
+    // reached via the SHARED `pricing_eligibility` rule (not a duplicated
+    // local check), and that it actually gates the runtime output, not
+    // only documentation/tests.
+
+    #[test]
+    fn cli_log_billing_channel_is_unknown_and_thus_ineligible_against_direct_api_pricing() {
+        let verdict = cli_log_cost_eligibility(true);
+        assert_eq!(
+            verdict,
+            Eligibility::NotEligible(
+                crate::pricing_eligibility::IneligibilityReason::BillingChannelMismatch
+            ),
+            "Unknown billing channel must fail against DirectApi pricing, per the shared eligibility rule"
+        );
+        assert!(!cli_log_cost_available());
+    }
+
+    #[test]
+    fn cost_summary_hides_total_when_ineligible_but_keeps_token_data() {
+        let mut by_model = HashMap::new();
+        by_model.insert("gpt-5".to_string(), 42.0);
+        let summary = CostSummary {
+            total_cost_usd: 42.0,
+            input_tokens: 1_000,
+            output_tokens: 500,
+            by_model,
+            ..Default::default()
+        };
+
+        assert!(!summary.cost_eligible());
+        assert_eq!(summary.eligible_total_cost_usd(), None);
+        assert_eq!(summary.eligible_by_model(), None);
+        assert_eq!(summary.format_total(), "Unavailable");
+        // Token/model facts are never hidden by the monetary gate.
+        assert_eq!(summary.input_tokens, 1_000);
+        assert_eq!(summary.output_tokens, 500);
+        assert_eq!(summary.by_model.get("gpt-5"), Some(&42.0));
+    }
+
+    #[test]
+    fn get_daily_cost_history_returns_empty_not_a_fabricated_zero_series_for_codex_and_claude() {
+        // An empty series (not a flat "$0.00 every day" line) is the
+        // correct "unavailable" representation here -- a flat zero line
+        // would misread as a real, known-zero spend history.
+        assert!(get_daily_cost_history("codex", 30).is_empty());
+        assert!(get_daily_cost_history("claude", 30).is_empty());
     }
 }

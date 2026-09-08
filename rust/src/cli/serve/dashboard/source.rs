@@ -201,19 +201,23 @@ async fn collect_costs() -> HashMap<String, RawCostPayload> {
                 .find(|(day, _)| day == &today)
                 .map(|(_, cost)| cost)
         };
+        // Phase 4C: `today_of` already returns `None` for these two
+        // providers via `get_daily_cost_history`'s own gate; `last_30_days_usd`
+        // needs the same eligibility check (see cost_scanner.rs's module
+        // doc comment).
         let mut costs = HashMap::new();
         costs.insert(
             "codex".to_string(),
             RawCostPayload {
                 today_usd: today_of("codex"),
-                last_30_days_usd: Some(codex.total_cost_usd),
+                last_30_days_usd: codex.eligible_total_cost_usd(),
             },
         );
         costs.insert(
             "claude".to_string(),
             RawCostPayload {
                 today_usd: today_of("claude"),
-                last_30_days_usd: Some(claude.total_cost_usd),
+                last_30_days_usd: claude.eligible_total_cost_usd(),
             },
         );
         costs

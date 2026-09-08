@@ -53,11 +53,19 @@ impl SourceStatus {
 }
 
 /// Known vs unknown cost split. Unknown pricing never becomes a synthetic zero.
+///
+/// Phase 4C: `known_usd` is computed from local Codex JSONL session logs,
+/// which carry no evidence distinguishing a subscription-covered session
+/// from a per-token-metered API session (see `cost_scanner.rs`'s module
+/// doc comment) -- `eligible` reports whether `known_usd` may be shown to
+/// a user as a trustworthy dollar figure. Always `false` today. Callers
+/// MUST check `eligible` before displaying `known_usd`.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CostEstimate {
     pub known_usd: f64,
     pub unknown_tokens: u64,
+    pub eligible: bool,
 }
 
 impl Default for CostEstimate {
@@ -65,6 +73,7 @@ impl Default for CostEstimate {
         Self {
             known_usd: 0.0,
             unknown_tokens: 0,
+            eligible: crate::cost_scanner::cli_log_cost_available(),
         }
     }
 }
@@ -73,6 +82,14 @@ impl CostEstimate {
     pub fn add_assign(&mut self, other: &Self) {
         self.known_usd += other.known_usd;
         self.unknown_tokens = self.unknown_tokens.saturating_add(other.unknown_tokens);
+        self.eligible = self.eligible && other.eligible;
+    }
+
+    /// The trustworthy total, or `None` when billing-channel eligibility
+    /// could not be established (owner Phase 4C section 8: unavailable,
+    /// never a fabricated `$0`).
+    pub fn eligible_known_usd(&self) -> Option<f64> {
+        self.eligible.then_some(self.known_usd)
     }
 }
 
@@ -185,5 +202,70 @@ impl CodexLocalProjectUsageSnapshot {
                 session.cwd = None;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Phase 4C: billing-channel eligibility gate on CostEstimate --
+    // docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md "Phase 4C" section.
+
+    #[test]
+    fn default_cost_estimate_is_ineligible_today() {
+        let estimate = CostEstimate::default();
+        assert!(
+            !estimate.eligible,
+            "no local CLI-log observation has an established billing channel today"
+        );
+    }
+
+    #[test]
+    fn eligible_known_usd_hides_the_figure_when_ineligible() {
+        let estimate = CostEstimate {
+            known_usd: 12.34,
+            unknown_tokens: 0,
+            eligible: false,
+        };
+        assert_eq!(
+            estimate.eligible_known_usd(),
+            None,
+            "a real computed total must not be shown when billing channel is unknown"
+        );
+        // The raw field is still readable internally (diagnostics/tests
+        // proving the pricing math itself is correct) -- only the
+        // accessor gates display-worthiness.
+        assert_eq!(estimate.known_usd, 12.34);
+    }
+
+    #[test]
+    fn eligible_known_usd_shows_the_figure_when_eligible() {
+        let estimate = CostEstimate {
+            known_usd: 5.0,
+            unknown_tokens: 0,
+            eligible: true,
+        };
+        assert_eq!(estimate.eligible_known_usd(), Some(5.0));
+    }
+
+    #[test]
+    fn add_assign_stays_ineligible_if_either_side_is_ineligible() {
+        let mut a = CostEstimate {
+            known_usd: 1.0,
+            unknown_tokens: 0,
+            eligible: true,
+        };
+        let b = CostEstimate {
+            known_usd: 2.0,
+            unknown_tokens: 0,
+            eligible: false,
+        };
+        a.add_assign(&b);
+        assert_eq!(a.known_usd, 3.0);
+        assert!(
+            !a.eligible,
+            "combining an eligible and an ineligible estimate must not silently become eligible"
+        );
     }
 }
