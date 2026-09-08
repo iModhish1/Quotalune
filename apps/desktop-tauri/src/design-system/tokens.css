@@ -37,14 +37,6 @@
   --qa-accent-2: #6366f1;
   --qa-accent-soft: rgba(45, 212, 191, 0.16);
 
-  /* Restrained antique/champagne gold -- reserved for a single selected/
-     high-value structural accent (never a provider/data color, never used
-     throughout a surface). See design-system/tokens.css doc: this is a
-     STRUCTURAL identity accent, distinct from --qa-accent (provider/data
-     accent, e.g. chart lines, active filter chips). */
-  --qa-accent-gold: #c9a875;
-  --qa-accent-gold-soft: rgba(201, 168, 117, 0.14);
-
   /* Status ramp */
   --qa-status-healthy: #4ade80;
   --qa-status-moderate: #fbbf24;
@@ -156,8 +148,6 @@
 
   --qa-accent: #14a894;
   --qa-accent-soft: rgba(20, 168, 148, 0.14);
-  --qa-accent-gold: #9c7a3d;
-  --qa-accent-gold-soft: rgba(156, 122, 61, 0.14);
 
   --qa-status-healthy: #0e9f6e;
   --qa-status-moderate: #d99e0b;

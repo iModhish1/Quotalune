@@ -15,6 +15,7 @@ vi.mock("@tauri-apps/api/event", () => eventMocks);
 
 import DashboardAnalyticsPanel from "./DashboardAnalyticsPanel";
 import { LocaleProvider } from "../../../i18n/LocaleProvider";
+import { catalogBySlug } from "../../../design-system/themeCatalog";
 import type { DashboardSnapshot, ProviderUsageSnapshot, SettingsSnapshot } from "../../../types/bridge";
 
 const LOCALE_ENTRIES = {
@@ -135,6 +136,7 @@ function renderPanel(
   liveProviders: ProviderUsageSnapshot[],
   snap: DashboardSnapshot,
   onOpenProviders = vi.fn(),
+  settings: SettingsSnapshot = SETTINGS,
 ) {
   tauriMocks.getLocaleStrings.mockResolvedValue({ language: "english", entries: LOCALE_ENTRIES });
   tauriMocks.getDashboardSnapshot.mockResolvedValue(snap);
@@ -142,7 +144,7 @@ function renderPanel(
     <LocaleProvider>
       <DashboardAnalyticsPanel
         liveProviders={liveProviders}
-        settings={SETTINGS}
+        settings={settings}
         onOpenProviders={onOpenProviders}
       />
     </LocaleProvider>,
@@ -224,5 +226,34 @@ describe("DashboardAnalyticsPanel", () => {
     // line (owner Phase 3.5 section 11) -- match on substring.
     expect(await screen.findByText(/Local history: collecting/)).toBeInTheDocument();
     expect(screen.getByText("Collecting local usage history…")).toBeInTheDocument();
+  });
+
+  it("Phase 3.6: the rendered root actually carries the resolved Structure Theme's real colors as --qa-analytics-* inline custom properties, and a different theme setting produces genuinely different values", async () => {
+    const smokedSilver = catalogBySlug("smoked-silver")!;
+    const emberAlloy = catalogBySlug("ember-alloy")!;
+
+    const first = renderPanel([provider()], snapshot(), vi.fn(), {
+      ...SETTINGS,
+      catalogTheme: smokedSilver.slug,
+    } as SettingsSnapshot);
+    await screen.findByText("Today");
+    const rootA = document.querySelector(".dashboard-analytics") as HTMLElement;
+    expect(rootA.style.getPropertyValue("--qa-analytics-accent")).toBe(smokedSilver.accent);
+    expect(rootA.style.getPropertyValue("--qa-analytics-hairline")).toBe(smokedSilver.hairline);
+    first.unmount();
+
+    renderPanel([provider()], snapshot(), vi.fn(), {
+      ...SETTINGS,
+      catalogTheme: emberAlloy.slug,
+    } as SettingsSnapshot);
+    await screen.findByText("Today");
+    const rootB = document.querySelector(".dashboard-analytics") as HTMLElement;
+    expect(rootB.style.getPropertyValue("--qa-analytics-accent")).toBe(emberAlloy.accent);
+    // The whole point of Phase 3.6: two different real Structure Themes
+    // must genuinely differ, not render one hardcoded value regardless of
+    // selection.
+    expect(rootB.style.getPropertyValue("--qa-analytics-accent")).not.toBe(
+      rootA.style.getPropertyValue("--qa-analytics-accent"),
+    );
   });
 });

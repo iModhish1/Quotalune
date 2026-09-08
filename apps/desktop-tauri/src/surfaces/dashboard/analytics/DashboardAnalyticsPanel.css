@@ -3,46 +3,65 @@
 /* ── Analytics Control Strip (Phase 3.5 section 2) ──────────────────────
    The native app chrome already shows "QUOTALIS / Dashboard" as the page
    identity -- this strip is purely the shared range/provider-scope
-   controls plus a real history chip, not a second page title. */
-.dashboard-analytics__header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;border:1px solid var(--qa-hairline);border-radius:12px;background:color-mix(in srgb,var(--qa-material-raised) 42%,transparent)}
+   controls plus a real history chip, not a second page title.
+
+   Phase 3.6: every color below reads var(--qa-analytics-<name>, var(--qa-
+   <fallback>)) -- the --qa-analytics-* namespace is set once, as an inline
+   style, on .dashboard-analytics's own root (useDashboardStructureTheme.ts)
+   from the real resolved Structure Theme. Outside the Dashboard that
+   namespace is simply undefined, so every rule below falls through to the
+   original light/dark-only --qa-* token untouched -- see
+   docs/validation/DASHBOARD_STRUCTURE_THEME_INTEGRATION.md. */
+.dashboard-analytics__header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;border:1px solid var(--qa-analytics-hairline,var(--qa-hairline));border-radius:12px;background:color-mix(in srgb,var(--qa-analytics-surface-tertiary,var(--qa-material-raised)) 100%,transparent)}
 .dashboard-analytics__controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
-.dashboard-analytics__range{display:flex;gap:2px;padding:2px;border:1px solid var(--qa-hairline);border-radius:999px;background:color-mix(in srgb,var(--qa-graphite-1) 60%,transparent)}
-.dashboard-analytics__range-btn{padding:5px 10px;border:none;border-radius:999px;background:transparent;color:var(--qa-ink-3);font:inherit;font-size:11px;cursor:pointer;white-space:nowrap}
-.dashboard-analytics__range-btn--active{background:color-mix(in srgb,var(--qa-accent) 26%,var(--qa-material-raised));color:var(--qa-ink-1)}
-.dashboard-analytics__provider-filter{padding:5px 10px;border:1px solid var(--qa-hairline);border-radius:10px;background:color-mix(in srgb,var(--qa-graphite-1) 60%,transparent);color:var(--qa-ink-2);font:inherit;font-size:11px}
-.dashboard-analytics__history-chip{padding:4px 10px;border:1px solid var(--qa-hairline);border-radius:999px;color:var(--qa-ink-3);font-size:10px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dashboard-analytics__range{display:flex;gap:2px;padding:2px;border:1px solid var(--qa-analytics-hairline,var(--qa-hairline));border-radius:999px;background:color-mix(in srgb,var(--qa-graphite-1) 60%,transparent)}
+.dashboard-analytics__range-btn{padding:5px 10px;border:none;border-radius:999px;background:transparent;color:var(--qa-analytics-text-tertiary,var(--qa-ink-3));font:inherit;font-size:11px;cursor:pointer;white-space:nowrap}
+.dashboard-analytics__range-btn--active{background:var(--qa-analytics-selection,color-mix(in srgb,var(--qa-accent) 26%,var(--qa-material-raised)));color:var(--qa-analytics-text-primary,var(--qa-ink-1))}
+.dashboard-analytics__provider-filter{padding:5px 10px;border:1px solid var(--qa-analytics-hairline,var(--qa-hairline));border-radius:10px;background:color-mix(in srgb,var(--qa-graphite-1) 60%,transparent);color:var(--qa-analytics-text-secondary,var(--qa-ink-2));font:inherit;font-size:11px}
+.dashboard-analytics__history-chip{padding:4px 10px;border:1px solid var(--qa-analytics-hairline,var(--qa-hairline));border-radius:999px;color:var(--qa-analytics-text-tertiary,var(--qa-ink-3));font-size:10px;font-variant-numeric:tabular-nums;white-space:nowrap}
 
 /* ── Section eyebrows (Phase 3.5 sections 7/8/9) ─────────────────────────
    Explicit "Selected Range" vs "Current Status" labeling so the one
    range/provider control strip above never looks like it silently scopes
    every widget on the page -- Current Status is deliberately live and
    unfiltered; Selected Range genuinely respects both controls. */
+/* Deliberately plain --qa-ink-4 (not the --qa-analytics-* theme chain):
+   this text sits directly on the app's own chrome background, not inside
+   a themed card -- pairing it with the resolved theme's own "muted" color
+   (calibrated for legibility against that theme's OWN surface tiers) can
+   mismatch the app chrome's actual light/dark background. A real 4-theme
+   contrast pass caught this: Ceramic Pearl's muted is dark (correct for
+   its own light card surfaces), which read as low-contrast dark-on-dark
+   here since this element has no themed card behind it. --qa-ink-4 is
+   already correctly calibrated against the app's real light/dark chrome. */
 .dashboard-analytics__eyebrow{margin:2px 2px 0;color:var(--qa-ink-4);font-size:10px;font-weight:650;text-transform:uppercase;letter-spacing:.1em}
 
 .dashboard-analytics__row{display:grid;grid-template-columns:2fr 1fr;gap:12px;align-items:start}
 .dashboard-analytics__row--single{grid-template-columns:1fr}
 
-/* ── Material hierarchy (Phase 3.5 sections 3/4): three surface tiers
-   instead of one flat treatment repeated on every card -- "compact
-   luxury" via depth/border/typography differences, no new colors beyond
-   the one restrained gold accent reserved for the single primary card. */
+/* ── Material hierarchy (Phase 3.5 sections 3/4, Phase 3.6 themed): three
+   surface tiers instead of one flat treatment repeated on every card --
+   "compact luxury" via depth/border/typography differences. The one
+   structural-accent highlight (was a hardcoded gold token in Phase 3.5,
+   refactored in Phase 3.6 -- see integration doc section 7) now resolves
+   to the active Structure Theme's own signature accent. */
 
 /* Primary: Usage Trend -- the main analytics surface. */
-.dashboard-analytics__trend{padding:14px 16px;border:1px solid var(--qa-hairline-strong);border-top:2px solid var(--qa-accent-gold-soft);border-radius:16px;background:color-mix(in srgb,var(--qa-material-raised) 62%,transparent);min-width:0}
-.dashboard-analytics__trend h2{margin:0 0 2px;color:var(--qa-ink-1);font-size:13px;font-weight:700;letter-spacing:.02em}
+.dashboard-analytics__trend{padding:14px 16px;border:1px solid var(--qa-analytics-hairline-strong,var(--qa-hairline-strong));border-top:2px solid color-mix(in srgb,var(--qa-analytics-accent-structural,var(--qa-accent)) 55%,transparent);border-radius:16px;background:var(--qa-analytics-surface-primary,color-mix(in srgb,var(--qa-material-raised) 62%,transparent));box-shadow:var(--qa-analytics-shadow,none);min-width:0}
+.dashboard-analytics__trend h2{margin:0 0 2px;color:var(--qa-analytics-text-primary,var(--qa-ink-1));font-size:13px;font-weight:700;letter-spacing:.02em}
 
 /* Secondary: provider breakdown, alerts, KPI cells. */
-.dashboard-analytics__distribution,.dashboard-analytics__alerts{padding:12px 14px;border:1px solid var(--qa-hairline);border-radius:14px;background:color-mix(in srgb,var(--qa-material-raised) 52%,transparent);min-width:0}
-.dashboard-analytics__distribution h2,.dashboard-analytics__alerts h2{margin:0 0 6px;color:var(--qa-ink-2);font-size:12px;font-weight:650;text-transform:uppercase;letter-spacing:.04em}
-.dashboard-analytics__caption{margin:-4px 0 8px;color:var(--qa-ink-4);font-size:10px}
+.dashboard-analytics__distribution,.dashboard-analytics__alerts{padding:12px 14px;border:1px solid var(--qa-analytics-hairline,var(--qa-hairline));border-radius:14px;background:var(--qa-analytics-surface-secondary,color-mix(in srgb,var(--qa-material-raised) 52%,transparent));min-width:0}
+.dashboard-analytics__distribution h2,.dashboard-analytics__alerts h2{margin:0 0 6px;color:var(--qa-analytics-text-secondary,var(--qa-ink-2));font-size:12px;font-weight:650;text-transform:uppercase;letter-spacing:.04em}
+.dashboard-analytics__caption{margin:-4px 0 8px;color:var(--qa-analytics-text-quaternary,var(--qa-ink-4));font-size:10px}
 /* Alerts earns more visual weight once there is something to act on
    (section 9) -- a slightly stronger border, not a louder color. */
-.dashboard-analytics__alerts--active{border-color:var(--qa-hairline-strong)}
+.dashboard-analytics__alerts--active{border-color:var(--qa-analytics-hairline-strong,var(--qa-hairline-strong))}
 
 /* Tertiary: reset schedule, data status -- quiet supporting information,
    smaller heading, tighter padding, lower material opacity. */
-.dashboard-analytics__reset-schedule,.dashboard-analytics__data-status{padding:9px 14px;border:1px solid var(--qa-hairline);border-radius:12px;background:color-mix(in srgb,var(--qa-material-raised) 36%,transparent);min-width:0}
-.dashboard-analytics__reset-schedule h2,.dashboard-analytics__data-status h2{margin:0 0 4px;color:var(--qa-ink-3);font-size:10.5px;font-weight:650;text-transform:uppercase;letter-spacing:.04em}
+.dashboard-analytics__reset-schedule,.dashboard-analytics__data-status{padding:9px 14px;border:1px solid var(--qa-analytics-hairline,var(--qa-hairline));border-radius:12px;background:var(--qa-analytics-surface-tertiary,color-mix(in srgb,var(--qa-material-raised) 36%,transparent));min-width:0}
+.dashboard-analytics__reset-schedule h2,.dashboard-analytics__data-status h2{margin:0 0 4px;color:var(--qa-analytics-text-tertiary,var(--qa-ink-3));font-size:10.5px;font-weight:650;text-transform:uppercase;letter-spacing:.04em}
 /* Adaptive empty state (section 10): a tertiary card with nothing to show
    collapses its own padding further rather than holding the same height
    as when it has real rows. */
@@ -50,58 +69,65 @@
 
 .dashboard-analytics__section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .dashboard-analytics__section-head h2{margin:0}
-.dashboard-analytics__empty{margin:0;padding:14px 0;color:var(--qa-ink-3);font-size:11px;text-align:center}
+.dashboard-analytics__empty{margin:0;padding:14px 0;color:var(--qa-analytics-text-tertiary,var(--qa-ink-3));font-size:11px;text-align:center}
 .dashboard-analytics__empty--compact{padding:6px 0}
 
-.dashboard-analytics__metric-toggle{display:flex;gap:2px;padding:2px;border:1px solid var(--qa-hairline);border-radius:999px}
-.dashboard-analytics__metric-btn{padding:4px 9px;border:none;border-radius:999px;background:transparent;color:var(--qa-ink-3);font:inherit;font-size:10px;cursor:pointer}
-.dashboard-analytics__metric-btn--active{background:color-mix(in srgb,var(--qa-accent) 26%,var(--qa-material-raised));color:var(--qa-ink-1)}
+.dashboard-analytics__metric-toggle{display:flex;gap:2px;padding:2px;border:1px solid var(--qa-analytics-hairline,var(--qa-hairline));border-radius:999px}
+.dashboard-analytics__metric-btn{padding:4px 9px;border:none;border-radius:999px;background:transparent;color:var(--qa-analytics-text-tertiary,var(--qa-ink-3));font:inherit;font-size:10px;cursor:pointer}
+.dashboard-analytics__metric-btn--active{background:var(--qa-analytics-selection,color-mix(in srgb,var(--qa-accent) 26%,var(--qa-material-raised)));color:var(--qa-analytics-text-primary,var(--qa-ink-1))}
 
 .dashboard-analytics__trend-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
 .dashboard-analytics__trend-item{display:flex;flex-direction:column;gap:4px}
-.dashboard-analytics__trend-provider{color:var(--qa-ink-2);font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+.dashboard-analytics__trend-provider{color:var(--qa-analytics-text-secondary,var(--qa-ink-2));font-size:10px;text-transform:uppercase;letter-spacing:.04em}
 
 .dashboard-analytics__distribution-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .dashboard-analytics__distribution-row{display:grid;grid-template-columns:64px 1fr 40px;align-items:center;gap:8px}
-.dashboard-analytics__distribution-name{color:var(--qa-ink-2);font-size:11px;text-transform:capitalize;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dashboard-analytics__distribution-name{color:var(--qa-analytics-text-secondary,var(--qa-ink-2));font-size:11px;text-transform:capitalize;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dashboard-analytics__distribution-bar-track{height:6px;border-radius:999px;background:var(--qa-track);overflow:hidden}
 .dashboard-analytics__distribution-bar-fill{height:100%;border-radius:999px}
-.dashboard-analytics__distribution-value{color:var(--qa-ink-3);font-size:10px;text-align:right;font-variant-numeric:tabular-nums}
+.dashboard-analytics__distribution-value{color:var(--qa-analytics-text-tertiary,var(--qa-ink-3));font-size:10px;text-align:right;font-variant-numeric:tabular-nums}
 /* Single-provider case (section 17): a 100% share is definitional, not
    comparative -- a plain compact line instead of a full-width bar. */
-.dashboard-analytics__distribution-solo{margin:0;padding:4px 0;color:var(--qa-ink-2);font-size:11px}
+.dashboard-analytics__distribution-solo{margin:0;padding:4px 0;color:var(--qa-analytics-text-secondary,var(--qa-ink-2));font-size:11px}
 
 .dashboard-analytics__alerts-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .dashboard-analytics__alert{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:9px;background:color-mix(in srgb,var(--qa-graphite-1) 55%,transparent);font-size:11px}
 /* Restrained severity treatment (section 16): a quiet left rule, not a
-   bright/heavy red block. */
+   bright/heavy red block. Deliberately NOT theme-driven (Phase 3.6
+   section 13): semantic warning/critical state must win over decorative
+   theme color in every Structure Theme, so these stay on --qa-status-*. */
 .dashboard-analytics__alert--critical{border-left:2px solid color-mix(in srgb,var(--qa-status-critical) 70%,var(--qa-hairline-strong))}
 .dashboard-analytics__alert--warning{border-left:2px solid color-mix(in srgb,var(--qa-status-high) 60%,var(--qa-hairline-strong))}
 .dashboard-analytics__alert-glyph{flex:none}
-.dashboard-analytics__alert-text{flex:1;min-width:0;color:var(--qa-ink-1)}
-.dashboard-analytics__alert-action{flex:none;padding:3px 9px;border:1px solid var(--qa-hairline-strong);border-radius:7px;background:transparent;color:var(--qa-ink-2);font:inherit;font-size:10px;cursor:pointer;white-space:nowrap}
+.dashboard-analytics__alert-text{flex:1;min-width:0;color:var(--qa-analytics-text-primary,var(--qa-ink-1))}
+.dashboard-analytics__alert-action{flex:none;padding:3px 9px;border:1px solid var(--qa-analytics-hairline-strong,var(--qa-hairline-strong));border-radius:7px;background:transparent;color:var(--qa-analytics-text-secondary,var(--qa-ink-2));font:inherit;font-size:10px;cursor:pointer;white-space:nowrap}
 
-.dashboard-analytics__data-status-line{margin:0;color:var(--qa-ink-2);font-size:10.5px;font-variant-numeric:tabular-nums}
+.dashboard-analytics__data-status-line{margin:0;color:var(--qa-analytics-text-secondary,var(--qa-ink-2));font-size:10.5px;font-variant-numeric:tabular-nums}
 .dashboard-analytics__data-status-line+.dashboard-analytics__data-status-line{margin-top:3px}
-.dashboard-analytics__data-status-line--muted{color:var(--qa-ink-4)}
+.dashboard-analytics__data-status-line--muted{color:var(--qa-analytics-text-quaternary,var(--qa-ink-4))}
 
 .dashboard-analytics__reset-schedule-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
 .dashboard-analytics__reset-schedule-row{display:flex;align-items:center;gap:7px;padding:4px 0;font-size:11px}
 .dashboard-analytics__reset-schedule-glyph{flex:none}
-.dashboard-analytics__reset-schedule-name{flex:1;min-width:0;color:var(--qa-ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dashboard-analytics__reset-schedule-value{flex:none;color:var(--qa-ink-3);font-variant-numeric:tabular-nums;white-space:nowrap}
+.dashboard-analytics__reset-schedule-name{flex:1;min-width:0;color:var(--qa-analytics-text-secondary,var(--qa-ink-2));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dashboard-analytics__reset-schedule-value{flex:none;color:var(--qa-analytics-text-tertiary,var(--qa-ink-3));font-variant-numeric:tabular-nums;white-space:nowrap}
 
 /* ── KPI row: primary cells (real values) + a compact status strip for
    metrics with no real data yet (Phase 3.5 section 6) ──────────────────── */
 .dashboard-analytics__kpis{display:flex;flex-direction:column;gap:8px}
 .dashboard-analytics__kpis-primary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
-.dashboard-kpi{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--qa-hairline);border-radius:12px;background:color-mix(in srgb,var(--qa-material-raised) 55%,transparent)}
+.dashboard-kpi{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--qa-analytics-hairline,var(--qa-hairline));border-radius:12px;background:var(--qa-analytics-surface-secondary,color-mix(in srgb,var(--qa-material-raised) 55%,transparent))}
+/* Warning/critical KPI borders are semantic state, not decorative theme --
+   deliberately left on --qa-status-* (section 13). */
 .dashboard-kpi--warning{border-color:color-mix(in srgb,var(--qa-status-high) 45%,var(--qa-hairline))}
 .dashboard-kpi--critical{border-color:color-mix(in srgb,var(--qa-status-critical) 55%,var(--qa-hairline))}
-.dashboard-kpi__label{color:var(--qa-ink-3);font-size:10px;text-transform:uppercase;letter-spacing:.05em}
-.dashboard-kpi__value{color:var(--qa-ink-1);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.dashboard-kpi__label{color:var(--qa-analytics-text-tertiary,var(--qa-ink-3));font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+.dashboard-kpi__value{color:var(--qa-analytics-text-primary,var(--qa-ink-1));font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
 
 .dashboard-analytics__kpis-compact{display:flex;flex-wrap:wrap;gap:6px 14px;padding:6px 2px 0}
+/* Also deliberately plain --qa-ink-4 -- .dashboard-analytics__kpis-compact
+   has no themed card background either, same reasoning as the eyebrow
+   rule above. */
 .dashboard-kpi-compact{display:flex;align-items:baseline;gap:5px;font-size:10.5px}
 .dashboard-kpi-compact__label{color:var(--qa-ink-4);text-transform:uppercase;letter-spacing:.05em;font-size:9.5px}
 .dashboard-kpi-compact__value{color:var(--qa-ink-4)}

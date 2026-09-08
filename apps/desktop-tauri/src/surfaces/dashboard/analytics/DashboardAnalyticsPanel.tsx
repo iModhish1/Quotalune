@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLocale } from "../../../hooks/useLocale";
 import { useDashboardSnapshot } from "../../../hooks/useDashboardSnapshot";
+import { useDashboardStructureTheme } from "./useDashboardStructureTheme";
 import { availableHistoryDays, computeKpis } from "./dashboardSelectors";
 import DashboardHeader from "./DashboardHeader";
 import KpiRow from "./KpiRow";
@@ -39,6 +40,10 @@ export default function DashboardAnalyticsPanel({
   const { t } = useLocale();
   const [range, setRange] = useState<DashboardRangeKind>("last7Days");
   const [providerFilter, setProviderFilter] = useState<string | null>(null);
+  // Phase 3.6: the Dashboard's structural surfaces now follow the same
+  // resolved Structure Theme every other themed surface uses -- see
+  // docs/validation/DASHBOARD_STRUCTURE_THEME_INTEGRATION.md.
+  const { style: structureThemeStyle } = useDashboardStructureTheme(settings);
 
   const providerOptions = useMemo(
     () => liveProviders.map((p) => ({ id: p.providerId, name: p.displayName })),
@@ -72,7 +77,7 @@ export default function DashboardAnalyticsPanel({
   }, [snapshot, t]);
 
   return (
-    <div className="dashboard-analytics">
+    <div className="dashboard-analytics" style={structureThemeStyle}>
       <DashboardHeader
         range={range}
         onRangeChange={setRange}

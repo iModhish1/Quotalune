@@ -2845,7 +2845,12 @@ body:has(.tray-panel-reveal) {
 .chart__axis {
   position: relative;
   font-size: 0.7rem;
-  color: var(--provider-row-text-secondary);
+  /* Phase 3.6: falls through to --qa-analytics-text-tertiary only inside
+     the Dashboard (see DashboardAnalyticsPanel.css/
+     useDashboardStructureTheme.ts) -- everywhere else (e.g. Settings'
+     CostHistoryChart/CreditsHistoryChart) that custom property is
+     undefined, so this resolves exactly as before. */
+  color: var(--qa-analytics-text-tertiary, var(--provider-row-text-secondary));
 }
 
 .chart__axis > span {
@@ -3214,7 +3219,8 @@ body:has(.tray-panel-reveal) {
 }
 
 .chart__baseline {
-  stroke: var(--qa-hairline, rgba(255, 255, 255, 0.08));
+  /* Phase 3.6: same Dashboard-only fallback chain as .chart__axis above. */
+  stroke: var(--qa-analytics-hairline, var(--qa-hairline, rgba(255, 255, 255, 0.08)));
   stroke-width: 1;
 }
 
@@ -3233,9 +3239,12 @@ body:has(.tray-panel-reveal) {
   position: absolute;
   pointer-events: none;
   z-index: 5;
-  background: var(--chart-tooltip-bg);
-  color: var(--chart-tooltip-text);
-  border: 1px solid var(--chart-tooltip-border);
+  /* Phase 3.6: same Dashboard-only fallback chain as .chart__axis/
+     .chart__baseline above -- undefined (falls through unchanged)
+     everywhere outside .dashboard-analytics. */
+  background: var(--qa-analytics-surface-secondary, var(--chart-tooltip-bg));
+  color: var(--qa-analytics-text-primary, var(--chart-tooltip-text));
+  border: 1px solid var(--qa-analytics-hairline-strong, var(--chart-tooltip-border));
   border-radius: 4px;
   padding: 4px 8px;
   font-size: 0.72rem;

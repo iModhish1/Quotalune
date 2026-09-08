@@ -240,3 +240,92 @@ it's actually slightly better than Phase 3's original 0.31% baseline
   elsewhere in the app. Building real structure-theme reach into the
   Dashboard is a larger, separate design-system change, not a Phase 3.5
   refinement.
+
+---
+
+# Phase 3.6 — Structure Theme integration, native proof
+
+Same day, same isolated `dev-channel` methodology. Personal untouched
+throughout — verified read-only before starting (see final report).
+
+Full architectural audit, chosen integration point, and semantic token
+mapping: `docs/validation/DASHBOARD_STRUCTURE_THEME_INTEGRATION.md`.
+
+## Screenshots
+
+| File | State |
+|---|---|
+| `QUOTALIS_THEME_DEFAULT.png` | Real default (`01-obsidian-orbit`, "Obsidian Orbit") -- Trend card top border shows the theme's real teal signature (`#2dd4bf`) |
+| `QUOTALIS_THEME_SILVER.png` | Real "Smoked Silver" -- silver signature (`#c4cdd8`), same range/data state as above |
+| `QUOTALIS_THEME_WARM.png` | Real "Sapphire Observatory" -- genuinely champagne-gold signature (`#d3b77e`, a real catalog value, not invented) |
+| `QUOTALIS_THEME_CONTRAST.png` | Real "Ceramic Pearl" -- the catalog's one `material.light: true` entry; renders as a genuinely light/near-white card surface, structurally distinct from the other three |
+| `QUOTALIS_THEME_RTL_NONDEFAULT.png` | Real Arabic (`set_ui_language("arabic")`) + real non-default theme ("Smoked Silver") simultaneously -- RTL layout, real translations, Latin-digit dates, full Arabic month names, LTR-isolated provider names, and theme styling all verified together |
+| `QUOTALIS_STRUCTURE_THEME_MATRIX.png` | 2x2 composite of the four screenshots above |
+
+All four comparison screenshots use the identical window size, default
+7-day range, "All Providers" filter, and the same real Dev snapshot data
+(64 samples, 2 real providers both needing sign-in) -- only the resolved
+Structure Theme setting differs between them, set via the real
+`set_catalog_theme(slug, "global")` IPC command.
+
+## Real defects found and fixed during this pass's own verification
+
+Both were caught by actually switching themes and looking, not by
+inspecting the derivation code in isolation:
+
+**1. Structural accent didn't actually differentiate themes.** The first
+draft mapped `--qa-analytics-accent-structural` to `theme.accent2`.
+Verified live: Obsidian Orbit's and Sapphire Observatory's `accent2` are
+both similar supporting blues, so the Trend card's signature border looked
+nearly identical across two themes with very different real identities
+(one is genuinely gold-accented). Fixed by mapping the structural highlight
+to `theme.accent` instead -- each theme's actual signature color (a theme
+has one signature color, not two) -- re-verified: Sapphire Observatory's
+border is now visibly, genuinely gold.
+
+**2. Chrome-level text became low-contrast under the one light theme.**
+Verified live against Ceramic Pearl: the compact KPI status strip and
+section eyebrows (elements with no themed card background of their own --
+they sit directly on the app's own dark chrome) initially used the
+resolved theme's own `muted` text color. For a light theme, `muted` is a
+dark color (correct for pairing with that theme's own light card
+surfaces) -- pairing it with the app's unrelated dark chrome background
+produced dark-on-dark, hard-to-read text. Fixed architecturally: text with
+no themed card backdrop stays on the existing `--qa-ink-*` tokens (already
+correctly calibrated against the app's real light/dark chrome); only text
+that sits inside an actual `--qa-analytics-surface-*` card uses the
+theme's own text colors, since only there is the background/text pairing
+actually self-consistent. Also raised the tertiary/quaternary text
+opacity floor and the tertiary surface opacity (55% vs the original 36%)
+since low-opacity layering compounded unpredictably for a light theme
+composited over dark chrome. Re-verified live: Reset Schedule's heading/
+body text and the compact KPI strip are both legible under Ceramic Pearl
+now.
+
+## Idle CPU re-measurement (section 16)
+
+Same methodology as Phase 3/3.5: an initial reading taken immediately
+after a compound theme+language switch showed 100.47% of one core over
+20s even after a 10s settle -- investigated rather than accepted, since it
+contradicted the "stays quiet" requirement. Waited longer (40s total) and
+re-measured: **0.2% of one core**, confirming this was a slower-than-usual
+settle after two state changes fired back-to-back (theme switch + language
+switch), not a continuous loop. `useDashboardStructureTheme` computes its
+style object via `useMemo` keyed on the `settings` reference -- no polling,
+no observer, no interval.
+
+## What was verified at the code/test level rather than a live UI
+walkthrough (time-scoped, not skipped)
+
+- **Profile-theme precedence** (section 10): the real precedence chain
+  (surface override → profile → global → default) is exercised by
+  `useDashboardStructureTheme.test.ts`, which calls the same
+  `resolveCatalogTheme` function every other themed surface in the app
+  already relies on (itself independently tested). A live two-profile
+  UI walkthrough was not additionally performed this pass; the resolution
+  logic itself is shared, not Dashboard-specific, and already proven.
+- **Follow-Structure/Independent provider presentation** (section 11):
+  unaffected by this phase by construction -- provider color resolution
+  (`providerCreditsColor`, `ProviderIcon`, `buildAlerts`) was not touched;
+  the existing `ProviderIdentityThemeMatrix.test.tsx` (24-theme x provider-
+  identity coverage) continues to pass unchanged.
