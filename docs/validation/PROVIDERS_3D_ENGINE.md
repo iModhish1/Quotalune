@@ -166,13 +166,27 @@ per the Phase 5 spec and not attempted:
   integration, WebGPU-only rendering, dynamic pricing visualization.
 - A filtering UI for large provider counts (the layout engine scales to
   70, but no on-canvas filter/search control exists yet).
-- Native WebView2 visual/motion/performance proof (screenshots at each
-  required provider count/theme/RTL/reduced-motion combination, a
-  20-cycle 2D↔3D memory-cleanup measurement, idle-CPU/frame-timing
-  measurement at 1/6/12/24 providers, live Structure Theme switching and
-  profile switching while mounted) — **not captured this session**; see
-  `PHASE5_3D_PROTOTYPE.md` for the honest accounting of what was and was
-  not verified.
+- No in-canvas visual highlight for the currently-selected provider body
+  (selection state is authoritative and correct in the accessible DOM
+  panel, which is what the accessibility requirement actually asks for;
+  a 3D highlight is a production-polish item).
+- A single-provider composition's body visibly overlaps the core sphere
+  from the default camera angle (in-frame, legible, not broken — found
+  and only partially tuned during Phase 5.1 native proof).
+- WebGL context restore does not reapply the Structure Theme's clear
+  color (reverts to plain black) — the app does not crash and rendering
+  resumes correctly otherwise; a narrow edge case (genuine GPU-driver
+  context loss is rare) not hardened in this pass.
+
+Phase 5.1 (`PHASE5_3D_PROTOTYPE.md`) closed the remaining native
+WebView2 proof gap this document originally listed here (screenshots at
+every required count/theme/RTL/reduced-motion/fallback state, the
+20-cycle memory test, demand-render proof, frame performance, live
+theme/profile switching) — see that document for the full evidence log,
+including two real bugs found and fixed (ring-radius/camera framing, the
+WebGL-fallback button's wrong target) and one pre-existing non-3D bug
+found and flagged separately (stale provider list after a profile
+switch, `task_3e1b7b73`).
 
 Before this becomes the production 3D Dashboard: a provider-count-scaling
 strategy proven past the current 12/secondary-ring split (real visual
