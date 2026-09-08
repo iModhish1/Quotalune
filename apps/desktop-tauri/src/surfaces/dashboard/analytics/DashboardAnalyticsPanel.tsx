@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLocale } from "../../../hooks/useLocale";
-import { useDashboardSnapshot } from "../../../hooks/useDashboardSnapshot";
+import { useEffectiveDashboardSnapshot } from "../../../hooks/useEffectiveDashboardSnapshot";
+import type { DataProvenance } from "../../../hooks/useEffectiveProviders";
 import { useDashboardStructureTheme } from "./useDashboardStructureTheme";
 import { availableHistoryDays, computeKpis } from "./dashboardSelectors";
 import DashboardHeader from "./DashboardHeader";
@@ -10,7 +11,13 @@ import ProviderDistribution from "./ProviderDistribution";
 import ResetSchedule from "./ResetSchedule";
 import AlertsPanel from "./AlertsPanel";
 import DataStatusPanel from "./DataStatusPanel";
-import type { DashboardRangeKind, ProviderUsageSnapshot, SettingsSnapshot } from "../../../types/bridge";
+import DemoIndicator from "../../../demoMode/DemoIndicator";
+import type {
+  DashboardRangeKind,
+  ProviderCatalogEntry,
+  ProviderUsageSnapshot,
+  SettingsSnapshot,
+} from "../../../types/bridge";
 import "./DashboardAnalyticsPanel.css";
 
 /**
@@ -31,11 +38,26 @@ import "./DashboardAnalyticsPanel.css";
 export default function DashboardAnalyticsPanel({
   liveProviders,
   settings,
+  catalog = [],
+  provenance = "live",
   onOpenProviders,
+  onExitDemo,
 }: {
   liveProviders: ProviderUsageSnapshot[];
   settings: SettingsSnapshot;
+  /** Real provider registry catalog (`state.providers`) -- only needed
+   *  when Demo Mode is on, to build the synthetic `DashboardSnapshot`.
+   *  Optional so existing callers/tests that never exercise Demo Mode
+   *  don't need updating. */
+  catalog?: ProviderCatalogEntry[];
+  /** Phase 5.2: whether `liveProviders` is real or Demo Mode's synthetic
+   *  dataset -- drives the persistent DEMO indicator. */
+  provenance?: DataProvenance;
   onOpenProviders: () => void;
+  /** Turns Demo Mode off -- only ever called from the indicator, so a
+   *  no-op default is safe for callers that never render it (provenance
+   *  stays "live"). */
+  onExitDemo?: () => void;
 }) {
   const { t } = useLocale();
   const [range, setRange] = useState<DashboardRangeKind>("last7Days");
@@ -54,7 +76,7 @@ export default function DashboardAnalyticsPanel({
     [providerFilter],
   );
 
-  const { snapshot } = useDashboardSnapshot(range, undefined, providersArg);
+  const { snapshot } = useEffectiveDashboardSnapshot(range, undefined, providersArg, settings, catalog);
 
   const kpis = useMemo(
     () =>
@@ -78,6 +100,11 @@ export default function DashboardAnalyticsPanel({
 
   return (
     <div className="dashboard-analytics" style={structureThemeStyle}>
+      {provenance === "demo" && (
+        <div className="dashboard-analytics__demo-indicator">
+          <DemoIndicator providerCount={liveProviders.length} onExit={() => onExitDemo?.()} />
+        </div>
+      )}
       <DashboardHeader
         range={range}
         onRangeChange={setRange}
@@ -94,7 +121,12 @@ export default function DashboardAnalyticsPanel({
       <h3 className="dashboard-analytics__eyebrow">{t("DashboardCurrentStatusEyebrow")}</h3>
       <KpiRow kpis={kpis} resetTimeRelative={settings.resetTimeRelative} />
       <div className="dashboard-analytics__row">
-        <AlertsPanel providers={liveProviders} settings={settings} onOpenProviders={onOpenProviders} />
+        <AlertsPanel
+          providers={liveProviders}
+          settings={settings}
+          onOpenProviders={onOpenProviders}
+          isDemo={provenance === "demo"}
+        />
         <ResetSchedule providers={liveProviders} relative={settings.resetTimeRelative} />
       </div>
       <div className="dashboard-analytics__row dashboard-analytics__row--single">

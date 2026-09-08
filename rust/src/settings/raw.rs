@@ -63,6 +63,21 @@ pub(super) struct RawSettings {
     )]
     dashboard_performance_preset: super::DashboardPerformancePreset,
 
+    #[serde(default)]
+    demo_mode_enabled: bool,
+    #[serde(default)]
+    demo_provider_mode: super::DemoProviderMode,
+    #[serde(default)]
+    demo_provider_count: u32,
+    #[serde(default)]
+    demo_provider_ids: Vec<String>,
+    #[serde(default)]
+    demo_scenario: super::DemoScenario,
+    #[serde(default)]
+    demo_seed: u64,
+    #[serde(default)]
+    demo_history_days: u32,
+
     start_minimized: bool,
     startup_destination: String,
     last_settings_tab: Option<String>,
@@ -312,6 +327,13 @@ impl Default for RawSettings {
             low_power_mode_preference: Some(s.low_power_mode_preference),
             dashboard_mode: s.dashboard_mode,
             dashboard_performance_preset: s.dashboard_performance_preset,
+            demo_mode_enabled: s.demo_mode_enabled,
+            demo_provider_mode: s.demo_provider_mode,
+            demo_provider_count: s.demo_provider_count,
+            demo_provider_ids: s.demo_provider_ids,
+            demo_scenario: s.demo_scenario,
+            demo_seed: s.demo_seed,
+            demo_history_days: s.demo_history_days,
             start_minimized: s.start_minimized,
             startup_destination: s.startup_destination,
             last_settings_tab: s.last_settings_tab,
@@ -679,6 +701,21 @@ impl From<RawSettings> for Settings {
             low_power_mode_preference,
             dashboard_mode: raw.dashboard_mode,
             dashboard_performance_preset: raw.dashboard_performance_preset,
+            demo_mode_enabled: raw.demo_mode_enabled,
+            demo_provider_mode: raw.demo_provider_mode,
+            // A corrupt/legacy value (0, or missing -> 0) must not silently
+            // enable Demo Mode with zero providers (owner section 6) --
+            // fall back to the real product default instead of clamping to
+            // the floor of 1, which would still be a degenerate showcase.
+            demo_provider_count: if raw.demo_provider_count == 0 {
+                super::DEFAULT_DEMO_PROVIDER_COUNT
+            } else {
+                super::clamp_demo_provider_count(raw.demo_provider_count)
+            },
+            demo_provider_ids: raw.demo_provider_ids,
+            demo_scenario: raw.demo_scenario,
+            demo_seed: if raw.demo_seed == 0 { 1 } else { raw.demo_seed },
+            demo_history_days: super::normalize_demo_history_days(raw.demo_history_days),
             start_minimized: raw.start_minimized,
             startup_destination: raw.startup_destination,
             last_settings_tab: raw.last_settings_tab,

@@ -103,6 +103,11 @@ export default function Providers3DDevLab({ state }: { state: BootstrapState }) 
           liveProviders={fixtures}
           settings={labSettings}
           theme={theme}
+          provenance="demo"
+          onExitDemo={() => {
+            // eslint-disable-next-line no-console
+            console.info("[providers3d-devlab] onExitDemo invoked (no-op -- the lab has no real Demo Mode setting to flip)");
+          }}
           onOpenProviders={() => {
             // eslint-disable-next-line no-console
             console.info("[providers3d-devlab] onOpenProviders invoked");

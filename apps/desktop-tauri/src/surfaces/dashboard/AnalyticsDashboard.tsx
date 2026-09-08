@@ -10,9 +10,14 @@
  * display this phase does not need to rebuild). The orbital usage hero is
  * turned off in this mode (`hideHero`) -- "No giant empty orbital hero in
  * 2D mode" once the real analytics rows above are the primary content.
+ *
+ * Phase 5.2: consumes `useEffectiveProviders()` instead of `useProviders()`
+ * directly, so this same component renders Demo Mode's synthetic data
+ * when enabled -- no duplicated Dashboard implementation (owner section
+ * 18/19).
  */
 import { useMemo } from "react";
-import { useProviders } from "../../hooks/useProviders";
+import { useEffectiveProviders } from "../../hooks/useEffectiveProviders";
 import { useSettings } from "../../hooks/useSettings";
 import { useDashboardState } from "../../hooks/useDashboardState";
 import { useResetStageOptions } from "../../hooks/useResetStageOptions";
@@ -25,8 +30,14 @@ import type { DashboardModeProps } from "../../lib/dashboardRegistry";
 import "./AnalyticsDashboard.css";
 
 export default function AnalyticsDashboard({ state, onOpenProviders }: DashboardModeProps) {
-  const { providers, isRefreshing, refreshingProviderIds, hasCachedData } = useProviders();
-  const { settings } = useSettings(state.settings);
+  const { settings, update } = useSettings(state.settings);
+  const {
+    providers,
+    isRefreshing,
+    refreshingProviderIds,
+    hasCachedData,
+    provenance,
+  } = useEffectiveProviders(settings, state.providers);
   const { t } = useLocale();
 
   const {
@@ -38,7 +49,12 @@ export default function AnalyticsDashboard({ state, onOpenProviders }: Dashboard
     handleGridClick,
     handleReorder,
     setCardRef,
-  } = useDashboardState({ providers, bootstrapProviders: state.providers, settings });
+  } = useDashboardState({
+    providers,
+    bootstrapProviders: state.providers,
+    settings,
+    bypassEnabledFilter: provenance === "demo",
+  });
 
   const resetOptions = useResetStageOptions(settings, "dashboard");
   const stageProviders = useMemo(
@@ -52,7 +68,10 @@ export default function AnalyticsDashboard({ state, onOpenProviders }: Dashboard
       <DashboardAnalyticsPanel
         liveProviders={sorted}
         settings={settings}
+        catalog={state.providers}
+        provenance={provenance}
         onOpenProviders={onOpenProviders}
+        onExitDemo={() => update({ demoModeEnabled: false })}
       />
       <h2 className="dashboard-tab__provider-overview-title">
         {t("DashboardProviderOverviewTitle")}

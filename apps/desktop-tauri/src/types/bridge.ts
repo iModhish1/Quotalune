@@ -26,6 +26,20 @@ export type DashboardModeId = "analytics2d" | "providers3d" | "hybrid";
  *  power settings. Mirrors `quotalis_core::settings::DashboardPerformancePreset`. */
 export type DashboardPerformancePreset = "lowCpu" | "balanced" | "highFidelity";
 
+/** Phase 5.2: how Demo Mode picks which providers to simulate.
+ *  Mirrors `quotalis_core::settings::DemoProviderMode`. */
+export type DemoProviderMode = "curated" | "custom";
+
+/** Phase 5.2: which deterministic simulated dataset Demo Mode generates.
+ *  Mirrors `quotalis_core::settings::DemoScenario`. */
+export type DemoScenario =
+  | "connectedShowcase"
+  | "balancedActivity"
+  | "highUsage"
+  | "resetSoon"
+  | "mixedStatus"
+  | "monetarySemantics";
+
 // ── Narrowed string-literal unions (persisted settings enums) ─────────
 
 export type TrayIconMode = "single" | "perProvider";
@@ -220,6 +234,18 @@ export interface SettingsSnapshot {
   lowPowerModePreference?: "off" | "on" | "automatic";
   dashboardMode?: DashboardModeId;
   dashboardPerformancePreset?: DashboardPerformancePreset;
+  /** Phase 5.2 Demo Mode -- optional (rather than matching the Rust
+   *  snapshot's always-present fields) so the many existing hand-built
+   *  `SettingsSnapshot` test fixtures across the codebase don't all need
+   *  updating; `demoMode/config.ts`'s `resolveDemoConfig` treats a
+   *  missing value the same as the real default (disabled). */
+  demoModeEnabled?: boolean;
+  demoProviderMode?: DemoProviderMode;
+  demoProviderCount?: number;
+  demoProviderIds?: string[];
+  demoScenario?: DemoScenario;
+  demoSeed?: number;
+  demoHistoryDays?: number;
   startAtLogin: boolean;
   startMinimized: boolean;
   startupDestination?: "dashboard" | "providerDisplay" | "lastOpened";
@@ -338,6 +364,13 @@ export interface SettingsUpdate {
   lowPowerModePreference?: "off" | "on" | "automatic";
   dashboardMode?: DashboardModeId;
   dashboardPerformancePreset?: DashboardPerformancePreset;
+  demoModeEnabled?: boolean;
+  demoProviderMode?: DemoProviderMode;
+  demoProviderCount?: number;
+  demoProviderIds?: string[];
+  demoScenario?: DemoScenario;
+  demoSeed?: number;
+  demoHistoryDays?: number;
   startAtLogin?: boolean;
   startMinimized?: boolean;
   startupDestination?: "dashboard" | "providerDisplay" | "lastOpened";

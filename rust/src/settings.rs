@@ -763,6 +763,162 @@ mod dashboard_mode_tests {
     }
 }
 
+/// Phase 5.2: how Demo Mode picks which providers to simulate. `Curated`
+/// deterministically selects `demo_provider_count` real registered
+/// providers (see the frontend's `demoMode/curatedProviders.ts`, which
+/// mirrors this choice); `Custom` uses the explicit `demo_provider_ids`
+/// list instead. Real product setting -- not gated behind any dev flag.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum DemoProviderMode {
+    #[default]
+    Curated,
+    Custom,
+}
+
+impl DemoProviderMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Curated => "curated",
+            Self::Custom => "custom",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value.trim() {
+            "curated" => Some(Self::Curated),
+            "custom" => Some(Self::Custom),
+            _ => None,
+        }
+    }
+}
+
+/// Phase 5.2: which deterministic simulated dataset Demo Mode generates.
+/// Every scenario stays within Phase 4's monetary truth model (Spend vs
+/// Balance vs Credits vs Unavailable) -- see
+/// `docs/validation/PHASE5_DEMO_MODE.md`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum DemoScenario {
+    #[default]
+    ConnectedShowcase,
+    BalancedActivity,
+    HighUsage,
+    ResetSoon,
+    MixedStatus,
+    MonetarySemantics,
+}
+
+impl DemoScenario {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::ConnectedShowcase => "connectedShowcase",
+            Self::BalancedActivity => "balancedActivity",
+            Self::HighUsage => "highUsage",
+            Self::ResetSoon => "resetSoon",
+            Self::MixedStatus => "mixedStatus",
+            Self::MonetarySemantics => "monetarySemantics",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value.trim() {
+            "connectedShowcase" => Some(Self::ConnectedShowcase),
+            "balancedActivity" => Some(Self::BalancedActivity),
+            "highUsage" => Some(Self::HighUsage),
+            "resetSoon" => Some(Self::ResetSoon),
+            "mixedStatus" => Some(Self::MixedStatus),
+            "monetarySemantics" => Some(Self::MonetarySemantics),
+            _ => None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod demo_mode_settings_tests {
+    use super::{DemoProviderMode, DemoScenario};
+
+    #[test]
+    fn demo_provider_mode_defaults_to_curated() {
+        assert_eq!(DemoProviderMode::default(), DemoProviderMode::Curated);
+    }
+
+    #[test]
+    fn demo_provider_mode_round_trips_every_variant() {
+        for mode in [DemoProviderMode::Curated, DemoProviderMode::Custom] {
+            assert_eq!(DemoProviderMode::parse(mode.as_str()), Some(mode));
+        }
+    }
+
+    #[test]
+    fn demo_provider_mode_rejects_unknown_strings() {
+        assert_eq!(DemoProviderMode::parse("all"), None);
+        assert_eq!(DemoProviderMode::parse(""), None);
+    }
+
+    #[test]
+    fn demo_scenario_defaults_to_connected_showcase() {
+        assert_eq!(DemoScenario::default(), DemoScenario::ConnectedShowcase);
+    }
+
+    #[test]
+    fn demo_scenario_round_trips_every_variant() {
+        for scenario in [
+            DemoScenario::ConnectedShowcase,
+            DemoScenario::BalancedActivity,
+            DemoScenario::HighUsage,
+            DemoScenario::ResetSoon,
+            DemoScenario::MixedStatus,
+            DemoScenario::MonetarySemantics,
+        ] {
+            assert_eq!(DemoScenario::parse(scenario.as_str()), Some(scenario));
+        }
+    }
+
+    #[test]
+    fn demo_scenario_rejects_unknown_strings() {
+        assert_eq!(DemoScenario::parse("chaos"), None);
+        assert_eq!(DemoScenario::parse(""), None);
+    }
+
+    #[test]
+    fn clamp_demo_provider_count_enforces_1_to_24() {
+        assert_eq!(super::clamp_demo_provider_count(0), 1);
+        assert_eq!(super::clamp_demo_provider_count(1), 1);
+        assert_eq!(super::clamp_demo_provider_count(6), 6);
+        assert_eq!(super::clamp_demo_provider_count(24), 24);
+        assert_eq!(super::clamp_demo_provider_count(25), 24);
+        assert_eq!(super::clamp_demo_provider_count(u32::MAX), 24);
+    }
+
+    #[test]
+    fn normalize_demo_history_days_only_accepts_7_or_30() {
+        assert_eq!(super::normalize_demo_history_days(0), 7);
+        assert_eq!(super::normalize_demo_history_days(7), 7);
+        assert_eq!(super::normalize_demo_history_days(15), 7);
+        assert_eq!(super::normalize_demo_history_days(29), 7);
+        assert_eq!(super::normalize_demo_history_days(30), 30);
+        assert_eq!(super::normalize_demo_history_days(365), 30);
+    }
+}
+
+/// Default number of simulated providers the first time Demo Mode is
+/// enabled (owner Phase 5.2 section 5).
+pub const DEFAULT_DEMO_PROVIDER_COUNT: u32 = 6;
+/// Hard bounds enforced wherever `demo_provider_count` is set (owner
+/// section 6: "1 through 24", "Do not allow 0 while Demo Mode is
+/// enabled").
+pub const MIN_DEMO_PROVIDER_COUNT: u32 = 1;
+pub const MAX_DEMO_PROVIDER_COUNT: u32 = 24;
+/// Clamps a requested demo provider count into the supported range.
+pub fn clamp_demo_provider_count(count: u32) -> u32 {
+    count.clamp(MIN_DEMO_PROVIDER_COUNT, MAX_DEMO_PROVIDER_COUNT)
+}
+/// The only two supported simulated-history lengths (owner section 4/39).
+pub fn normalize_demo_history_days(days: u32) -> u32 {
+    if days >= 30 { 30 } else { 7 }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(from = "RawSettings", default)]
 pub struct Settings {
@@ -794,6 +950,33 @@ pub struct Settings {
     /// `low_power_mode_preference` (which governs provider polling).
     #[serde(default)]
     pub dashboard_performance_preset: DashboardPerformancePreset,
+
+    /// Phase 5.2: user-accessible Demo Mode -- previews Quotalis with
+    /// simulated provider data, entirely generated on the frontend (this
+    /// flag and the fields below are only CONFIGURATION; no simulated
+    /// observation is ever persisted here or anywhere else). Global, not
+    /// profile-scoped (owner section 33: a preview mode, not an account
+    /// configuration). Default off -- real users see real data unless
+    /// they explicitly opt in.
+    #[serde(default)]
+    pub demo_mode_enabled: bool,
+    #[serde(default)]
+    pub demo_provider_mode: DemoProviderMode,
+    #[serde(default)]
+    pub demo_provider_count: u32,
+    /// Only meaningful when `demo_provider_mode` is `Custom`.
+    #[serde(default)]
+    pub demo_provider_ids: Vec<String>,
+    #[serde(default)]
+    pub demo_scenario: DemoScenario,
+    /// Deterministic seed for the frontend's demo data generator --
+    /// changing it (via "Regenerate Demo Data") produces a new but still
+    /// fully reproducible dataset. Never used for anything security-
+    /// sensitive; a plain u64 counter is sufficient.
+    #[serde(default)]
+    pub demo_seed: u64,
+    #[serde(default)]
+    pub demo_history_days: u32,
 
     /// Whether to start minimized
     pub start_minimized: bool,
@@ -1632,6 +1815,13 @@ impl Default for Settings {
             low_power_mode_preference: LowPowerModePreference::Off,
             dashboard_mode: DashboardModeId::default(),
             dashboard_performance_preset: DashboardPerformancePreset::default(),
+            demo_mode_enabled: false,
+            demo_provider_mode: DemoProviderMode::default(),
+            demo_provider_count: DEFAULT_DEMO_PROVIDER_COUNT,
+            demo_provider_ids: Vec::new(),
+            demo_scenario: DemoScenario::default(),
+            demo_seed: 1,
+            demo_history_days: 7,
             start_minimized: false,
             startup_destination: default_startup_destination(),
             last_settings_tab: None,

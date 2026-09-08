@@ -41,10 +41,16 @@ export default function AlertsPanel({
   providers,
   settings,
   onOpenProviders,
+  isDemo = false,
 }: {
   providers: ProviderUsageSnapshot[];
   settings: Pick<SettingsSnapshot, "highUsageThreshold" | "criticalUsageThreshold">;
   onOpenProviders: () => void;
+  /** Phase 5.2 owner section 20: a simulated auth-required/unavailable
+   *  alert must never offer a real "Reconnect" action that would open
+   *  the real Providers tab and imply a genuine OAuth/credential flow --
+   *  its action is replaced with a disabled "Demo state" button instead. */
+  isDemo?: boolean;
 }) {
   const { t } = useLocale();
   const alerts = buildAlerts(providers, settings);
@@ -68,15 +74,20 @@ export default function AlertsPanel({
               <span className="dashboard-analytics__alert-text">
                 {renderWithIsolatedProvider(t(ALERT_KEYS[alert.kind]), alert.providerName)}
               </span>
-              {(alert.kind === "authRequired" || alert.kind === "unavailable") && (
-                <button
-                  type="button"
-                  className="dashboard-analytics__alert-action"
-                  onClick={onOpenProviders}
-                >
-                  {t("DashboardReconnect")}
-                </button>
-              )}
+              {(alert.kind === "authRequired" || alert.kind === "unavailable") &&
+                (isDemo ? (
+                  <button type="button" className="dashboard-analytics__alert-action" disabled>
+                    {t("Providers3DDemoStateButton")}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="dashboard-analytics__alert-action"
+                    onClick={onOpenProviders}
+                  >
+                    {t("DashboardReconnect")}
+                  </button>
+                ))}
             </li>
           ))}
         </ul>

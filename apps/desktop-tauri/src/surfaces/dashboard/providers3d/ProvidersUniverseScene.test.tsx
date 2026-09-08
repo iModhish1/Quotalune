@@ -42,6 +42,8 @@ describe("ProvidersUniverseScene", () => {
         theme={CANONICAL_THEME}
         onOpenProviders={onOpenProviders}
         onSwitchToAnalytics2D={onSwitchToAnalytics2D}
+        provenance="live"
+        onExitDemo={vi.fn()}
       />,
     );
     expect(screen.getByText("Providers3DUnavailableTitle")).toBeInTheDocument();
@@ -60,6 +62,8 @@ describe("ProvidersUniverseScene", () => {
           theme={CANONICAL_THEME}
           onOpenProviders={vi.fn()}
           onSwitchToAnalytics2D={vi.fn()}
+          provenance="live"
+          onExitDemo={vi.fn()}
         />,
       ),
     ).not.toThrow();

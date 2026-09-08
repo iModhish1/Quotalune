@@ -15,6 +15,13 @@ pub struct SettingsUpdate {
     pub low_power_mode_preference: Option<String>,
     pub dashboard_mode: Option<String>,
     pub dashboard_performance_preset: Option<String>,
+    pub demo_mode_enabled: Option<bool>,
+    pub demo_provider_mode: Option<String>,
+    pub demo_provider_count: Option<u32>,
+    pub demo_provider_ids: Option<Vec<String>>,
+    pub demo_scenario: Option<String>,
+    pub demo_seed: Option<u64>,
+    pub demo_history_days: Option<u32>,
     pub start_at_login: Option<bool>,
     pub start_minimized: Option<bool>,
     pub startup_destination: Option<String>,
@@ -194,6 +201,34 @@ impl SettingsUpdate {
             && let Some(preset) = quotalis_core::settings::DashboardPerformancePreset::parse(value)
         {
             settings.dashboard_performance_preset = preset;
+        }
+        // Phase 5.2: Demo Mode is CONFIGURATION only -- this patches the
+        // persisted settings, never generates or writes any simulated
+        // observation. See docs/validation/PHASE5_DEMO_MODE.md.
+        if let Some(value) = self.demo_mode_enabled {
+            settings.demo_mode_enabled = value;
+        }
+        if let Some(value) = self.demo_provider_mode.as_deref()
+            && let Some(mode) = quotalis_core::settings::DemoProviderMode::parse(value)
+        {
+            settings.demo_provider_mode = mode;
+        }
+        if let Some(value) = self.demo_provider_count {
+            settings.demo_provider_count = quotalis_core::settings::clamp_demo_provider_count(value);
+        }
+        if let Some(ref ids) = self.demo_provider_ids {
+            settings.demo_provider_ids = ids.clone();
+        }
+        if let Some(value) = self.demo_scenario.as_deref()
+            && let Some(scenario) = quotalis_core::settings::DemoScenario::parse(value)
+        {
+            settings.demo_scenario = scenario;
+        }
+        if let Some(value) = self.demo_seed {
+            settings.demo_seed = if value == 0 { 1 } else { value };
+        }
+        if let Some(value) = self.demo_history_days {
+            settings.demo_history_days = quotalis_core::settings::normalize_demo_history_days(value);
         }
         if let Some(ref s) = self.tray_icon_mode
             && let Some(mode) = parse_tray_icon_mode(s)

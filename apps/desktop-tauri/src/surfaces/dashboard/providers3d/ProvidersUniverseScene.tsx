@@ -28,6 +28,8 @@ import {
 } from "./sceneModel";
 import { resolveProviderIdentityColor } from "./identity";
 import { createProvidersUniverseEngine, type ProvidersUniverseEngine } from "./engine";
+import DemoIndicator from "../../../demoMode/DemoIndicator";
+import type { DataProvenance } from "../../../hooks/useEffectiveProviders";
 import "./ProvidersUniverseScene.css";
 
 export interface ProvidersUniverseSceneProps {
@@ -43,6 +45,14 @@ export interface ProvidersUniverseSceneProps {
    *  tab, not the 2D Dashboard -- caught by clicking the real button in
    *  a native capture with WebGL genuinely disabled). */
   onSwitchToAnalytics2D: () => void;
+  /** Whether `liveProviders` is real backend data or Demo Mode's
+   *  synthetic dataset (Phase 5.2 owner section 1) -- drives the
+   *  persistent DEMO indicator and "Connected · Demo" status text so
+   *  simulated data is never mistaken for a real connection. */
+  provenance: DataProvenance;
+  /** Turns Demo Mode off (the indicator's "Exit Demo" action, owner
+   *  section 28) -- never clears the user's saved demo customization. */
+  onExitDemo: () => void;
 }
 
 function monetaryText(node: ProviderSceneNode, t: (key: import("../../../i18n/keys").LocaleKey) => string): string {
@@ -60,7 +70,7 @@ function monetaryText(node: ProviderSceneNode, t: (key: import("../../../i18n/ke
   return `${t("Providers3DMonetaryCredits")}: ${amount}`;
 }
 
-function SelectedProviderPanel({ node }: { node: ProviderSceneNode }) {
+function SelectedProviderPanel({ node, isDemo }: { node: ProviderSceneNode; isDemo: boolean }) {
   const { t } = useLocale();
   const resetText = useFormattedResetTime(node.resetsAt, null, true, "reset");
   return (
@@ -71,6 +81,7 @@ function SelectedProviderPanel({ node }: { node: ProviderSceneNode }) {
     >
       <h3>
         <bdi>{node.displayName}</bdi>
+        {isDemo && <span className="providers3d__demo-chip">{t("DemoIndicatorBadge")}</span>}
       </h3>
       <dl>
         <div>
@@ -87,10 +98,14 @@ function SelectedProviderPanel({ node }: { node: ProviderSceneNode }) {
           <dt>{t("Providers3DAuthStatus")}</dt>
           <dd>
             {node.authState === "ready"
-              ? t("Providers3DAuthReady")
-              : node.authState === "needsAuth"
-                ? t("DashboardAlertAuthRequired").replace("{}", node.displayName)
-                : t("DashboardAlertUnavailable").replace("{}", node.displayName)}
+              ? isDemo
+                ? t("Providers3DAuthReadyDemo")
+                : t("Providers3DAuthReady")
+              : isDemo
+                ? t("Providers3DDemoStateButton")
+                : node.authState === "needsAuth"
+                  ? t("DashboardAlertAuthRequired").replace("{}", node.displayName)
+                  : t("DashboardAlertUnavailable").replace("{}", node.displayName)}
           </dd>
         </div>
         <div>
@@ -108,6 +123,8 @@ export default function ProvidersUniverseScene({
   theme,
   onOpenProviders,
   onSwitchToAnalytics2D,
+  provenance,
+  onExitDemo,
 }: ProvidersUniverseSceneProps) {
   const { t } = useLocale();
   const systemReducedMotion = useReducedMotion();
@@ -250,6 +267,11 @@ export default function ProvidersUniverseScene({
   return (
     <div className="providers3d" data-qa-motion={reducedMotion ? "reduced" : "full"}>
       <div className="providers3d__canvas-wrap" ref={containerRef}>
+        {provenance === "demo" && (
+          <div className="providers3d__demo-indicator">
+            <DemoIndicator providerCount={nodes.length} onExit={onExitDemo} />
+          </div>
+        )}
         <canvas
           ref={canvasRef}
           className="providers3d__canvas"
@@ -299,7 +321,7 @@ export default function ProvidersUniverseScene({
         </ul>
       </nav>
 
-      {selectedNode && <SelectedProviderPanel node={selectedNode} />}
+      {selectedNode && <SelectedProviderPanel node={selectedNode} isDemo={provenance === "demo"} />}
     </div>
   );
 }

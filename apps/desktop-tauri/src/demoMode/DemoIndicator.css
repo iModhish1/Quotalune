@@ -1,0 +1,37 @@
+.demo-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--qa-hairline-strong, rgba(200, 214, 230, 0.18));
+  background: var(--qa-material-raised, rgba(255, 255, 255, 0.06));
+  font-size: 12px;
+  line-height: 1;
+  color: var(--qa-ink-primary, #e8eaed);
+  white-space: nowrap;
+}
+
+.demo-indicator__badge {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--qa-accent, #2dd4bf);
+}
+
+.demo-indicator__detail {
+  color: var(--qa-ink-muted, #aeb9c5);
+}
+
+.demo-indicator__exit {
+  border: none;
+  background: transparent;
+  color: var(--qa-ink-primary, #e8eaed);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
+
+.demo-indicator__exit:hover {
+  color: var(--qa-accent, #2dd4bf);
+}

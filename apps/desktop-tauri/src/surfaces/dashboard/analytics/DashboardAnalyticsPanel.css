@@ -143,3 +143,7 @@
   .dashboard-analytics__range{flex-wrap:wrap;border-radius:10px}
   .dashboard-analytics__kpis-primary{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
 }
+
+.dashboard-analytics__demo-indicator {
+  margin-bottom: 12px;
+}

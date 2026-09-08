@@ -14,11 +14,19 @@ export function useDashboardState({
   bootstrapProviders,
   settings,
   deepLinkProviderId,
+  bypassEnabledFilter,
 }: {
   providers: ProviderUsageSnapshot[];
   bootstrapProviders: BootstrapState["providers"];
   settings: SettingsSnapshot;
   deepLinkProviderId?: string;
+  /** Phase 5.2: Demo Mode's synthetic providers are never a subset of the
+   *  real profile's `enabledProviders` (owner section 19) -- filtering
+   *  them by it would wipe out the whole demo dataset. Callers pass
+   *  `true` here when `providers` came from `useEffectiveProviders()`
+   *  with `provenance === "demo"`; real (live) data always goes through
+   *  the filter as before. */
+  bypassEnabledFilter?: boolean;
 }) {
   // `orderProviderSnapshots` only SORTS -- it ranks a disabled/stale
   // provider to the end but never excludes it. `providers` itself
@@ -36,9 +44,10 @@ export function useDashboardState({
   // (`AnalyticsDashboard.tsx`, `PopOutPanel.tsx`), so filtering fixes
   // both at once.
   const enabledProviders = useMemo(() => {
+    if (bypassEnabledFilter) return providers;
     const enabled = new Set(settings.enabledProviders);
     return providers.filter((p) => enabled.has(p.providerId));
-  }, [providers, settings.enabledProviders]);
+  }, [providers, settings.enabledProviders, bypassEnabledFilter]);
 
   const sorted = useMemo(
     () =>
