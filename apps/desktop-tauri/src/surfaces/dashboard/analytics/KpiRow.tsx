@@ -32,7 +32,7 @@ function KpiCard({ label, value, unavailableReason, tone = "default" }: KpiCardP
 
 function NextResetValue({ resetsAt, relative }: { resetsAt: string; relative: boolean }) {
   const formatted = useFormattedResetTime(resetsAt, null, relative, "reset");
-  return <>{formatted}</>;
+  return <bdi>{formatted}</bdi>;
 }
 
 /**
@@ -58,9 +58,12 @@ export default function KpiRow({
       <KpiCard
         label={t("DashboardKpiHighestUsage")}
         value={
-          kpis.highestUsageProvider
-            ? `${kpis.highestUsageProvider.providerName} · ${formatPercentage(kpis.highestUsageProvider.usedPercent)}`
-            : null
+          kpis.highestUsageProvider ? (
+            // Provider name + percentage are an LTR-safe technical pairing
+            // (owner section 16) -- isolate the whole value so it never
+            // reorders inside an RTL sentence.
+            <bdi>{`${kpis.highestUsageProvider.providerName} · ${formatPercentage(kpis.highestUsageProvider.usedPercent)}`}</bdi>
+          ) : null
         }
         unavailableReason={t("DashboardValueUnavailable")}
       />

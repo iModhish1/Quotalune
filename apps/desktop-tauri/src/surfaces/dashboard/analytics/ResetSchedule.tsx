@@ -27,8 +27,12 @@ function ResetRow({
   const formatted = useFormattedResetTime(resetsAt, null, relative, "reset");
   return (
     <li className="dashboard-analytics__reset-schedule-row">
-      <span className="dashboard-analytics__reset-schedule-name">{providerName}</span>
-      <span className="dashboard-analytics__reset-schedule-value">{formatted}</span>
+      <span className="dashboard-analytics__reset-schedule-name">
+        <bdi>{providerName}</bdi>
+      </span>
+      <span className="dashboard-analytics__reset-schedule-value">
+        <bdi>{formatted}</bdi>
+      </span>
     </li>
   );
 }

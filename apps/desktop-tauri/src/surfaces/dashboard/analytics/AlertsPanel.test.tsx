@@ -89,7 +89,13 @@ describe("AlertsPanel", () => {
     renderPanel([
       provider({ errorState: "needsAuthentication", error: "OAuth token expired: refresh_token invalid" }),
     ]);
-    expect(await screen.findByText("Claude needs sign-in")).toBeInTheDocument();
+    // The provider name renders inside a <bdi> for RTL isolation (owner
+    // section 16), so the sentence is split across nodes -- match on the
+    // alert-text container's full textContent instead of a single node.
+    const alertText = await screen.findByText(
+      (_, element) => element?.className === "dashboard-analytics__alert-text",
+    );
+    expect(alertText).toHaveTextContent("Claude needs sign-in");
     expect(screen.queryByText(/OAuth token expired/)).not.toBeInTheDocument();
   });
 
@@ -102,6 +108,9 @@ describe("AlertsPanel", () => {
 
   it("renders a quota-critical alert using the real reported usage", async () => {
     renderPanel([provider({ primary: rateWindow(95) })]);
-    expect(await screen.findByText("Claude has nearly exhausted its quota")).toBeInTheDocument();
+    const alertText = await screen.findByText(
+      (_, element) => element?.className === "dashboard-analytics__alert-text",
+    );
+    expect(alertText).toHaveTextContent("Claude has nearly exhausted its quota");
   });
 });

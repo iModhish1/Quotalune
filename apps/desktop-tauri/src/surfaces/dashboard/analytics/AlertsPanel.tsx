@@ -12,6 +12,23 @@ const ALERT_KEYS: Record<DashboardAlert["kind"], LocaleKey> = {
 };
 
 /**
+ * Splits a "{} ..." template on its single placeholder and wraps the
+ * provider name in `<bdi>` (owner section 16: provider/model names stay
+ * LTR-isolated inside an RTL sentence, never reversed). The surrounding
+ * template text renders as plain text either side of it.
+ */
+function renderWithIsolatedProvider(template: string, providerName: string) {
+  const [before, after] = template.split("{}");
+  return (
+    <>
+      {before}
+      <bdi>{providerName}</bdi>
+      {after}
+    </>
+  );
+}
+
+/**
  * Deterministic, local, rule-based alerts (owner section 22), doubling as
  * the "friendly provider errors" surface (owner section 10/20): an
  * auth-required alert reads "{provider} needs sign-in" with a Reconnect
@@ -44,7 +61,7 @@ export default function AlertsPanel({
               className={`dashboard-analytics__alert dashboard-analytics__alert--${alert.severity}`}
             >
               <span className="dashboard-analytics__alert-text">
-                {t(ALERT_KEYS[alert.kind]).replace("{}", alert.providerName)}
+                {renderWithIsolatedProvider(t(ALERT_KEYS[alert.kind]), alert.providerName)}
               </span>
               {(alert.kind === "authRequired" || alert.kind === "unavailable") && (
                 <button

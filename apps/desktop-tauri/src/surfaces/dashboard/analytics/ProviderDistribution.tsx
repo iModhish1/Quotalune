@@ -34,7 +34,9 @@ export default function ProviderDistribution({
         <ul className="dashboard-analytics__distribution-list">
           {ranked.map((entry) => (
             <li key={`${entry.provider}:${entry.accountId}`} className="dashboard-analytics__distribution-row">
-              <span className="dashboard-analytics__distribution-name">{entry.provider}</span>
+              <span className="dashboard-analytics__distribution-name">
+                <bdi>{entry.provider}</bdi>
+              </span>
               <div className="dashboard-analytics__distribution-bar-track">
                 <div
                   className="dashboard-analytics__distribution-bar-fill"
@@ -45,7 +47,7 @@ export default function ProviderDistribution({
                 />
               </div>
               <span className="dashboard-analytics__distribution-value">
-                {formatPercentage(entry.share * 100)}
+                <bdi>{formatPercentage(entry.share * 100)}</bdi>
               </span>
             </li>
           ))}
