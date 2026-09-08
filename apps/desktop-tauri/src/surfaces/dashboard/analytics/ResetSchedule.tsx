@@ -1,5 +1,6 @@
 import { useLocale } from "../../../hooks/useLocale";
 import { useFormattedResetTime } from "../../../hooks/useFormattedResetTime";
+import { ProviderIcon } from "../../../components/providers/ProviderIcon";
 import { rankProvidersByResetTime } from "./dashboardSelectors";
 import type { ProviderUsageSnapshot } from "../../../types/bridge";
 
@@ -16,10 +17,12 @@ import type { ProviderUsageSnapshot } from "../../../types/bridge";
  * here.
  */
 function ResetRow({
+  providerId,
   providerName,
   resetsAt,
   relative,
 }: {
+  providerId: string;
   providerName: string;
   resetsAt: string;
   relative: boolean;
@@ -27,6 +30,7 @@ function ResetRow({
   const formatted = useFormattedResetTime(resetsAt, null, relative, "reset");
   return (
     <li className="dashboard-analytics__reset-schedule-row">
+      <ProviderIcon providerId={providerId} size={14} className="dashboard-analytics__reset-schedule-glyph" />
       <span className="dashboard-analytics__reset-schedule-name">
         <bdi>{providerName}</bdi>
       </span>
@@ -49,17 +53,20 @@ export default function ResetSchedule({
 
   return (
     <section
-      className="dashboard-analytics__reset-schedule"
+      className={`dashboard-analytics__reset-schedule${ranked.length === 0 ? " dashboard-analytics__reset-schedule--empty" : ""}`}
       aria-label={t("DashboardResetScheduleTitle")}
     >
       <h2>{t("DashboardResetScheduleTitle")}</h2>
       {ranked.length === 0 ? (
-        <p className="dashboard-analytics__empty">{t("DashboardResetScheduleEmpty")}</p>
+        <p className="dashboard-analytics__empty dashboard-analytics__empty--compact">
+          {t("DashboardResetScheduleEmpty")}
+        </p>
       ) : (
         <ul className="dashboard-analytics__reset-schedule-list">
           {ranked.map((entry) => (
             <ResetRow
               key={entry.providerId}
+              providerId={entry.providerId}
               providerName={entry.providerName}
               resetsAt={entry.resetsAt}
               relative={relative}

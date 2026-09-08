@@ -517,6 +517,20 @@ locale_keys! {
     DashboardDataSamples,
     DashboardResetScheduleTitle,
     DashboardResetScheduleEmpty,
+    // Phase 3.5 visual/semantic refinement: the header's compact "Analytics
+    // Control Strip" history chip, the Current-Status/Selected-Range section
+    // eyebrows (owner sections 2/7/8: distinguish live provider state from
+    // range-scoped history, and stop the provider filter from visually
+    // implying it scopes the whole page when it only scopes range-based
+    // widgets), and Provider Distribution's honest "historical share, not
+    // live connectivity" caption/solo-provider copy.
+    DashboardHistoryChipCollecting,
+    DashboardHistoryChipToday,
+    DashboardHistoryChipDays,
+    DashboardCurrentStatusEyebrow,
+    DashboardSelectedRangeEyebrow,
+    DashboardDistributionCaption,
+    DashboardDistributionSoloAll,
     // Shared, generic label for the peak-value annotation on the
     // dependency-free `LineChart` primitive (components/charts/LineChart.tsx)
     // -- used by both the Dashboard's Usage Trend widget and the provider

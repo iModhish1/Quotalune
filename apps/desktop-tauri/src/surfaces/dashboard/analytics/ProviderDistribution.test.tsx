@@ -32,8 +32,10 @@ function renderPanel(providers: DashboardProviderSummary[]) {
   tauriMocks.getLocaleStrings.mockResolvedValue({
     language: "english",
     entries: {
-      DashboardDistributionTitle: "Provider Distribution",
+      DashboardDistributionTitle: "Historical Usage Share",
       DashboardDistributionEmpty: "Not enough usage yet to show a distribution",
+      DashboardDistributionCaption: "Share of usage in the selected range",
+      DashboardDistributionSoloAll: "{} accounts for all usage in this range",
     },
   });
   return render(
@@ -58,6 +60,17 @@ describe("ProviderDistribution", () => {
     expect(
       await screen.findByText("Not enough usage yet to show a distribution"),
     ).toBeInTheDocument();
+  });
+
+  it("renders a compact one-line statement for a single real provider instead of a redundant 100%-filled bar", async () => {
+    renderPanel([summary({ provider: "codex", usedPercent: 42 })]);
+    expect(
+      await screen.findByText("accounts for all usage in this range", { exact: false }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("codex")).toBeInTheDocument();
+    // The full bar-list markup (only meaningful for comparing multiple
+    // providers) must not render for a lone provider.
+    expect(document.querySelector(".dashboard-analytics__distribution-bar-track")).toBeNull();
   });
 
   it("ranks real providers by usage share", async () => {

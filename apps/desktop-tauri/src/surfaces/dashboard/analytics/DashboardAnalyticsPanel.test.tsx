@@ -27,6 +27,11 @@ const LOCALE_ENTRIES = {
   DashboardRangeLast3Months: "3 Months",
   DashboardRangeThisYear: "Year",
   DashboardProviderFilterAll: "All Providers",
+  DashboardHistoryChipCollecting: "Collecting history",
+  DashboardHistoryChipToday: "History from today",
+  DashboardHistoryChipDays: "{} days of history",
+  DashboardCurrentStatusEyebrow: "Current Status",
+  DashboardSelectedRangeEyebrow: "Selected Range",
   DashboardKpiActiveProviders: "Active Providers",
   DashboardKpiHighestUsage: "Highest Usage",
   DashboardKpiNextReset: "Next Reset",
@@ -39,12 +44,16 @@ const LOCALE_ENTRIES = {
   DashboardMetricSpend: "Estimated Cost",
   DashboardTrendEmptyForRange: "No data in this range yet",
   DashboardCollectingHistory: "Collecting local usage history…",
-  DashboardDistributionTitle: "Provider Distribution",
+  DashboardDistributionTitle: "Historical Usage Share",
   DashboardDistributionEmpty: "Not enough usage yet to show a distribution",
+  DashboardDistributionCaption: "Share of usage in the selected range",
+  DashboardDistributionSoloAll: "{} accounts for all usage in this range",
   DashboardAlertsTitle: "Alerts",
   DashboardAlertsEmpty: "No alerts — everything looks fine",
   DashboardAlertAuthRequired: "{} needs sign-in",
   DashboardReconnect: "Reconnect",
+  DashboardResetScheduleTitle: "Reset Schedule",
+  DashboardResetScheduleEmpty: "No upcoming resets to show yet",
   DashboardDataStatusTitle: "Data Status",
   DashboardDataStatusHistoryActive: "Local history: active",
   DashboardDataStatusHistoryCollecting: "Local history: collecting",
@@ -145,27 +154,57 @@ describe("DashboardAnalyticsPanel", () => {
 
   it("wires the header, KPIs, trend, distribution, alerts, and data status together from one snapshot call", async () => {
     renderPanel([provider()], snapshot());
-    expect(await screen.findByText("Dashboard")).toBeInTheDocument();
+    // The native app chrome already shows "QUOTALIS / Dashboard" -- the
+    // control strip no longer repeats a giant title (owner Phase 3.5
+    // section 2), so "Today" (a range button, always synchronous) is the
+    // render-complete anchor instead.
+    expect(await screen.findByText("Today")).toBeInTheDocument();
     // "Data Status" only renders once the async snapshot resolves (DataStatusPanel
     // returns null while snapshot is still null) -- wait on it before asserting
     // on the rest so this isn't racing the header's synchronous render.
     expect(await screen.findByText("Data Status")).toBeInTheDocument();
+    expect(screen.getByText("Current Status")).toBeInTheDocument();
+    expect(screen.getByText("Selected Range")).toBeInTheDocument();
     expect(screen.getByText("Active Providers")).toBeInTheDocument();
     expect(screen.getByText("Usage Trend")).toBeInTheDocument();
-    expect(screen.getByText("Provider Distribution")).toBeInTheDocument();
+    expect(screen.getByText("Historical Usage Share")).toBeInTheDocument();
     // Exactly one fetch for the default range -- no widget re-fetches independently.
     expect(tauriMocks.getDashboardSnapshot).toHaveBeenCalledTimes(1);
   });
 
   it("changing the range triggers exactly one new snapshot fetch with the new range", async () => {
     renderPanel([provider()], snapshot());
-    await screen.findByText("Dashboard");
+    await screen.findByText("Today");
     fireEvent.click(screen.getByRole("radio", { name: "30 Days" }));
     await vi.waitFor(() =>
       expect(tauriMocks.getDashboardSnapshot).toHaveBeenLastCalledWith(
         expect.objectContaining({ range: "last30Days" }),
       ),
     );
+  });
+
+  it("the provider filter genuinely scopes the Selected Range fetch, while Current Status (KPIs/Alerts/Reset Schedule) stays live and unfiltered -- the explicit Phase 3.5 section 8 semantics", async () => {
+    renderPanel(
+      [provider({ providerId: "claude", displayName: "Claude" }), provider({ providerId: "codex", displayName: "Codex" })],
+      snapshot(),
+    );
+    await screen.findByText("Today");
+    // Two real providers -- "Active Providers" (a Current Status KPI) must
+    // read 2 regardless of any Selected Range provider filter.
+    expect(screen.getByText("Active Providers").closest(".dashboard-kpi")).toHaveTextContent("2");
+
+    // Filtering Selected Range to just Codex must genuinely re-scope the
+    // snapshot fetch (the historical/range-based widgets)...
+    fireEvent.change(screen.getByLabelText("All Providers"), { target: { value: "codex" } });
+    await vi.waitFor(() =>
+      expect(tauriMocks.getDashboardSnapshot).toHaveBeenLastCalledWith(
+        expect.objectContaining({ providers: ["codex"] }),
+      ),
+    );
+    // ...but must NOT silently narrow the unfiltered Current Status count --
+    // it stays 2, because that section is explicitly live/global, not
+    // scoped by the Selected Range control sitting above it.
+    expect(screen.getByText("Active Providers").closest(".dashboard-kpi")).toHaveTextContent("2");
   });
 
   it("an auth-required provider surfaces a friendly alert with a working Reconnect action", async () => {
@@ -181,7 +220,9 @@ describe("DashboardAnalyticsPanel", () => {
 
   it("shows honest unavailable/collecting states with zero real history, never fabricated numbers", async () => {
     renderPanel([], snapshot());
-    expect(await screen.findByText("Local history: collecting")).toBeInTheDocument();
+    // Data Status merges what used to be separate rows into one compact
+    // line (owner Phase 3.5 section 11) -- match on substring.
+    expect(await screen.findByText(/Local history: collecting/)).toBeInTheDocument();
     expect(screen.getByText("Collecting local usage history…")).toBeInTheDocument();
   });
 });

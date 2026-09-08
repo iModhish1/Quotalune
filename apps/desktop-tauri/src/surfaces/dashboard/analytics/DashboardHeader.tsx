@@ -29,44 +29,52 @@ export interface DashboardHeaderProps {
   providerOptions: { id: string; name: string }[];
   providerFilter: string | null;
   onProviderFilterChange: (providerId: string | null) => void;
+  /** Real history-availability summary (owner Phase 3.5 section 2), e.g.
+   *  "Collecting history" / "7 days of history" -- null while the first
+   *  snapshot hasn't resolved yet. Never a fabricated placeholder. */
+  historyChip: string | null;
 }
 
-/** Dashboard title/subtitle + the one global range selector every widget
- *  below shares -- no widget queries its own independent date window
- *  (owner section 7). */
+/**
+ * The Analytics Control Strip (owner Phase 3.5 section 2): the native app
+ * chrome already shows "QUOTALIS / Dashboard" as the page identity, so this
+ * no longer repeats a giant "Dashboard" title -- it's purely the shared
+ * range/provider-scope controls plus a real history-availability chip, the
+ * one state every widget below implicitly depends on. `DashboardSubtitle`
+ * is kept only as the range radiogroup's accessible name (not rendered as
+ * visible text) so screen readers still get context without a second
+ * on-screen "Dashboard" heading nested under the real one.
+ */
 export default function DashboardHeader({
   range,
   onRangeChange,
   providerOptions,
   providerFilter,
   onProviderFilterChange,
+  historyChip,
 }: DashboardHeaderProps) {
   const { t } = useLocale();
   return (
     <header className="dashboard-analytics__header">
-      <div className="dashboard-analytics__heading">
-        <h1>{t("TabDashboard")}</h1>
-        <p>{t("DashboardSubtitle")}</p>
+      <div
+        className="dashboard-analytics__range"
+        role="radiogroup"
+        aria-label={t("DashboardSubtitle")}
+      >
+        {SELECTABLE_RANGES.map((r) => (
+          <button
+            key={r}
+            type="button"
+            role="radio"
+            aria-checked={range === r}
+            className={`dashboard-analytics__range-btn${range === r ? " dashboard-analytics__range-btn--active" : ""}`}
+            onClick={() => onRangeChange(r)}
+          >
+            {t(RANGE_KEYS[r])}
+          </button>
+        ))}
       </div>
       <div className="dashboard-analytics__controls">
-        <div
-          className="dashboard-analytics__range"
-          role="radiogroup"
-          aria-label={t("DashboardSubtitle")}
-        >
-          {SELECTABLE_RANGES.map((r) => (
-            <button
-              key={r}
-              type="button"
-              role="radio"
-              aria-checked={range === r}
-              className={`dashboard-analytics__range-btn${range === r ? " dashboard-analytics__range-btn--active" : ""}`}
-              onClick={() => onRangeChange(r)}
-            >
-              {t(RANGE_KEYS[r])}
-            </button>
-          ))}
-        </div>
         {providerOptions.length > 1 && (
           <select
             className="dashboard-analytics__provider-filter"
@@ -82,6 +90,7 @@ export default function DashboardHeader({
             ))}
           </select>
         )}
+        {historyChip && <span className="dashboard-analytics__history-chip">{historyChip}</span>}
       </div>
     </header>
   );

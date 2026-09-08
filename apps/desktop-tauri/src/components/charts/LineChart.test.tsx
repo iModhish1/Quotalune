@@ -66,4 +66,22 @@ describe("LineChart", () => {
     const bdi = document.querySelector(".chart__axis-max bdi");
     expect(bdi).toHaveTextContent("30.00");
   });
+
+  it("renders a grounding baseline hairline and a distinct ring on the actual peak point (section 13 visual refinement)", () => {
+    render(<LineChart data={points([10, 90, 30])} ariaLabel="Usage" animations={false} />);
+    expect(document.querySelector(".chart__baseline")).not.toBeNull();
+    const peakRing = document.querySelector(".chart__peak-ring") as SVGCircleElement | null;
+    expect(peakRing).not.toBeNull();
+    // Peak is the middle point (index 1) -- the ring must sit at that
+    // point's x, not a fixed/arbitrary position.
+    const points_ = Array.from(document.querySelectorAll(".chart__point"));
+    expect(peakRing?.getAttribute("cx")).toBe(points_[1].getAttribute("cx"));
+  });
+
+  it("fills the area under the line with a gradient (not a single flat opacity block)", () => {
+    render(<LineChart data={points([10, 20, 30])} ariaLabel="Usage" animations={false} />);
+    expect(document.querySelector("linearGradient")).not.toBeNull();
+    const area = document.querySelector(".chart__area");
+    expect(area?.getAttribute("fill")).toMatch(/^url\(#/);
+  });
 });

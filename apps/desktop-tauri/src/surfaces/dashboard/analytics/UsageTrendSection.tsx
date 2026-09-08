@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useLocale } from "../../../hooks/useLocale";
+import { resolveIntlLocale } from "../../../i18n/resolveIntlLocale";
 import { LineChart, type LineChartPoint } from "../../../components/charts/LineChart";
 import { providerCreditsColor, providerCostColor } from "../../../components/charts/chartPalette";
 import { formatPercentage } from "../../../design-system/percent";
@@ -7,16 +8,24 @@ import type { DashboardSnapshot } from "../../../types/bridge";
 
 type Metric = "usage" | "spend";
 
-function bucketFormatter(grain: "hourly" | "daily", timezone: string) {
+/**
+ * Previously used `Intl.DateTimeFormat(undefined, ...)`, which always
+ * follows the WebView2 environment's own default locale and completely
+ * ignores the app's selected UI language -- an Arabic-language user would
+ * still see English month abbreviations ("Sep 4") on the trend axis. Now
+ * resolves through the same `resolveIntlLocale` table every other
+ * locale-aware Intl call in the app uses.
+ */
+function bucketFormatter(grain: "hourly" | "daily", timezone: string, uiLocale: string) {
   try {
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat(uiLocale, {
       timeZone: timezone,
       ...(grain === "hourly"
         ? { hour: "numeric" }
         : { month: "short", day: "numeric" }),
     });
   } catch {
-    return new Intl.DateTimeFormat(undefined, grain === "hourly" ? { hour: "numeric" } : { month: "short", day: "numeric" });
+    return new Intl.DateTimeFormat(uiLocale, grain === "hourly" ? { hour: "numeric" } : { month: "short", day: "numeric" });
   }
 }
 
@@ -46,14 +55,15 @@ function groupByProvider<T extends { provider: string; accountId: string; bucket
  * a meaningful number.
  */
 export default function UsageTrendSection({ snapshot }: { snapshot: DashboardSnapshot | null }) {
-  const { t } = useLocale();
+  const { t, language } = useLocale();
   const hasCost = snapshot?.availability.hasCostData ?? false;
   const [metric, setMetric] = useState<Metric>("usage");
   const activeMetric = metric === "spend" && !hasCost ? "usage" : metric;
 
+  const uiLocale = resolveIntlLocale(language);
   const fmt = useMemo(
-    () => bucketFormatter(snapshot?.grain ?? "daily", snapshot?.timezone ?? "UTC"),
-    [snapshot?.grain, snapshot?.timezone],
+    () => bucketFormatter(snapshot?.grain ?? "daily", snapshot?.timezone ?? "UTC", uiLocale),
+    [snapshot?.grain, snapshot?.timezone, uiLocale],
   );
 
   const usageGroups = useMemo(

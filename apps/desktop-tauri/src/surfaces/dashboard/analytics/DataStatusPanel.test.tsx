@@ -65,19 +65,22 @@ describe("DataStatusPanel", () => {
 
   it("reports collecting history and unavailable cost with no real data yet", async () => {
     renderPanel(snapshot());
-    expect(await screen.findByText("Local history: collecting")).toBeInTheDocument();
-    expect(screen.getByText("Cost data unavailable")).toBeInTheDocument();
+    // Two compact lines now (owner section 11), each merging what used to
+    // be separate <dl> rows into one text node -- match on substring/
+    // textContent rather than an exact standalone string.
+    expect(await screen.findByText(/Local history: collecting/)).toBeInTheDocument();
+    expect(screen.getByText(/Cost data unavailable/)).toBeInTheDocument();
   });
 
   it("never claims pricing is verified", async () => {
     renderPanel(snapshot({ sampleCount: 500, hasCostData: true }));
-    expect(await screen.findByText("Pricing: not yet verified")).toBeInTheDocument();
-    expect(screen.getByText("Cost: estimated (provider-reported)")).toBeInTheDocument();
-    expect(screen.queryByText(/verified$/i)).not.toHaveTextContent("Pricing verified");
+    expect(await screen.findByText(/Pricing: not yet verified/)).toBeInTheDocument();
+    expect(screen.getByText(/Cost: estimated \(provider-reported\)/)).toBeInTheDocument();
+    expect(screen.queryByText(/Pricing verified/i)).not.toBeInTheDocument();
   });
 
   it("renders the real sample count, not a fabricated number", async () => {
     renderPanel(snapshot({ sampleCount: 64 }));
-    expect(await screen.findByText("64 samples")).toBeInTheDocument();
+    expect(await screen.findByText(/64 samples/)).toBeInTheDocument();
   });
 });

@@ -7,23 +7,8 @@ import {
   resolveRegionalLocale,
   type ResetPresentationSettingsDto,
 } from "../lib/resetPresentationSettings";
-import type { Language } from "../types/bridge";
 import type { StageResetOptions } from "../components/orbit/stageProviders";
-
-/** Same BCP-47 tags `localeDirection.ts` applies to the document -- reused
- *  here so the UI language and the Intl locale used for reset formatting
- *  never drift apart. */
-const LANGUAGE_TAGS: Record<Language, string> = {
-  english: "en-US",
-  chinese: "zh-CN",
-  chinesetraditional: "zh-TW",
-  japanese: "ja-JP",
-  korean: "ko-KR",
-  spanish: "es-MX",
-  russian: "ru-RU",
-  turkish: "tr-TR",
-  arabic: "ar-SA",
-};
+import { resolveIntlLocale } from "../i18n/resolveIntlLocale";
 
 function applyTemplate(template: string, args: string[]): string {
   let result = template;
@@ -51,7 +36,7 @@ export function useResetStageOptions(
   surfaceId?: string,
 ): StageResetOptions {
   const { t, language } = useLocale();
-  const uiLocale = LANGUAGE_TAGS[language];
+  const uiLocale = resolveIntlLocale(language);
   const translate: ResetTranslate = useMemo(
     () => (key: ResetLocaleKey, args: string[]) => applyTemplate(t(key as LocaleKey), args),
     [t],

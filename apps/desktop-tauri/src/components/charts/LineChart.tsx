@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useChartAnimation } from "./useChartAnimation";
 
 /**
@@ -52,6 +52,7 @@ export function LineChart({
   const fmt = valueFormatter ?? ((v: number) => v.toFixed(2));
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
+  const gradientId = useId();
 
   const anim = useChartAnimation(data.length, animations, [
     data.length,
@@ -135,8 +136,29 @@ export function LineChart({
         aria-label={ariaLabel}
       >
         {areaPath && (
-          <path d={areaPath} fill={color} opacity={0.18} className="chart__area" />
+          <>
+            {/* Restrained observatory-style fill (section 13): a gradient
+                that fades toward the baseline instead of one flat block of
+                opacity, so the plot reads as quiet depth rather than a
+                heavy solid slab of color. */}
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity={0.22} />
+                <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <path d={areaPath} fill={`url(#${gradientId})`} className="chart__area" />
+          </>
         )}
+        {/* Baseline hairline -- grounds the plot instead of letting the
+            fill/line float with no lower reference edge. */}
+        <line
+          x1={pad}
+          y1={baselineY}
+          x2={pad + usableWidth}
+          y2={baselineY}
+          className="chart__baseline"
+        />
         <polyline
           points={polyline}
           fill="none"
@@ -163,6 +185,20 @@ export function LineChart({
             </title>
           </circle>
         ))}
+        {/* Peak marker (section 13): a quiet outer ring ties the "Max"
+            annotation below to the actual point it describes, instead of
+            the peak looking identical to every other sample. */}
+        <circle
+          cx={coords[maxIndex]?.x}
+          cy={coords[maxIndex]?.y}
+          r={3.5}
+          fill="none"
+          stroke={color}
+          strokeWidth={1}
+          opacity={0.55}
+          className="chart__peak-ring"
+          aria-hidden="true"
+        />
       </svg>
       <div className="chart__axis">
         <span style={{ left: `${pad}px` }}>{data[0].label.slice(-5)}</span>

@@ -1,5 +1,6 @@
 import { useLocale } from "../../../hooks/useLocale";
 import type { LocaleKey } from "../../../i18n/keys";
+import { ProviderIcon } from "../../../components/providers/ProviderIcon";
 import { buildAlerts, type DashboardAlert } from "./dashboardSelectors";
 import type { ProviderUsageSnapshot, SettingsSnapshot } from "../../../types/bridge";
 
@@ -49,7 +50,10 @@ export default function AlertsPanel({
   const alerts = buildAlerts(providers, settings);
 
   return (
-    <section className="dashboard-analytics__alerts" aria-label={t("DashboardAlertsTitle")}>
+    <section
+      className={`dashboard-analytics__alerts${alerts.length > 0 ? " dashboard-analytics__alerts--active" : ""}`}
+      aria-label={t("DashboardAlertsTitle")}
+    >
       <h2>{t("DashboardAlertsTitle")}</h2>
       {alerts.length === 0 ? (
         <p className="dashboard-analytics__empty">{t("DashboardAlertsEmpty")}</p>
@@ -60,6 +64,7 @@ export default function AlertsPanel({
               key={alert.id}
               className={`dashboard-analytics__alert dashboard-analytics__alert--${alert.severity}`}
             >
+              <ProviderIcon providerId={alert.providerId} size={16} className="dashboard-analytics__alert-glyph" />
               <span className="dashboard-analytics__alert-text">
                 {renderWithIsolatedProvider(t(ALERT_KEYS[alert.kind]), alert.providerName)}
               </span>

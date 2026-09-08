@@ -1,31 +1,57 @@
-.dashboard-analytics{display:flex;flex-direction:column;gap:14px;padding:2px 2px 4px;min-width:0}
+.dashboard-analytics{display:flex;flex-direction:column;gap:12px;padding:2px 2px 4px;min-width:0}
 
-.dashboard-analytics__header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--qa-hairline);border-radius:14px;background:color-mix(in srgb,var(--qa-material-raised) 55%,transparent)}
-.dashboard-analytics__heading h1{margin:0;color:var(--qa-ink-1);font-size:16px;font-weight:650}
-.dashboard-analytics__heading p{margin:2px 0 0;color:var(--qa-ink-3);font-size:11px}
+/* ── Analytics Control Strip (Phase 3.5 section 2) ──────────────────────
+   The native app chrome already shows "QUOTALIS / Dashboard" as the page
+   identity -- this strip is purely the shared range/provider-scope
+   controls plus a real history chip, not a second page title. */
+.dashboard-analytics__header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;border:1px solid var(--qa-hairline);border-radius:12px;background:color-mix(in srgb,var(--qa-material-raised) 42%,transparent)}
 .dashboard-analytics__controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .dashboard-analytics__range{display:flex;gap:2px;padding:2px;border:1px solid var(--qa-hairline);border-radius:999px;background:color-mix(in srgb,var(--qa-graphite-1) 60%,transparent)}
 .dashboard-analytics__range-btn{padding:5px 10px;border:none;border-radius:999px;background:transparent;color:var(--qa-ink-3);font:inherit;font-size:11px;cursor:pointer;white-space:nowrap}
 .dashboard-analytics__range-btn--active{background:color-mix(in srgb,var(--qa-accent) 26%,var(--qa-material-raised));color:var(--qa-ink-1)}
 .dashboard-analytics__provider-filter{padding:5px 10px;border:1px solid var(--qa-hairline);border-radius:10px;background:color-mix(in srgb,var(--qa-graphite-1) 60%,transparent);color:var(--qa-ink-2);font:inherit;font-size:11px}
+.dashboard-analytics__history-chip{padding:4px 10px;border:1px solid var(--qa-hairline);border-radius:999px;color:var(--qa-ink-3);font-size:10px;font-variant-numeric:tabular-nums;white-space:nowrap}
 
-.dashboard-analytics__kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
-.dashboard-kpi{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--qa-hairline);border-radius:12px;background:color-mix(in srgb,var(--qa-material-raised) 55%,transparent)}
-.dashboard-kpi--warning{border-color:color-mix(in srgb,var(--qa-status-high) 45%,var(--qa-hairline))}
-.dashboard-kpi--critical{border-color:color-mix(in srgb,var(--qa-status-critical) 55%,var(--qa-hairline))}
-.dashboard-kpi__label{color:var(--qa-ink-3);font-size:10px;text-transform:uppercase;letter-spacing:.05em}
-.dashboard-kpi__value{color:var(--qa-ink-1);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
-.dashboard-kpi__value--empty{color:var(--qa-ink-3);font-weight:500}
-.dashboard-kpi__hint{color:var(--qa-ink-3);font-size:10px}
+/* ── Section eyebrows (Phase 3.5 sections 7/8/9) ─────────────────────────
+   Explicit "Selected Range" vs "Current Status" labeling so the one
+   range/provider control strip above never looks like it silently scopes
+   every widget on the page -- Current Status is deliberately live and
+   unfiltered; Selected Range genuinely respects both controls. */
+.dashboard-analytics__eyebrow{margin:2px 2px 0;color:var(--qa-ink-4);font-size:10px;font-weight:650;text-transform:uppercase;letter-spacing:.1em}
 
 .dashboard-analytics__row{display:grid;grid-template-columns:2fr 1fr;gap:12px;align-items:start}
 .dashboard-analytics__row--single{grid-template-columns:1fr}
 
-.dashboard-analytics__trend,.dashboard-analytics__distribution,.dashboard-analytics__alerts,.dashboard-analytics__data-status,.dashboard-analytics__reset-schedule{padding:12px 14px;border:1px solid var(--qa-hairline);border-radius:14px;background:color-mix(in srgb,var(--qa-material-raised) 50%,transparent);min-width:0}
-.dashboard-analytics__trend h2,.dashboard-analytics__distribution h2,.dashboard-analytics__alerts h2,.dashboard-analytics__data-status h2,.dashboard-analytics__reset-schedule h2{margin:0 0 8px;color:var(--qa-ink-2);font-size:12px;font-weight:650;text-transform:uppercase;letter-spacing:.04em}
+/* ── Material hierarchy (Phase 3.5 sections 3/4): three surface tiers
+   instead of one flat treatment repeated on every card -- "compact
+   luxury" via depth/border/typography differences, no new colors beyond
+   the one restrained gold accent reserved for the single primary card. */
+
+/* Primary: Usage Trend -- the main analytics surface. */
+.dashboard-analytics__trend{padding:14px 16px;border:1px solid var(--qa-hairline-strong);border-top:2px solid var(--qa-accent-gold-soft);border-radius:16px;background:color-mix(in srgb,var(--qa-material-raised) 62%,transparent);min-width:0}
+.dashboard-analytics__trend h2{margin:0 0 2px;color:var(--qa-ink-1);font-size:13px;font-weight:700;letter-spacing:.02em}
+
+/* Secondary: provider breakdown, alerts, KPI cells. */
+.dashboard-analytics__distribution,.dashboard-analytics__alerts{padding:12px 14px;border:1px solid var(--qa-hairline);border-radius:14px;background:color-mix(in srgb,var(--qa-material-raised) 52%,transparent);min-width:0}
+.dashboard-analytics__distribution h2,.dashboard-analytics__alerts h2{margin:0 0 6px;color:var(--qa-ink-2);font-size:12px;font-weight:650;text-transform:uppercase;letter-spacing:.04em}
+.dashboard-analytics__caption{margin:-4px 0 8px;color:var(--qa-ink-4);font-size:10px}
+/* Alerts earns more visual weight once there is something to act on
+   (section 9) -- a slightly stronger border, not a louder color. */
+.dashboard-analytics__alerts--active{border-color:var(--qa-hairline-strong)}
+
+/* Tertiary: reset schedule, data status -- quiet supporting information,
+   smaller heading, tighter padding, lower material opacity. */
+.dashboard-analytics__reset-schedule,.dashboard-analytics__data-status{padding:9px 14px;border:1px solid var(--qa-hairline);border-radius:12px;background:color-mix(in srgb,var(--qa-material-raised) 36%,transparent);min-width:0}
+.dashboard-analytics__reset-schedule h2,.dashboard-analytics__data-status h2{margin:0 0 4px;color:var(--qa-ink-3);font-size:10.5px;font-weight:650;text-transform:uppercase;letter-spacing:.04em}
+/* Adaptive empty state (section 10): a tertiary card with nothing to show
+   collapses its own padding further rather than holding the same height
+   as when it has real rows. */
+.dashboard-analytics__reset-schedule--empty{padding-bottom:9px}
+
 .dashboard-analytics__section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .dashboard-analytics__section-head h2{margin:0}
 .dashboard-analytics__empty{margin:0;padding:14px 0;color:var(--qa-ink-3);font-size:11px;text-align:center}
+.dashboard-analytics__empty--compact{padding:6px 0}
 
 .dashboard-analytics__metric-toggle{display:flex;gap:2px;padding:2px;border:1px solid var(--qa-hairline);border-radius:999px}
 .dashboard-analytics__metric-btn{padding:4px 9px;border:none;border-radius:999px;background:transparent;color:var(--qa-ink-3);font:inherit;font-size:10px;cursor:pointer}
@@ -41,25 +67,53 @@
 .dashboard-analytics__distribution-bar-track{height:6px;border-radius:999px;background:var(--qa-track);overflow:hidden}
 .dashboard-analytics__distribution-bar-fill{height:100%;border-radius:999px}
 .dashboard-analytics__distribution-value{color:var(--qa-ink-3);font-size:10px;text-align:right;font-variant-numeric:tabular-nums}
+/* Single-provider case (section 17): a 100% share is definitional, not
+   comparative -- a plain compact line instead of a full-width bar. */
+.dashboard-analytics__distribution-solo{margin:0;padding:4px 0;color:var(--qa-ink-2);font-size:11px}
 
 .dashboard-analytics__alerts-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
-.dashboard-analytics__alert{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border-radius:9px;background:color-mix(in srgb,var(--qa-graphite-1) 55%,transparent);font-size:11px}
-.dashboard-analytics__alert--critical{border-left:2px solid var(--qa-status-critical)}
-.dashboard-analytics__alert--warning{border-left:2px solid var(--qa-status-high)}
-.dashboard-analytics__alert-text{color:var(--qa-ink-1)}
-.dashboard-analytics__alert-action{padding:3px 9px;border:1px solid var(--qa-hairline-strong);border-radius:7px;background:transparent;color:var(--qa-ink-2);font:inherit;font-size:10px;cursor:pointer;white-space:nowrap}
+.dashboard-analytics__alert{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:9px;background:color-mix(in srgb,var(--qa-graphite-1) 55%,transparent);font-size:11px}
+/* Restrained severity treatment (section 16): a quiet left rule, not a
+   bright/heavy red block. */
+.dashboard-analytics__alert--critical{border-left:2px solid color-mix(in srgb,var(--qa-status-critical) 70%,var(--qa-hairline-strong))}
+.dashboard-analytics__alert--warning{border-left:2px solid color-mix(in srgb,var(--qa-status-high) 60%,var(--qa-hairline-strong))}
+.dashboard-analytics__alert-glyph{flex:none}
+.dashboard-analytics__alert-text{flex:1;min-width:0;color:var(--qa-ink-1)}
+.dashboard-analytics__alert-action{flex:none;padding:3px 9px;border:1px solid var(--qa-hairline-strong);border-radius:7px;background:transparent;color:var(--qa-ink-2);font:inherit;font-size:10px;cursor:pointer;white-space:nowrap}
 
-.dashboard-analytics__data-status-list{margin:0;display:flex;flex-direction:column;gap:6px}
-.dashboard-analytics__data-status-row{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:11px}
-.dashboard-analytics__data-status-row dt{margin:0;color:var(--qa-ink-2)}
-.dashboard-analytics__data-status-row dd{margin:0;color:var(--qa-ink-3)}
+.dashboard-analytics__data-status-line{margin:0;color:var(--qa-ink-2);font-size:10.5px;font-variant-numeric:tabular-nums}
+.dashboard-analytics__data-status-line+.dashboard-analytics__data-status-line{margin-top:3px}
+.dashboard-analytics__data-status-line--muted{color:var(--qa-ink-4)}
 
-.dashboard-analytics__reset-schedule-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
-.dashboard-analytics__reset-schedule-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;font-size:11px}
-.dashboard-analytics__reset-schedule-name{color:var(--qa-ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dashboard-analytics__reset-schedule-value{color:var(--qa-ink-3);font-variant-numeric:tabular-nums;white-space:nowrap}
+.dashboard-analytics__reset-schedule-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.dashboard-analytics__reset-schedule-row{display:flex;align-items:center;gap:7px;padding:4px 0;font-size:11px}
+.dashboard-analytics__reset-schedule-glyph{flex:none}
+.dashboard-analytics__reset-schedule-name{flex:1;min-width:0;color:var(--qa-ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dashboard-analytics__reset-schedule-value{flex:none;color:var(--qa-ink-3);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ── KPI row: primary cells (real values) + a compact status strip for
+   metrics with no real data yet (Phase 3.5 section 6) ──────────────────── */
+.dashboard-analytics__kpis{display:flex;flex-direction:column;gap:8px}
+.dashboard-analytics__kpis-primary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.dashboard-kpi{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--qa-hairline);border-radius:12px;background:color-mix(in srgb,var(--qa-material-raised) 55%,transparent)}
+.dashboard-kpi--warning{border-color:color-mix(in srgb,var(--qa-status-high) 45%,var(--qa-hairline))}
+.dashboard-kpi--critical{border-color:color-mix(in srgb,var(--qa-status-critical) 55%,var(--qa-hairline))}
+.dashboard-kpi__label{color:var(--qa-ink-3);font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+.dashboard-kpi__value{color:var(--qa-ink-1);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+
+.dashboard-analytics__kpis-compact{display:flex;flex-wrap:wrap;gap:6px 14px;padding:6px 2px 0}
+.dashboard-kpi-compact{display:flex;align-items:baseline;gap:5px;font-size:10.5px}
+.dashboard-kpi-compact__label{color:var(--qa-ink-4);text-transform:uppercase;letter-spacing:.05em;font-size:9.5px}
+.dashboard-kpi-compact__value{color:var(--qa-ink-4)}
+.dashboard-kpi-compact__reason{color:var(--qa-ink-4)}
 
 @media(max-width:720px){
   .dashboard-analytics__row{grid-template-columns:1fr}
-  .dashboard-analytics__header{flex-direction:column;align-items:flex-start}
+  .dashboard-analytics__header{flex-direction:column;align-items:stretch}
+  .dashboard-analytics__controls{justify-content:space-between}
+}
+
+@media(max-width:480px){
+  .dashboard-analytics__range{flex-wrap:wrap;border-radius:10px}
+  .dashboard-analytics__kpis-primary{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
 }

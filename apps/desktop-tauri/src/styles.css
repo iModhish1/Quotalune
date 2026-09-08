@@ -3213,6 +3213,15 @@ body:has(.tray-panel-reveal) {
     filter 0.15s ease;
 }
 
+.chart__baseline {
+  stroke: var(--qa-hairline, rgba(255, 255, 255, 0.08));
+  stroke-width: 1;
+}
+
+.chart__peak-ring {
+  pointer-events: none;
+}
+
 .chart__bar:hover,
 .chart__stack-rect:hover,
 .chart__point:hover {
