@@ -18,6 +18,7 @@ pub mod logging;
 pub mod login;
 pub mod notifications;
 pub mod paths;
+pub mod pricing_eligibility;
 pub mod profiles;
 pub mod providers;
 pub mod secure_file;
