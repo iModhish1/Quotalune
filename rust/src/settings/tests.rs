@@ -1688,24 +1688,21 @@ fn demo_mode_settings_round_trip() {
 
 #[test]
 fn demo_provider_count_clamps_a_corrupt_on_disk_value_instead_of_zero_providers() {
-    let too_high: Settings = serde_json::from_str(
-        r#"{ "enabled_providers": [], "demo_provider_count": 999 }"#,
-    )
-    .expect("oversized demo_provider_count must clamp, not fail");
+    let too_high: Settings =
+        serde_json::from_str(r#"{ "enabled_providers": [], "demo_provider_count": 999 }"#)
+            .expect("oversized demo_provider_count must clamp, not fail");
     assert_eq!(too_high.demo_provider_count, MAX_DEMO_PROVIDER_COUNT);
 
-    let zero: Settings = serde_json::from_str(
-        r#"{ "enabled_providers": [], "demo_provider_count": 0 }"#,
-    )
-    .expect("zero demo_provider_count must fall back to the real default");
+    let zero: Settings =
+        serde_json::from_str(r#"{ "enabled_providers": [], "demo_provider_count": 0 }"#)
+            .expect("zero demo_provider_count must fall back to the real default");
     assert_eq!(zero.demo_provider_count, DEFAULT_DEMO_PROVIDER_COUNT);
 }
 
 #[test]
 fn demo_history_days_only_ever_persists_7_or_30() {
-    let odd: Settings = serde_json::from_str(
-        r#"{ "enabled_providers": [], "demo_history_days": 15 }"#,
-    )
-    .expect("an odd demo_history_days must normalize, not fail");
+    let odd: Settings =
+        serde_json::from_str(r#"{ "enabled_providers": [], "demo_history_days": 15 }"#)
+            .expect("an odd demo_history_days must normalize, not fail");
     assert_eq!(odd.demo_history_days, 7);
 }

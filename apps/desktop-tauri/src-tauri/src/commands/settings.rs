@@ -214,7 +214,8 @@ impl SettingsUpdate {
             settings.demo_provider_mode = mode;
         }
         if let Some(value) = self.demo_provider_count {
-            settings.demo_provider_count = quotalis_core::settings::clamp_demo_provider_count(value);
+            settings.demo_provider_count =
+                quotalis_core::settings::clamp_demo_provider_count(value);
         }
         if let Some(ref ids) = self.demo_provider_ids {
             settings.demo_provider_ids = ids.clone();
@@ -228,7 +229,8 @@ impl SettingsUpdate {
             settings.demo_seed = if value == 0 { 1 } else { value };
         }
         if let Some(value) = self.demo_history_days {
-            settings.demo_history_days = quotalis_core::settings::normalize_demo_history_days(value);
+            settings.demo_history_days =
+                quotalis_core::settings::normalize_demo_history_days(value);
         }
         if let Some(ref s) = self.tray_icon_mode
             && let Some(mode) = parse_tray_icon_mode(s)
