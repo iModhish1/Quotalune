@@ -586,3 +586,140 @@ is reported honestly rather than fabricated: this session recorded zero
 new samples (no Quotalis binary was launched), and the prior 64-sample
 dataset's on-disk location does not currently exist. There is nothing to
 sanitize-and-report this pass.
+
+## 7. Phase 4B — Provider Capability Matrix + Billing Channel Audit + Official Pricing Provenance
+
+Starting HEAD `24fb9800` (Phase 4A/4A.1 closed). Full detail lives in
+[QUOTALIS_PROVIDER_CAPABILITY_MATRIX.md](QUOTALIS_PROVIDER_CAPABILITY_MATRIX.md)
+and the updated [PRICING_PROVENANCE.md](PRICING_PROVENANCE.md); this
+section is the narrative summary.
+
+### 7.1 Provider count reconciliation
+
+`ProviderId::all()` (`rust/src/core/provider.rs`) lists **70** real
+registered providers. **22 distinct provider directories** construct any
+`CostSnapshot` at all: 14 Spend + 6 Balance + 2 Credits (CommandCode,
+Codex) = 22, matching Phase 4A.1's arithmetic exactly. The earlier
+Phase 4 audit's "24" figure counted **files**, not providers (`claude`
+spans 2 files, `cursor` spans 3 -- 22 providers + 2 extra files from
+those two = 24 grep hits). No real discrepancy in substance; a units
+mismatch in an earlier doc, now corrected and explained.
+
+### 7.2 Structural finding: no typed model/token/request field exists anywhere
+
+Every adapter-facing type (`UsageSnapshot`, `RateWindow`, `CostSnapshot`)
+lacks a dedicated field for model ID, input/output tokens, cached-token
+categories, or request count. A separate `TokenUsageSummary`/
+`WidgetSnapshot` type family exists but is dead code -- confirmed no
+provider ever constructs it. Wherever this data appears in a live
+adapter at all, it is free text embedded in a display string
+(`login_method`/`reset_description`), never a structured field, and
+never persisted to `history.db`.
+
+### 7.3 Billing channel audit
+
+Several providers blend more than one billing channel under a single
+`ProviderId` (`claude`: OAuth subscription quota + Admin-API DirectApi +
+web-session overage; `minimax`, `neuralwatt`, `opencodego`, `sub2api`,
+`zenmux`: similar mixes). The hard rule this phase set out to verify
+(subscription quota must never be priced with API-key pricing) is
+already respected structurally in the registry design: `codex`
+(ChatGPT-account credits, OAuth, `chatgpt.com/backend-api/wham/usage`)
+and `openaiapi` (raw API key, `api.openai.com/v1/organization/*`) are
+deliberately separate `ProviderId`s, confirmed by independently reading
+both adapters -- the same pattern repeats for `xai`/`grok` and
+`cursor`/any raw-API provider.
+
+### 7.4 Local-estimation eligibility result
+
+`rust/src/pricing_eligibility.rs` (new, pure, offline, 14 tests) makes
+the hard rule executable: `can_locally_estimate_cost(observation,
+pricing_requirements)` checks billing-channel match first (always,
+independent of every other field), then canonical model, then every
+required billable category, then currency/unit, then pricing
+verification -- any single miss fails closed with a named reason, never
+a fallback. Applying this to the real registry: **no provider is
+eligible for local cost estimation today.** The 14 Spend providers
+already report real dollars directly (a local estimate would be
+redundant, not additive -- owner rule: provider-reported wins). The 6
+Balance and 2 Credits providers fail on billing-channel mismatch against
+any DirectApi pricing record. The 48 non-monetary providers have no
+monetary observation to estimate against at all.
+
+### 7.5 A real, previously-undocumented finding: `cost_scanner.rs`'s billing-channel gap
+
+`cost_scanner.rs` (the separate JSONL-session-log pipeline behind
+Settings -> "Usage & Spend", explicitly out of Phase 4/4A/4A.1 scope)
+applies `CODEX_PRICING`/`CLAUDE_PRICING` -- both independently verified
+against official DirectApi pricing -- to every local Codex/Claude CLI
+session log uniformly, regardless of whether that session was run under
+a flat-fee subscription (ChatGPT Plus/Pro/Team, Claude Pro/Max) or a
+raw, per-token-metered API key. Live official-source research
+(`support.claude.com`, fetched 2026-09-08) confirms subscription-covered
+Claude Code usage is NOT itself billed per-token unless the user
+explicitly opts into API-rate overage; `codex/api.rs:216-220` confirms
+Codex CLI's `auth.json` distinguishes the two auth modes but
+`cost_scanner.rs`'s session parser never records which one produced a
+given file. This is exactly the "ChatGPT/Codex subscription quota != API
+token billing" mismatch this phase's hard rule names -- a real,
+currently-shipping risk, **not fixed this phase** (out of scope), flagged
+as a required Phase 4C prerequisite investigation.
+
+### 7.6 Official pricing research (scoped narrowly, per owner instruction)
+
+Only the two pricing tables an actual code path consumes
+(`CODEX_PRICING`, `CLAUDE_PRICING`, both feeding `cost_scanner.rs`) were
+in scope for fresh research -- researching official API price lists for
+all 22 monetary providers would produce data Quotalis cannot use, since
+20 of them already report real provider-reported figures directly.
+Anthropic and OpenAI's official DirectApi pricing were already verified
+in Phase 4 (`claude.com/pricing`, `developers.openai.com/api/docs/
+pricing`); this phase adds the required per-record provenance table
+format, the source-trust hierarchy, the discrepancy-handling policy, and
+the model-alias audit, all in `PRICING_PROVENANCE.md`. The `gpt-5.6-sol`
+discrepancy from Phase 4 remains **UNRESOLVED**, not silently fixed.
+
+### 7.7 Persistence capability
+
+A second matrix in `QUOTALIS_PROVIDER_CAPABILITY_MATRIX.md` section 6
+proves exact historical cost estimation is not possible for any provider
+today, even the 5 (`claude` Admin-API, `openaiapi`, `openrouter`,
+`mistral`, `opencodego` local-SQLite) that momentarily have real
+token/model text in a live fetch -- `history_recorder.rs`'s cost-sample
+branch only ever persists the aggregate dollar figure, never the
+underlying token/model facts. No schema change was made this phase
+(owner section 29) -- this is a capability-gap finding for a future
+Phase 4C decision only.
+
+### 7.8 Arabic terminology review
+
+Reviewed every Phase 4A/4A.1 monetary term. Found and fixed one real
+collision: `DashboardDataStatusCostProviderReportedCredits` originally
+used "الأرصدة" (the balances -- same root as Balance's "الرصيد"),
+which would have visually/semantically blurred Balance and Credits in
+Arabic exactly as owner section 45 warns against. Changed to "وحدات
+الائتمان" (credit units, a distinct root, ائتمان = credit). Spend
+(إنفاق), Balance (رصيد), Credits (ائتمان), Pricing (تسعير), and
+Unavailable (غير متاح) now use five genuinely distinct Arabic roots.
+
+### 7.9 No runtime changes
+
+No pricing engine wired, no forecasting, no schema migration, no
+Dashboard redesign. `pricing_eligibility.rs` is a pure, offline,
+untested-in-production model -- 14 new tests validate the rule itself,
+not any live calculation.
+
+### 7.10 Phase 4C shortlist
+
+**No provider is shortlisted.** Per the eligibility result (7.4), every
+current provider fails at least one hard precondition: the 14 Spend
+providers don't need local estimation (redundant), the 6 Balance + 2
+Credits providers fail billing-channel match, and the 48 non-monetary
+providers have no monetary data. The one path that could theoretically
+become eligible -- `cost_scanner.rs`'s Codex/Claude CLI JSONL logs,
+which do have real per-session token/model data -- is blocked by the
+unresolved billing-channel-mismatch finding in 7.5 and would need that
+resolved (session-level auth-mode detection, or channel-scoped
+relabeling) before it could honestly be called eligible. This is
+recorded as the single concrete prerequisite for any future Phase 4C
+scope, not a shortlist entry.
