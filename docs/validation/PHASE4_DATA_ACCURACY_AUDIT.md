@@ -169,11 +169,179 @@ shared cost-origin labeling. See "Defects found" #2.
   identical (regression test
   `dedups_cost_samples_by_cost_value_not_placeholder_percent`,
   `history.rs:386-407`), so legitimate cost samples are not collapsed.
-- The `usage_samples` SQLite schema (no migration in this phase — see
-  defect #3's resolution above).
+- The `usage_samples` SQLite schema's core columns (defect #3's resolution
+  above still stands: `has_token_data`/`has_request_data`/`has_model_data`
+  remain hardcoded `false`). **Superseded by Phase 4A below**: two
+  additive, backward-compatible columns (`cost_currency_code`,
+  `cost_measurement_kind`) were added — see section 5.
 - Any of `cost_scanner.rs`'s JSONL-log scanning logic itself (only its
   *labeling/precedence* relative to the Dashboard's numbers is in scope).
 
 See also: [QUOTALIS_PROVIDER_DATA_CAPABILITIES.md](QUOTALIS_PROVIDER_DATA_CAPABILITIES.md),
 [PRICING_PROVENANCE.md](PRICING_PROVENANCE.md),
 [PRICING_CATALOG.md](PRICING_CATALOG.md).
+
+## 5. Phase 4A — Monetary Semantics & Cost Aggregation Correction
+
+Phase 4A superseded remaining lower-priority Phase 4 work to fix defect
+#1 (this doc's section 3, item 1) properly and completely, after the
+initial Phase 4 fix (commit `6d3a16fb`) turned out to encode an
+incomplete assumption. This section is the dedicated, non-downplayed
+record the owner's Phase 4A spec requires.
+
+### 5.1 Old behavior
+
+`dashboardSelectors.ts`'s `computeKpis()` computed `estimatedSpendTotal`
+as:
+```ts
+spendPoints.reduce((sum, p) => sum + p.costUsed, 0)
+```
+— a plain sum of every `SpendTrendPoint` in the requested display range,
+across every time bucket, for every provider/account.
+
+### 5.2 Why it was mathematically wrong
+
+`SpendDailyPoint`/`SpendTrendPoint.costUsed` is not a delta. It is
+whatever a provider's `CostSnapshot.used` field held at capture time --
+documented in `core/usage_snapshot.rs` as "Amount used in the current
+period", i.e. a **running total for the provider's current billing
+period**. A history series like:
+```
+day 1: $1.00
+day 2: $2.00
+day 3: $3.00
+day 4: $4.00
+```
+represents the SAME underlying period-to-date total read four times
+(spend increased from $1 to $4 over four days) -- not four independent
+$1 charges. Summing them (`1+2+3+4 = $10`) reports 2.5x the real current
+spend ($4). The error scales with how many buckets/days are in the
+requested range: `Last 30 Days` would have summed roughly 30x more
+inflation than `Today`.
+
+### 5.3 Root cause (deeper than the first fix realized)
+
+The first Phase 4 fix (commit `6d3a16fb`) corrected the "sum across
+time" mistake by taking only the latest bucket per (provider, accountId)
+series, then summing those latest values *across* providers/accounts.
+That is safe **only when every provider being combined reports the same
+kind of number**. A dedicated provider-adapter audit (Phase 4A, this
+document's evidence base) proved that assumption false: **6 of the 24
+`CostSnapshot`-constructing providers** (`crossmodel`, `sub2api`,
+`devin`, `neuralwatt`, `opencodego`, `zenmux`) write a **point-in-time
+prepaid balance** into `used`, not period spend -- a balance can
+legitimately *decrease* as money is spent, which is the opposite
+direction from a spend total. `codex` has two code paths with genuinely
+different semantics (a real spend-control cumulative total, or a raw
+credit balance) with nothing in `history.db` recording which path
+produced a given historical row. Combining a Cumulative-period-spend
+provider with a PointInTime-balance provider in one "sum the latest
+readings" total (even without ever summing across time) still conflates
+two different kinds of number.
+
+### 5.4 Affected code
+
+- `apps/desktop-tauri/src/surfaces/dashboard/analytics/dashboardSelectors.ts`
+  -- `computeKpis`/`totalReportedSpend` (the KPI total).
+- `rust/src/dashboard_data.rs` -- new `CostContract`, `CostOrigin`,
+  `CostMeasurementKind`, `CostAvailability`, `PricingStatus` types;
+  `provider_cost_measurement_kind()`; `aggregate_spend()` now also
+  carries `currency_code`/`measurement_kind` per bucket.
+- `rust/src/history.rs` -- additive schema migration (`user_version` 2
+  and 3): `cost_currency_code`, `cost_measurement_kind` columns.
+- `apps/desktop-tauri/src-tauri/src/history_recorder.rs` -- stamps both
+  new columns at write time from the real `CostSnapshot` and the proven
+  per-provider classification.
+- `apps/desktop-tauri/src-tauri/src/commands/dashboard.rs` -- bridges
+  the new `CostContract` and per-point currency/measurement-kind fields
+  to the frontend.
+- `apps/desktop-tauri/src/types/bridge.ts` -- `CostContract`,
+  `CostOrigin`, `CostMeasurementKind`, `CostAvailability`,
+  `PricingStatus` TS mirrors; `SpendTrendPoint` gains `currencyCode`/
+  `measurementKind`.
+- `KpiRow.tsx` -- renders the KPI in its real currency (`Intl.NumberFormat`)
+  instead of a hardcoded `$` prefix, and only when the contract proves a
+  trustworthy combined total exists.
+- `DataStatusPanel.tsx`/`dashboardSelectors.ts`'s `resolveDataStatus` --
+  cost/pricing status now reads the real `CostContract` instead of
+  inferring from `hasCostData` alone.
+- Locale files (`en-US.ftl`, `ar-SA.ftl`) -- new/renamed Data Status
+  strings (`DashboardDataStatusCostProviderReported`,
+  `DashboardDataStatusCostLegacyAmbiguous`,
+  `DashboardDataStatusPricingNotRequired`).
+
+### 5.5 Affected ranges
+
+Every display range (`Today`, `7 Days`, `30 Days`, `This Month`,
+`3 Months`, `This Year`, `Custom`) was affected by the original bug --
+the inflation factor scaled with the number of buckets the range
+produced (more days/hours = more summed cumulative readings = worse
+inflation), so wider ranges were wrong by a larger factor than `Today`.
+
+### 5.6 Could real displayed historical numbers have been inflated?
+
+**Yes, structurally, for any account that had more than one cost sample
+in the selected range while running a pre-Phase-4 build.** Whether any
+*specific* real user ever saw an inflated number in this Quotalis Dev
+environment could not be confirmed one way or the other: this
+environment's `history.db` has never held real multi-day cost history to
+observe the bug against (see section 6's real-Dev-state report below).
+The bug is proven mathematically (this doc's before/after reproduction)
+and by the now-fixed/tested code path, not by having caught it live in a
+screenshot.
+
+### 5.7 Corrected semantics
+
+- **Never sum a cumulative reading across time buckets of the same
+  series** (unchanged conclusion from the first fix, now with a name:
+  `CostMeasurementKind::Cumulative` readings use "latest bucket wins").
+- **Never combine series across providers/accounts of different
+  measurement kinds.** `CostContract.measurementKind` collapses to
+  `Unknown` the moment more than one kind (or an unclassified provider)
+  appears in the relevant sample set, and the frontend's
+  `reportedSpendTotal` returns `null` whenever the contract is anything
+  but a uniform `Cumulative` reading in one known currency.
+- **Never combine currencies.** `CostContract.currencyCode` is `None`/`null`
+  the moment more than one currency appears; the combined KPI is
+  unavailable in that case (no FX, per owner rule 13).
+- **Pre-Phase-4A ("legacy") rows are never treated as trustworthy.** A
+  row with no recorded currency reads back as
+  `CostAvailability::LegacyAmbiguous` and is excluded from any combined
+  total -- the raw row is still visible in history for inspection, just
+  not aggregated.
+- Bucket granularity (hourly vs. daily) does not change the true current
+  total -- proven by
+  `changing_bucket_grain_does_not_change_the_latest_cumulative_reading`.
+
+### 5.8 Legacy-data limitations
+
+Every row written before this migration (schema `user_version` < 2) has
+no recorded currency or measurement kind. These rows are NOT
+retroactively reinterpreted, NOT deleted, and NOT rewritten -- they
+remain fully queryable (usage/quota data on the same rows is completely
+unaffected), but any cost figure on such a row is excluded from every
+Phase-4A-and-later monetary aggregate. This is a deliberate, permanent
+limitation of pre-Phase-4A history, not a bug: guessing a currency or
+measurement kind for old data would violate the same "never guess" rule
+this phase exists to enforce.
+
+### 5.9 Before/after reproduction (real fixture shape)
+
+Using a `SpendDailyPoint`-shaped fixture matching the real
+`CostSnapshot.used`/`currency_code` fields exactly as `claude`'s adapter
+constructs them (Cumulative, USD):
+```
+Reading 1 (day 1): $2.00
+Reading 2 (day 2): $4.00
+Reading 3 (day 3): $6.00
+```
+- **OLD** (`spendPoints.reduce((sum, p) => sum + p.costUsed, 0)`):
+  `2 + 4 + 6 = $12.00` -- wrong, 2x the true current spend.
+- **NEW** (latest reading in the series, per `CostMeasurementKind::Cumulative`
+  semantics): `$6.00` -- correct.
+
+Reproduced executably in
+`rust/src/dashboard_data.rs::tests::latest_value_per_bucket_never_sums_a_cumulative_series`
+and mirrored in
+`dashboardSelectors.test.ts`'s `"PHASE 4A regression: never sums a
+cumulative-period reading across time buckets..."` test.
