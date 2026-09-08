@@ -99,12 +99,25 @@ export function LineChart({
   // a constant SVG_WIDTH/2 regardless of where the peak actually fell,
   // reading as an orphaned number disconnected from the data. Clamped away
   // from the two edge date labels so it never overlaps them.
+  //
+  // The axis row's `<span>` positions are expressed as PERCENTAGES of
+  // SVG_WIDTH (via `toPercent` below), not raw pixels: the SVG itself
+  // scales to fill its container via `width:100%`/viewBox, but a real
+  // rendered card is usually far wider than SVG_WIDTH=280 -- raw
+  // `left:${x}px` values (the previous behavior) never rescaled to match,
+  // so the axis labels quietly clustered inside the leftmost ~280px of
+  // whatever the real container width was, leaving the rest empty. This
+  // surfaced as a real, reproduced bug: at a wide card width, Arabic's
+  // longer "الأقصى 98%" max-value label and the "٧ سبتمبر" end-date label
+  // sat close enough (in that stale absolute-pixel coordinate space) to
+  // visually merge with no gap between them.
   const maxIndex = values.indexOf(max);
   const maxLabelMargin = SVG_WIDTH * 0.18;
   const maxLabelX = Math.min(
     Math.max(coords[maxIndex]?.x ?? SVG_WIDTH / 2, maxLabelMargin),
     SVG_WIDTH - maxLabelMargin,
   );
+  const toPercent = (x: number) => `${((x / SVG_WIDTH) * 100).toFixed(2)}%`;
 
   const polyline = coords.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(" ");
 
@@ -201,12 +214,25 @@ export function LineChart({
         />
       </svg>
       <div className="chart__axis">
-        <span style={{ left: `${pad}px` }}>{data[0].label.slice(-5)}</span>
-        <span className="chart__axis-max" style={{ left: `${maxLabelX}px` }}>
+        {/* Previously `.label.slice(-5)` -- a hardcoded last-5-characters
+            trim that silently assumed every caller's label was already
+            English-length ("Sep 4"). A real Arabic screenshot caught this
+            breaking: Intl's ar-SA short month name ("سبتمبر") is longer
+            than 5 characters, so the trim sliced mid-word into "بتمبر"
+            (missing its first letter). Labels are now trusted as-is --
+            every real caller already formats its own locale-appropriate
+            short label (UsageTrendSection's bucketFormatter,
+            CreditsHistoryChart's date formatter). */}
+        <span style={{ left: toPercent(pad) }}>
+          <bdi>{data[0].label}</bdi>
+        </span>
+        <span className="chart__axis-max" style={{ left: toPercent(maxLabelX) }}>
           {maxLabel ? `${maxLabel} ` : null}
           <bdi>{fmt(max)}</bdi>
         </span>
-        <span style={{ left: `${SVG_WIDTH - pad}px` }}>{data[data.length - 1].label.slice(-5)}</span>
+        <span style={{ left: toPercent(SVG_WIDTH - pad) }}>
+          <bdi>{data[data.length - 1].label}</bdi>
+        </span>
       </div>
       {hover && !anim.running && (
         <div

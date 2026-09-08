@@ -7,6 +7,17 @@ function points(values: number[]): LineChartPoint[] {
 }
 
 describe("LineChart", () => {
+  it("never truncates a caller-supplied axis label, regardless of length or script (regression: a real Arabic screenshot caught a hardcoded .slice(-5) cutting 'سبتمبر' into 'بتمبر')", () => {
+    const arabicLabelPoints: LineChartPoint[] = [
+      { label: "٤ سبتمبر", value: 10 },
+      { label: "٧ سبتمبر", value: 20 },
+    ];
+    render(<LineChart data={arabicLabelPoints} ariaLabel="Usage" animations={false} />);
+    expect(screen.getByText("٤ سبتمبر")).toBeInTheDocument();
+    expect(screen.getByText("٧ سبتمبر")).toBeInTheDocument();
+    expect(screen.queryByText("بتمبر")).not.toBeInTheDocument();
+  });
+
   it("shows the empty message when there is no data", () => {
     render(<LineChart data={[]} ariaLabel="Usage" emptyMessage="No data yet" />);
     expect(screen.getByText("No data yet")).toBeInTheDocument();
@@ -35,11 +46,16 @@ describe("LineChart", () => {
       <LineChart data={points([10, 20, 90])} ariaLabel="Usage" animations={false} maxLabel="Max" />,
     );
     const axisMax = document.querySelector(".chart__axis-max") as HTMLElement;
+    // Position is a PERCENTAGE of the chart's actual rendered width (see
+    // the fix in LineChart.tsx: the axis previously used raw pixels
+    // matching the fixed 280-unit design width, which never rescaled to a
+    // real card's much wider rendered width -- percentages track it
+    // correctly regardless of container size). A fixed-center
+    // implementation would place this at exactly 50%. The peak (last of
+    // 3 points) should anchor well to the right of center, clamped
+    // within the label's margin.
     const left = parseFloat(axisMax.style.left);
-    // SVG_WIDTH is 280; a fixed-center implementation would place this at
-    // exactly 140. The peak (last of 3 points) should anchor well to the
-    // right of center, clamped within the label's margin.
-    expect(left).toBeGreaterThan(140);
+    expect(left).toBeGreaterThan(50);
   });
 
   it("clamps the peak label so it never overlaps the start/end date labels, even when the peak is the very first or last point", () => {
@@ -49,14 +65,14 @@ describe("LineChart", () => {
     const leftAtStart = parseFloat(
       (document.querySelector(".chart__axis-max") as HTMLElement).style.left,
     );
-    expect(leftAtStart).toBeGreaterThanOrEqual(280 * 0.18 - 0.5);
+    expect(leftAtStart).toBeGreaterThanOrEqual(18 - 0.5);
     first.unmount();
 
     render(<LineChart data={points([10, 10, 90])} ariaLabel="Usage" animations={false} maxLabel="Max" />);
     const leftAtEnd = parseFloat(
       (document.querySelector(".chart__axis-max") as HTMLElement).style.left,
     );
-    expect(leftAtEnd).toBeLessThanOrEqual(280 * 0.82 + 0.5);
+    expect(leftAtEnd).toBeLessThanOrEqual(82 + 0.5);
   });
 
   it("isolates the numeric peak value in <bdi> for safe rendering inside RTL text", () => {

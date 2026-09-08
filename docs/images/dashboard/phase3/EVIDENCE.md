@@ -131,3 +131,112 @@ interaction:
 - Zero DEV-ONLY synthetic states were injected — every required visual
   state was already genuinely present in this profile's real data, so
   there was nothing to inject.
+
+---
+
+# Phase 3.5 — Visual + semantic refinement, native proof
+
+Captured 2026-09-08, same day, same isolated `dev-channel` methodology.
+Personal untouched throughout (the pre-existing Personal `QuotaArc.exe`
+process was left running, never touched, across every rebuild in this
+pass).
+
+## Screenshots
+
+| File | State |
+|---|---|
+| `QUOTALIS_2D_REFINED_REAL_DATA.png` | Real Dev data, refined layout: no duplicate title, Selected Range/Current Status eyebrows, compact KPI strip, Historical Usage Share solo-provider line, gold-accented primary card, gradient chart fill, provider glyphs on alerts |
+| `QUOTALIS_2D_REFINED_MAXIMIZED.png` | Same real data, maximized window |
+| `QUOTALIS_2D_REFINED_NARROW.png` | 480px via CDP viewport emulation, zero horizontal overflow (measured) |
+| `QUOTALIS_2D_REFINED_RTL.png` | Real `set_ui_language("arabic")`, after fixing two real bugs found during this exact verification pass (see below) |
+| `QUOTALIS_2D_REFINED_AUTH.png` | Identical file to REFINED_REAL_DATA -- both real providers still genuinely need sign-in on this profile, same honesty rationale as Phase 3 |
+| `QUOTALIS_PHASE3_OLD_VS_REFINED.png` | Real Phase-3 capture (before this wave) vs the real Phase-3.5 capture above, not the old orbital screen |
+
+## Two real bugs found and fixed during this pass's own RTL verification
+
+Both were caught by actually looking at a real Arabic screenshot at
+100%, not by inspecting code in isolation -- exactly the "does this look
+like Quotalis, or could this be broken and I didn't notice" discipline
+section 26 asked for.
+
+**1. Chart axis label truncation (`'.slice(-5)'`)** -- `LineChart.tsx`'s
+date-axis labels used a hardcoded "keep only the last 5 characters" trim,
+silently assuming every label was already English-length ("Sep 4" is
+exactly 5 characters). Intl's `ar-SA` short month name ("سبتمبر") is
+longer than 5 characters, so the trim sliced mid-word: the axis showed
+"بتمبر" (missing its first letter, "س"). Fixed by removing the trim
+entirely -- every real caller (`UsageTrendSection`'s `bucketFormatter`,
+`CreditsHistoryChart`'s new date formatter) already produces an
+appropriately short, locale-correct label, so the chart no longer needs
+to (and shouldn't) blindly re-truncate it. The identical bug exists in
+the sibling `BarChart.tsx` (used by the Settings-surface Cost History
+chart, outside this pass's Dashboard-focused scope) -- flagged as a
+separate follow-up task rather than fixed here.
+
+**2. Axis labels never rescaled to the chart's real rendered width** --
+a more fundamental, pre-existing bug this pass's RTL check surfaced:
+`LineChart`'s axis `<span>` positions were raw pixels computed against
+the fixed `SVG_WIDTH = 280` design constant, but the SVG itself stretches
+to fill its actual container via `width:100%` -- on any real card wider
+than 280px (nearly always), the axis text quietly clustered inside the
+leftmost ~280px of a much wider row instead of spanning it, though this
+was easy to miss in English because the effect at typical card widths
+happened not to look obviously wrong. It became clearly visible at a
+real Arabic screenshot's card width: the longer Arabic "الأقصى ٪98" max-
+value label and the end-date label sat close enough in that stale
+absolute-pixel space to visually merge with no gap ("سبتمبرالأقصى").
+Fixed by switching every axis label's `left` to a percentage of
+`SVG_WIDTH` instead of a raw pixel value, so it now tracks the chart's
+true rendered width in both languages. Confirmed via CDP measurement
+before/after: the gap between the max-value label and the end-date label
+went from ~0.5px (visually merged) to ~36.6px (clearly separated) at the
+same real card width.
+
+**3. Arabic-Indic digits in the new date formatters** -- caught in the
+same pass: the two new `Intl.DateTimeFormat`/`toLocaleDateString` call
+sites this refinement added (chart axis, Data Status "available since")
+didn't pass `numberingSystem: "latn"`, so Arabic rendered day numbers as
+Arabic-Indic digits ("٤") instead of Latin ("4") -- inconsistent with
+the app's own established, already-shipped digit policy (the Reset
+Presentation system hardcodes `numberingSystem: "latn"` everywhere).
+Fixed by adding the same option to both new call sites.
+
+Also fixed, non-visual: `TabDashboard` (the sidebar nav label) was
+entirely missing from `ar-SA.ftl`, silently falling back to English
+"Dashboard" in the Arabic UI. Confirmed live in the Arabic screenshots
+above: the sidebar now genuinely reads "لوحة المعلومات".
+
+## Idle performance re-measurement (section 24)
+
+An initial re-measurement immediately after a maximize+screenshot action
+showed 92.42% of one core over 20s -- investigated rather than accepted
+at face value, since it directly contradicted the "must stay quiet"
+requirement. Re-measured after allowing a proper idle settle period
+(not sampling mid-resize): **0.00% of one core across the whole 4-process
+tree over 20s idle**, confirming the 92% reading was a measurement
+artifact (catching the tail of the resize/screenshot action itself, not
+a genuine background loop), and that idle behavior did not regress --
+it's actually slightly better than Phase 3's original 0.31% baseline
+(measurement noise at this scale, not a meaningful claim of improvement).
+
+## What was intentionally not done this pass, and why
+
+- **Sidebar density (spec section 12)**: exploration found the "side"
+  navigation mode has zero dedicated vertical-sidebar CSS today (only
+  ARIA/keyboard semantics change on that mode) -- a real fix needs its
+  own pass across the whole shared nav, not a Dashboard-scoped tweak,
+  and risks exactly the "shared, not Dashboard-only" blast radius the
+  spec itself warned against doing carelessly.
+- **Structure-theme-driven Dashboard material identity (part of
+  sections 4/23)**: confirmed via code exploration that the 24-entry
+  Structure Theme catalog (Obsidian Orbit, Smoked Silver, Sapphire
+  Observatory, etc.) has no plumbing into any `--qa-*` token a Dashboard
+  content card consumes -- it's a separate, provider-orb-only styling
+  layer. Verifying "the Dashboard under 4 different structure themes"
+  would have produced 4 byte-identical screenshots, so it wasn't done as
+  a checkbox exercise; the one light/dark mode axis that DOES affect the
+  Dashboard (`[data-qa-theme]`) is exercised by every screenshot above
+  (all dark) plus this session's existing light-mode test coverage
+  elsewhere in the app. Building real structure-theme reach into the
+  Dashboard is a larger, separate design-system change, not a Phase 3.5
+  refinement.

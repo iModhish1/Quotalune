@@ -15,17 +15,22 @@ type Metric = "usage" | "spend";
  * still see English month abbreviations ("Sep 4") on the trend axis. Now
  * resolves through the same `resolveIntlLocale` table every other
  * locale-aware Intl call in the app uses.
+ *
+ * `numberingSystem: "latn"` matches the rest of the app's established
+ * digit policy (see `resetPresentation.ts`, which hardcodes the same):
+ * dates stay in Latin digits even in Arabic, never Arabic-Indic ("٤").
  */
 function bucketFormatter(grain: "hourly" | "daily", timezone: string, uiLocale: string) {
+  const options: Intl.DateTimeFormatOptions = {
+    timeZone: timezone,
+    numberingSystem: "latn",
+    ...(grain === "hourly" ? { hour: "numeric" } : { month: "short", day: "numeric" }),
+  };
   try {
-    return new Intl.DateTimeFormat(uiLocale, {
-      timeZone: timezone,
-      ...(grain === "hourly"
-        ? { hour: "numeric" }
-        : { month: "short", day: "numeric" }),
-    });
+    return new Intl.DateTimeFormat(uiLocale, options);
   } catch {
-    return new Intl.DateTimeFormat(uiLocale, grain === "hourly" ? { hour: "numeric" } : { month: "short", day: "numeric" });
+    const { timeZone: _timeZone, ...fallback } = options;
+    return new Intl.DateTimeFormat(uiLocale, fallback);
   }
 }
 

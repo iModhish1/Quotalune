@@ -31,7 +31,9 @@ export default function DataStatusPanel({ snapshot }: { snapshot: DashboardSnaps
   const sinceText = firstSample
     ? t("DashboardDataAvailableSince").replace(
         "{}",
-        new Date(firstSample * 1000).toLocaleDateString(uiLocale),
+        // numberingSystem: "latn" matches the app's established digit
+        // policy (resetPresentation.ts hardcodes the same).
+        new Date(firstSample * 1000).toLocaleDateString(uiLocale, { numberingSystem: "latn" }),
       )
     : null;
   const samplesText = t("DashboardDataSamples").replace(
