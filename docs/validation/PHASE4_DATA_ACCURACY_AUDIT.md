@@ -723,3 +723,207 @@ resolved (session-level auth-mode detection, or channel-scoped
 relabeling) before it could honestly be called eligible. This is
 recorded as the single concrete prerequisite for any future Phase 4C
 scope, not a shortlist entry.
+
+## 8. Phase 4C — Billing-Channel Attribution + Existing Cost-Scanner Safety Closure
+
+Starting HEAD `d3b4436f` (Phase 4A/4A.1/4B closed; Phase 4C shortlist
+established EMPTY). This phase's purpose was narrow and specific: close
+or fail-closed the one currently-shipping risk Phase 4B's audit
+discovered -- `cost_scanner.rs` (and everything downstream of it) has
+real token/model data for Codex/Claude CLI sessions but could not prove
+which billing channel produced any given session.
+
+### 8.1 Every active local-cost runtime path, audited first
+
+A dedicated trace (before any code was touched) found the local-cost
+computation graph is bigger than `cost_scanner.rs` alone -- three
+structurally independent pipelines, all ultimately calling
+`CostUsagePricing::codex_cost_usd`/`claude_cost_usd`/`codex_cost_usd_at_date*`:
+
+1. **`cost_scanner.rs`** (+ its internal helpers `codex_costs.rs`,
+   `pi_session_cost.rs`) -- reachable from `get_provider_chart_data`,
+   `get_provider_local_usage_summary`, `get_spend_contract`,
+   `get_usage_spend_summary` (Tauri commands), `quotalis cost` and
+   `quotalis serve /cost`, `/dashboard/v1/snapshot` (CLI/API).
+2. **`codex_workspaces/indexer.rs`** (`CodexWorkspacesIndex`) --
+   reachable from `get_codex_workspaces_snapshot`, `quotalis cost
+   --group-by session`, `quotalis workspaces`, and
+   `spend_contract.rs::load_native_spend`.
+3. **`spend_contract.rs`/`spend_contract/opencodex.rs`** -- reachable
+   from `get_spend_contract`, `get_usage_spend_summary`, `quotalis
+   cost`'s embedded `spendContract` JSON field.
+
+All three read local JSONL session-log files (Codex:
+`~/.codex/sessions/**/*.jsonl`; Claude: `~/.claude/projects/**/*.jsonl`;
+OpenCodex: `$OPENCODEX_HOME/usage.jsonl`) -- there is no live-API cost
+computation anywhere in this graph. `CostUsagePricing::
+claude_models_dev_target` is TEST ONLY (no non-test caller). No dead
+code was found anywhere in the traced graph. `providers/cursor/
+local_csv.rs::summarize` and `providers/opencodego/local.rs` are
+PROVIDER(-TOOL)-REPORTED PASSTHROUGH -- they read a `cost` field the
+respective tool (Cursor, OpenCode) already computed itself, never
+calling `CostUsagePricing` -- confirmed unaffected by this phase's gate.
+
+The computed dollar figure is **not durably persisted** anywhere in this
+graph (Codex's on-disk cache stores only token counts, re-priced on
+every read; Claude has no cache at all; only short-lived 30s/session
+in-memory UI caches hold an already-computed total).
+
+### 8.2 Codex channel result
+
+Traced Codex CLI's own `auth.json` parsing (`providers/codex/api.rs:
+216-220`): it explicitly branches on whether the file contains an
+`OPENAI_API_KEY` field (raw API key mode) or OAuth `access_token`/
+`refresh_token` tokens (ChatGPT-subscription mode) -- proving Codex CLI
+genuinely supports both channels. But the LOCAL SESSION JSONL FORMAT
+Codex CLI writes (`CodexUsageRecord`: `day_key`/`model`/`input`/
+`cached`/`output` only, confirmed by reading `jsonl_scanner.rs:160-165`)
+carries none of that information forward -- a session file alone cannot
+prove which mode produced it. **Result: BillingChannel::Unknown for
+every Codex CLI session, unconditionally.**
+
+### 8.3 Claude channel result
+
+Live official-source research (`support.claude.com/en/articles/
+11145838-use-claude-code-with-your-pro-or-max-plan`, fetched
+2026-09-08) confirms Claude Code genuinely supports the same two
+channels: Pro/Max subscription usage (flat fee, shared quota, NOT
+itself billed per-token unless the user explicitly opts into API-rate
+overage) and a raw Anthropic API key (per-token metered). The local
+Claude transcript JSONL format (`ClaudeEvent`/`ClaudeMessage`/
+`ClaudeUsage`: `type`/`timestamp`/`requestId`/`model`/token-usage counts
+only, confirmed by reading `cost_scanner.rs:257-307`) carries none of
+that information either. **Result: BillingChannel::Unknown for every
+Claude Code session, unconditionally** -- and per owner section 5,
+Bedrock and Vertex usage (routed through entirely different provider
+adapters, not this JSONL pipeline at all) were never priced with
+Anthropic-direct rates in the first place; no change was needed there.
+
+### 8.4 Other scanner/channel findings
+
+- **OpenCodex import** (`spend_contract/opencodex.rs`): its own
+  `RouteTarget::Subscription("codex")`/`"opencodego"`/`"kimi"`/
+  `"deepseek"` labels only say WHICH upstream vendor a request routed
+  to, not which billing mode was used for that vendor -- the identical
+  gap as Codex/Claude, so it is gated by the same global verdict.
+- **`opencodego`'s own local-cost path** (`providers/opencodego/
+  local.rs`) reads a `cost` field OpenCode's own local SQLite database
+  already computed (`json_extract(data, '$.cost')`) -- confirmed no
+  `CostUsagePricing` call exists in that file. Genuinely provider(-tool)-
+  reported passthrough, not gated by this phase (resolves Phase 4B's
+  "not fully traced" flag on this path).
+- **Cursor's local CSV** (`providers/cursor/local_csv.rs`): reads a
+  `cost` column Cursor's own export already contains -- same passthrough
+  category, unaffected.
+
+### 8.5 Eligibility-runtime integration (not documentation/tests-only)
+
+`rust/src/pricing_eligibility.rs`'s `can_locally_estimate_cost` (built
+in Phase 4B as a pure model) is now the SOLE authority
+`cost_scanner::cli_log_cost_eligibility`/`cli_log_cost_available` calls
+into -- no second, duplicated billing-channel check exists anywhere
+else in Rust or the frontend. Every dollar-figure-facing call site was
+updated to route through it (or through `CostSummary::
+eligible_total_cost_usd`/`eligible_by_model`/`eligible_by_speed`,
+`SpendContract`'s `strip_model_costs`/`strip_daily_costs`/
+`strip_import_costs`, or `CostEstimate::eligible_known_usd`, all of
+which themselves call the same shared function once per scan/session,
+never re-deriving the verdict independently):
+
+- `CostSummary.total_cost_usd`/`by_model`/`by_speed` (`cost_scanner.rs`)
+- `get_daily_cost_history` (`cost_scanner.rs`) -- returns an EMPTY series
+  for `codex`/`claude` when ineligible, never a flat `$0.00` line (which
+  would misread as a real known-zero total)
+- `SpendContract.known_cost_usd`, `.models[].cost_usd`,
+  `.daily[].cost_usd`, `.imports[].known_cost_usd` and their nested
+  models/daily (`spend_contract.rs`)
+- `CostEstimate.known_usd` on every `ProjectUsage`/`SessionUsage`/
+  `DailyPoint.estimated_cost_usd` (`codex_workspaces/types.rs`,
+  `indexer.rs`)
+- `quotalis cost` CLI text output (`format_total()` now reads
+  "Unavailable") and JSON output (`total_usd: null`, `eligible: false`,
+  `unavailableReason: "billingChannelUnknown"`)
+- `quotalis serve /cost` and `/dashboard/v1/snapshot` JSON responses
+- Settings → Usage & Spend tab (`usage_spend.rs`'s Claude branch;
+  Codex/OpenCodeGo/Kimi/DeepSeek branches already inherited the gate via
+  `SpendContract`)
+- Provider card local-usage tile and chart cost trend
+  (`chart.rs::load_local_usage_summary_with_unknown_models`)
+- Codex Workspaces project/session list (`UsageSpendTab.tsx`, via the
+  new `CodexWorkspacesCostEstimate.eligible` field)
+
+The frontend never decides billing-channel compatibility itself -- it
+only ever receives an already-gated `number | null` (or, for the Codex
+Workspaces view, a `knownUsd`/`eligible` pair) and renders "Unavailable"
+via the existing `formatUsd`/`DashboardValueUnavailable` conventions.
+
+### 8.6 Unresolved-pricing handling
+
+`gpt-5.6-sol`'s output-rate discrepancy (Phase 4/4B, still UNRESOLVED)
+is now doubly quarantined: the whole `CODEX_PRICING` table is already
+gated to `Unavailable` by the billing-channel check regardless, so this
+specific unresolved record cannot reach a user even by coincidence. No
+code distinguishes per-model verification state at runtime today (the
+gate is table-wide, not per-record) -- documented as a known
+simplification, not a gap: since the entire table is unreachable, a
+finer-grained per-record gate would currently have no observable effect.
+
+### 8.7 Unknown-model handling
+
+Unchanged, pre-existing, already-correct behavior, re-confirmed
+unaffected by this phase: `codex_cost_usd`/`claude_cost_usd` still
+return `None` for an unrecognized model ID, never a nearest/latest/
+default price (`golden_codex_unknown_model_is_none_never_a_guessed_price`/
+`golden_claude_unknown_model_is_none_never_a_guessed_price`, unchanged
+this phase). This is now redundant-but-harmless with the new
+billing-channel gate (both independently prevent a bad number from
+reaching a user), which is the correct "fail closed on any single
+missing precondition" posture the eligibility rule is designed for.
+
+### 8.8 Legacy local-estimate handling
+
+`cost_scanner.rs`'s computed dollar figures were never durably persisted
+(8.1) -- there is no "legacy locally-estimated row" to reinterpret, and
+this phase touched no history schema. The Phase 4A.1 `MonetaryQuantityKind`/
+`CostMeasurementKind`/currency schema on `history.db`'s `usage_samples`
+table is untouched; this phase's fix operates entirely on the separate,
+on-demand-computed `cost_scanner.rs`/`spend_contract.rs`/
+`codex_workspaces` pipeline, which never wrote to that table.
+
+### 8.9 Provider-reported Spend: unaffected
+
+Nothing in this phase touches `history.db`, `DashboardSnapshot`,
+`CostContract`, or any of the 14 Spend / 6 Balance / 2 Credits
+providers' real provider-reported figures (Phase 4A/4A.1's territory).
+The fail-closed rule applies exclusively to LOCALLY ESTIMATED money from
+the three local-JSONL pipelines audited in 8.1.
+
+### 8.10 Before/after (concrete)
+
+Before this phase: `quotalis cost --provider codex --json` on a machine
+with real Codex CLI usage would emit `"cost": {"total_usd": 12.34,
+"currency": "USD"}` and `"by_model": {"gpt-5": 12.34}` regardless of
+whether that $12.34 was ever actually billed per-token or was entirely
+covered by a flat ChatGPT subscription fee. After this phase, the same
+scan emits `"cost": {"total_usd": null, "currency": "USD", "eligible":
+false, "unavailableReason": "billingChannelUnknown"}` and `"by_model":
+{}` -- `"tokens"`/`"sessions_count"` are identical in both cases (proven
+by `json_output_cost_is_null_and_ineligible_when_billing_channel_unknown`).
+
+### 8.11 Real Dev validation
+
+No Dev history exists in this environment (unchanged from Phase 4A.1/
+4B's reconciliation) and no live CLI session could be safely observed
+without a real Codex/Claude local install on this machine. Verification
+used the sanitized, real-shaped fixtures already embedded in this
+project's own test suite (`records_unknown_claude_model_while_using_
+fallback_cost`'s Claude transcript JSON, `parses_current_codex_payload_
+token_count_events`'s Codex `token_count` event JSON, and this phase's
+new `json_output_cost_is_null_and_ineligible_when_billing_channel_
+unknown` fixture) -- none contain credentials, tokens, cookies, or
+account identifiers. No fixture is labeled as real provider data.
+
+### 8.12 Personal
+
+Untouched throughout -- confirmed absent (unchanged since Phase 4A.1),
+no app launch, no history read/write, no migration.

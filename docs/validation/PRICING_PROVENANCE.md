@@ -185,11 +185,32 @@ were checked against official first-party sources.
 | Google/Gemini | none (models.dev fallback only) | official page fetched for reference | not wired to a hardcoded table |
 | DeepSeek | none (schedule only) | not obtained (403/JS-shell blocked) | official $/token pricing still unverified |
 
+## Runtime eligibility status (owner Phase 4C section 32)
+
+*"Can this record currently produce a dollar amount in Quotalis?"*
+
+| Table | Officially verified? | Runtime-reachable? | Currently produces a dollar amount? |
+|---|---|---|---|
+| `CLAUDE_PRICING` | Yes (4 current models; older dated IDs potentially stale) | Yes — `cost_scanner.rs`, `pi_session_cost.rs` | **No.** Quarantined by `pricing_eligibility::can_locally_estimate_cost` (`cost_scanner::cli_log_cost_available()`) — every consumer (`CostSummary.total_cost_usd`/`by_model`, `SpendContract.known_cost_usd`, `quotalis cost` CLI, `quotalis serve /cost` and `/dashboard/v1/snapshot`, Settings → Usage & Spend) reads `Unavailable`/`null`/`None` at runtime as of Phase 4C. See `docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md` "Phase 4C". |
+| `CODEX_PRICING` | Partial — GPT-5 family verified except `gpt-5.6-sol` (UNRESOLVED) | Yes — `cost_scanner.rs`, `codex_costs.rs`, `codex_workspaces/indexer.rs`, `pi_session_cost.rs`, `spend_contract/opencodex.rs` | **No**, same quarantine as above — and even had it not been quarantined, `gpt-5.6-sol` specifically would still be blocked by its own unresolved-pricing state (`PricingRequirements.pricing_verified = false` for that record conceptually; no code path distinguishes per-model verification state today, so the whole table is gated uniformly, which also correctly covers this case). |
+| `models_dev_pricing.rs` cache | Not independently verified (third-party aggregation) | Yes — fallback for routed/unknown Codex/Claude models | **No** — feeds the same quarantined `CostUsagePricing::codex_cost_usd`/`claude_cost_usd` call sites. |
+
+No pricing record in this project can currently produce a runtime dollar
+amount for any provider — not because the prices are wrong (Anthropic's
+and most of OpenAI's are independently official-source-verified), but
+because **billing-channel eligibility**, the precondition this project's
+own architecture requires before showing any locally-estimated figure,
+cannot be established for any local observation today. This is the
+intended, correct behavior per owner Phase 4C section 26 ("Any current
+pricing record that is unverified, unresolved, or channel-mismatched
+must be incapable of generating production monetary output... it may
+remain in research docs/tests, but not active calculation").
+
 ## Formal per-record provenance (owner Phase 4B section 12 format)
 
 | Provider | Billing product/channel | Canonical model | Official URL | Date verified | Currency | Unit | Input | Output | Cache | Other | Tier conditions | Effective date | Notes/ambiguities | Quotalis eligibility |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Anthropic | DirectApi | claude-fable-5 | claude.com/pricing | 2026-09-08 | USD | per 1M tokens | see cost_pricing.rs | see cost_pricing.rs | 5m/1h cache write + read | — | none observed | not stated on page | 4 current models verified; older dated IDs unverifiable (page shows current only) | **Billing-channel-conditional** — see finding above; not unconditionally eligible for CLI-log estimation |
+| Anthropic | DirectApi | claude-fable-5 | claude.com/pricing | 2026-09-08 | USD | per 1M tokens | see cost_pricing.rs | see cost_pricing.rs | 5m/1h cache write + read | — | none observed | not stated on page | 4 current models verified; older dated IDs unverifiable (page shows current only) | **Quarantined (Phase 4C)** — see "Runtime eligibility status" below; verified pricing, but gated to `Unavailable` at every production output |
 | Anthropic | DirectApi | claude-sonnet-5 | claude.com/pricing | 2026-09-08 | USD | per 1M tokens | see cost_pricing.rs | see cost_pricing.rs | 5m/1h cache write + read | — | 200k-token tier (structural match only) | not stated | same as above | same as above |
 | Anthropic | DirectApi | claude-opus-5 | claude.com/pricing | 2026-09-08 | USD | per 1M tokens | see cost_pricing.rs | see cost_pricing.rs | 5m/1h cache write + read | — | none observed | not stated | same as above | same as above |
 | Anthropic | DirectApi | claude-haiku-4-5 | claude.com/pricing | 2026-09-08 | USD | per 1M tokens | see cost_pricing.rs | see cost_pricing.rs | 5m/1h cache write + read | — | none observed | not stated | same as above | same as above |

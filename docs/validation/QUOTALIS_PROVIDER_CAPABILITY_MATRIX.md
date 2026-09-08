@@ -234,34 +234,67 @@ DirectApi record for any monetary provider, and no provider persists
 the token/model facts a local estimate would need even where a live
 fetch momentarily has them.
 
-## 8. A separate, out-of-registry finding: `cost_scanner.rs`
+**Phase 4C update**: this table covers the `Provider`-trait/registry
+pipeline only. `cost_scanner.rs` (section 8 below) is a structurally
+separate, third source of local monetary computation, outside the
+registry — its own eligibility result (also uniformly `NotEligible
+(BillingChannelMismatch)`, now enforced at runtime, not only in this
+table) is documented in section 8 and in
+`docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md` "Phase 4C".
+
+## 8. A separate, out-of-registry finding: `cost_scanner.rs` — CLOSED in Phase 4C
 
 `rust/src/cost_scanner.rs` (feeding the Settings → "Usage & Spend" tab,
-entirely independent of the `Provider` trait / registry above) scans
-local Codex/Claude CLI JSONL session logs directly and DOES have real
-per-session model + input/output/cached token counts — genuinely
-billable-shaped local data, unlike anything in the registry above. It
-applies `CODEX_PRICING`/`CLAUDE_PRICING` (`cost_pricing.rs`) uniformly
-to every session **regardless of which billing channel produced that
-session**: both Codex CLI (`~/.codex/auth.json`) and Claude Code CLI can
-be authenticated either via a subscription (ChatGPT Plus/Pro/Team,
-Claude Pro/Max — flat fee, quota-included, confirmed via
-`codex/api.rs:216-220`'s `OPENAI_API_KEY`-vs-OAuth-tokens branch, and
-independently confirmed for Claude Code via live web research: Anthropic
-support documents overage-beyond-subscription billing at "standard API
-rates," implying subscription-covered usage is NOT itself billed
-per-token) **or** via a raw API key (per-token metered). `cost_scanner.rs`'s
-JSONL parser (confirmed by reading `parse_codex_file`) never records
-which auth mode produced a given session file. This means
-`CODEX_PRICING`/`CLAUDE_PRICING` — while independently verified against
-official DirectApi sources (`PRICING_PROVENANCE.md`) — are applied
-**without confirming the billing channel matches**, for any session run
-under a subscription. This is a real, previously-undocumented
-billing-channel-mismatch risk in an already-shipping pipeline (owner
-section 4's exact hard rule: "ChatGPT/Codex subscription quota ≠ OpenAI
-API token billing"). It is **out of this phase's scope to fix**
-(`cost_scanner.rs` was explicitly marked out of scope by Phase 4/4A) —
-flagged here as a Phase 4C prerequisite investigation, not resolved.
+`codex_workspaces/indexer.rs`, `spend_contract.rs`/`opencodex.rs`, the
+`quotalis cost` CLI, and the `quotalis serve` `/cost` and
+`/dashboard/v1/snapshot` JSON endpoints — entirely independent of the
+`Provider` trait / registry above) scans local Codex/Claude CLI JSONL
+session logs directly and DOES have real per-session model +
+input/output/cached token counts — genuinely billable-shaped local data,
+unlike anything in the registry above.
+
+**Token data existing is not the same as that token data being
+priceable (owner section 31).** Phase 4B flagged, and Phase 4C traced in
+full and closed, a real billing-channel-mismatch risk: it applied
+`CODEX_PRICING`/`CLAUDE_PRICING` (`cost_pricing.rs`) uniformly to every
+session **regardless of which billing channel produced that session**.
+Both Codex CLI (`~/.codex/auth.json`) and Claude Code CLI can be
+authenticated either via a subscription (ChatGPT Plus/Pro/Team, Claude
+Pro/Max — flat fee, quota-included, confirmed via `codex/api.rs:216-220`'s
+`OPENAI_API_KEY`-vs-OAuth-tokens branch, and confirmed for Claude Code
+via live official-source research: `support.claude.com` states
+subscription-covered usage is billed at standard API rates only if the
+user explicitly opts into overage) **or** via a raw API key (per-token
+metered). Neither the Codex JSONL record (`day_key`/`model`/`input`/
+`cached`/`output` only) nor the Claude transcript event (`type`/
+`timestamp`/`requestId`/`model`/token-usage counts only) carries any
+field that distinguishes which mode produced a given session.
+
+**Phase 4C fix**: every dollar figure derived from this pipeline
+(`CostSummary.total_cost_usd`/`by_model`/`by_speed`, `SpendContract.
+known_cost_usd` and its `models`/`daily`/`imports` breakdowns,
+`CodexWorkspacesIndex`'s `CostEstimate.known_usd` on every project/
+session/daily point) now routes through the single shared
+`pricing_eligibility::can_locally_estimate_cost` rule
+(`cost_scanner::cli_log_cost_eligibility`/`cli_log_cost_available`),
+classified as billing channel `Unknown` against the `DirectApi` channel
+these price tables actually price — always `NotEligible
+(BillingChannelMismatch)` today. Every dollar-figure-facing surface
+(CLI text/JSON output, the `quotalis serve` JSON endpoints, the
+Settings tab, the Codex Workspaces view) now reads "Unavailable"/`null`/
+`None` instead of a computed number; token/model/session counts are
+completely unaffected and remain fully real. See
+`docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md` "Phase 4C" for the full
+before/after and the complete list of gated call sites.
+
+`opencodego`'s local-cost path is explicitly **NOT** affected by this
+gate: `rust/src/providers/opencodego/local.rs` reads a `cost` field
+directly out of OpenCode's own local SQLite database
+(`json_extract(data, '$.cost')`) — confirmed via grep that no
+`CostUsagePricing` call exists anywhere in that file. This is
+provider(-tool)-reported passthrough, structurally identical to
+Cursor's local-CSV passthrough, not a Quotalis-computed local estimate
+-- resolving Phase 4B's earlier "not fully traced" uncertainty flag.
 
 ## 9. Provider capability summary (owner section 41)
 
