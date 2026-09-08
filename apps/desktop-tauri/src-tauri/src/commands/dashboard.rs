@@ -5,8 +5,8 @@
 
 use quotalis_core::dashboard_data::{
     self, CostAvailability, CostContract, CostMeasurementKind, CostOrigin, DashboardRangeKind,
-    DashboardSnapshot, DataAvailability, PricingStatus, ProviderSummary, SpendDailyPoint,
-    UsageDailyPoint,
+    DashboardSnapshot, DataAvailability, MonetaryQuantityKind, PricingStatus, ProviderSummary,
+    SpendDailyPoint, UsageDailyPoint,
 };
 use quotalis_core::history::HistoryStore;
 use serde::Serialize;
@@ -105,6 +105,11 @@ pub struct SpendTrendPointBridge {
     /// code must not combine values across buckets/series with different
     /// measurement kinds.
     pub measurement_kind: &'static str,
+    /// "spend" | "balance" | "credits" | "unknown" -- see
+    /// `quotalis_core::dashboard_data::MonetaryQuantityKind`, the
+    /// orthogonal dimension to `measurement_kind`. The Spend KPI may
+    /// consume ONLY buckets where this is `"spend"`.
+    pub quantity_kind: &'static str,
 }
 
 impl From<SpendDailyPoint> for SpendTrendPointBridge {
@@ -116,6 +121,7 @@ impl From<SpendDailyPoint> for SpendTrendPointBridge {
             cost_used: p.cost_used,
             currency_code: p.currency_code,
             measurement_kind: p.measurement_kind.as_str(),
+            quantity_kind: p.quantity_kind.as_str(),
         }
     }
 }
@@ -124,6 +130,7 @@ impl From<SpendDailyPoint> for SpendTrendPointBridge {
 #[serde(rename_all = "camelCase")]
 pub struct CostContractBridge {
     pub origin: &'static str,
+    pub quantity_kind: &'static str,
     pub measurement_kind: &'static str,
     pub currency_code: Option<String>,
     pub period: String,
@@ -139,6 +146,12 @@ impl From<CostContract> for CostContractBridge {
                 CostOrigin::LocallyEstimated => "locallyEstimated",
                 CostOrigin::UserConfigured => "userConfigured",
                 CostOrigin::Unavailable => "unavailable",
+            },
+            quantity_kind: match c.quantity_kind {
+                MonetaryQuantityKind::Spend => "spend",
+                MonetaryQuantityKind::Balance => "balance",
+                MonetaryQuantityKind::Credits => "credits",
+                MonetaryQuantityKind::Unknown => "unknown",
             },
             measurement_kind: match c.measurement_kind {
                 CostMeasurementKind::Cumulative => "cumulative",

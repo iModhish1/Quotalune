@@ -334,21 +334,146 @@ impl CostMeasurementKind {
 /// account/org/team-scoping caveats noted in
 /// PHASE4_DATA_ACCURACY_AUDIT.md that this function does not attempt to
 /// resolve).
+///
+/// Phase 4A.1: superseded by [`classify_monetary_observation`], which adds
+/// the orthogonal quantity dimension (Spend/Balance/Credits) and resolves
+/// Codex correctly using the adapter's own `period` label instead of
+/// guessing by provider ID alone. Kept only as the `measurement_kind`
+/// half of that function, re-exposed for any existing caller.
 pub fn provider_cost_measurement_kind(provider_cli_id: &str) -> CostMeasurementKind {
-    match provider_cli_id {
-        "crossmodel" | "sub2api" | "devin" | "neuralwatt" | "opencodego" | "zenmux" => {
-            CostMeasurementKind::PointInTime
+    classify_monetary_observation(provider_cli_id, "").1
+}
+
+/// Phase 4A.1: the second, orthogonal monetary dimension. `CostMeasurementKind`
+/// answers "is this a running total, a delta, or a snapshot reading" --
+/// it says nothing about WHAT the number represents. A providers that
+/// reports a prepaid balance and a provider that reports period spend can
+/// both be "PointInTime" or both be "Cumulative" in the temporal sense
+/// while meaning completely different things financially; conflating them
+/// is exactly the mistake owner Phase 4A.1 asks to close.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum MonetaryQuantityKind {
+    /// Money actually spent/consumed against a billing period or credit
+    /// allotment -- the only kind the Dashboard's "Spend" KPI may ever
+    /// consume.
+    Spend,
+    /// A prepaid balance (cash-denominated) -- remaining funds, not spend.
+    /// Can legitimately decrease as money is spent and increase on
+    /// top-up. Never shown under the Spend label.
+    Balance,
+    /// A provider-defined, non-cash-equivalent unit (e.g. a ChatGPT
+    /// account credit balance, a Command Code monthly credit allotment)
+    /// -- distinct from a real-currency Balance because there is no
+    /// proven 1:1 conversion to USD/EUR/etc. in this codebase. Never
+    /// shown under the Spend label, never summed with real-currency
+    /// figures.
+    Credits,
+    /// What the number represents could not be established (legacy row,
+    /// or a provider/path not yet classified). Fails closed -- excluded
+    /// from every KPI, including a future Balance/Credits display.
+    Unknown,
+}
+
+impl MonetaryQuantityKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Spend => "spend",
+            Self::Balance => "balance",
+            Self::Credits => "credits",
+            Self::Unknown => "unknown",
         }
-        "codex" => CostMeasurementKind::Unknown,
-        // Confirmed period-cumulative spend: aiand, bedrock, claude,
-        // commandcode, cursor, deepinfra, deepseek, fireworks, litellm,
-        // llmproxy, minimax, mistral, openaiapi, openrouter, xai.
-        "aiand" | "bedrock" | "claude" | "commandcode" | "cursor" | "deepinfra" | "deepseek"
-        | "fireworks" | "litellm" | "llmproxy" | "minimax" | "mistral" | "openaiapi"
-        | "openrouter" | "xai" => CostMeasurementKind::Cumulative,
+    }
+
+    fn parse(value: Option<&str>) -> Self {
+        match value {
+            Some("spend") => Self::Spend,
+            Some("balance") => Self::Balance,
+            Some("credits") => Self::Credits,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+/// Phase 4A.1 (docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md "Phase 4A.1"
+/// section): classifies a monetary observation on BOTH orthogonal
+/// dimensions at once, using whatever real evidence is available --
+/// provider identity, and (for the one provider whose live adapter code
+/// is genuinely ambiguous by ID alone) the exact `period` label the
+/// adapter itself already produces, since that string is adapter-
+/// authored evidence, not a guess layered on top of it.
+///
+/// **Codex, traced in full** (`rust/src/providers/codex/api.rs`): the
+/// LIVE fetch path (`fetch_usage`/`fetch_usage_pat`, both used in
+/// production) calls `build_result_from_json` -> `extract_credits`
+/// exclusively, which ALWAYS constructs `CostSnapshot::new(balance,
+/// "USD", "Credits")` -- i.e. `used` is always the raw ChatGPT-account
+/// credit BALANCE (`period == "Credits"`), never spend. A second
+/// function, `build_result`, DOES contain a spend-against-a-monthly-
+/// limit branch (`SpendControlLimitSnapshot::to_cost_snapshot`, `period
+/// == "Monthly credits"`) that would be genuine Spend -- but `build_result`
+/// is called only from two unit tests (`UsageResponse` is never
+/// constructed anywhere in the live fetch path); it is dead code today,
+/// not a real, reachable second semantic. So Codex's real observed
+/// `period` value at write time IS proof of which (theoretical) path
+/// produced it, and today that is always `"Credits"` (Balance-shaped,
+/// but denominated in account credits rather than cash -- classified
+/// `Credits`, not `Balance`). If `build_result`'s branch is ever wired
+/// into a live fetch path in the future, its distinct `"Monthly
+/// credits"` period label will already correctly classify as
+/// `Spend`/`Cumulative` by this same function -- no further guessing
+/// required, because the adapter's own label carries the evidence.
+pub fn classify_monetary_observation(
+    provider_cli_id: &str,
+    period_label: &str,
+) -> (MonetaryQuantityKind, CostMeasurementKind) {
+    match provider_cli_id {
+        // Genuine prepaid CASH balances (USD/provider-currency), verified
+        // 2026-09-08 against each adapter's real construction site:
+        // crossmodel.rs:197, sub2api/mod.rs:519,573, devin/mod.rs:141,
+        // neuralwatt/mod.rs:319, opencodego/mod.rs:539, zenmux/mod.rs:244.
+        // (Note: crossmodel and sub2api literally pass `used = 0.0` and
+        // put the real balance in `CostSnapshot.limit`, which
+        // history_recorder.rs does not persist -- their `cost_used`
+        // history rows are constant zero today. Still genuinely Balance-
+        // shaped data, just not currently captured in history at a
+        // useful value; flagged, not fixed, in this pass.)
+        "crossmodel" | "sub2api" | "devin" | "neuralwatt" | "opencodego" | "zenmux" => (
+            MonetaryQuantityKind::Balance,
+            CostMeasurementKind::PointInTime,
+        ),
+        // Codex: see this function's doc comment above for the full
+        // traced evidence. Classify by the adapter's own period label,
+        // not by provider ID alone.
+        "codex" => match period_label {
+            "Monthly credits" => (
+                MonetaryQuantityKind::Credits,
+                CostMeasurementKind::Cumulative,
+            ),
+            "Credits" => (
+                MonetaryQuantityKind::Credits,
+                CostMeasurementKind::PointInTime,
+            ),
+            _ => (MonetaryQuantityKind::Unknown, CostMeasurementKind::Unknown),
+        },
+        // Command Code: `used = plan.monthly_credits_usd - monthly_credits`
+        // -- consumption against a monthly CREDIT allotment (not raw
+        // cash, despite `currency_code` being hard-coded "USD" in the
+        // adapter -- a separate, pre-existing labeling nuance not fixed
+        // in this pass). Re-verified `commandcode/mod.rs:356-366`.
+        "commandcode" => (
+            MonetaryQuantityKind::Credits,
+            CostMeasurementKind::Cumulative,
+        ),
+        // Confirmed genuine, cash-denominated period-cumulative SPEND:
+        // aiand, bedrock, claude, cursor, deepinfra, deepseek, fireworks,
+        // litellm, llmproxy, minimax, mistral, openaiapi, openrouter, xai.
+        "aiand" | "bedrock" | "claude" | "cursor" | "deepinfra" | "deepseek" | "fireworks"
+        | "litellm" | "llmproxy" | "minimax" | "mistral" | "openaiapi" | "openrouter" | "xai" => {
+            (MonetaryQuantityKind::Spend, CostMeasurementKind::Cumulative)
+        }
         // Not yet examined by the Phase 4A provider-adapter audit -- fail
-        // closed rather than assume either shape.
-        _ => CostMeasurementKind::Unknown,
+        // closed on both dimensions rather than assume either shape.
+        _ => (MonetaryQuantityKind::Unknown, CostMeasurementKind::Unknown),
     }
 }
 
@@ -394,6 +519,12 @@ pub enum PricingStatus {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CostContract {
     pub origin: CostOrigin,
+    /// Phase 4A.1: WHAT the aggregated figure represents (see
+    /// `MonetaryQuantityKind`). `Unknown` the moment more than one
+    /// quantity kind (or an unclassified provider) appears in the
+    /// relevant sample set -- a balance and a spend total are never
+    /// combined into one figure, even if their temporal shape matches.
+    pub quantity_kind: MonetaryQuantityKind,
     pub measurement_kind: CostMeasurementKind,
     /// ISO 4217 currency code, only when every aggregated sample shares
     /// one unambiguous currency. `None` when currencies differ or are
@@ -420,6 +551,7 @@ impl CostContract {
         if all_time_cost_samples.is_empty() {
             return Self {
                 origin: CostOrigin::Unavailable,
+                quantity_kind: MonetaryQuantityKind::Unknown,
                 measurement_kind: CostMeasurementKind::Unknown,
                 currency_code: None,
                 period: "unknown".to_string(),
@@ -445,6 +577,7 @@ impl CostContract {
             // currency/period/reset semantics they follow.
             return Self {
                 origin: CostOrigin::Unavailable,
+                quantity_kind: MonetaryQuantityKind::Unknown,
                 measurement_kind: CostMeasurementKind::Unknown,
                 currency_code: None,
                 period: "unknown".to_string(),
@@ -504,6 +637,18 @@ impl CostContract {
             _ => CostMeasurementKind::Unknown,
         };
 
+        // Phase 4A.1: quantity kind must ALSO be uniform across every
+        // tagged sample -- a mix of Spend and Balance (or Credits) is not
+        // one quantity even if measurement_kind happens to match.
+        let quantities: std::collections::BTreeSet<MonetaryQuantityKind> = tagged
+            .iter()
+            .map(|s| MonetaryQuantityKind::parse(s.monetary_quantity_kind.as_deref()))
+            .collect();
+        let quantity_kind = match (quantities.len(), quantities.iter().next()) {
+            (1, Some(&only)) => only,
+            _ => MonetaryQuantityKind::Unknown,
+        };
+
         // Both real tagged data and older untagged rows can coexist for
         // an account (a Phase-4A upgrade doesn't retag old history) --
         // the tagged data is still trustworthy on its own, so this stays
@@ -515,6 +660,7 @@ impl CostContract {
 
         Self {
             origin: CostOrigin::ProviderReported,
+            quantity_kind,
             measurement_kind,
             currency_code,
             period,
@@ -561,6 +707,11 @@ pub struct SpendDailyPoint {
     /// they were the same quantity (e.g. a period-cumulative spend total
     /// and a point-in-time prepaid balance).
     pub measurement_kind: CostMeasurementKind,
+    /// Phase 4A.1: WHAT this bucket's number represents (see
+    /// `MonetaryQuantityKind`) -- the orthogonal dimension to
+    /// `measurement_kind`. The Dashboard Spend KPI may consume ONLY
+    /// buckets where this is `Spend`.
+    pub quantity_kind: MonetaryQuantityKind,
 }
 
 /// Current-state summary for one provider/account -- its most recently
@@ -641,6 +792,8 @@ pub fn aggregate_spend(samples: &[UsageSample], tz: Tz, grain: Grain) -> Vec<Spe
                 .or_else(|| existing.currency_code.clone());
             existing.measurement_kind =
                 CostMeasurementKind::parse(sample.cost_measurement_kind.as_deref());
+            existing.quantity_kind =
+                MonetaryQuantityKind::parse(sample.monetary_quantity_kind.as_deref());
         } else {
             buckets.push(SpendDailyPoint {
                 provider: sample.provider.clone(),
@@ -650,6 +803,9 @@ pub fn aggregate_spend(samples: &[UsageSample], tz: Tz, grain: Grain) -> Vec<Spe
                 currency_code: sample.cost_currency_code.clone(),
                 measurement_kind: CostMeasurementKind::parse(
                     sample.cost_measurement_kind.as_deref(),
+                ),
+                quantity_kind: MonetaryQuantityKind::parse(
+                    sample.monetary_quantity_kind.as_deref(),
                 ),
             });
         }
@@ -904,7 +1060,14 @@ mod tests {
             // Mirrors history_recorder.rs's real write-time behavior:
             // stamp whatever this provider was proven to write.
             cost_measurement_kind: cost.map(|_| {
-                provider_cost_measurement_kind(provider)
+                classify_monetary_observation(provider, "")
+                    .1
+                    .as_str()
+                    .to_string()
+            }),
+            monetary_quantity_kind: cost.map(|_| {
+                classify_monetary_observation(provider, "")
+                    .0
                     .as_str()
                     .to_string()
             }),
@@ -981,6 +1144,51 @@ mod tests {
             cost_used: Some(cost),
             cost_currency_code: currency.map(|c| c.to_string()),
             cost_measurement_kind: kind.map(|k| k.as_str().to_string()),
+            // These pre-existing (measurement-kind-focused) fixtures don't
+            // exercise the quantity dimension explicitly -- default to the
+            // quantity kind that pairs naturally with the given
+            // measurement kind (Cumulative -> Spend, PointInTime ->
+            // Balance) so they keep testing exactly what they said they
+            // were testing. Dedicated quantity-kind tests below use
+            // `cost_sample_q` instead.
+            monetary_quantity_kind: kind.map(|k| match k {
+                CostMeasurementKind::PointInTime => {
+                    MonetaryQuantityKind::Balance.as_str().to_string()
+                }
+                _ => MonetaryQuantityKind::Spend.as_str().to_string(),
+            }),
+            resets_at: None,
+            captured_at: at,
+        }
+    }
+
+    /// Like `cost_sample`, but lets a test set BOTH orthogonal dimensions
+    /// explicitly -- for the quantity-kind-specific regression corpus
+    /// (owner Phase 4A.1 section 21).
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "test fixture constructor, mirrors UsageSample's real field count"
+    )]
+    fn cost_sample_q(
+        provider: &str,
+        account: &str,
+        cost: f64,
+        currency: Option<&str>,
+        quantity: Option<MonetaryQuantityKind>,
+        kind: Option<CostMeasurementKind>,
+        at: i64,
+    ) -> UsageSample {
+        UsageSample {
+            account_id: account.to_string(),
+            provider: provider.to_string(),
+            window_id: Some(COST_WINDOW_ID.to_string()),
+            window_label: Some("Monthly".to_string()),
+            used_percent: 0.0,
+            remaining_percent: 0.0,
+            cost_used: Some(cost),
+            cost_currency_code: currency.map(|c| c.to_string()),
+            cost_measurement_kind: kind.map(|k| k.as_str().to_string()),
+            monetary_quantity_kind: quantity.map(|q| q.as_str().to_string()),
             resets_at: None,
             captured_at: at,
         }
@@ -1635,5 +1843,192 @@ mod tests {
         // No migration/truncation event: the reopened store is queried with
         // the exact same public API a brand-new process would use -- there
         // is no separate "legacy import" code path to invoke.
+    }
+
+    // ── Phase 4A.1: monetary quantity-kind regression corpus ────────────
+    // docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md "Phase 4A.1" section,
+    // owner section 21. `CostMeasurementKind` alone was proven
+    // insufficient -- these tests exercise the orthogonal quantity
+    // dimension explicitly, using real provider-shaped classifications
+    // where a real provider supports them, and a synthetic same-model
+    // case only where the TYPE itself needs validating (never a faked
+    // provider capability).
+
+    #[test]
+    fn classify_crossmodel_is_balance_point_in_time_real_provider() {
+        let (quantity, kind) = classify_monetary_observation("crossmodel", "balance");
+        assert_eq!(quantity, MonetaryQuantityKind::Balance);
+        assert_eq!(kind, CostMeasurementKind::PointInTime);
+    }
+
+    #[test]
+    fn classify_zenmux_is_balance_point_in_time_real_provider() {
+        let (quantity, kind) = classify_monetary_observation("zenmux", "ZenMux PAYG balance");
+        assert_eq!(quantity, MonetaryQuantityKind::Balance);
+        assert_eq!(kind, CostMeasurementKind::PointInTime);
+    }
+
+    #[test]
+    fn classify_claude_is_spend_cumulative_real_provider() {
+        let (quantity, kind) = classify_monetary_observation("claude", "Monthly");
+        assert_eq!(quantity, MonetaryQuantityKind::Spend);
+        assert_eq!(kind, CostMeasurementKind::Cumulative);
+    }
+
+    #[test]
+    fn classify_commandcode_is_credits_cumulative_real_provider() {
+        let (quantity, kind) = classify_monetary_observation("commandcode", "monthly credits");
+        assert_eq!(quantity, MonetaryQuantityKind::Credits);
+        assert_eq!(kind, CostMeasurementKind::Cumulative);
+    }
+
+    /// Codex's live fetch path (`fetch_usage`/`fetch_usage_pat` ->
+    /// `build_result_from_json` -> `extract_credits`) always produces
+    /// `period == "Credits"` -- a raw account-credit BALANCE, never
+    /// spend. See `classify_monetary_observation`'s doc comment for the
+    /// full traced evidence (the "Monthly credits" spend branch exists in
+    /// `build_result` but is unreachable from any live fetch today).
+    #[test]
+    fn classify_codex_live_path_is_credits_point_in_time() {
+        let (quantity, kind) = classify_monetary_observation("codex", "Credits");
+        assert_eq!(quantity, MonetaryQuantityKind::Credits);
+        assert_eq!(kind, CostMeasurementKind::PointInTime);
+    }
+
+    /// If Codex's (currently dead) spend-control-limit path is ever wired
+    /// into a live fetch, its distinct "Monthly credits" period label
+    /// already classifies correctly as Cumulative Credits spend -- no
+    /// code change required, because the adapter's own label carries the
+    /// evidence. This test protects that forward-compatibility property
+    /// (a synthetic period string, since this path is not live today).
+    #[test]
+    fn classify_codex_would_resolve_monthly_credits_path_correctly_if_ever_live() {
+        let (quantity, kind) = classify_monetary_observation("codex", "Monthly credits");
+        assert_eq!(quantity, MonetaryQuantityKind::Credits);
+        assert_eq!(kind, CostMeasurementKind::Cumulative);
+    }
+
+    #[test]
+    fn classify_codex_unrecognized_period_fails_closed_to_unknown() {
+        let (quantity, kind) = classify_monetary_observation("codex", "some-other-shape");
+        assert_eq!(quantity, MonetaryQuantityKind::Unknown);
+        assert_eq!(kind, CostMeasurementKind::Unknown);
+    }
+
+    #[test]
+    fn classify_unclassified_provider_fails_closed_on_both_dimensions() {
+        let (quantity, kind) = classify_monetary_observation("some-future-provider", "whatever");
+        assert_eq!(quantity, MonetaryQuantityKind::Unknown);
+        assert_eq!(kind, CostMeasurementKind::Unknown);
+    }
+
+    #[test]
+    fn cost_contract_quantity_kind_spend_for_a_known_spend_provider() {
+        let day0 = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let s = cost_sample_q(
+            "claude",
+            "a1",
+            12.0,
+            Some("USD"),
+            Some(MonetaryQuantityKind::Spend),
+            Some(CostMeasurementKind::Cumulative),
+            day0,
+        );
+        let all: Vec<&UsageSample> = vec![&s];
+        let contract = CostContract::from_samples(&all, &all);
+        assert_eq!(contract.quantity_kind, MonetaryQuantityKind::Spend);
+    }
+
+    #[test]
+    fn cost_contract_quantity_kind_balance_for_a_known_balance_provider() {
+        let day0 = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let s = cost_sample_q(
+            "zenmux",
+            "a1",
+            30.0,
+            Some("USD"),
+            Some(MonetaryQuantityKind::Balance),
+            Some(CostMeasurementKind::PointInTime),
+            day0,
+        );
+        let all: Vec<&UsageSample> = vec![&s];
+        let contract = CostContract::from_samples(&all, &all);
+        assert_eq!(contract.quantity_kind, MonetaryQuantityKind::Balance);
+    }
+
+    #[test]
+    fn cost_contract_quantity_kind_credits_for_codex() {
+        let day0 = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let s = cost_sample_q(
+            "codex",
+            "a1",
+            5.0,
+            Some("USD"),
+            Some(MonetaryQuantityKind::Credits),
+            Some(CostMeasurementKind::PointInTime),
+            day0,
+        );
+        let all: Vec<&UsageSample> = vec![&s];
+        let contract = CostContract::from_samples(&all, &all);
+        assert_eq!(contract.quantity_kind, MonetaryQuantityKind::Credits);
+    }
+
+    /// Same numeric value/currency/measurement-kind, but genuinely
+    /// different quantity kinds (Spend vs Balance) -- must collapse to
+    /// Unknown, never silently pick one, and must never feed a combined
+    /// KPI (owner Phase 4A.1 hard rule: balances never enter Spend).
+    #[test]
+    fn cost_contract_quantity_kind_unknown_when_spend_and_balance_are_mixed() {
+        let day0 = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let spend = cost_sample_q(
+            "claude",
+            "a1",
+            5.0,
+            Some("USD"),
+            Some(MonetaryQuantityKind::Spend),
+            Some(CostMeasurementKind::Cumulative),
+            day0,
+        );
+        let balance = cost_sample_q(
+            "zenmux",
+            "a2",
+            5.0,
+            Some("USD"),
+            Some(MonetaryQuantityKind::Balance),
+            Some(CostMeasurementKind::Cumulative), // even with matching temporal shape...
+            day0,
+        );
+        let all: Vec<&UsageSample> = vec![&spend, &balance];
+        let contract = CostContract::from_samples(&all, &all);
+        // ...the quantity kind still collapses to Unknown -- proving the
+        // two dimensions are checked independently, not conflated.
+        assert_eq!(contract.quantity_kind, MonetaryQuantityKind::Unknown);
+        assert_eq!(contract.measurement_kind, CostMeasurementKind::Cumulative);
+    }
+
+    /// Legacy rows (no recorded quantity kind at all) must remain
+    /// ambiguous -- never inferred as Spend just because the historical
+    /// column happens to be named `cost_used`. Column names are not proof.
+    #[test]
+    fn cost_contract_legacy_row_never_inferred_as_spend_from_column_name() {
+        let day0 = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let legacy = UsageSample {
+            account_id: "a1".to_string(),
+            provider: "claude".to_string(),
+            window_id: Some(COST_WINDOW_ID.to_string()),
+            window_label: Some("Monthly".to_string()),
+            used_percent: 0.0,
+            remaining_percent: 0.0,
+            cost_used: Some(9.99),
+            cost_currency_code: None,
+            cost_measurement_kind: None,
+            monetary_quantity_kind: None,
+            resets_at: None,
+            captured_at: day0,
+        };
+        let all: Vec<&UsageSample> = vec![&legacy];
+        let contract = CostContract::from_samples(&all, &all);
+        assert_eq!(contract.quantity_kind, MonetaryQuantityKind::Unknown);
+        assert_eq!(contract.availability, CostAvailability::LegacyAmbiguous);
     }
 }

@@ -9,7 +9,7 @@
 //! Recording is best-effort: history failures must never break the
 //! provider refresh path.
 
-use quotalis_core::dashboard_data::provider_cost_measurement_kind;
+use quotalis_core::dashboard_data::classify_monetary_observation;
 use quotalis_core::history::{HistoryStore, UsageSample};
 use quotalis_core::profiles::ProfileStore;
 
@@ -84,6 +84,7 @@ fn sample_for_window(
         cost_used: None,
         cost_currency_code: None,
         cost_measurement_kind: None,
+        monetary_quantity_kind: None,
         resets_at: window.resets_at.as_deref().and_then(iso_to_epoch),
         captured_at,
     }
@@ -145,6 +146,8 @@ fn samples_for_snapshot(snapshot: &ProviderUsageSnapshot) -> Option<Vec<UsageSam
     // dollar amount into a percentage aggregate, and so a provider with no
     // cost data simply has no "cost" rows rather than a fabricated 0.
     if let Some(cost) = &snapshot.cost {
+        let (quantity_kind, measurement_kind) =
+            classify_monetary_observation(&snapshot.provider_id, &cost.period);
         samples.push(UsageSample {
             account_id: account_key.clone(),
             provider: snapshot.provider_id.clone(),
@@ -159,14 +162,16 @@ fn samples_for_snapshot(snapshot: &ProviderUsageSnapshot) -> Option<Vec<UsageSam
             // never defaulted to USD. Only pre-Phase-4A rows (written
             // before this column existed) read back with `None`.
             cost_currency_code: Some(cost.currency_code.clone()),
-            // Phase 4A: which measurement kind THIS provider was proven
-            // (by direct code audit, not inference) to write into `used`
-            // -- see `provider_cost_measurement_kind`'s doc comment.
-            cost_measurement_kind: Some(
-                provider_cost_measurement_kind(&snapshot.provider_id)
-                    .as_str()
-                    .to_string(),
-            ),
+            // Phase 4A.1: classify BOTH orthogonal dimensions (what the
+            // number represents, and its temporal shape) using the
+            // provider identity AND the adapter's own `period` label --
+            // the label is real evidence the adapter itself produced
+            // (e.g. it is what lets Codex's genuinely different "Credits"
+            // vs "Monthly credits" cases resolve correctly instead of
+            // being guessed by provider ID alone). See
+            // `classify_monetary_observation`'s doc comment.
+            cost_measurement_kind: Some(measurement_kind.as_str().to_string()),
+            monetary_quantity_kind: Some(quantity_kind.as_str().to_string()),
             resets_at: cost.resets_at.as_deref().and_then(iso_to_epoch),
             captured_at,
         });

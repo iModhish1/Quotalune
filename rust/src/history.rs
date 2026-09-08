@@ -47,6 +47,14 @@ pub struct UsageSample {
     /// both read back safely as `None`/an unrecognized string rather than
     /// failing to deserialize.
     pub cost_measurement_kind: Option<String>,
+    /// "spend" | "balance" | "credits" | "unknown" (or `None` for a
+    /// pre-Phase-4A.1 row). See `dashboard_data::MonetaryQuantityKind` --
+    /// the orthogonal dimension to `cost_measurement_kind`: WHAT the
+    /// number represents (spend vs. a prepaid balance vs. a
+    /// provider-defined credits unit), not its temporal shape. Stored as
+    /// a plain string for the same forward/backward-compat reason as
+    /// `cost_measurement_kind`.
+    pub monetary_quantity_kind: Option<String>,
     /// Epoch seconds.
     pub resets_at: Option<i64>,
     /// Epoch seconds.
@@ -179,6 +187,22 @@ impl HistoryStore {
                  COMMIT;",
             )?;
         }
+        if version < 4 {
+            // Phase 4A.1: add the orthogonal monetary_quantity_kind column
+            // (docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md "Phase 4A.1"
+            // section). cost_measurement_kind alone couldn't distinguish
+            // "the provider's own currency balance" from "genuine spend"
+            // when both happen to read as the same temporal shape --
+            // conflating a balance with spend is a distinct mistake from
+            // the original cumulative-summing bug. Additive, backward-
+            // compatible: existing rows get NULL (legacy/unknown quantity).
+            conn.execute_batch(
+                "BEGIN;
+                 ALTER TABLE usage_samples ADD COLUMN monetary_quantity_kind TEXT;
+                 PRAGMA user_version = 4;
+                 COMMIT;",
+            )?;
+        }
         Ok(())
     }
 
@@ -196,6 +220,17 @@ impl HistoryStore {
                 // so comparing only `used_percent` would treat any two
                 // different cost readings within the dedup window as
                 // duplicates of each other.
+                //
+                // Phase 4A.1 (owner section 9): the numeric value alone is
+                // NOT sufficient either -- two samples with the SAME
+                // cost_used but different currency, quantity kind
+                // (spend/balance/credits), or measurement kind
+                // (cumulative/point-in-time) are different facts, not
+                // duplicates of each other (5 USD Spend != 5 EUR Spend !=
+                // 5 USD Balance != 5 USD Cumulative-Spend vs
+                // PointInTime-Spend). All three columns join the dedup key
+                // via NULL-safe `IS`, alongside `account_id` (already
+                // exact-match, so multi-account never collapses).
                 let duplicate: bool = conn
                     .query_row(
                         "SELECT EXISTS(
@@ -204,13 +239,19 @@ impl HistoryStore {
                                AND window_id IS ?2
                                AND used_percent = ?3
                                AND cost_used IS ?4
-                               AND captured_at >= ?5
+                               AND cost_currency_code IS ?5
+                               AND cost_measurement_kind IS ?6
+                               AND monetary_quantity_kind IS ?7
+                               AND captured_at >= ?8
                          )",
                         rusqlite::params![
                             sample.account_id,
                             sample.window_id,
                             sample.used_percent,
                             sample.cost_used,
+                            sample.cost_currency_code,
+                            sample.cost_measurement_kind,
+                            sample.monetary_quantity_kind,
                             now_epoch() - DEDUP_WINDOW_SECS,
                         ],
                         |r| r.get::<_, i64>(0),
@@ -225,8 +266,8 @@ impl HistoryStore {
                          (account_id, provider, window_id, window_label,
                           used_percent, remaining_percent, cost_used,
                           cost_currency_code, cost_measurement_kind,
-                          resets_at, captured_at)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                          monetary_quantity_kind, resets_at, captured_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
                     rusqlite::params![
                         sample.account_id,
                         sample.provider,
@@ -237,6 +278,7 @@ impl HistoryStore {
                         sample.cost_used,
                         sample.cost_currency_code,
                         sample.cost_measurement_kind,
+                        sample.monetary_quantity_kind,
                         sample.resets_at,
                         sample.captured_at,
                     ],
@@ -254,7 +296,7 @@ impl HistoryStore {
                 "SELECT account_id, provider, window_id, window_label,
                         used_percent, remaining_percent, cost_used,
                         cost_currency_code, cost_measurement_kind,
-                        resets_at, captured_at
+                        monetary_quantity_kind, resets_at, captured_at
                  FROM usage_samples WHERE 1=1",
             );
             let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
@@ -305,8 +347,9 @@ impl HistoryStore {
                     cost_used: r.get(6)?,
                     cost_currency_code: r.get(7)?,
                     cost_measurement_kind: r.get(8)?,
-                    resets_at: r.get(9)?,
-                    captured_at: r.get(10)?,
+                    monetary_quantity_kind: r.get(9)?,
+                    resets_at: r.get(10)?,
+                    captured_at: r.get(11)?,
                 })
             })?;
             let mut out = Vec::new();
@@ -377,6 +420,7 @@ mod tests {
             cost_used: None,
             cost_currency_code: None,
             cost_measurement_kind: None,
+            monetary_quantity_kind: None,
             resets_at: None,
             captured_at: at,
         }
@@ -455,6 +499,7 @@ mod tests {
             cost_used: Some(cost),
             cost_currency_code: Some("USD".to_string()),
             cost_measurement_kind: Some("unknown".to_string()),
+            monetary_quantity_kind: Some("unknown".to_string()),
             resets_at: None,
             captured_at: at,
         };
@@ -464,6 +509,137 @@ mod tests {
         // Different cost within the dedup window: must still be stored --
         // the bug this test guards against would have dropped this too.
         assert_eq!(store.record_samples(&[cost_sample(15.00, now)]).unwrap(), 1);
+    }
+
+    // ── Phase 4A.1: dedup must preserve semantic differences ────────────
+    // docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md "Phase 4A.1" section,
+    // owner sections 9/10. Same numeric value, different currency/
+    // quantity-kind/measurement-kind/account must never collapse into one
+    // row -- "5 USD Spend" != "5 EUR Spend" != "5 USD Balance" != "5 USD
+    // Cumulative Spend" vs "5 USD PointInTime Spend".
+
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "test fixture constructor mirrors the real row's column count"
+    )]
+    fn semantic_cost_sample(
+        account: &str,
+        cost: f64,
+        currency: &str,
+        quantity_kind: &str,
+        measurement_kind: &str,
+        at: i64,
+    ) -> UsageSample {
+        UsageSample {
+            account_id: account.to_string(),
+            provider: "claude".to_string(),
+            window_id: Some("cost".to_string()),
+            window_label: Some("Monthly".to_string()),
+            used_percent: 0.0,
+            remaining_percent: 0.0,
+            cost_used: Some(cost),
+            cost_currency_code: Some(currency.to_string()),
+            cost_measurement_kind: Some(measurement_kind.to_string()),
+            monetary_quantity_kind: Some(quantity_kind.to_string()),
+            resets_at: None,
+            captured_at: at,
+        }
+    }
+
+    #[test]
+    fn dedup_same_value_and_semantics_still_dedups_per_existing_timing_rules() {
+        let store = store();
+        let now = now_epoch();
+        let s = semantic_cost_sample("a1", 5.0, "USD", "spend", "cumulative", now);
+        assert_eq!(store.record_samples(std::slice::from_ref(&s)).unwrap(), 1);
+        assert_eq!(
+            store.record_samples(&[s]).unwrap(),
+            0,
+            "identical semantics + value + within window must still dedup"
+        );
+    }
+
+    #[test]
+    fn dedup_same_value_different_currency_never_collapses() {
+        let store = store();
+        let now = now_epoch();
+        let usd = semantic_cost_sample("a1", 5.0, "USD", "spend", "cumulative", now);
+        let eur = semantic_cost_sample("a1", 5.0, "EUR", "spend", "cumulative", now);
+        assert_eq!(store.record_samples(&[usd]).unwrap(), 1);
+        assert_eq!(
+            store.record_samples(&[eur]).unwrap(),
+            1,
+            "5 USD Spend and 5 EUR Spend are different facts -- must not dedup"
+        );
+    }
+
+    #[test]
+    fn dedup_same_value_different_quantity_kind_never_collapses() {
+        let store = store();
+        let now = now_epoch();
+        let spend = semantic_cost_sample("a1", 5.0, "USD", "spend", "cumulative", now);
+        let balance = semantic_cost_sample("a1", 5.0, "USD", "balance", "cumulative", now);
+        assert_eq!(store.record_samples(&[spend]).unwrap(), 1);
+        assert_eq!(
+            store.record_samples(&[balance]).unwrap(),
+            1,
+            "5 USD Spend and 5 USD Balance are different facts -- must not dedup"
+        );
+    }
+
+    #[test]
+    fn dedup_same_value_different_measurement_kind_never_collapses() {
+        let store = store();
+        let now = now_epoch();
+        let cumulative = semantic_cost_sample("a1", 5.0, "USD", "spend", "cumulative", now);
+        let point_in_time = semantic_cost_sample("a1", 5.0, "USD", "spend", "point_in_time", now);
+        assert_eq!(store.record_samples(&[cumulative]).unwrap(), 1);
+        assert_eq!(
+            store.record_samples(&[point_in_time]).unwrap(),
+            1,
+            "5 USD Cumulative Spend and 5 USD PointInTime Spend are different facts -- must not dedup"
+        );
+    }
+
+    #[test]
+    fn dedup_same_value_different_account_never_collapses() {
+        let store = store();
+        let now = now_epoch();
+        let a1 = semantic_cost_sample("a1", 5.0, "USD", "spend", "cumulative", now);
+        let a2 = semantic_cost_sample("a2", 5.0, "USD", "spend", "cumulative", now);
+        assert_eq!(store.record_samples(&[a1]).unwrap(), 1);
+        assert_eq!(
+            store.record_samples(&[a2]).unwrap(),
+            1,
+            "same value on a different account is a different fact -- must not dedup"
+        );
+    }
+
+    #[test]
+    fn dedup_none_vs_known_semantic_never_silently_collapses() {
+        let store = store();
+        let now = now_epoch();
+        let legacy_unknown = UsageSample {
+            account_id: "a1".to_string(),
+            provider: "claude".to_string(),
+            window_id: Some("cost".to_string()),
+            window_label: Some("Monthly".to_string()),
+            used_percent: 0.0,
+            remaining_percent: 0.0,
+            cost_used: Some(5.0),
+            cost_currency_code: None,
+            cost_measurement_kind: None,
+            monetary_quantity_kind: None,
+            resets_at: None,
+            captured_at: now,
+        };
+        let known = semantic_cost_sample("a1", 5.0, "USD", "spend", "cumulative", now);
+        assert_eq!(store.record_samples(&[legacy_unknown]).unwrap(), 1);
+        assert_eq!(
+            store.record_samples(&[known]).unwrap(),
+            1,
+            "an untagged legacy row and a semantically-known row with the same numeric value must not silently collapse"
+        );
     }
 
     #[test]
