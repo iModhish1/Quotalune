@@ -35,6 +35,7 @@ const FloatBar = lazy(() => import("./floatbar/FloatBar"));
 const TopArc = lazy(() => import("./surfaces/top-arc/TopArc"));
 const CollectionsNativeView = lazy(() => import("./surfaces/collections/CollectionsNativeView"));
 const DemoStage = lazy(() => import("./demo/DemoStage"));
+const Providers3DDevLab = lazy(() => import("./surfaces/dashboard/providers3d/Providers3DDevLab"));
 
 function SurfaceFallback() {
   return null;
@@ -48,6 +49,13 @@ function isSettingsWindow(): boolean {
 /** True when running inside the detached FloatBar window. */
 function isFloatBarWindow(): boolean {
   return getCurrentWebviewWindow().label === FLOATBAR_WINDOW_LABEL;
+}
+
+/** True for the DEV-only 3D engine lab route (`?window=providers3d-lab`).
+ *  Gated a second time (belt-and-suspenders) by `import.meta.env.DEV` at
+ *  the one call site -- see Phase 5 owner sections 56/57. */
+function isProviders3DLabWindow(): boolean {
+  return new URLSearchParams(window.location.search).get("window") === "providers3d-lab";
 }
 
 /** True when running inside the detached Top Arc surface window. */
@@ -221,6 +229,18 @@ function AppInner() {
           <p>{t("LoadingShellContractHint")}</p>
         </section>
       </main>
+    );
+  }
+
+  // Phase 5 owner sections 56/57: DEV-only 3D engine lab. Never reachable
+  // in a production build (see the `import.meta.env.DEV` gate inside
+  // `DevOnlyRoute`) -- uses the real Tauri bootstrap/settings bridge like
+  // every other surface, only the provider list is synthetic.
+  if (isProviders3DLabWindow() && import.meta.env.DEV) {
+    return (
+      <Suspense fallback={<SurfaceFallback />}>
+        <Providers3DDevLab state={state} />
+      </Suspense>
     );
   }
 
