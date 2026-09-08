@@ -32,6 +32,7 @@ export default function DashboardBody({
   settings,
   onSettings,
   cardRef,
+  hideHero,
 }: {
   /** Every provider, in display order -- feeds the switcher grid and the
    *  orbital hero, which always show the full set regardless of selection. */
@@ -52,6 +53,13 @@ export default function DashboardBody({
   settings: SettingsSnapshot;
   onSettings: () => void;
   cardRef: (providerId: string, node: HTMLDivElement | null) => void;
+  /** Skip the orbital usage hero. The 2D Analytics Dashboard mode uses
+   *  this -- a full 3D-style orbital centerpiece is exactly the "giant
+   *  empty orbital hero" the Phase 3 spec says 2D must not show, now that
+   *  the real analytics rows (KPIs, trend, distribution) are the primary
+   *  content. `PopOutPanel`'s detached window keeps the hero (unaffected,
+   *  defaults to `false`). */
+  hideHero?: boolean;
 }) {
   if (allProviders.length === 0) {
     return <MenuEmpty isLoading={isRefreshing && !hasCachedData} onSettings={onSettings} />;
@@ -69,14 +77,16 @@ export default function DashboardBody({
         onSelect={onSelect}
         onReorder={onReorder}
       />
-      <CatalogUsageHero
-        variant="dashboard"
-        catalog={catalog}
-        providers={stageProviders}
-        selectedProviderId={selectedProviderId}
-        onSelectProvider={(providerId) => onSelect(providerId)}
-        showProviderIcons={settings.switcherShowsIcons}
-      />
+      {!hideHero && (
+        <CatalogUsageHero
+          variant="dashboard"
+          catalog={catalog}
+          providers={stageProviders}
+          selectedProviderId={selectedProviderId}
+          onSelectProvider={(providerId) => onSelect(providerId)}
+          showProviderIcons={settings.switcherShowsIcons}
+        />
+      )}
       <div className="provider-grid__divider" />
       <div className="menu-stack">
         {visibleProviders.map((p, idx) => (

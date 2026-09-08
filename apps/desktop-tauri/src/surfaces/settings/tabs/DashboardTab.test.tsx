@@ -10,6 +10,28 @@ const tauriMocks = vi.hoisted(() => ({
   getLocaleStrings: vi.fn(),
   setUiLanguage: vi.fn(),
   getProviderChartData: vi.fn().mockResolvedValue(null),
+  // Phase 3: AnalyticsDashboard now renders DashboardAnalyticsPanel, which
+  // calls useDashboardSnapshot() -- this must resolve (not be undefined)
+  // or the hook's synchronous call site throws inside the render effect.
+  getDashboardSnapshot: vi.fn().mockResolvedValue({
+    generatedAt: 0,
+    rangeSince: 0,
+    rangeUntil: 0,
+    grain: "daily",
+    timezone: "UTC",
+    availability: {
+      firstSampleAt: null,
+      lastSampleAt: null,
+      sampleCount: 0,
+      hasCostData: false,
+      hasTokenData: false,
+      hasRequestData: false,
+      hasModelData: false,
+    },
+    providers: [],
+    usageTrend: [],
+    spendTrend: [],
+  }),
 }));
 
 const eventMocks = vi.hoisted(() => ({
