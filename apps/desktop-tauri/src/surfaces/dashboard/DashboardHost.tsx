@@ -83,7 +83,7 @@ export default function DashboardHost({
   return (
     <DashboardModeErrorBoundary key={resolved} mode={resolved} onSwitchToDefault={onSwitchToDefault}>
       <Suspense fallback={<DashboardHostSkeleton />}>
-        <Mode state={state} onOpenProviders={onOpenProviders} />
+        <Mode state={state} onOpenProviders={onOpenProviders} onSwitchToAnalytics2D={onSwitchToDefault} />
       </Suspense>
     </DashboardModeErrorBoundary>
   );

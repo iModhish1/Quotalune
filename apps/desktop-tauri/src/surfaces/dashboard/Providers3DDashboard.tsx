@@ -18,7 +18,7 @@ import { CANONICAL_THEME, catalogBySlug } from "../../design-system/themeCatalog
 import ProvidersUniverseScene from "./providers3d/ProvidersUniverseScene";
 import type { DashboardModeProps } from "../../lib/dashboardRegistry";
 
-export default function Providers3DDashboard({ state, onOpenProviders }: DashboardModeProps) {
+export default function Providers3DDashboard({ state, onOpenProviders, onSwitchToAnalytics2D }: DashboardModeProps) {
   const { providers } = useProviders();
   const { settings } = useSettings(state.settings);
   const { slug } = resolveCatalogTheme(settings, "providers3d");
@@ -30,6 +30,7 @@ export default function Providers3DDashboard({ state, onOpenProviders }: Dashboa
       settings={settings}
       theme={theme}
       onOpenProviders={onOpenProviders}
+      onSwitchToAnalytics2D={onSwitchToAnalytics2D}
     />
   );
 }

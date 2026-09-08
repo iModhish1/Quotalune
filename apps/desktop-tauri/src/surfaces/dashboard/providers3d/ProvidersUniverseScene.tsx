@@ -34,7 +34,15 @@ export interface ProvidersUniverseSceneProps {
   liveProviders: ProviderUsageSnapshot[];
   settings: SettingsSnapshot;
   theme: CatalogTheme;
+  /** Opens the Providers settings tab (e.g. from the empty-state "manage
+   *  providers" action) -- distinct from `onSwitchToAnalytics2D` below. */
   onOpenProviders: () => void;
+  /** Switches the Dashboard mode itself back to 2D -- used by the
+   *  WebGL-unavailable fallback (Phase 5.1 owner section 18 fix: this
+   *  used to call `onOpenProviders`, which actually opens the Providers
+   *  tab, not the 2D Dashboard -- caught by clicking the real button in
+   *  a native capture with WebGL genuinely disabled). */
+  onSwitchToAnalytics2D: () => void;
 }
 
 function monetaryText(node: ProviderSceneNode, t: (key: import("../../../i18n/keys").LocaleKey) => string): string {
@@ -99,6 +107,7 @@ export default function ProvidersUniverseScene({
   settings,
   theme,
   onOpenProviders,
+  onSwitchToAnalytics2D,
 }: ProvidersUniverseSceneProps) {
   const { t } = useLocale();
   const systemReducedMotion = useReducedMotion();
@@ -228,7 +237,7 @@ export default function ProvidersUniverseScene({
       <div className="providers3d__fallback" role="status">
         <h3>{t("Providers3DUnavailableTitle")}</h3>
         <p>{t("Providers3DUnavailableBody")}</p>
-        <button type="button" className="credential-btn credential-btn--secondary" onClick={onOpenProviders}>
+        <button type="button" className="credential-btn credential-btn--secondary" onClick={onSwitchToAnalytics2D}>
           {t("Providers3DOpen2DFallback")}
         </button>
       </div>

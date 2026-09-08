@@ -51,8 +51,14 @@ export function primaryRingRadiusFor(primaryCount: number): number {
 
 /** Single-provider composition: centered, not orbiting a huge empty ring
  *  (owner section 59) -- placed a short, fixed distance from the core so
- *  the camera can frame both in one composition. */
-const SINGLE_PROVIDER_POSITION: ScenePosition = { x: 0, y: 0, z: PRIMARY_RING_RADIUS_MIN * 0.6 };
+ *  the camera can frame both in one composition. This distance is
+ *  intentionally its own constant, not derived from
+ *  `PRIMARY_RING_RADIUS_MIN` -- tying it to that (Phase 5.1's ring-radius
+ *  fix) previously shrank it enough that the single provider's body
+ *  visually overlapped the core, caught in that same native capture
+ *  pass. */
+const SINGLE_PROVIDER_DISTANCE = 2.4;
+const SINGLE_PROVIDER_POSITION: ScenePosition = { x: 0, y: 0, z: SINGLE_PROVIDER_DISTANCE };
 
 function ringPosition(index: number, count: number, radius: number): ScenePosition {
   const angle = (index / count) * Math.PI * 2;

@@ -107,6 +107,10 @@ export default function Providers3DDevLab({ state }: { state: BootstrapState }) 
             // eslint-disable-next-line no-console
             console.info("[providers3d-devlab] onOpenProviders invoked");
           }}
+          onSwitchToAnalytics2D={() => {
+            // eslint-disable-next-line no-console
+            console.info("[providers3d-devlab] onSwitchToAnalytics2D invoked");
+          }}
         />
       </div>
     </div>

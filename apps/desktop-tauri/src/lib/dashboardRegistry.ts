@@ -34,6 +34,14 @@ export interface DashboardDefinition {
 export interface DashboardModeProps {
   state: import("../types/bridge").BootstrapState;
   onOpenProviders: () => void;
+  /** Switches the Dashboard mode itself back to the 2D baseline
+   *  (`analytics2d`) -- distinct from `onOpenProviders`, which opens the
+   *  Providers settings tab. Threaded from `DashboardHost`'s own
+   *  `onSwitchToDefault` (already used by its per-mode error boundary),
+   *  so a mode's own in-body escape hatch (e.g. the 3D engine's WebGL-
+   *  unavailable fallback) uses the exact same real switch, not a second
+   *  mechanism that only looks like it does the same thing. */
+  onSwitchToAnalytics2D: () => void;
 }
 
 const AnalyticsDashboard = lazy(() => import("../surfaces/dashboard/AnalyticsDashboard"));
