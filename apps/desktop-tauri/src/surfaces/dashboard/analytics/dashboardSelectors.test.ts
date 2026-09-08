@@ -4,6 +4,7 @@ import {
   buildAlerts,
   compareTrendHalves,
   computeKpis,
+  rankProvidersByResetTime,
   rankProvidersByShare,
   resolveDataStatus,
 } from "./dashboardSelectors";
@@ -124,6 +125,55 @@ describe("rankProvidersByShare", () => {
     expect(ranked).toHaveLength(1);
     expect(ranked[0].share).toBe(1);
     expect(ranked[0].usedPercent).toBe(42); // real value, not invented
+  });
+});
+
+describe("rankProvidersByResetTime", () => {
+  it("returns [] when no provider has a real future reset", () => {
+    expect(rankProvidersByResetTime([])).toEqual([]);
+    expect(rankProvidersByResetTime([provider({ primary: rateWindow({ resetsAt: null }) })])).toEqual(
+      [],
+    );
+  });
+
+  it("excludes a provider whose reset has already passed", () => {
+    const past = new Date(Date.now() - 60_000).toISOString();
+    const ranked = rankProvidersByResetTime([
+      provider({ primary: rateWindow({ resetsAt: past }), selectedMetric: rateWindow({ resetsAt: past }) }),
+    ]);
+    expect(ranked).toEqual([]);
+  });
+
+  it("orders real future resets soonest-first", () => {
+    const soon = new Date(Date.now() + 30 * 60_000).toISOString();
+    const later = new Date(Date.now() + 5 * 60 * 60_000).toISOString();
+    const ranked = rankProvidersByResetTime([
+      provider({
+        providerId: "codex",
+        displayName: "Codex",
+        primary: rateWindow({ resetsAt: later }),
+        selectedMetric: rateWindow({ resetsAt: later }),
+      }),
+      provider({
+        providerId: "claude",
+        displayName: "Claude",
+        primary: rateWindow({ resetsAt: soon }),
+        selectedMetric: rateWindow({ resetsAt: soon }),
+      }),
+    ]);
+    expect(ranked.map((r) => r.providerId)).toEqual(["claude", "codex"]);
+  });
+
+  it("excludes a provider that needs authentication rather than showing a stale reset", () => {
+    const soon = new Date(Date.now() + 30 * 60_000).toISOString();
+    const ranked = rankProvidersByResetTime([
+      provider({
+        errorState: "needsAuthentication",
+        primary: rateWindow({ resetsAt: soon }),
+        selectedMetric: rateWindow({ resetsAt: soon }),
+      }),
+    ]);
+    expect(ranked).toEqual([]);
   });
 });
 

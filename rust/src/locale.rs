@@ -515,6 +515,8 @@ locale_keys! {
     DashboardDataStatusPricingNotVerified,
     DashboardDataAvailableSince,
     DashboardDataSamples,
+    DashboardResetScheduleTitle,
+    DashboardResetScheduleEmpty,
     TabProviderDisplay,
     TabCollections,
     CollectionsPageHelper,

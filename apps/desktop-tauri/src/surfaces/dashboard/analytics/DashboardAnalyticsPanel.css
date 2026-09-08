@@ -19,9 +19,10 @@
 .dashboard-kpi__hint{color:var(--qa-ink-3);font-size:10px}
 
 .dashboard-analytics__row{display:grid;grid-template-columns:2fr 1fr;gap:12px;align-items:start}
+.dashboard-analytics__row--single{grid-template-columns:1fr}
 
-.dashboard-analytics__trend,.dashboard-analytics__distribution,.dashboard-analytics__alerts,.dashboard-analytics__data-status{padding:12px 14px;border:1px solid var(--qa-hairline);border-radius:14px;background:color-mix(in srgb,var(--qa-material-raised) 50%,transparent);min-width:0}
-.dashboard-analytics__trend h2,.dashboard-analytics__distribution h2,.dashboard-analytics__alerts h2,.dashboard-analytics__data-status h2{margin:0 0 8px;color:var(--qa-ink-2);font-size:12px;font-weight:650;text-transform:uppercase;letter-spacing:.04em}
+.dashboard-analytics__trend,.dashboard-analytics__distribution,.dashboard-analytics__alerts,.dashboard-analytics__data-status,.dashboard-analytics__reset-schedule{padding:12px 14px;border:1px solid var(--qa-hairline);border-radius:14px;background:color-mix(in srgb,var(--qa-material-raised) 50%,transparent);min-width:0}
+.dashboard-analytics__trend h2,.dashboard-analytics__distribution h2,.dashboard-analytics__alerts h2,.dashboard-analytics__data-status h2,.dashboard-analytics__reset-schedule h2{margin:0 0 8px;color:var(--qa-ink-2);font-size:12px;font-weight:650;text-transform:uppercase;letter-spacing:.04em}
 .dashboard-analytics__section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .dashboard-analytics__section-head h2{margin:0}
 .dashboard-analytics__empty{margin:0;padding:14px 0;color:var(--qa-ink-3);font-size:11px;text-align:center}
@@ -52,6 +53,11 @@
 .dashboard-analytics__data-status-row{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:11px}
 .dashboard-analytics__data-status-row dt{margin:0;color:var(--qa-ink-2)}
 .dashboard-analytics__data-status-row dd{margin:0;color:var(--qa-ink-3)}
+
+.dashboard-analytics__reset-schedule-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.dashboard-analytics__reset-schedule-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;font-size:11px}
+.dashboard-analytics__reset-schedule-name{color:var(--qa-ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dashboard-analytics__reset-schedule-value{color:var(--qa-ink-3);font-variant-numeric:tabular-nums;white-space:nowrap}
 
 @media(max-width:720px){
   .dashboard-analytics__row{grid-template-columns:1fr}

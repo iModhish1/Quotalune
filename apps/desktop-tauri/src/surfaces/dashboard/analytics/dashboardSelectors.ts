@@ -152,6 +152,38 @@ export function buildAlerts(
   return alerts.sort((a, b) => (a.severity === b.severity ? 0 : a.severity === "critical" ? -1 : 1));
 }
 
+export interface ProviderResetSchedule {
+  providerId: string;
+  providerName: string;
+  resetsAt: string;
+}
+
+/**
+ * Every connected provider with a real, still-future reset instant,
+ * ordered soonest-first (owner build-order item F: a dedicated
+ * cross-provider "sorted by soonest reset" widget, distinct from the
+ * single next-reset KPI and from any one provider's own detail card).
+ * Generalizes the same soonest-reset logic `computeKpis` uses for its
+ * single `nextReset` KPI into the full ranked list. Providers with no
+ * reset data, an unparseable timestamp, or an already-past reset are
+ * left out rather than shown as a fabricated "now".
+ */
+export function rankProvidersByResetTime(
+  providers: ProviderUsageSnapshot[],
+): ProviderResetSchedule[] {
+  const now = Date.now();
+  const connected = providers.filter((p) => p.errorState === "ready");
+  const withResets: ProviderResetSchedule[] = [];
+  for (const p of connected) {
+    const metric = selectSingleMetricUsageWindow(p);
+    if (!metric.resetsAt) continue;
+    const resetMs = Date.parse(metric.resetsAt);
+    if (Number.isNaN(resetMs) || resetMs <= now) continue;
+    withResets.push({ providerId: p.providerId, providerName: p.displayName, resetsAt: metric.resetsAt });
+  }
+  return withResets.sort((a, b) => Date.parse(a.resetsAt) - Date.parse(b.resetsAt));
+}
+
 export interface DataStatus {
   historyState: "active" | "collecting";
   quotaState: "live";

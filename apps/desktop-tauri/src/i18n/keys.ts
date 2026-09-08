@@ -277,6 +277,8 @@ export const ALL_LOCALE_KEYS = [
   "DashboardDataStatusPricingNotVerified",
   "DashboardDataAvailableSince",
   "DashboardDataSamples",
+  "DashboardResetScheduleTitle",
+  "DashboardResetScheduleEmpty",
   "TabProviderDisplay",
   "TabCollections",
   "CollectionsPageHelper",

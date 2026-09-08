@@ -5,6 +5,7 @@ import DashboardHeader from "./DashboardHeader";
 import KpiRow from "./KpiRow";
 import UsageTrendSection from "./UsageTrendSection";
 import ProviderDistribution from "./ProviderDistribution";
+import ResetSchedule from "./ResetSchedule";
 import AlertsPanel from "./AlertsPanel";
 import DataStatusPanel from "./DataStatusPanel";
 import type { DashboardRangeKind, ProviderUsageSnapshot, SettingsSnapshot } from "../../../types/bridge";
@@ -67,7 +68,10 @@ export default function DashboardAnalyticsPanel({
         <ProviderDistribution providers={snapshot?.providers ?? []} />
       </div>
       <div className="dashboard-analytics__row">
+        <ResetSchedule providers={liveProviders} relative={settings.resetTimeRelative} />
         <AlertsPanel providers={liveProviders} settings={settings} onOpenProviders={onOpenProviders} />
+      </div>
+      <div className="dashboard-analytics__row dashboard-analytics__row--single">
         <DataStatusPanel snapshot={snapshot} />
       </div>
     </div>
