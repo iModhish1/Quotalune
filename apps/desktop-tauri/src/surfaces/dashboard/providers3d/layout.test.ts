@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeProviderLayout, PRIMARY_RING_CAPACITY, ringForProvider } from "./layout";
+import { computeProviderLayout, PRIMARY_RING_CAPACITY, primaryRingRadiusFor, ringForProvider } from "./layout";
 
 describe("computeProviderLayout", () => {
   it("returns an empty map for zero providers", () => {
@@ -66,6 +66,23 @@ describe("computeProviderLayout", () => {
       expect(seen.has(key)).toBe(false);
       seen.add(key);
     }
+  });
+
+  it("Phase 5.1 fix: the primary ring's radius grows with occupancy -- 2 providers are not spread across the same radius as 12 (owner sections 9/26)", () => {
+    const twoProviderDistance = Math.hypot(...Object.values(computeProviderLayout(["a", "b"]).get("a")!));
+    const twelveIds = Array.from({ length: 12 }, (_, i) => `provider-${i}`);
+    const twelveProviderDistance = Math.hypot(
+      ...Object.values(computeProviderLayout(twelveIds).get(twelveIds.slice().sort()[0])!),
+    );
+    expect(twoProviderDistance).toBeLessThan(twelveProviderDistance);
+  });
+
+  it("primaryRingRadiusFor grows monotonically from 2 up to ring capacity, then holds", () => {
+    const radii = [2, 4, 6, 8, 10, 12, 12].map((n) => primaryRingRadiusFor(n));
+    for (let i = 1; i < radii.length; i += 1) {
+      expect(radii[i]).toBeGreaterThanOrEqual(radii[i - 1]);
+    }
+    expect(primaryRingRadiusFor(12)).toBe(primaryRingRadiusFor(24));
   });
 
   it("keeps every position within a bounded, finite distance from the core", () => {

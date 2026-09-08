@@ -23,7 +23,13 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { DashboardPerformancePreset } from "../../../types/bridge";
 import type { ProviderSceneNode, SceneStructureColors } from "./sceneModel";
-import { computeProviderLayout, ringForProvider } from "./layout";
+import {
+  computeProviderLayout,
+  primaryRingRadiusFor,
+  ringForProvider,
+  PRIMARY_RING_CAPACITY,
+  SECONDARY_RING_RADIUS,
+} from "./layout";
 import { computeDevicePixelRatio, DirtyRenderScheduler, cameraTransitionDurationMs } from "./renderPolicy";
 
 export interface EngineCallbacks {
@@ -274,7 +280,21 @@ export class ProvidersUniverseEngine {
   private frameCamera(providerCount: number, force = false): void {
     if (!force && providerCount === this.lastFramedCount) return;
     this.lastFramedCount = providerCount;
-    const distance = providerCount <= 1 ? 6 : providerCount <= 12 ? 11 : 15;
+    // Phase 5.1 owner sections 9/26 fix: the first native capture showed
+    // 2 real providers looking like debris lost in a huge empty canvas --
+    // the camera distance was a fixed bucket that assumed every count up
+    // to 12 used the same full-size ring. It now derives from the same
+    // real ring radius `layout.ts` actually places bodies on, so framing
+    // tracks the true geometry instead of guessing at it a second time.
+    let distance: number;
+    if (providerCount <= 1) {
+      distance = 6;
+    } else {
+      const primaryCount = Math.min(providerCount, PRIMARY_RING_CAPACITY);
+      const hasSecondaryRing = providerCount > PRIMARY_RING_CAPACITY;
+      const maxRingRadius = hasSecondaryRing ? SECONDARY_RING_RADIUS : primaryRingRadiusFor(primaryCount);
+      distance = maxRingRadius * 1.7 + 4;
+    }
     const duration = cameraTransitionDurationMs(this.options.reducedMotion);
     // Prototype: an interruptible transition would tween position over
     // `duration`; for the prototype we snap when reduced motion is on

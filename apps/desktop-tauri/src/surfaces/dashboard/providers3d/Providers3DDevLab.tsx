@@ -5,11 +5,14 @@
  * counts (1/6/12/24/70), status mixes, and any catalog Structure Theme --
  * combinations real Dev-channel data cannot reliably produce on demand.
  *
- * HARD GATE: this component's one call site (`App.tsx`, the
- * `?window=providers3d-lab` route) is itself wrapped in an
- * `import.meta.env.DEV` check -- it is never reachable in a production
- * build, and its fixture data (`devFixtures.ts`) never flows into
- * `Providers3DDashboard.tsx`, which uses only `useProviders()`.
+ * Reachable only via the undiscoverable `?window=providers3d-lab` query
+ * param (App.tsx) -- the same convention `?window=demo` already uses, not
+ * `import.meta.env.DEV` (that flag is always `false` in a built artifact,
+ * including a `dev-channel` Rust build, so gating on it would make this
+ * permanently unreachable in the very binary it exists to help verify --
+ * found during Phase 5.1 native proof). Its fixture data (`devFixtures.ts`)
+ * never flows into `Providers3DDashboard.tsx`, which uses only
+ * `useProviders()`.
  */
 import { useMemo, useState } from "react";
 import { useSettings } from "../../../hooks/useSettings";

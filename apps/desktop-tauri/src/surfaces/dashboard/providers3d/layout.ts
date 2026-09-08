@@ -25,13 +25,34 @@ export interface ScenePosition {
 }
 
 export const PRIMARY_RING_CAPACITY = 12;
-const PRIMARY_RING_RADIUS = 6;
-const SECONDARY_RING_RADIUS = 10;
+const PRIMARY_RING_RADIUS_MAX = 6;
+/** Floor for the primary ring's radius at low provider counts (Phase 5.1
+ *  owner sections 9/26 fix): a fixed radius-6 ring with only 2 bodies on
+ *  it left them looking like debris lost in a huge empty void in the
+ *  first native capture. The ring now grows with occupancy instead of
+ *  starting at full size immediately. */
+const PRIMARY_RING_RADIUS_MIN = 3;
+export const SECONDARY_RING_RADIUS = 10;
+
+function clamp01(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
+/** Primary ring radius as a function of how many providers actually sit
+ *  on it -- 2 providers get a small, tight ring; the ring reaches its
+ *  full radius once the ring is at capacity. Exported so the engine's
+ *  camera framing can match the same real geometry instead of guessing
+ *  at fixed distance buckets. */
+export function primaryRingRadiusFor(primaryCount: number): number {
+  if (primaryCount <= 2) return PRIMARY_RING_RADIUS_MIN;
+  const t = clamp01((primaryCount - 2) / (PRIMARY_RING_CAPACITY - 2));
+  return PRIMARY_RING_RADIUS_MIN + (PRIMARY_RING_RADIUS_MAX - PRIMARY_RING_RADIUS_MIN) * t;
+}
 
 /** Single-provider composition: centered, not orbiting a huge empty ring
  *  (owner section 59) -- placed a short, fixed distance from the core so
  *  the camera can frame both in one composition. */
-const SINGLE_PROVIDER_POSITION: ScenePosition = { x: 0, y: 0, z: PRIMARY_RING_RADIUS * 0.6 };
+const SINGLE_PROVIDER_POSITION: ScenePosition = { x: 0, y: 0, z: PRIMARY_RING_RADIUS_MIN * 0.6 };
 
 function ringPosition(index: number, count: number, radius: number): ScenePosition {
   const angle = (index / count) * Math.PI * 2;
@@ -63,9 +84,10 @@ export function computeProviderLayout(
 
   const primary = sorted.slice(0, PRIMARY_RING_CAPACITY);
   const secondary = sorted.slice(PRIMARY_RING_CAPACITY);
+  const primaryRadius = primaryRingRadiusFor(primary.length);
 
   primary.forEach((id, index) => {
-    positions.set(id, ringPosition(index, primary.length, PRIMARY_RING_RADIUS));
+    positions.set(id, ringPosition(index, primary.length, primaryRadius));
   });
   secondary.forEach((id, index) => {
     positions.set(id, ringPosition(index, secondary.length, SECONDARY_RING_RADIUS));

@@ -51,9 +51,9 @@ function isFloatBarWindow(): boolean {
   return getCurrentWebviewWindow().label === FLOATBAR_WINDOW_LABEL;
 }
 
-/** True for the DEV-only 3D engine lab route (`?window=providers3d-lab`).
- *  Gated a second time (belt-and-suspenders) by `import.meta.env.DEV` at
- *  the one call site -- see Phase 5 owner sections 56/57. */
+/** True for the fixture-driven 3D engine lab route
+ *  (`?window=providers3d-lab`) -- undiscoverable from any in-app UI, same
+ *  convention as `?window=demo`. See Phase 5 owner sections 56/57. */
 function isProviders3DLabWindow(): boolean {
   return new URLSearchParams(window.location.search).get("window") === "providers3d-lab";
 }
@@ -232,11 +232,18 @@ function AppInner() {
     );
   }
 
-  // Phase 5 owner sections 56/57: DEV-only 3D engine lab. Never reachable
-  // in a production build (see the `import.meta.env.DEV` gate inside
-  // `DevOnlyRoute`) -- uses the real Tauri bootstrap/settings bridge like
-  // every other surface, only the provider list is synthetic.
-  if (isProviders3DLabWindow() && import.meta.env.DEV) {
+  // Phase 5 owner sections 56/57: fixture-driven 3D engine lab, gated by
+  // the same `?window=<id>` query-param convention already used for
+  // `?window=demo` (DemoStage, below) -- not by `import.meta.env.DEV`.
+  // That flag is Vite's *build-mode* switch (`vite dev` vs `vite build`)
+  // and is `false` in every artifact this project ships, including a
+  // `dev-channel`-feature Rust build, so gating on it made this lab
+  // permanently unreachable in the one binary it exists to help verify
+  // (found during Phase 5.1 native proof). Uses the real Tauri
+  // bootstrap/settings bridge like every other surface -- only the
+  // provider list itself is synthetic, and it is undiscoverable from any
+  // in-app UI (no button/menu item opens this URL), same as DemoStage.
+  if (isProviders3DLabWindow()) {
     return (
       <Suspense fallback={<SurfaceFallback />}>
         <Providers3DDevLab state={state} />
