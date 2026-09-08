@@ -222,10 +222,14 @@ fn load_local_usage_summary_with_unknown_models(
     }
 
     let lang = locale::current_language();
+    // Phase 4C: gate the dollar figures through the shared billing-channel
+    // eligibility rule (see cost_scanner.rs's module doc comment) -- never
+    // shows a computed cost with no established billing channel, but
+    // `thirty_day_tokens`/`latest_tokens`/`top_model` above stay real.
     (
         Some(ProviderLocalUsageSummary {
-            today_cost: non_zero_f64(today.total_cost_usd),
-            thirty_day_cost: non_zero_f64(thirty_day.total_cost_usd),
+            today_cost: today.eligible_total_cost_usd().and_then(non_zero_f64),
+            thirty_day_cost: thirty_day.eligible_total_cost_usd().and_then(non_zero_f64),
             thirty_day_tokens: non_zero_u64(thirty_day_tokens),
             latest_tokens: non_zero_u64(latest_tokens),
             top_model: top_model(&thirty_day),

@@ -596,7 +596,11 @@ function ProjectsPanel({
                       {project.topModel ? ` · ${project.topModel}` : ""}
                     </span>
                   </span>
-                  <span>{partialCost ? "~" : ""}${project.costEstimate.knownUsd.toFixed(2)}</span>
+                  <span>
+                    {project.costEstimate.eligible
+                      ? `${partialCost ? "~" : ""}$${project.costEstimate.knownUsd.toFixed(2)}`
+                      : t("DashboardValueUnavailable")}
+                  </span>
                   <span aria-hidden="true">{isExpanded ? "▾" : "▸"}</span>
                 </button>
 
@@ -610,8 +614,9 @@ function ProjectsPanel({
                             {session.displayTitle}
                           </span>
                           <span>
-                            {session.costEstimate.unknownTokens > 0 ? "~" : ""}
-                            ${session.costEstimate.knownUsd.toFixed(2)}
+                            {session.costEstimate.eligible
+                              ? `${session.costEstimate.unknownTokens > 0 ? "~" : ""}$${session.costEstimate.knownUsd.toFixed(2)}`
+                              : t("DashboardValueUnavailable")}
                           </span>
                         </div>
                       ))}

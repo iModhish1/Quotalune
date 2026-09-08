@@ -284,9 +284,12 @@ fn build_usage_spend_summary(
                 refreshing: codex_stale,
                 stale_updated_at: codex_stale_updated_at.clone(),
             },
+            // Phase 4C: Claude local-log-derived cost has no established
+            // billing channel either (see cost_scanner.rs's module doc
+            // comment) -- gated the same way as Codex above.
             "claude" => SpendValues {
-                seven_day: Some(claude_7_summary.total_cost_usd),
-                thirty_day: Some(claude_30_summary.total_cost_usd),
+                seven_day: claude_7_summary.eligible_total_cost_usd(),
+                thirty_day: claude_30_summary.eligible_total_cost_usd(),
                 seven_day_tokens: Some(
                     claude_7_summary
                         .input_tokens

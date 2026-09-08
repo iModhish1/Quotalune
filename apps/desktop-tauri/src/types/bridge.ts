@@ -508,9 +508,16 @@ export interface CodexWorkspacesUsageTotals {
   totalTokens: number;
 }
 
+/** Phase 4C: `knownUsd` is computed from local Codex JSONL session logs,
+ *  which carry no evidence distinguishing a subscription-covered session
+ *  from a per-token-metered API session -- `eligible` says whether
+ *  `knownUsd` may be shown as a trustworthy dollar figure. Always `false`
+ *  today; check it (or treat `!eligible` as "Unavailable") before
+ *  rendering `knownUsd`. */
 export interface CodexWorkspacesCostEstimate {
   knownUsd: number;
   unknownTokens: number;
+  eligible: boolean;
 }
 
 export interface CodexWorkspacesDailyPoint {
