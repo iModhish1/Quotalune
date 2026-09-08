@@ -146,9 +146,32 @@ export function BarChart({
         })}
       </svg>
       <div className="chart__axis">
-        <span style={{ left: `${barWidth / 2}px` }}>{data[0].label.slice(-5)}</span>
-        <span className="chart__axis-max" style={{ left: `${actualWidth / 2}px` }}>{fmt(max)}</span>
-        <span style={{ left: `${actualWidth - barWidth / 2}px` }}>{data[data.length - 1].label.slice(-5)}</span>
+        {/* Previously `.label.slice(-5)` -- a hardcoded last-5-characters
+            trim that silently assumed every caller's label was already
+            English-length ("Sep 4"), the same bug fixed in the sibling
+            LineChart. A real Arabic screenshot caught it there breaking:
+            Intl's ar-SA short month name ("سبتمبر") is longer than 5
+            characters, so the trim sliced mid-word into "بتمبر" (missing
+            its first letter). Labels are now trusted as-is -- every real
+            caller already formats its own locale-appropriate short label
+            (CostHistoryChart's/TokensHistoryChart's date formatter).
+
+            Positions are PERCENTAGES of `actualWidth`, not raw pixels --
+            also mirroring a second real bug found and fixed in LineChart:
+            the SVG scales to fill its container via `width:100%`, but raw
+            `left:${x}px` values (the previous behavior here) never
+            rescaled to match a real card's much wider rendered width, so
+            axis labels quietly clustered inside the leftmost ~280px of
+            whatever the true container width was. */}
+        <span style={{ left: `${(barWidth / 2 / actualWidth) * 100}%` }}>
+          <bdi>{data[0].label}</bdi>
+        </span>
+        <span className="chart__axis-max" style={{ left: "50%" }}>
+          <bdi>{fmt(max)}</bdi>
+        </span>
+        <span style={{ left: `${((actualWidth - barWidth / 2) / actualWidth) * 100}%` }}>
+          <bdi>{data[data.length - 1].label}</bdi>
+        </span>
       </div>
       {hover && !anim.running && (
         <div
