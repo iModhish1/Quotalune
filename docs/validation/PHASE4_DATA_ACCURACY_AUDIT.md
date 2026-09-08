@@ -176,4 +176,4 @@ shared cost-origin labeling. See "Defects found" #2.
 
 See also: [QUOTALIS_PROVIDER_DATA_CAPABILITIES.md](QUOTALIS_PROVIDER_DATA_CAPABILITIES.md),
 [PRICING_PROVENANCE.md](PRICING_PROVENANCE.md),
-[../architecture/PRICING_CATALOG.md](../architecture/PRICING_CATALOG.md).
+[PRICING_CATALOG.md](PRICING_CATALOG.md).
