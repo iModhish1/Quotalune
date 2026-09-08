@@ -149,3 +149,71 @@ commit): known-model exact-rate assertions for the models verified in
 produce the correct linearly-scaled result (catching a stray `* 1000` or
 `/ 1_000_000` unit-conversion bug before it reaches a user-facing dollar
 figure).
+
+## Phase 4B: future catalog schema design (SCHEMA ONLY — not implemented)
+
+Per owner Phase 4B section 30, this is a documentation-layer design for
+a possible future catalog, NOT wired to any runtime lookup or
+calculation. A future record would need fields the current
+`CodexPricing`/`ClaudePricing` structs don't have (billing channel,
+tier conditions, effective dates, provenance) — sketched conceptually
+below, not as a literal Rust type to implement yet:
+
+```
+PricingRecord {
+    provider: ProviderId,
+    billing_channel: BillingChannel,   // see pricing_eligibility.rs -- NOT priceable
+                                        // just because a model name matches; the
+                                        // channel must match too (owner section 4)
+    canonical_model: String,
+    aliases: Vec<AliasClaim>,           // { alias, asserted_by: "in-repo comment" | "official doc", note }
+    currency: String,
+    unit: PricingUnit,                  // PerMillionTokens | PerThousandRequests | Credits | ProviderDefined(String)
+    categories: {
+        input: Option<Rate>,
+        output: Option<Rate>,
+        cached_input: Option<Rate>,
+        cache_write: Option<Rate>,
+        reasoning: Option<Rate>,
+        request: Option<Rate>,
+        // ... only the categories a given product actually bills
+    },
+    tier_conditions: Vec<TierCondition>,  // { threshold, affected_categories, rates_above }
+    effective_date: Option<Date>,          // when the OFFICIAL price took effect, if stated
+    verified_at: Date,                     // the REAL research date -- never build/install time
+    freshness: Verified | PotentiallyStale | Unverified | Unavailable,
+    official_source: Url,
+    notes: String,
+}
+```
+
+**"Not priceable" is a first-class outcome (owner section 31)**: the
+schema does not assume every provider/channel combination resolves to a
+`PricingRecord` at all. A provider observation can legitimately be
+quota-only, credits-only, balance-only, unsupported, or unverified --
+`pricing_eligibility::can_locally_estimate_cost` (this phase's new pure
+model, `rust/src/pricing_eligibility.rs`) already returns a typed
+`NotEligible(reason)` rather than assuming a record exists to look up.
+
+**Billing channel is the first check, always** (owner section 4/39): a
+future catalog lookup would key on `(billing_channel, canonical_model)`,
+never `canonical_model` alone -- a `PricingRecord` for OpenAI's DirectApi
+`gpt-5` must never be handed to a Codex ChatGPT-subscription observation
+just because the model name matches, exactly the mismatch
+`pricing_eligibility::billing_channel_mismatch_fails_even_with_everything_else_present`
+proves must fail closed.
+
+**Freshness policy**: `verified_at` is always the date a human (or this
+audit) actually confirmed the price against an official source --
+`PRICING_PROVENANCE.md` records the real per-fact dates this phase used
+(2026-09-08). No code path may stamp a build or install timestamp as
+`verified_at`; a record with no real verification date is `Unverified`,
+not `Verified`.
+
+## Phase 4B: no runtime scraping, no server (re-confirmed)
+
+Unchanged guarantee, re-verified this phase: research used live web
+access only during this documentation/audit pass; nothing in
+`rust/src/` gained a new network call, no Quotalis-owned pricing
+service, backend, account, or telemetry was introduced.
+`pricing_eligibility.rs` is pure and offline (no I/O of any kind).
