@@ -1,0 +1,19 @@
+{
+  "generatedAt": 1788830178,
+  "rangeSince": 1786309200,
+  "rangeUntil": 1788830178,
+  "grain": "daily",
+  "timezone": "Asia/Riyadh",
+  "availability": {
+    "firstSampleAt": 1788555145,
+    "lastSampleAt": 1788735644,
+    "sampleCount": 64,
+    "hasCostData": false,
+    "hasTokenData": false,
+    "hasRequestData": false,
+    "hasModelData": false
+  },
+  "providerCount": 1,
+  "usageTrendPoints": 3,
+  "spendTrendPoints": 0
+}
