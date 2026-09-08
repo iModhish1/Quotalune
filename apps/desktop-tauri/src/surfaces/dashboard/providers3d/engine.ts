@@ -31,6 +31,40 @@ export interface EngineCallbacks {
   onHover?: (id: string | null) => void;
 }
 
+/**
+ * Phase 5.1 owner section 6/23: lifecycle/demand-render instrumentation
+ * for native (CDP-driven) proof passes.
+ *
+ * Note on gating: `import.meta.env.DEV` is Vite's *build-mode* flag
+ * (`vite dev` vs `vite build`) -- it is `false` in every artifact this
+ * project ships, including a `dev-channel`-feature Rust build, because
+ * the frontend is always produced via `pnpm run build` regardless of the
+ * Rust `dev-channel` Cargo feature (a completely separate axis: data-root
+ * isolation from Personal, not frontend bundle mode). Gating this on
+ * `import.meta.env.DEV` would make it permanently inert in the one binary
+ * (`QuotalisDev.exe`) it exists to help verify. It is therefore always
+ * registered -- but it is deliberately inert in cost and content: one
+ * `Set.add`/`Set.delete` per engine lifecycle, no user data, no PII, no
+ * behavior change (mirrors Three.js's own always-on `renderer.info`
+ * counters, which this reads from). Never referenced by any production
+ * rendering/business logic.
+ */
+declare global {
+  interface Window {
+    __quotalisProviders3DDebug__?: {
+      engines: Set<ProvidersUniverseEngine>;
+    };
+  }
+}
+
+function debugRegistry(): NonNullable<Window["__quotalisProviders3DDebug__"]> | undefined {
+  if (typeof window === "undefined") return undefined;
+  if (!window.__quotalisProviders3DDebug__) {
+    window.__quotalisProviders3DDebug__ = { engines: new Set() };
+  }
+  return window.__quotalisProviders3DDebug__;
+}
+
 export interface EngineOptions extends EngineCallbacks {
   performancePreset: DashboardPerformancePreset;
   reducedMotion: boolean;
@@ -109,6 +143,7 @@ export class ProvidersUniverseEngine {
   constructor(canvas: HTMLCanvasElement, context: WebGL2RenderingContext, options: EngineOptions) {
     this.canvas = canvas;
     this.options = options;
+    debugRegistry()?.engines.add(this);
     this.renderer = new THREE.WebGLRenderer({ canvas, context, antialias: true, alpha: false });
     this.renderer.setPixelRatio(computeDevicePixelRatio(window.devicePixelRatio, options.performancePreset));
 
@@ -358,9 +393,32 @@ export class ProvidersUniverseEngine {
     this.renderer.render(this.scene, this.camera);
   }
 
+  /** Diagnostic snapshot (Phase 5.1 owner section 6/23) for native proof
+   *  passes -- `renderer.info.render.frame` is Three.js's own
+   *  monotonically-increasing count of real `render()` calls made by
+   *  this renderer instance across its lifetime; reading it here (rather
+   *  than reimplementing a counter) is the demand-render proof: sample
+   *  it, wait with no interaction, sample again, and confirm it did not
+   *  advance. Not used by any production code path. */
+  getDebugInfo() {
+    return {
+      disposed: this.disposed,
+      schedulerScheduled: this.scheduler.isScheduled(),
+      providerVisualCount: this.providerVisuals.size,
+      rendererInfo: {
+        frame: this.renderer.info.render.frame,
+        calls: this.renderer.info.render.calls,
+        triangles: this.renderer.info.render.triangles,
+        geometries: this.renderer.info.memory.geometries,
+        textures: this.renderer.info.memory.textures,
+      },
+    };
+  }
+
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    debugRegistry()?.engines.delete(this);
     this.scheduler.dispose();
     this.controls.dispose();
     this.canvas.removeEventListener("webglcontextlost", this.onContextLost);
