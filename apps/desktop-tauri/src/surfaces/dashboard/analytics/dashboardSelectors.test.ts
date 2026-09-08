@@ -338,26 +338,62 @@ describe("computeKpis", () => {
       settings,
     });
     expect(withoutCost.estimatedSpendTotal).toBeNull();
+  });
 
-    const withCost = computeKpis({
+  it("PHASE 4 regression: never sums a cumulative-period reading across time buckets of the same series (would double/triple count the same running total)", () => {
+    const availability = {
+      firstSampleAt: 0,
+      lastSampleAt: 100,
+      sampleCount: 5,
+      hasCostData: true,
+      hasTokenData: false,
+      hasRequestData: false,
+      hasModelData: false,
+    };
+    // Same provider+account, three buckets -- each is the provider's own
+    // running month-to-date total at that point in time, NOT a delta.
+    // The pre-Phase-4 bug summed all three (1.5 + 2.25 + 3.0 = 6.75),
+    // inflating the KPI 3x. The correct total is just the latest
+    // reading for that series: 3.0.
+    const kpis = computeKpis({
       liveProviders: [],
       snapshot: snapshot({
-        availability: {
-          firstSampleAt: 0,
-          lastSampleAt: 100,
-          sampleCount: 5,
-          hasCostData: true,
-          hasTokenData: false,
-          hasRequestData: false,
-          hasModelData: false,
-        },
+        availability,
         spendTrend: [
           { provider: "claude", accountId: "a1", bucketStart: 0, costUsed: 1.5 },
           { provider: "claude", accountId: "a1", bucketStart: 86400, costUsed: 2.25 },
+          { provider: "claude", accountId: "a1", bucketStart: 172800, costUsed: 3.0 },
         ],
       }),
       settings,
     });
-    expect(withCost.estimatedSpendTotal).toBeCloseTo(3.75);
+    expect(kpis.estimatedSpendTotal).toBeCloseTo(3.0);
+  });
+
+  it("sums the latest reading across genuinely independent provider/account series (legitimate -- these are different real totals, not the same one counted twice)", () => {
+    const availability = {
+      firstSampleAt: 0,
+      lastSampleAt: 100,
+      sampleCount: 5,
+      hasCostData: true,
+      hasTokenData: false,
+      hasRequestData: false,
+      hasModelData: false,
+    };
+    const kpis = computeKpis({
+      liveProviders: [],
+      snapshot: snapshot({
+        availability,
+        spendTrend: [
+          // Claude a1: two buckets, only the latest (2.25) should count.
+          { provider: "claude", accountId: "a1", bucketStart: 0, costUsed: 1.5 },
+          { provider: "claude", accountId: "a1", bucketStart: 86400, costUsed: 2.25 },
+          // Codex a1: one bucket, counts in full.
+          { provider: "codex", accountId: "a1", bucketStart: 86400, costUsed: 4.0 },
+        ],
+      }),
+      settings,
+    });
+    expect(kpis.estimatedSpendTotal).toBeCloseTo(6.25);
   });
 });

@@ -257,17 +257,45 @@ export function computeKpis({ liveProviders, snapshot, settings }: KpiInputs): K
     }
   }
 
-  const spendPoints = snapshot?.spendTrend ?? [];
-  const estimatedSpendTotal =
-    snapshot?.availability.hasCostData && spendPoints.length > 0
-      ? spendPoints.reduce((sum, p) => sum + p.costUsed, 0)
-      : null;
-
   return {
     activeProviderCount: connected.length,
     highestUsageProvider: highest,
     nextReset,
     alertCount: buildAlerts(liveProviders, settings).length,
-    estimatedSpendTotal,
+    estimatedSpendTotal: totalReportedSpend(snapshot),
   };
+}
+
+/**
+ * Phase 4 fix (docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md, defect #1):
+ * `SpendTrendPoint.costUsed` is a point-in-time/period-cumulative reading
+ * -- "whatever the provider reported as its own dollar-usage figure" for
+ * that bucket (see `SpendDailyPoint`'s doc comment in
+ * `rust/src/dashboard_data.rs`), NOT a per-bucket delta. Summing every
+ * bucket in the trend (the old behavior) summed the same running total
+ * N times over and inflated the KPI roughly Nx -- exactly the "never sum
+ * cumulative snapshots" mistake the owner's Phase 4 spec calls out.
+ *
+ * The correct total is: for each independent (provider, accountId)
+ * series, take only its MOST RECENT bucket (that series' current
+ * cumulative reading) -- then sum those latest-per-series values across
+ * providers/accounts. Summing *across independent series* is legitimate
+ * (each provider/account reports its own real total, and totals from
+ * genuinely different sources are additive); summing *across time within
+ * one series* is not (that's the same total counted repeatedly).
+ */
+function totalReportedSpend(snapshot: DashboardSnapshot | null): number | null {
+  const spendPoints = snapshot?.spendTrend ?? [];
+  if (!snapshot?.availability.hasCostData || spendPoints.length === 0) return null;
+
+  const latestBySeries = new Map<string, (typeof spendPoints)[number]>();
+  for (const point of spendPoints) {
+    const key = `${point.provider}::${point.accountId}`;
+    const existing = latestBySeries.get(key);
+    if (!existing || point.bucketStart > existing.bucketStart) {
+      latestBySeries.set(key, point);
+    }
+  }
+  if (latestBySeries.size === 0) return null;
+  return Array.from(latestBySeries.values()).reduce((sum, p) => sum + p.costUsed, 0);
 }
