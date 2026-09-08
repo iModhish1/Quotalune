@@ -522,6 +522,26 @@ locale_keys! {
     DashboardDataSamples,
     DashboardResetScheduleTitle,
     DashboardResetScheduleEmpty,
+    // Phase 5: 3D Provider Universe prototype.
+    Providers3DCanvasLabel,
+    Providers3DCanvasDescription,
+    Providers3DEmptyTitle,
+    Providers3DManageProviders,
+    Providers3DResetView,
+    Providers3DProviderNavigator,
+    Providers3DSelectedProviderDetail,
+    Providers3DUsage,
+    Providers3DAuthStatus,
+    Providers3DAuthReady,
+    Providers3DMonetaryState,
+    Providers3DMonetarySpend,
+    Providers3DMonetaryBalance,
+    Providers3DMonetaryCredits,
+    Providers3DMonetaryBalanceUnavailable,
+    Providers3DMonetaryCreditsUnavailable,
+    Providers3DUnavailableTitle,
+    Providers3DUnavailableBody,
+    Providers3DOpen2DFallback,
     // Phase 3.5 visual/semantic refinement: the header's compact "Analytics
     // Control Strip" history chip, the Current-Status/Selected-Range section
     // eyebrows (owner sections 2/7/8: distinguish live provider state from

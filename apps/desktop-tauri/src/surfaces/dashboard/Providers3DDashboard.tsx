@@ -1,40 +1,35 @@
 /**
- * 3D Providers Dashboard -- Dev-only placeholder for Phase 2.
+ * 3D Providers Dashboard -- Phase 5 prototype.
  *
- * No Three.js/WebGL dependency exists in this codebase yet (confirmed in
- * the Phase 0 audit) -- the real 3D engine is explicitly a later phase
- * (Phase 5/6), never started here. This placeholder exists only to prove
- * `DashboardHost`'s mount/dispose contract works for a mode that isn't
- * `analytics2d`, using the real `DashboardSnapshot` (never synthetic data)
- * for the one honest thing it can show: how much real history exists.
+ * Consumes the SAME real data every other Dashboard surface uses
+ * (`useProviders`/`useSettings`) -- never synthetic data (owner Phase 5
+ * section 0). `DASHBOARD_REGISTRY.providers3d.isPlaceholder` stays `true`:
+ * this is an explicit prototype, not the final production 3D Dashboard,
+ * per `docs/validation/PHASE5_3D_PROTOTYPE.md`'s scope.
  *
- * Never shown to a Personal/production user as a finished feature --
- * `DASHBOARD_REGISTRY.providers3d.isPlaceholder` is `true` and Dashboard
- * Studio's UI must say so explicitly.
+ * A DEV-only lab (`Providers3DDevLab`) exists separately for fixture-
+ * driven stress testing (owner section 56/57) -- this component itself
+ * never renders fixture data as if it were real.
  */
+import { useProviders } from "../../hooks/useProviders";
+import { useSettings } from "../../hooks/useSettings";
+import { resolveCatalogTheme } from "../../design-system/themeResolution";
+import { CANONICAL_THEME, catalogBySlug } from "../../design-system/themeCatalog";
+import ProvidersUniverseScene from "./providers3d/ProvidersUniverseScene";
 import type { DashboardModeProps } from "../../lib/dashboardRegistry";
-import { useDashboardSnapshot } from "../../hooks/useDashboardSnapshot";
-import "./DashboardPlaceholder.css";
 
-export default function Providers3DDashboard(_props: DashboardModeProps) {
-  const { snapshot, isLoading } = useDashboardSnapshot("last30Days");
+export default function Providers3DDashboard({ state, onOpenProviders }: DashboardModeProps) {
+  const { providers } = useProviders();
+  const { settings } = useSettings(state.settings);
+  const { slug } = resolveCatalogTheme(settings, "providers3d");
+  const theme = catalogBySlug(slug) ?? CANONICAL_THEME;
 
   return (
-    <div className="dashboard-placeholder">
-      <h3>3D Providers Dashboard</h3>
-      <p>The 3D engine will be implemented in a later phase (development build only).</p>
-      {!isLoading && snapshot && (
-        <dl className="dashboard-placeholder__facts">
-          <div>
-            <dt>Real history samples</dt>
-            <dd>{snapshot.availability.sampleCount.toLocaleString()}</dd>
-          </div>
-          <div>
-            <dt>Providers with history</dt>
-            <dd>{new Set(snapshot.providers.map((p) => p.provider)).size}</dd>
-          </div>
-        </dl>
-      )}
-    </div>
+    <ProvidersUniverseScene
+      liveProviders={providers}
+      settings={settings}
+      theme={theme}
+      onOpenProviders={onOpenProviders}
+    />
   );
 }
