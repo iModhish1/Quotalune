@@ -51,6 +51,7 @@ DashboardDataAvailableSince = البيانات متاحة منذ { "{}" }
 DashboardDataSamples = { "{}" } عينة
 DashboardResetScheduleTitle = جدول إعادة التعيين
 DashboardResetScheduleEmpty = لا توجد عمليات إعادة تعيين قادمة لعرضها بعد
+ChartMaxValueLabel = الأقصى
 TabAdvanced = متقدم
 TabAbout = حول Quotalis
 TabShortcuts = الاختصارات

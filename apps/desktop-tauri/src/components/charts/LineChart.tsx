@@ -25,6 +25,14 @@ export interface LineChartProps {
   area?: boolean;
   animations?: boolean;
   emptyMessage?: string;
+  /**
+   * Pre-translated prefix for the peak-value annotation (e.g. "Max",
+   * caller-supplied like `ariaLabel`/`emptyMessage` -- this component has
+   * no locale dependency of its own). When omitted, the peak value renders
+   * with no prefix (previous behavior, preserved for any caller that
+   * hasn't been updated yet).
+   */
+  maxLabel?: string;
 }
 
 const DEFAULT_COLOR = "var(--chart-credits)";
@@ -39,6 +47,7 @@ export function LineChart({
   area = true,
   animations = true,
   emptyMessage,
+  maxLabel,
 }: LineChartProps) {
   const fmt = valueFormatter ?? ((v: number) => v.toFixed(2));
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -83,6 +92,18 @@ export function LineChart({
   if (coords.length === 1) {
     coords.push({ x: pad + usableWidth, y: coords[0].y, finalY: coords[0].finalY });
   }
+
+  // Anchor the peak-value annotation to the actual highest point's x
+  // position (first occurrence), not a fixed center -- it previously sat at
+  // a constant SVG_WIDTH/2 regardless of where the peak actually fell,
+  // reading as an orphaned number disconnected from the data. Clamped away
+  // from the two edge date labels so it never overlaps them.
+  const maxIndex = values.indexOf(max);
+  const maxLabelMargin = SVG_WIDTH * 0.18;
+  const maxLabelX = Math.min(
+    Math.max(coords[maxIndex]?.x ?? SVG_WIDTH / 2, maxLabelMargin),
+    SVG_WIDTH - maxLabelMargin,
+  );
 
   const polyline = coords.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(" ");
 
@@ -145,7 +166,10 @@ export function LineChart({
       </svg>
       <div className="chart__axis">
         <span style={{ left: `${pad}px` }}>{data[0].label.slice(-5)}</span>
-        <span className="chart__axis-max" style={{ left: `${SVG_WIDTH / 2}px` }}>{fmt(max)}</span>
+        <span className="chart__axis-max" style={{ left: `${maxLabelX}px` }}>
+          {maxLabel ? `${maxLabel} ` : null}
+          <bdi>{fmt(max)}</bdi>
+        </span>
         <span style={{ left: `${SVG_WIDTH - pad}px` }}>{data[data.length - 1].label.slice(-5)}</span>
       </div>
       {hover && !anim.running && (

@@ -517,6 +517,12 @@ locale_keys! {
     DashboardDataSamples,
     DashboardResetScheduleTitle,
     DashboardResetScheduleEmpty,
+    // Shared, generic label for the peak-value annotation on the
+    // dependency-free `LineChart` primitive (components/charts/LineChart.tsx)
+    // -- used by both the Dashboard's Usage Trend widget and the provider
+    // detail Credits History chart, so it lives here rather than in the
+    // Dashboard-specific block above.
+    ChartMaxValueLabel,
     TabProviderDisplay,
     TabCollections,
     CollectionsPageHelper,

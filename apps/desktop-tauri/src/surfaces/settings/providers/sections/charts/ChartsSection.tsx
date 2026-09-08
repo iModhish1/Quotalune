@@ -152,6 +152,7 @@ export function ChartsSection({ providerId, accountEmail, accentColor, t }: Prop
             providerId={providerId}
             animations={animations}
             emptyMessage={emptyMsg}
+            maxLabel={t("ChartMaxValueLabel")}
           />
         )}
         {current === "usage" && (

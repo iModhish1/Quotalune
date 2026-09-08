@@ -9,6 +9,7 @@ interface Props {
   providerId: string;
   animations: boolean;
   emptyMessage: string;
+  maxLabel: string;
 }
 
 /**
@@ -22,6 +23,7 @@ export function CreditsHistoryChart({
   providerId,
   animations,
   emptyMessage,
+  maxLabel,
 }: Props) {
   const recent = data.slice(-30);
   const points = recent.map((p) => ({ label: p.date, value: p.value }));
@@ -35,6 +37,7 @@ export function CreditsHistoryChart({
         valueFormatter={(v) => v.toFixed(1)}
         animations={animations}
         emptyMessage={emptyMessage}
+        maxLabel={maxLabel}
       />
     </div>
   );

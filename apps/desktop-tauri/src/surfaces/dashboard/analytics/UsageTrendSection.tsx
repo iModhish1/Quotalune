@@ -123,6 +123,7 @@ export default function UsageTrendSection({ snapshot }: { snapshot: DashboardSna
                       ? (n) => formatPercentage(n)
                       : (n) => `$${n.toFixed(2)}`
                   }
+                  maxLabel={t("ChartMaxValueLabel")}
                 />
               </div>
             );

@@ -41,6 +41,7 @@ DashboardDataAvailableSince = Data available since { "{}" }
 DashboardDataSamples = { "{}" } samples
 DashboardResetScheduleTitle = Reset Schedule
 DashboardResetScheduleEmpty = No upcoming resets to show yet
+ChartMaxValueLabel = Max
 TabProviderDisplay = Provider Display
 TabCollections = Collections
 CollectionsPageHelper = Group providers into your own layout, choose how they're arranged, and see the result live in the detached Collections window.

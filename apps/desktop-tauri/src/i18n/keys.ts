@@ -279,6 +279,7 @@ export const ALL_LOCALE_KEYS = [
   "DashboardDataSamples",
   "DashboardResetScheduleTitle",
   "DashboardResetScheduleEmpty",
+  "ChartMaxValueLabel",
   "TabProviderDisplay",
   "TabCollections",
   "CollectionsPageHelper",
