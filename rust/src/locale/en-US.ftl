@@ -12,13 +12,17 @@ DashboardProviderFilterAll = All Providers
 DashboardKpiActiveProviders = Active Providers
 DashboardKpiHighestUsage = Highest Usage
 DashboardKpiNextReset = Next Reset
-DashboardKpiEstimatedSpend = Estimated Spend
+# Phase 4: this figure is always the provider's own reported dollar
+# total (never a Quotalis-computed estimate from token pricing) -- see
+# docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md. "Estimated" would
+# misattribute the number's origin, so this reads "Reported Spend".
+DashboardKpiEstimatedSpend = Reported Spend
 DashboardKpiAlerts = Alerts
 DashboardValueUnavailable = Not available
 DashboardDataStatusCostUnavailable = Cost data unavailable
 DashboardUsageTrendTitle = Usage Trend
 DashboardMetricUsage = Usage %
-DashboardMetricSpend = Estimated Cost
+DashboardMetricSpend = Reported Spend
 DashboardTrendEmptyForRange = No data in this range yet
 DashboardCollectingHistory = Collecting local usage history…
 DashboardDistributionTitle = Historical Usage Share
