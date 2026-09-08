@@ -43,7 +43,20 @@ DashboardDataStatusHistoryActive = Local history: active
 DashboardDataStatusHistoryCollecting = Local history: collecting
 # Phase 4A: never call this "estimated" -- it is always the provider's
 # own reported figure, never a Quotalis computation.
-DashboardDataStatusCostProviderReported = Cost: provider-reported
+# Phase 4A.1: this specific label is reserved for genuine SPEND -- a
+# provider-reported balance or credits figure uses the labels below
+# instead, never this one (a balance is never called "Cost"/"Spend").
+DashboardDataStatusCostProviderReported = Cost: provider-reported spend
+# Phase 4A.1: a provider's own prepaid balance -- remaining funds, not
+# money spent. Never shown under a "Cost"/"Spend" label.
+DashboardDataStatusCostProviderReportedBalance = Monetary data: provider-reported balance
+# Phase 4A.1: a provider-defined credits unit (e.g. a ChatGPT account
+# credit balance) -- no proven real-currency conversion in this app.
+DashboardDataStatusCostProviderReportedCredits = Monetary data: provider-reported credits
+# Phase 4A.1: real monetary data exists but what it represents (spend vs.
+# balance vs. credits) could not be established -- excluded from every
+# KPI, including a future balance/credits display.
+DashboardDataStatusCostSemanticsUnknown = Monetary semantics: unknown
 # Real numeric cost data exists, but it predates Phase 4A's currency/
 # measurement-kind columns, so its semantics can't be proven.
 DashboardDataStatusCostLegacyAmbiguous = Cost: legacy data, semantics unknown

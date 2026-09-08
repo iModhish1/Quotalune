@@ -188,12 +188,22 @@ export interface DataStatus {
   historyState: "active" | "collecting";
   quotaState: "live";
   /**
-   * Phase 4A (owner section 16): distinguishes real, trustworthy
-   * provider-reported cost from legacy rows whose semantics can't be
-   * proven, from no cost data at all. Never "estimated" -- Quotalis
-   * performs no local estimation today (see `costContract.origin`).
+   * Phase 4A.1 (owner section 5): distinguishes real, trustworthy
+   * provider-reported data by WHAT it represents -- spend, balance, or
+   * provider-defined credits -- never a generic "providerReported" that
+   * would let a balance masquerade as spend. "monetarySemanticsUnknown"
+   * covers real cost rows whose quantity kind couldn't be established
+   * (distinct from "legacyAmbiguous", which is specifically pre-Phase-4A
+   * untagged rows). Never "estimated" -- Quotalis performs no local
+   * estimation today (see `costContract.origin`).
    */
-  costState: "providerReported" | "legacyAmbiguous" | "unavailable";
+  costState:
+    | "providerReportedSpend"
+    | "providerReportedBalance"
+    | "providerReportedCredits"
+    | "monetarySemanticsUnknown"
+    | "legacyAmbiguous"
+    | "unavailable";
   /**
    * Phase 4A: "notRequired" for provider-reported cost (Quotalis pricing
    * verification does not apply to a number it didn't compute) --
@@ -217,7 +227,13 @@ export function resolveDataStatus(snapshot: DashboardSnapshot | null): DataStatu
   const contract = snapshot?.costContract;
   const costState: DataStatus["costState"] =
     contract?.availability === "available" && contract.origin === "providerReported"
-      ? "providerReported"
+      ? contract.quantityKind === "spend"
+        ? "providerReportedSpend"
+        : contract.quantityKind === "balance"
+          ? "providerReportedBalance"
+          : contract.quantityKind === "credits"
+            ? "providerReportedCredits"
+            : "monetarySemanticsUnknown"
       : contract?.availability === "legacyAmbiguous"
         ? "legacyAmbiguous"
         : "unavailable";
@@ -307,31 +323,33 @@ export function computeKpis({ liveProviders, snapshot, settings }: KpiInputs): K
 }
 
 /**
- * Phase 4A (docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md "Phase 4A"
- * section): `SpendTrendPoint.costUsed` does not mean the same thing for
- * every provider -- a real provider-adapter audit proved several
- * providers write a point-in-time prepaid BALANCE into this field, not
- * period spend, and Codex has two code paths with genuinely different,
- * historically-indistinguishable semantics. `snapshot.costContract` is
- * the proven, structured answer for the whole snapshot (Rust already
- * collapses it to `"unknown"` the moment more than one measurement kind
- * or currency is mixed in) -- this function trusts that contract instead
- * of re-deriving semantics from the raw trend data itself.
+ * Phase 4A.1 hard rule (docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md
+ * "Phase 4A.1" section, owner section 4): the Dashboard Spend KPI may
+ * consume ONLY observations whose `quantityKind` is `"spend"` --
+ * NEVER `"balance"`, `"credits"`, or `"unknown"`, even if their temporal
+ * shape (`measurementKind`) happens to look identical to a genuine spend
+ * series. `CostMeasurementKind` alone was proven insufficient by a real
+ * provider-adapter audit: several providers write a prepaid balance into
+ * the exact same field a spend total uses elsewhere. `snapshot.costContract`
+ * is the proven, structured answer for the whole snapshot (Rust already
+ * collapses it to `"unknown"` on either dimension the moment more than
+ * one kind/currency is mixed in) -- this function trusts that contract
+ * instead of re-deriving semantics from the raw trend data itself.
  *
  * A combined total is produced ONLY when the contract says every
- * relevant sample is a genuine period-cumulative ("cumulative") reading
- * in one unambiguous currency: for each independent (provider,
- * accountId) series, take only its MOST RECENT bucket (that series'
- * current cumulative reading), then sum those latest-per-series values
- * across providers/accounts. Summing across independent Cumulative
- * series is legitimate (each is its own real period total, and totals
- * from genuinely different sources are additive); summing across time
- * within one series never is (that was the original bug -- the same
- * running total counted repeatedly). Any other measurement kind
- * (point-in-time balance, unknown/ambiguous, or a mix) returns
- * `null` -- a balance is not spend, and mixed semantics cannot be
- * combined into one honest number (owner Phase 4A section 15: accuracy
- * wins over feature completeness).
+ * relevant sample is Spend, Cumulative, in one unambiguous currency: for
+ * each independent (provider, accountId) series, take only its MOST
+ * RECENT bucket (that series' current cumulative reading), then sum
+ * those latest-per-series values across providers/accounts. Summing
+ * across independent Cumulative Spend series is legitimate (each is its
+ * own real period total, and totals from genuinely different sources
+ * are additive); summing across time within one series never is (that
+ * was the original bug -- the same running total counted repeatedly).
+ * Any other quantity kind (balance, credits, unknown) or measurement
+ * kind (point-in-time, unknown, or a mix) returns `null` -- if only
+ * balance data exists, Spend is unavailable; the balance is NOT shown
+ * under the Spend label (owner Phase 4A.1 section 3/4). Accuracy wins
+ * over feature completeness (owner Phase 4A section 15).
  */
 function totalReportedSpend(
   snapshot: DashboardSnapshot | null,
@@ -340,6 +358,7 @@ function totalReportedSpend(
   const contract = snapshot?.costContract;
   if (!contract || spendPoints.length === 0) return null;
   if (contract.availability !== "available") return null;
+  if (contract.quantityKind !== "spend") return null;
   if (contract.measurementKind !== "cumulative") return null;
   if (!contract.currencyCode) return null;
 
@@ -348,7 +367,11 @@ function totalReportedSpend(
     // Belt-and-suspenders: even though the contract already proved a
     // uniform kind/currency for the snapshot as a whole, never let an
     // individual point that disagrees (a bug elsewhere, or a future
-    // provider not yet classified) silently join the total.
+    // provider not yet classified) silently join the total. This is the
+    // literal enforcement of the hard rule: a Balance/Credits/Unknown
+    // point can NEVER reach the Spend KPI even if it slipped through
+    // some future refactor of the contract-level gate above.
+    if (point.quantityKind !== "spend") continue;
     if (point.measurementKind !== "cumulative") continue;
     if (point.currencyCode !== contract.currencyCode) continue;
     const key = `${point.provider}::${point.accountId}`;

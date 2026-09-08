@@ -1,18 +1,31 @@
 import { useLocale } from "../../../hooks/useLocale";
 import { resolveIntlLocale } from "../../../i18n/resolveIntlLocale";
-import { resolveDataStatus } from "./dashboardSelectors";
+import { resolveDataStatus, type DataStatus } from "./dashboardSelectors";
 import type { DashboardSnapshot } from "../../../types/bridge";
+import type { LocaleKey } from "../../../i18n/keys";
+
+const COST_STATE_LOCALE_KEY: Record<DataStatus["costState"], LocaleKey> = {
+  providerReportedSpend: "DashboardDataStatusCostProviderReported",
+  providerReportedBalance: "DashboardDataStatusCostProviderReportedBalance",
+  providerReportedCredits: "DashboardDataStatusCostProviderReportedCredits",
+  monetarySemanticsUnknown: "DashboardDataStatusCostSemanticsUnknown",
+  legacyAmbiguous: "DashboardDataStatusCostLegacyAmbiguous",
+  unavailable: "DashboardDataStatusCostUnavailable",
+};
 
 /**
- * Pricing/Data Status shell (owner section 26, revised Phase 4A section
- * 16): honest state only. Cost state distinguishes real
- * provider-reported figures from legacy (pre-Phase-4A) rows whose
- * semantics can't be proven from unavailable data -- never a blanket
- * "estimated". Pricing state reads "not required" for provider-reported
- * cost (Quotalis's own pricing catalog never touches it) rather than
- * implying a provider-reported number came from Quotalis pricing;
- * "unverified" is reserved for a future locally-estimated figure, not
- * produced anywhere today.
+ * Pricing/Data Status shell (owner section 26, revised Phase 4A.1
+ * section 5): honest state only. Cost state distinguishes real
+ * provider-reported SPEND from a provider-reported BALANCE or CREDITS
+ * figure (a balance is never called "Cost"/"Spend" -- see
+ * `docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md` "Phase 4A.1"), from
+ * legacy (pre-Phase-4A) rows whose semantics can't be proven, from real
+ * cost data whose quantity kind is genuinely unknown. Pricing state
+ * stays independent of quantity kind -- a provider-reported balance does
+ * not imply verified pricing any more than provider-reported spend does;
+ * it reads "not required" for any provider-reported figure (Quotalis's
+ * own pricing catalog never touches it), "unverified" only for a future
+ * locally-estimated figure (not produced anywhere today).
  */
 /**
  * Compact system/data-health strip (owner section 11 of the Phase 3.5
@@ -44,13 +57,7 @@ export default function DataStatusPanel({ snapshot }: { snapshot: DashboardSnaps
     "{}",
     String(snapshot.availability.sampleCount),
   );
-  const costText = t(
-    status.costState === "providerReported"
-      ? "DashboardDataStatusCostProviderReported"
-      : status.costState === "legacyAmbiguous"
-        ? "DashboardDataStatusCostLegacyAmbiguous"
-        : "DashboardDataStatusCostUnavailable",
-  );
+  const costText = t(COST_STATE_LOCALE_KEY[status.costState]);
   const pricingText = t(
     status.pricingState === "unverified"
       ? "DashboardDataStatusPricingNotVerified"

@@ -41,6 +41,7 @@ function snapshot(
     spendTrend: [],
     costContract: {
       origin: "unavailable",
+      quantityKind: "unknown",
       measurementKind: "unknown",
       currencyCode: null,
       period: "unknown",
@@ -58,7 +59,10 @@ function renderPanel(snap: DashboardSnapshot | null) {
       DashboardDataStatusTitle: "Data Status",
       DashboardDataStatusHistoryActive: "Local history: active",
       DashboardDataStatusHistoryCollecting: "Local history: collecting",
-      DashboardDataStatusCostProviderReported: "Cost: provider-reported",
+      DashboardDataStatusCostProviderReported: "Cost: provider-reported spend",
+      DashboardDataStatusCostProviderReportedBalance: "Monetary data: provider-reported balance",
+      DashboardDataStatusCostProviderReportedCredits: "Monetary data: provider-reported credits",
+      DashboardDataStatusCostSemanticsUnknown: "Monetary semantics: unknown",
       DashboardDataStatusCostLegacyAmbiguous: "Cost: legacy data, semantics unknown",
       DashboardDataStatusCostUnavailable: "Cost data unavailable",
       DashboardDataStatusPricingNotVerified: "Pricing: not yet verified",
@@ -86,19 +90,73 @@ describe("DataStatusPanel", () => {
     expect(screen.getByText(/Cost data unavailable/)).toBeInTheDocument();
   });
 
-  it("PHASE 4A: real provider-reported cost never says 'estimated' or implies Quotalis pricing was needed", async () => {
+  it("PHASE 4A.1: real provider-reported SPEND never says 'estimated' or implies Quotalis pricing was needed", async () => {
     renderPanel(
       snapshot(
         { sampleCount: 500, hasCostData: true },
-        { origin: "providerReported", availability: "available", pricingStatus: "notRequired" },
+        {
+          origin: "providerReported",
+          quantityKind: "spend",
+          availability: "available",
+          pricingStatus: "notRequired",
+        },
       ),
     );
-    expect(await screen.findByText(/Cost: provider-reported/)).toBeInTheDocument();
+    expect(await screen.findByText(/Cost: provider-reported spend/)).toBeInTheDocument();
     expect(
       screen.getByText(/Pricing: not required for provider-reported cost/),
     ).toBeInTheDocument();
     expect(screen.queryByText(/estimated/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Pricing verified/i)).not.toBeInTheDocument();
+  });
+
+  it("PHASE 4A.1 hard rule: a provider-reported BALANCE is never labeled Cost/Spend", async () => {
+    renderPanel(
+      snapshot(
+        { sampleCount: 40, hasCostData: true },
+        {
+          origin: "providerReported",
+          quantityKind: "balance",
+          availability: "available",
+          pricingStatus: "notRequired",
+        },
+      ),
+    );
+    expect(await screen.findByText(/Monetary data: provider-reported balance/)).toBeInTheDocument();
+    expect(screen.queryByText(/Cost: provider-reported spend/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Spend/)).not.toBeInTheDocument();
+  });
+
+  it("PHASE 4A.1: a provider-reported CREDITS figure gets its own label, not Cost/Spend", async () => {
+    renderPanel(
+      snapshot(
+        { sampleCount: 10, hasCostData: true },
+        {
+          origin: "providerReported",
+          quantityKind: "credits",
+          availability: "available",
+          pricingStatus: "notRequired",
+        },
+      ),
+    );
+    expect(await screen.findByText(/Monetary data: provider-reported credits/)).toBeInTheDocument();
+    expect(screen.queryByText(/Cost: provider-reported spend/)).not.toBeInTheDocument();
+  });
+
+  it("PHASE 4A.1: real cost data with unresolved quantity semantics reads 'Monetary semantics: unknown', never Spend", async () => {
+    renderPanel(
+      snapshot(
+        { sampleCount: 5, hasCostData: true },
+        {
+          origin: "providerReported",
+          quantityKind: "unknown",
+          availability: "available",
+          pricingStatus: "notRequired",
+        },
+      ),
+    );
+    expect(await screen.findByText(/Monetary semantics: unknown/)).toBeInTheDocument();
+    expect(screen.queryByText(/Cost: provider-reported spend/)).not.toBeInTheDocument();
   });
 
   it("PHASE 4A: legacy (pre-Phase-4A) cost rows are labeled ambiguous, never shown as trustworthy provider-reported data", async () => {
@@ -109,14 +167,14 @@ describe("DataStatusPanel", () => {
       ),
     );
     expect(await screen.findByText(/Cost: legacy data, semantics unknown/)).toBeInTheDocument();
-    expect(screen.queryByText(/Cost: provider-reported/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Cost: provider-reported spend/)).not.toBeInTheDocument();
   });
 
-  it("never claims pricing is verified for provider-reported cost", async () => {
+  it("never claims pricing is verified for provider-reported cost, regardless of quantity kind", async () => {
     renderPanel(
       snapshot(
         { sampleCount: 500, hasCostData: true },
-        { origin: "providerReported", availability: "available" },
+        { origin: "providerReported", quantityKind: "balance", availability: "available" },
       ),
     );
     expect(await screen.findByText(/Pricing: not required for provider-reported cost/)).toBeInTheDocument();

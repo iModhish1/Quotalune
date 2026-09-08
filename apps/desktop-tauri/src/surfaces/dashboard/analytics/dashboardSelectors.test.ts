@@ -86,6 +86,7 @@ function trendPoint(overrides: Partial<UsageTrendPoint> = {}): UsageTrendPoint {
 function costContract(overrides: Partial<CostContract> = {}): CostContract {
   return {
     origin: "unavailable",
+    quantityKind: "unknown",
     measurementKind: "unknown",
     currencyCode: null,
     period: "unknown",
@@ -103,6 +104,7 @@ function spendPoint(overrides: Partial<SpendTrendPoint> = {}): SpendTrendPoint {
     costUsed: 0,
     currencyCode: "USD",
     measurementKind: "cumulative",
+    quantityKind: "spend",
     ...overrides,
   };
 }
@@ -298,6 +300,7 @@ describe("resolveDataStatus", () => {
         },
         costContract: costContract({
           origin: "providerReported",
+          quantityKind: "spend",
           measurementKind: "cumulative",
           currencyCode: "USD",
           period: "Monthly",
@@ -306,7 +309,57 @@ describe("resolveDataStatus", () => {
       }),
     );
     expect(status.pricingState).toBe("notRequired");
-    expect(status.costState).toBe("providerReported");
+    expect(status.costState).toBe("providerReportedSpend");
+  });
+
+  it("PHASE 4A.1: a provider-reported BALANCE is never labeled providerReportedSpend", () => {
+    const status = resolveDataStatus(
+      snapshot({
+        availability: {
+          firstSampleAt: 0,
+          lastSampleAt: 1000,
+          sampleCount: 500,
+          hasCostData: true,
+          hasTokenData: false,
+          hasRequestData: false,
+          hasModelData: false,
+        },
+        costContract: costContract({
+          origin: "providerReported",
+          quantityKind: "balance",
+          measurementKind: "pointInTime",
+          currencyCode: "USD",
+          period: "balance",
+          availability: "available",
+        }),
+      }),
+    );
+    expect(status.costState).toBe("providerReportedBalance");
+  });
+
+  it("PHASE 4A.1: a provider-reported CREDITS figure gets its own costState", () => {
+    const status = resolveDataStatus(
+      snapshot({
+        availability: {
+          firstSampleAt: 0,
+          lastSampleAt: 1000,
+          sampleCount: 10,
+          hasCostData: true,
+          hasTokenData: false,
+          hasRequestData: false,
+          hasModelData: false,
+        },
+        costContract: costContract({
+          origin: "providerReported",
+          quantityKind: "credits",
+          measurementKind: "pointInTime",
+          currencyCode: "USD",
+          period: "Credits",
+          availability: "available",
+        }),
+      }),
+    );
+    expect(status.costState).toBe("providerReportedCredits");
   });
 
   it("PHASE 4A: legacy-ambiguous cost rows never report as providerReported", () => {
@@ -405,6 +458,7 @@ describe("computeKpis", () => {
   };
   const cumulativeContract = costContract({
     origin: "providerReported",
+    quantityKind: "spend",
     measurementKind: "cumulative",
     currencyCode: "USD",
     period: "Monthly",
@@ -454,20 +508,27 @@ describe("computeKpis", () => {
     expect(kpis.reportedSpendCurrency).toBe("USD");
   });
 
-  it("PHASE 4A: a point-in-time balance is never shown as Spend -- returns unavailable, not the balance number", () => {
+  it("PHASE 4A.1 hard rule: a point-in-time BALANCE is never shown as Spend -- returns unavailable, not the balance number", () => {
     const kpis = computeKpis({
       liveProviders: [],
       snapshot: snapshot({
         availability: { ...cumulativeAvailability },
         costContract: costContract({
           origin: "providerReported",
+          quantityKind: "balance",
           measurementKind: "pointInTime",
           currencyCode: "USD",
           period: "balance",
           availability: "available",
         }),
         spendTrend: [
-          spendPoint({ provider: "zenmux", bucketStart: 0, costUsed: 30, measurementKind: "pointInTime" }),
+          spendPoint({
+            provider: "zenmux",
+            bucketStart: 0,
+            costUsed: 30,
+            quantityKind: "balance",
+            measurementKind: "pointInTime",
+          }),
         ],
       }),
       settings,
@@ -476,7 +537,35 @@ describe("computeKpis", () => {
     expect(kpis.reportedSpendCurrency).toBeNull();
   });
 
-  it("PHASE 4A: mixed measurement kinds across providers collapse to unavailable, never a combined guess", () => {
+  it("PHASE 4A.1 hard rule: a CREDITS figure (e.g. Codex's live balance) is never shown as Spend", () => {
+    const kpis = computeKpis({
+      liveProviders: [],
+      snapshot: snapshot({
+        availability: { ...cumulativeAvailability },
+        costContract: costContract({
+          origin: "providerReported",
+          quantityKind: "credits",
+          measurementKind: "pointInTime",
+          currencyCode: "USD",
+          period: "Credits",
+          availability: "available",
+        }),
+        spendTrend: [
+          spendPoint({
+            provider: "codex",
+            bucketStart: 0,
+            costUsed: 12,
+            quantityKind: "credits",
+            measurementKind: "pointInTime",
+          }),
+        ],
+      }),
+      settings,
+    });
+    expect(kpis.reportedSpendTotal).toBeNull();
+  });
+
+  it("PHASE 4A: mixed measurement kinds across providers (same quantity kind) collapse to unavailable, never a combined guess", () => {
     const kpis = computeKpis({
       liveProviders: [],
       snapshot: snapshot({
@@ -486,6 +575,7 @@ describe("computeKpis", () => {
         // re-deriving its own (wrong) answer from the raw points.
         costContract: costContract({
           origin: "providerReported",
+          quantityKind: "spend",
           measurementKind: "unknown",
           currencyCode: null,
           period: "unknown",
@@ -501,6 +591,29 @@ describe("computeKpis", () => {
     expect(kpis.reportedSpendTotal).toBeNull();
   });
 
+  it("PHASE 4A.1: mixed quantity kinds (same temporal shape) collapse to unavailable -- proves the two dimensions are checked independently", () => {
+    const kpis = computeKpis({
+      liveProviders: [],
+      snapshot: snapshot({
+        availability: cumulativeAvailability,
+        costContract: costContract({
+          origin: "providerReported",
+          quantityKind: "unknown", // Rust already proved quantity kinds differ
+          measurementKind: "cumulative", // ...even though temporal shape matches
+          currencyCode: "USD",
+          period: "Monthly",
+          availability: "available",
+        }),
+        spendTrend: [
+          spendPoint({ provider: "claude", bucketStart: 0, costUsed: 12, quantityKind: "spend" }),
+          spendPoint({ provider: "zenmux", bucketStart: 0, costUsed: 30, quantityKind: "balance" }),
+        ],
+      }),
+      settings,
+    });
+    expect(kpis.reportedSpendTotal).toBeNull();
+  });
+
   it("PHASE 4A: mixed currencies collapse to unavailable rather than summing USD + EUR", () => {
     const kpis = computeKpis({
       liveProviders: [],
@@ -508,6 +621,7 @@ describe("computeKpis", () => {
         availability: cumulativeAvailability,
         costContract: costContract({
           origin: "providerReported",
+          quantityKind: "spend",
           measurementKind: "cumulative",
           currencyCode: null, // Rust already proved currencies differ
           period: "Monthly",

@@ -1078,18 +1078,38 @@ export interface UsageTrendPoint {
  *  See `docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md`. */
 export type CostMeasurementKind = "cumulative" | "delta" | "pointInTime" | "unknown";
 
+/** Phase 4A.1: the orthogonal dimension to `CostMeasurementKind` -- WHAT
+ *  a monetary reading represents, not its temporal shape. Proven false
+ *  by a real provider-adapter audit that `CostMeasurementKind` alone was
+ *  sufficient: several providers write a prepaid balance into the same
+ *  field a spend total uses elsewhere, and a balance/spend confusion is
+ *  a distinct mistake from summing cumulative snapshots.
+ *  - "spend": money actually consumed against a billing period/credit
+ *    allotment -- the ONLY kind the Dashboard Spend KPI may ever show.
+ *  - "balance": a prepaid balance (cash-denominated) -- remaining funds,
+ *    never spend. Can legitimately decrease as money is spent.
+ *  - "credits": a provider-defined, non-cash-equivalent unit (e.g. a
+ *    ChatGPT account credit balance) -- no proven USD/EUR conversion.
+ *  - "unknown": could not be established (legacy row, unclassified
+ *    provider/path) -- excluded from every KPI.
+ *  See `docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md` "Phase 4A.1". */
+export type MonetaryQuantityKind = "spend" | "balance" | "credits" | "unknown";
+
 export interface SpendTrendPoint {
   provider: string;
   accountId: string;
   bucketStart: number;
-  /** A reading in whatever `measurementKind` says it is -- always
-   *  provider-reported (see `DashboardSnapshot.costContract.origin`),
-   *  never a Quotalis-computed figure. */
+  /** A reading in whatever `quantityKind`/`measurementKind` say it is --
+   *  always provider-reported (see `DashboardSnapshot.costContract.origin`),
+   *  never a Quotalis-computed figure. Despite the field's historical
+   *  name, this is NOT always "spend" -- check `quantityKind` before
+   *  showing it under a Spend label. */
   costUsed: number;
   /** ISO 4217 currency code, `null` for a legacy (pre-Phase-4A) sample --
    *  never assume USD. */
   currencyCode: string | null;
   measurementKind: CostMeasurementKind;
+  quantityKind: MonetaryQuantityKind;
 }
 
 /** Where a monetary figure came from. Quotalis today only ever produces
@@ -1117,6 +1137,11 @@ export type PricingStatus = "notRequired" | "unverified" | "verified";
  *  monetary semantics from a naked number any more -- read this instead. */
 export interface CostContract {
   origin: CostOrigin;
+  /** Never "unknown" if it can be helped -- collapses to "unknown" the
+   *  moment more than one quantity kind (or an unclassified provider)
+   *  appears in the relevant sample set. A balance and a spend total are
+   *  never combined into one figure. */
+  quantityKind: MonetaryQuantityKind;
   measurementKind: CostMeasurementKind;
   /** Only set when every relevant sample shares one unambiguous currency
    *  -- `null` when currencies differ or are unknown; never guessed. */

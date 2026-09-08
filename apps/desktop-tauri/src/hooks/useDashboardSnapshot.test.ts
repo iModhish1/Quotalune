@@ -35,6 +35,7 @@ function snapshot(overrides: Partial<DashboardSnapshot> = {}): DashboardSnapshot
     spendTrend: [],
     costContract: {
       origin: "unavailable",
+      quantityKind: "unknown",
       measurementKind: "unknown",
       currencyCode: null,
       period: "unknown",
