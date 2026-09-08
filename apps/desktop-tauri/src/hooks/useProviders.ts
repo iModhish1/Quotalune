@@ -91,6 +91,21 @@ export function useProviders(options: UseProvidersOptions = {}): UseProvidersRes
     });
   }, []);
 
+  /** Unlike `mergeSnapshots` (an upsert -- used for individual
+   *  `provider-updated` deltas, where an absent id must NOT be treated as
+   *  "removed"), `getCachedProviders()` returns the complete, authoritative
+   *  set of providers visible in the current context. A backend-driven
+   *  reload (settings change, profile switch) must REPLACE state with it,
+   *  including down to an empty array -- a profile with zero accounts is
+   *  a real, valid state, not "nothing changed." Using `mergeSnapshots`
+   *  here (fixed alongside the missing "quotalis:settings-updated"
+   *  listener, Phase 5.1) would have kept the previous profile's
+   *  providers on screen forever once merged in, since an upsert has no
+   *  way to express "this id is no longer present." */
+  const replaceSnapshots = useCallback((snapshots: ProviderUsageSnapshot[]) => {
+    setProviders(snapshots);
+  }, []);
+
   const flushPendingSnapshots = useCallback(() => {
     if (flushTimerRef.current !== undefined) {
       window.clearTimeout(flushTimerRef.current);
@@ -153,7 +168,18 @@ export function useProviders(options: UseProvidersOptions = {}): UseProvidersRes
       },
     );
 
-    const unlistenSettings = listen("settings-changed", () => {
+    // Re-fetch cached providers whenever the backend broadcasts a change
+    // that can alter which providers are visible: a plain settings save
+    // ("settings-changed") or a profile switch/create/update/delete
+    // ("quotalis:settings-updated" -- emitted by both `update_settings`
+    // and every `command_profiles.rs` mutation via its shared
+    // `emit_changed`, mirroring the two-event pattern `useSettings.ts`
+    // already listens for). Without the second event, switching to a
+    // profile with different (or zero) accounts left this hook's provider
+    // list showing the previous profile's providers until some unrelated
+    // event happened to trigger a refetch -- confirmed via real native CDP
+    // proof in docs/validation/PHASE5_3D_PROTOTYPE.md (Phase 5.1).
+    const reloadFromBackendEvent = () => {
       const epoch = ++settingsReloadEpochRef.current;
       settingsReloadingRef.current = true;
       if (flushTimerRef.current !== undefined) {
@@ -164,7 +190,7 @@ export function useProviders(options: UseProvidersOptions = {}): UseProvidersRes
       getCachedProviders()
         .then((cached) => {
           if (!cancelled && epoch === settingsReloadEpochRef.current) {
-            mergeSnapshots(cached);
+            replaceSnapshots(cached);
           }
         })
         .finally(() => {
@@ -173,7 +199,10 @@ export function useProviders(options: UseProvidersOptions = {}): UseProvidersRes
             flushPendingSnapshots();
           }
         });
-    });
+    };
+
+    const unlistenSettings = listen("settings-changed", reloadFromBackendEvent);
+    const unlistenProfile = listen("quotalis:settings-updated", reloadFromBackendEvent);
 
     const unlistenStarted = listen<RefreshStartedPayload>("refresh-started", (event) => {
       if (!cancelled) {
@@ -236,6 +265,7 @@ export function useProviders(options: UseProvidersOptions = {}): UseProvidersRes
       pendingSnapshotsRef.current.clear();
       unlistenUpdated.then((fn) => fn());
       unlistenSettings.then((fn) => fn());
+      unlistenProfile.then((fn) => fn());
       unlistenStarted.then((fn) => fn());
       unlistenComplete.then((fn) => fn());
     };
@@ -245,6 +275,7 @@ export function useProviders(options: UseProvidersOptions = {}): UseProvidersRes
     options.refreshOnMount,
     flushPendingSnapshots,
     mergeSnapshots,
+    replaceSnapshots,
     queueSnapshot,
   ]);
 

@@ -162,6 +162,33 @@ describe("useProviders", () => {
     expect(tauriMocks.getCachedProviders).toHaveBeenCalledTimes(2);
   });
 
+  /**
+   * Regression test for a real bug found via native CDP proof (Phase 5.1,
+   * docs/validation/PHASE5_3D_PROTOTYPE.md): `switch_profile` (and
+   * `create_profile`/`update_profile`/`delete_profile`, all via
+   * `command_profiles.rs`'s shared `emit_changed`) broadcasts
+   * "quotalis:settings-updated", not "settings-changed" -- this hook
+   * previously only listened for the latter, so an already-mounted
+   * Dashboard kept showing the previous profile's providers after a
+   * switch until some unrelated event happened to trigger a refetch.
+   */
+  it("reloads cached provider presentation when the active profile changes (switch_profile's event, not settings-changed)", async () => {
+    tauriMocks.getCachedProviders.mockResolvedValueOnce([provider("codex")]);
+
+    const { result } = renderHook(() => useProviders({ refreshOnMount: false }));
+    await waitFor(() =>
+      expect(result.current.providers.map((p) => p.providerId)).toEqual(["codex"]),
+    );
+
+    // The new profile has zero configured accounts -- the real scenario
+    // this bug was caught in.
+    tauriMocks.getCachedProviders.mockResolvedValueOnce([]);
+    act(() => emitProviderEvent("quotalis:settings-updated", undefined));
+
+    await waitFor(() => expect(result.current.providers).toHaveLength(0));
+    expect(tauriMocks.getCachedProviders).toHaveBeenCalledTimes(2);
+  });
+
   it("discards queued pre-change snapshots before reloading settings presentation", async () => {
     vi.useFakeTimers();
     try {
