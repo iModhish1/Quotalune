@@ -62,13 +62,22 @@ pub async fn open_settings_window(app: tauri::AppHandle, tab: String) -> Result<
 /// Open (or focus) the real Dashboard (`MainRoute::Dashboard` /
 /// `PopOutPanel.tsx`) in the shared `main` window — the same target sidebar
 /// navigation, tray deep-links, and cold launch all converge on (Wave 6
-/// Phase 3's single central route vocabulary). Not `async`: unlike the
-/// window-creating commands below, this only transitions an
-/// already-existing window (`main` is created hidden at startup and never
-/// torn down), so it doesn't hit the `WebviewWindowBuilder::build`
-/// deadlock-on-sync-command issue.
+/// Phase 3's single central route vocabulary).
+///
+/// Must be `async`, same as `open_settings_window`/`open_flyout_window`/
+/// `open_collections_window`: every `MainRoute` (Dashboard included)
+/// currently resolves to a detached Settings-window tab via
+/// `open_or_focus_main_window` -> `settings_window::open_or_focus`, and on a
+/// profile's first-ever launch (before the user has ever opened Settings)
+/// that falls through to a synchronous `WebviewWindowBuilder::build()` call.
+/// A prior version of this doc comment claimed this command was safe as a
+/// sync command because it "only transitions an already-existing window" —
+/// that assumption was wrong for a fresh profile and produced a real,
+/// reproduced Windows main-thread deadlock (the whole window subsystem hangs
+/// on first launch if a Dashboard deep-link/shortcut fires before Settings
+/// has ever been created). See docs/images/dashboard/phase3/EVIDENCE.md.
 #[tauri::command]
-pub fn open_dashboard(app: tauri::AppHandle) -> Result<(), String> {
+pub async fn open_dashboard(app: tauri::AppHandle) -> Result<(), String> {
     crate::shell::open_or_focus_main_window(&app, crate::shell::MainRoute::Dashboard)
 }
 
