@@ -10,6 +10,7 @@ import { useSettings } from "../../../hooks/useSettings";
 import type { BootstrapState, DashboardModeId, DashboardPerformancePreset } from "../../../types/bridge";
 import { DASHBOARD_DEFINITIONS, DASHBOARD_PERFORMANCE_PRESETS } from "../../../lib/dashboardRegistry";
 import { catalogBySlug } from "../../../design-system/themeCatalog";
+import DemoSettingsSection from "../../../demoMode/DemoSettingsSection";
 import "./DashboardStudioTab.css";
 
 export default function DashboardStudioTab({
@@ -100,6 +101,8 @@ export default function DashboardStudioTab({
           </button>
         </div>
       </section>
+
+      <DemoSettingsSection settings={settings} catalog={state.providers} update={update} />
     </div>
   );
 }
