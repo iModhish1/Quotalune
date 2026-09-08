@@ -345,3 +345,244 @@ Reproduced executably in
 and mirrored in
 `dashboardSelectors.test.ts`'s `"PHASE 4A regression: never sums a
 cumulative-period reading across time buckets..."` test.
+
+## 6. Phase 4A.1 — Monetary Contract Semantic Closure
+
+Starting HEAD `160853db` (Phase 4A accepted). This section closes the one
+remaining semantic gap Phase 4A's own audit surfaced but did not yet
+formalize: `CostMeasurementKind` (temporal shape) is not sufficient to
+describe a monetary observation -- it says nothing about WHAT the number
+represents. A provider that reports a prepaid balance and a provider
+that reports period spend can both read as the same measurement kind
+while meaning financially opposite things.
+
+### 6.1 The missing dimension: `MonetaryQuantityKind`
+
+`MonetaryQuantityKind ∈ {Spend, Balance, Credits, Unknown}`, orthogonal
+to `CostMeasurementKind ∈ {Cumulative, Delta, PointInTime, Unknown}`. See
+`rust/src/dashboard_data.rs`'s `MonetaryQuantityKind` enum and
+`classify_monetary_observation()` for the full model, and
+`CostContract` for how both dimensions attach to a `DashboardSnapshot`
+alongside origin/currency/period/availability/pricing-status. Every one
+of the 24 `CostSnapshot`-constructing providers is classified on BOTH
+dimensions at once, from real adapter evidence -- never inferred from
+the `cost_used` column name.
+
+### 6.2 24-provider classification table
+
+| Provider | Quantity kind | Measurement kind | Evidence |
+|---|---|---|---|
+| aiand | Spend | Cumulative | rolling-30-day summed log cost |
+| bedrock | Spend | Cumulative | AWS Cost Explorer month-to-date |
+| claude | Spend | Cumulative | admin_api.rs org cost report / web_api.rs extra-usage credits |
+| commandcode | **Credits** | Cumulative | `plan.monthly_credits_usd - monthly_credits`, a credit allotment, not raw cash (`commandcode/mod.rs:356-366`) |
+| cursor | Spend | Cumulative | billing-cycle "included"/on-demand spend |
+| deepinfra | Spend | Cumulative | `payment/checklist` billing-cycle spend |
+| deepseek | Spend | Cumulative | `/api/v0/usage/cost` current-month sum |
+| fireworks | Spend | Cumulative | `billing/summary` 30-day rated spend |
+| litellm | Spend | Cumulative | proxy `spend`/`spend_usd` field |
+| llmproxy | Spend | Cumulative | `approximate_cost_usd` |
+| minimax | Spend | Cumulative | 30-day billing-history sum |
+| mistral | Spend | Cumulative | admin billing API, token-priced |
+| openaiapi | Spend | Cumulative | credit-grants usage / Admin API org cost |
+| openrouter | Spend | Cumulative | `/activity` 30-day summed cost |
+| xai | Spend | Cumulative | team-scoped daily cost buckets |
+| crossmodel | Balance | PointInTime | `CostSnapshot::new(0.0, ...)`, real balance in `.limit` (`crossmodel.rs:197`) -- **`used` is a constant 0 today; see 6.4 caveat** |
+| sub2api | Balance | PointInTime | same 0.0-in-`used`/real-value-in-`.limit` shape (`sub2api/mod.rs:519,573`) |
+| devin | Balance | PointInTime | `extra_usage_balance()` (`devin/mod.rs:141`) |
+| neuralwatt | Balance | PointInTime | `prepaid_remaining()` (`neuralwatt/mod.rs:319`) |
+| opencodego | Balance | PointInTime | scraped Zen balance (`opencodego/mod.rs:539`) |
+| zenmux | Balance | PointInTime | PAYG balance, currency validated `== "usd"` (`zenmux/mod.rs:244`) |
+| codex | **Credits, classified by adapter-produced `period` label, not provider ID alone** | **Cumulative if `period == "Monthly credits"`; PointInTime if `period == "Credits"` (the live case today)** | see 6.3 |
+
+### 6.3 Codex dual-path, traced in full
+
+| Code path | Source field | Business meaning | Measurement kind | Currency | Distinguishable at write time? |
+|---|---|---|---|---|---|
+| `build_result_from_json` -> `extract_credits` (`codex/api.rs:559-585`) -- **the ONLY path either `fetch_usage` or `fetch_usage_pat` (both live, production-used) ever calls** | `credits.balance` | Raw ChatGPT-account credit balance | PointInTime | `"USD"` (hard-coded; really credits) | **Yes** -- this path always sets `period = "Credits"` |
+| `build_result` -> `SpendControlLimitSnapshot::to_cost_snapshot` (`codex/api.rs:588-660`, `947-965`) -- **dead code**: `UsageResponse`, the only type `build_result` accepts, is constructed nowhere except two unit tests (`codex/api.rs:1572,1598`) | `individual_limit.used` (or derived from `remaining_percent`/`limit - balance`) | Spend against a monthly credit limit | Cumulative | `"USD"` (hard-coded; really credits) | **Yes, if ever live** -- this path always sets `period = "Monthly credits"` |
+
+**Result**: Codex's *live* fetch path is unambiguous and 100% traceable
+-- it is always the Balance/PointInTime/Credits case, never the
+theoretical Spend case, because the code that would produce the Spend
+case is unreachable from any real fetch today. This supersedes Phase
+4A's more conservative "Codex = Unknown, dual-path, can't distinguish"
+classification, which was based on reading `build_result`'s branching
+logic without first confirming which function the live fetch path
+actually calls. `classify_monetary_observation("codex", period)`
+resolves correctly using the adapter's own `period` string (real
+evidence the adapter produced, not a guess) -- if `build_result`'s
+branch is ever wired into a live path in the future, its distinct
+`"Monthly credits"` label already classifies correctly with zero further
+code changes, protected by
+`classify_codex_would_resolve_monthly_credits_path_correctly_if_ever_live`.
+An unrecognized period string for Codex fails closed to
+`(Unknown, Unknown)`, never guessed.
+
+### 6.4 Confidence caveats found during re-audit
+
+- **crossmodel/sub2api's `cost_used` history is currently always `0.0`.**
+  Both adapters pass `used = 0.0` and put the real balance in
+  `CostSnapshot.limit`, which `history_recorder.rs` never reads or
+  persists. Their Balance classification is correct, but no non-zero
+  balance value from either provider reaches `history.db` today. Not
+  fixed in this pass (would require persisting `.limit`, a separate,
+  larger change) -- flagged explicitly rather than silently left as an
+  apparent "real $0 balance".
+- **`commandcode`/Codex's `currency_code` is hard-coded `"USD"`** even
+  though both are genuinely credit-denominated, not cash. Pre-existing,
+  not introduced or fixed by this pass; the `Credits` quantity
+  classification is what keeps this from being treated as real currency
+  regardless.
+
+### 6.5 Dedup semantic fix
+
+`history.rs`'s dedup key was `(account_id, window_id, used_percent,
+cost_used)`. Two samples with the same `cost_used` but different
+currency, quantity kind, or measurement kind are different facts, not
+duplicates -- the key now also joins `cost_currency_code`,
+`cost_measurement_kind`, and `monetary_quantity_kind` (all via NULL-safe
+`IS`). Six new regression tests
+(`rust/src/history.rs::tests::dedup_*`) prove: identical semantics still
+dedup per existing timing rules; different currency, quantity kind,
+measurement kind, or account never dedup; an untagged legacy row and a
+semantically-known row with the same numeric value never silently
+collapse.
+
+### 6.6 Current-period vs. selected-range spend semantics
+
+Phase 4A's latest-reading-wins rule is correct for **"current
+billing-period reported spend"** -- it is NOT automatically the same
+metric as **"total spend observed across the selected historical
+range"** when that range crosses one or more billing-period resets (a
+sequence like `8 -> 10 -> [reset] -> 0.5 -> 2` has a current-period spend
+of `2`, but a hypothetical total-across-both-periods metric could be as
+much as `12`, an entirely different number). Per owner instruction, Phase
+4A.1 does NOT implement the second metric (reset-boundary detection
+would require providers to declare *why* a reset happened, which none do
+in-repo) -- the Dashboard's Spend KPI continues to expose only "current
+billing-period reported spend", and the alternative metric remains
+unavailable rather than approximated. `changing_bucket_grain_does_not_change_the_latest_cumulative_reading`
+proves the resulting invariant: `Today`/`7 Days`/`30 Days` never change
+the resolved current-period total merely because more buckets are
+loaded.
+
+### 6.7 Spend-trend chart semantics
+
+`SpendTrendPoint`s are cumulative-period snapshots, not per-bucket
+deltas -- `UsageTrendSection.tsx`'s chart renders each bucket's own
+value as a line point (already correct: no summing happens there), which
+visually reads as a cumulative-spend trajectory across the period, not a
+"daily spend"/"cost per bucket" bar chart. No visual change was needed
+this pass (re-confirmed by reading `UsageTrendSection.tsx`'s chart-point
+mapping); the existing implementation does not imply per-bucket deltas.
+
+### 6.8 Legacy data
+
+Unchanged from Phase 4A section 5.8, restated per owner section 14: a
+pre-migration row's `cost_used` is never inferred as `Spend` just
+because the historical column is named `cost_used` -- column names are
+not proof.
+`cost_contract_legacy_row_never_inferred_as_spend_from_column_name`
+proves this explicitly for the new quantity dimension.
+
+### 6.9 Git-history reconciliation
+
+The Phase 4A final report's "Starting HEAD: `afa4ddb3`" was accurate but
+incomplete context: `afa4ddb3` was simply the most recent commit on this
+same branch at the moment Phase 4A began, not a divergent starting
+point. `70717d30` (the owner's last explicitly accepted checkpoint,
+Phase 3.6) and `160853db` (Phase 4A's end) are connected by exactly
+eight commits, all on `feature/v9-theme-runtime`, all from this same
+continuous work session, with no unreported or unrelated change:
+
+```
+$ git log --oneline --decorate 70717d30..160853db
+160853db docs: Phase 4A section — bug documented in full, not downplayed
+51f42289 Phase 4A: frontend respects the cost-measurement contract, drops $-only rendering
+e1969e1e Phase 4A: formal cost-measurement contract (Rust) — origin/kind/currency
+afa4ddb3 docs+test: pricing catalog architecture, provenance, golden test corpus
+1494c29e fix: label the Dashboard spend KPI/chart as "Reported Spend", not "Estimated"
+6d3a16fb fix: stop summing cumulative spend across time buckets (Estimated Spend KPI)
+789a2319 docs: Phase 4 provider data-capabilities matrix
+35322ef4 docs: Phase 4 data pipeline audit — trace + confirmed defects
+```
+(`be08bd2d`, "docs: close Phase 3 profile-theme sanity check", is
+`70717d30`'s direct child and the true start of this range -- included
+above only where its own descendant commits begin the Phase 4 work.)
+
+Classification: `35322ef4`/`789a2319` = Phase 4 audit docs;
+`6d3a16fb`/`1494c29e` = the two confirmed correctness fixes;
+`afa4ddb3` = pricing-catalog research/docs (explicitly not wired into
+runtime); `e1969e1e`/`51f42289`/`160853db` = Phase 4A itself. No history
+rewrite was performed or is needed.
+
+### 6.10 Rust test-count reconciliation
+
+The Phase 4A final report stated "cargo test --workspace -- 1558+1
+passed" as the complete workspace total. That was **incomplete
+reporting, not a lost/skipped test**: `cargo test --workspace` runs
+THREE test binaries, not two --
+
+```
+Running unittests src\main.rs (target\debug\deps\Quotalis-*.exe)      -- 455 passed, 1 ignored
+Running unittests src\lib.rs  (target\debug\deps\quotalis_core-*.exe) -- 1577 passed (was 1558 pre-Phase-4A.1)
+Running unittests src\main.rs (target\debug\deps\quotalis-*.exe)      -- 1 passed
+Doc-tests quotalis_core                                                -- 0
+```
+
+`Quotalis` (capital Q, `apps/desktop-tauri/src-tauri`'s `[[bin]]` target
+-- `codexbar-desktop-tauri`'s actual binary name) and `quotalis`
+(lowercase, `rust`'s own small `[[bin]]` target inside `quotalis_core`)
+are two DIFFERENT binaries in the same Cargo workspace with
+case-differing names. Cargo correctly builds and runs both as separate,
+distinctly-hashed artifacts (`target/debug/deps/Quotalis-<hash>.exe` vs
+`quotalis-<hash>.exe` -- confirmed no filename collision on this
+Windows/case-insensitive filesystem: the hash suffix keeps them
+distinct). The Phase 4A report's `cargo test --workspace` output tool
+calls were read via a truncated `tail`, and the earlier "Quotalis" bin's
+455-test block scrolled out of what was quoted in the final report --
+the tests themselves ran and passed at the time; only the report's
+arithmetic omitted them. **Total: 455 + 1577 + 1 + 0 = 2033 passed, 0
+failed, 1 ignored** (the intentionally-`#[ignore]`d
+`manual_verification_against_real_history_db` test, by design). This
+satisfies PASS condition A: the complete expected suite runs, and the
+discrepancy has a precise, verified explanation (case B is not needed,
+but is also true).
+
+### 6.11 Dev-history reconciliation
+
+The 64-real-sample Dev history the owner referenced (`64 real samples,
+~2.1 days, 1 provider`) is documented in
+`docs/images/dashboard/phase3/EVIDENCE.md`: captured against a
+`dev-channel` build at HEAD `8eac68dd` (a prior commit on this same
+branch, mtime `2026-09-08 04:13:24`), data root `%APPDATA%\QuotaArc-Dev`
+/ `%LOCALAPPDATA%\QuotaArc-Dev`. Read-only investigation this session
+confirmed via `Test-Path`:
+- `%APPDATA%\QuotaArc-Dev` -- does not exist
+- `%LOCALAPPDATA%\QuotaArc-Dev` -- does not exist
+- `%APPDATA%\QuotaArc` (Personal) -- does not exist either
+
+Every Quotalis/QuotaArc app-data directory on this machine is currently
+absent, for both Dev and Personal. This is an environment-continuity
+fact, not a code regression and not cleanup performed by any Phase 4/4A
+work: this session never launched any Quotalis binary, Dev or
+otherwise, and the directories were already absent before any Phase 4
+commit in this session touched anything. The most consistent
+explanation is that the prior evidence was captured in a different
+execution environment instance than the one this session runs in (this
+repo also contains `.local/recovery/20260906-222639/` and
+`.local/recovery/personal-backup-0.10.0-20260907-002703/`, both
+consistent with at least one environment-level reset/recovery event
+having occurred at some point before this session). `target/debug/`
+does contain a leftover `QuotalisDev.exe` build artifact from that prior
+work, but a binary artifact surviving does not imply its data directory
+did. No data was fabricated to fill this gap; see 6.12.
+
+### 6.12 Real Dev check (this session)
+
+No Dev history database was found to query. Per owner section 19, this
+is reported honestly rather than fabricated: this session recorded zero
+new samples (no Quotalis binary was launched), and the prior 64-sample
+dataset's on-disk location does not currently exist. There is nothing to
+sanitize-and-report this pass.
