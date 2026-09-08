@@ -32,6 +32,21 @@ pub struct UsageSample {
     pub used_percent: f64,
     pub remaining_percent: f64,
     pub cost_used: Option<f64>,
+    /// ISO 4217 currency code for `cost_used` (e.g. "USD"), always written
+    /// alongside a cost sample as of Phase 4A (schema `user_version` 2) --
+    /// `CostSnapshot::currency_code` is a required, non-optional field on
+    /// every provider adapter, so every NEW cost row can carry it. Rows
+    /// written before this column existed read back as `None`: that is
+    /// legacy/ambiguous data, not "USD assumed" -- callers must not guess
+    /// a currency for a pre-migration row (owner Phase 4A section 4/14).
+    pub cost_currency_code: Option<String>,
+    /// "cumulative" | "point_in_time" | "unknown" (or `None` for a
+    /// pre-Phase-4A row). See `dashboard_data::CostMeasurementKind` --
+    /// stored as a plain string here rather than an enum so an old row
+    /// with no value, or a future kind this build doesn't know about,
+    /// both read back safely as `None`/an unrecognized string rather than
+    /// failing to deserialize.
+    pub cost_measurement_kind: Option<String>,
     /// Epoch seconds.
     pub resets_at: Option<i64>,
     /// Epoch seconds.
@@ -131,6 +146,39 @@ impl HistoryStore {
                  COMMIT;",
             )?;
         }
+        if version < 2 {
+            // Phase 4A: add a currency column for cost samples. Additive,
+            // backward-compatible -- existing rows get NULL (legacy/
+            // ambiguous currency, never silently assumed to be USD), no
+            // existing row's cost_used/used_percent/etc. is touched or
+            // rewritten (owner Phase 4A section 14: no destructive
+            // migration, old history stays fully readable).
+            conn.execute_batch(
+                "BEGIN;
+                 ALTER TABLE usage_samples ADD COLUMN cost_currency_code TEXT;
+                 PRAGMA user_version = 2;
+                 COMMIT;",
+            )?;
+        }
+        if version < 3 {
+            // Phase 4A part 2: add a measurement-kind column. A real
+            // provider-adapter audit (docs/validation/
+            // PHASE4_DATA_ACCURACY_AUDIT.md "Phase 4A" section) proved
+            // that `cost_used` does NOT mean the same thing for every
+            // provider -- several pass a point-in-time prepaid balance
+            // (not period spend) into the same field. This column records,
+            // per row, which one a provider was proven to write at the
+            // time it was recorded (see `dashboard_data::
+            // provider_cost_measurement_kind`), so a mixed-kind aggregate
+            // can never be silently produced. Additive, backward-
+            // compatible: existing rows get NULL (legacy/unknown kind).
+            conn.execute_batch(
+                "BEGIN;
+                 ALTER TABLE usage_samples ADD COLUMN cost_measurement_kind TEXT;
+                 PRAGMA user_version = 3;
+                 COMMIT;",
+            )?;
+        }
         Ok(())
     }
 
@@ -175,8 +223,10 @@ impl HistoryStore {
                 conn.execute(
                     "INSERT INTO usage_samples
                          (account_id, provider, window_id, window_label,
-                          used_percent, remaining_percent, cost_used, resets_at, captured_at)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                          used_percent, remaining_percent, cost_used,
+                          cost_currency_code, cost_measurement_kind,
+                          resets_at, captured_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
                     rusqlite::params![
                         sample.account_id,
                         sample.provider,
@@ -185,6 +235,8 @@ impl HistoryStore {
                         sample.used_percent,
                         sample.remaining_percent,
                         sample.cost_used,
+                        sample.cost_currency_code,
+                        sample.cost_measurement_kind,
                         sample.resets_at,
                         sample.captured_at,
                     ],
@@ -200,7 +252,9 @@ impl HistoryStore {
         self.with_conn(|conn| {
             let mut sql = String::from(
                 "SELECT account_id, provider, window_id, window_label,
-                        used_percent, remaining_percent, cost_used, resets_at, captured_at
+                        used_percent, remaining_percent, cost_used,
+                        cost_currency_code, cost_measurement_kind,
+                        resets_at, captured_at
                  FROM usage_samples WHERE 1=1",
             );
             let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
@@ -249,8 +303,10 @@ impl HistoryStore {
                     used_percent: r.get(4)?,
                     remaining_percent: r.get(5)?,
                     cost_used: r.get(6)?,
-                    resets_at: r.get(7)?,
-                    captured_at: r.get(8)?,
+                    cost_currency_code: r.get(7)?,
+                    cost_measurement_kind: r.get(8)?,
+                    resets_at: r.get(9)?,
+                    captured_at: r.get(10)?,
                 })
             })?;
             let mut out = Vec::new();
@@ -319,6 +375,8 @@ mod tests {
             used_percent: used,
             remaining_percent: 100.0 - used,
             cost_used: None,
+            cost_currency_code: None,
+            cost_measurement_kind: None,
             resets_at: None,
             captured_at: at,
         }
@@ -395,6 +453,8 @@ mod tests {
             used_percent: 0.0,
             remaining_percent: 0.0,
             cost_used: Some(cost),
+            cost_currency_code: Some("USD".to_string()),
+            cost_measurement_kind: Some("unknown".to_string()),
             resets_at: None,
             captured_at: at,
         };

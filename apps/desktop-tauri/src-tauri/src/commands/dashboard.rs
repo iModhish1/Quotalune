@@ -4,8 +4,9 @@
 //! -- one snapshot, targeted by range/timezone/provider filter.
 
 use quotalis_core::dashboard_data::{
-    self, DashboardRangeKind, DashboardSnapshot, DataAvailability, ProviderSummary,
-    SpendDailyPoint, UsageDailyPoint,
+    self, CostAvailability, CostContract, CostMeasurementKind, CostOrigin, DashboardRangeKind,
+    DashboardSnapshot, DataAvailability, PricingStatus, ProviderSummary, SpendDailyPoint,
+    UsageDailyPoint,
 };
 use quotalis_core::history::HistoryStore;
 use serde::Serialize;
@@ -93,10 +94,17 @@ pub struct SpendTrendPointBridge {
     pub provider: String,
     pub account_id: String,
     pub bucket_start: i64,
-    /// Always an estimate as reported by the provider itself -- never a
-    /// QuotaArc-computed figure (see the pricing-provenance phase for
-    /// that distinction).
+    /// A reading in whatever this bucket's `measurement_kind` says it is
+    /// -- ProviderReported always (see `DashboardSnapshotBridge`'s
+    /// `cost_contract` for the origin), never a Quotalis-computed figure.
     pub cost_used: f64,
+    /// ISO 4217 currency code, `null` for a legacy (pre-Phase-4A) sample.
+    pub currency_code: Option<String>,
+    /// "cumulative" | "point_in_time" | "delta" | "unknown" -- see
+    /// `quotalis_core::dashboard_data::CostMeasurementKind`. Frontend
+    /// code must not combine values across buckets/series with different
+    /// measurement kinds.
+    pub measurement_kind: &'static str,
 }
 
 impl From<SpendDailyPoint> for SpendTrendPointBridge {
@@ -106,6 +114,50 @@ impl From<SpendDailyPoint> for SpendTrendPointBridge {
             account_id: p.account_id,
             bucket_start: p.bucket_start,
             cost_used: p.cost_used,
+            currency_code: p.currency_code,
+            measurement_kind: p.measurement_kind.as_str(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CostContractBridge {
+    pub origin: &'static str,
+    pub measurement_kind: &'static str,
+    pub currency_code: Option<String>,
+    pub period: String,
+    pub availability: &'static str,
+    pub pricing_status: &'static str,
+}
+
+impl From<CostContract> for CostContractBridge {
+    fn from(c: CostContract) -> Self {
+        Self {
+            origin: match c.origin {
+                CostOrigin::ProviderReported => "providerReported",
+                CostOrigin::LocallyEstimated => "locallyEstimated",
+                CostOrigin::UserConfigured => "userConfigured",
+                CostOrigin::Unavailable => "unavailable",
+            },
+            measurement_kind: match c.measurement_kind {
+                CostMeasurementKind::Cumulative => "cumulative",
+                CostMeasurementKind::Delta => "delta",
+                CostMeasurementKind::PointInTime => "pointInTime",
+                CostMeasurementKind::Unknown => "unknown",
+            },
+            currency_code: c.currency_code,
+            period: c.period,
+            availability: match c.availability {
+                CostAvailability::Available => "available",
+                CostAvailability::LegacyAmbiguous => "legacyAmbiguous",
+                CostAvailability::Unavailable => "unavailable",
+            },
+            pricing_status: match c.pricing_status {
+                PricingStatus::NotRequired => "notRequired",
+                PricingStatus::Unverified => "unverified",
+                PricingStatus::Verified => "verified",
+            },
         }
     }
 }
@@ -122,6 +174,11 @@ pub struct DashboardSnapshotBridge {
     pub providers: Vec<ProviderSummaryBridge>,
     pub usage_trend: Vec<UsageTrendPointBridge>,
     pub spend_trend: Vec<SpendTrendPointBridge>,
+    /// Phase 4A: the formal, structured description of what `spend_trend`
+    /// means -- origin/measurement kind/currency/period/availability/
+    /// pricing status. The frontend must read this instead of guessing
+    /// semantics from the raw numbers.
+    pub cost_contract: CostContractBridge,
 }
 
 impl From<DashboardSnapshot> for DashboardSnapshotBridge {
@@ -139,6 +196,7 @@ impl From<DashboardSnapshot> for DashboardSnapshotBridge {
             providers: s.providers.into_iter().map(Into::into).collect(),
             usage_trend: s.usage_trend.into_iter().map(Into::into).collect(),
             spend_trend: s.spend_trend.into_iter().map(Into::into).collect(),
+            cost_contract: s.cost_contract.into(),
         }
     }
 }

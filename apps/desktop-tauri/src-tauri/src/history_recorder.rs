@@ -9,6 +9,7 @@
 //! Recording is best-effort: history failures must never break the
 //! provider refresh path.
 
+use quotalis_core::dashboard_data::provider_cost_measurement_kind;
 use quotalis_core::history::{HistoryStore, UsageSample};
 use quotalis_core::profiles::ProfileStore;
 
@@ -81,6 +82,8 @@ fn sample_for_window(
         used_percent: window.used_percent,
         remaining_percent: window.remaining_percent,
         cost_used: None,
+        cost_currency_code: None,
+        cost_measurement_kind: None,
         resets_at: window.resets_at.as_deref().and_then(iso_to_epoch),
         captured_at,
     }
@@ -150,6 +153,20 @@ fn samples_for_snapshot(snapshot: &ProviderUsageSnapshot) -> Option<Vec<UsageSam
             used_percent: 0.0,
             remaining_percent: 0.0,
             cost_used: Some(cost.used),
+            // Phase 4A: currency_code is a required (non-Option) field on
+            // every provider's CostSnapshot, so every cost sample recorded
+            // from here on carries its real currency -- never guessed,
+            // never defaulted to USD. Only pre-Phase-4A rows (written
+            // before this column existed) read back with `None`.
+            cost_currency_code: Some(cost.currency_code.clone()),
+            // Phase 4A: which measurement kind THIS provider was proven
+            // (by direct code audit, not inference) to write into `used`
+            // -- see `provider_cost_measurement_kind`'s doc comment.
+            cost_measurement_kind: Some(
+                provider_cost_measurement_kind(&snapshot.provider_id)
+                    .as_str()
+                    .to_string(),
+            ),
             resets_at: cost.resets_at.as_deref().and_then(iso_to_epoch),
             captured_at,
         });

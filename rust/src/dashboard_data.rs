@@ -218,6 +218,312 @@ impl DataAvailability {
     }
 }
 
+// ── Phase 4A: formal cost-measurement contract ──────────────────────────
+// docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md. Nothing downstream may
+// infer monetary semantics from a naked `f64` any more -- every consumer
+// of `DashboardSnapshot`'s cost fields gets an explicit origin, an
+// explicit measurement kind, and an explicit (or explicitly-unknown)
+// currency instead.
+
+/// Where a monetary figure came from. Quotalis today only ever produces
+/// `ProviderReported` (real) or `Unavailable` (no usable figure) --
+/// `LocallyEstimated` and `UserConfigured` are modeled here because the
+/// contract must be able to state them, but nothing in this codebase
+/// constructs them yet (see PHASE4_DATA_ACCURACY_AUDIT.md section 8: the
+/// history schema does not carry the model/token/request billing inputs
+/// a trustworthy local estimate would require).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CostOrigin {
+    /// The provider's own API/dashboard reported this dollar figure --
+    /// Quotalis performed no local token-pricing computation for it.
+    ProviderReported,
+    /// Computed locally by Quotalis from verified token usage and a
+    /// verified pricing-catalog record. Not produced anywhere today.
+    LocallyEstimated,
+    /// Supplied directly by the user as a manual override, not derived
+    /// from any provider response. Not produced anywhere today.
+    UserConfigured,
+    /// No monetary figure exists for the requested scope at all.
+    Unavailable,
+}
+
+/// What kind of number a monetary reading actually is. This is the field
+/// that stops "sum every bucket" from ever being a safe default again --
+/// callers must check `kind` before choosing how to aggregate across
+/// buckets/time.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CostMeasurementKind {
+    /// A running total for the provider's current billing/reporting
+    /// period (`CostSnapshot::used`'s documented meaning: "amount used in
+    /// the current period"). Must never be summed across time buckets of
+    /// the same provider/account series -- only the latest reading in a
+    /// bucket/period is meaningful; two readings of the same period are
+    /// the same fact measured twice, not two facts.
+    Cumulative,
+    /// A genuinely incremental amount that covers only its own bucket,
+    /// safe to sum across buckets. No provider adapter produces this
+    /// today (every current adapter reports a period-cumulative `used`),
+    /// but the contract must be able to say so once/if one does.
+    Delta,
+    /// A single point-in-time reading with no accumulation semantics
+    /// (e.g. a prepaid balance) -- can legitimately decrease as money is
+    /// spent or increase on top-up; summing or diffing it as if it were
+    /// spend is wrong.
+    PointInTime,
+    /// Semantics could not be established for at least one sample in the
+    /// aggregated set (this is what a pre-Phase-4A legacy history row --
+    /// no recorded currency/origin -- reads back as). Must not be
+    /// aggregated into a trusted total; treat as unavailable for
+    /// computation purposes even though the raw row is still visible in
+    /// history for inspection.
+    Unknown,
+}
+
+impl CostMeasurementKind {
+    /// Stable string form persisted to `history.db`'s `cost_measurement_kind`
+    /// column -- never renamed; a future variant gets a new string, an old
+    /// build reading a newer string it doesn't recognize falls back to
+    /// `Unknown` via `parse`, not a decode error.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Cumulative => "cumulative",
+            Self::Delta => "delta",
+            Self::PointInTime => "point_in_time",
+            Self::Unknown => "unknown",
+        }
+    }
+
+    fn parse(value: Option<&str>) -> Self {
+        match value {
+            Some("cumulative") => Self::Cumulative,
+            Some("delta") => Self::Delta,
+            Some("point_in_time") => Self::PointInTime,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+/// Evidence-based classification of what `CostSnapshot.used` actually
+/// means for each provider adapter, from a direct read of every one of
+/// the 24 `CostSnapshot`-constructing provider modules (Phase 4A audit,
+/// see PHASE4_DATA_ACCURACY_AUDIT.md). Do NOT infer this from a field
+/// name -- it is proven per-provider by reading the adapter's own
+/// response-parsing code.
+///
+/// Six providers write a **point-in-time prepaid balance** into `used`,
+/// not period spend: `crossmodel`/`sub2api` hard-code `used = 0.0` and
+/// put the real balance in `limit`; `devin`/`neuralwatt`/`opencodego`/
+/// `zenmux` pass their balance field directly as `used`. Treating any of
+/// these as "spend this period" would be wrong in the opposite direction
+/// from the original summing bug: a balance can legitimately DECREASE as
+/// money is spent, and combining it with a genuine period-spend number
+/// (even without summing across time) conflates "money remaining" with
+/// "money already spent".
+///
+/// `codex` is classified `Unknown` deliberately: its adapter has two
+/// code paths with genuinely different semantics (a real spend-control
+/// cumulative total, or -- when no spend-control limit exists -- a raw
+/// credit balance), and nothing persisted in `history.db` today records
+/// which path produced a given historical row. Guessing would violate
+/// the "never guess" rule; `Unknown` is the honest answer until the
+/// adapter itself records which path it took.
+///
+/// All other examined providers write a genuine period-cumulative spend
+/// total into `used` (confirmed by reading each adapter's response
+/// parsing, even though several also have real, separately-documented
+/// account/org/team-scoping caveats noted in
+/// PHASE4_DATA_ACCURACY_AUDIT.md that this function does not attempt to
+/// resolve).
+pub fn provider_cost_measurement_kind(provider_cli_id: &str) -> CostMeasurementKind {
+    match provider_cli_id {
+        "crossmodel" | "sub2api" | "devin" | "neuralwatt" | "opencodego" | "zenmux" => {
+            CostMeasurementKind::PointInTime
+        }
+        "codex" => CostMeasurementKind::Unknown,
+        // Confirmed period-cumulative spend: aiand, bedrock, claude,
+        // commandcode, cursor, deepinfra, deepseek, fireworks, litellm,
+        // llmproxy, minimax, mistral, openaiapi, openrouter, xai.
+        "aiand" | "bedrock" | "claude" | "commandcode" | "cursor" | "deepinfra" | "deepseek"
+        | "fireworks" | "litellm" | "llmproxy" | "minimax" | "mistral" | "openaiapi"
+        | "openrouter" | "xai" => CostMeasurementKind::Cumulative,
+        // Not yet examined by the Phase 4A provider-adapter audit -- fail
+        // closed rather than assume either shape.
+        _ => CostMeasurementKind::Unknown,
+    }
+}
+
+/// Whether a trustworthy monetary total exists at all for the current
+/// query, distinct from `DataAvailability::has_cost_data` (which only
+/// says *some* cost-tagged row exists, not whether it can be safely
+/// aggregated).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CostAvailability {
+    /// At least one cost sample exists and carries enough metadata
+    /// (currency) to be aggregated per this contract's rules.
+    Available,
+    /// Cost samples exist, but only pre-Phase-4A rows with no recorded
+    /// currency -- real numeric data, but not safely aggregable/
+    /// comparable. Surfaced honestly rather than dropped or guessed.
+    LegacyAmbiguous,
+    /// No cost sample exists for the requested scope.
+    Unavailable,
+}
+
+/// Whether Quotalis's own pricing catalog needs to be (or has been)
+/// verified for the figure being shown. `ProviderReported` cost never
+/// touches the pricing catalog, so verification is not applicable to it
+/// -- `NotRequired` exists specifically so the UI never implies a
+/// provider-reported number came from Quotalis's own pricing data (owner
+/// Phase 4A section 16).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PricingStatus {
+    /// The shown figure is provider-reported; Quotalis pricing-catalog
+    /// verification does not apply to it.
+    NotRequired,
+    /// A locally-estimated figure exists but its pricing record has not
+    /// been verified against an official source. Not produced today.
+    Unverified,
+    /// A locally-estimated figure exists and its pricing record has been
+    /// verified against an official source. Not produced today.
+    Verified,
+}
+
+/// The complete, structured description of what `DashboardSnapshot`'s
+/// cost fields actually mean for the current query -- see this module's
+/// "Phase 4A: formal cost-measurement contract" section.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CostContract {
+    pub origin: CostOrigin,
+    pub measurement_kind: CostMeasurementKind,
+    /// ISO 4217 currency code, only when every aggregated sample shares
+    /// one unambiguous currency. `None` when currencies differ or are
+    /// unknown (legacy rows) -- a mixed/unknown currency set is never
+    /// silently collapsed onto one code.
+    pub currency_code: Option<String>,
+    /// Human-readable period/scope ("Monthly", a provider-defined
+    /// string, or "unknown" when the aggregated set mixes periods).
+    pub period: String,
+    pub availability: CostAvailability,
+    pub pricing_status: PricingStatus,
+}
+
+impl CostContract {
+    /// Derive the contract from the exact samples that produced a
+    /// snapshot's `spend_trend` (the range-scoped cost samples) plus the
+    /// unbounded cost samples (to detect legacy-ambiguous rows outside
+    /// the current range, so `availability` reflects the account's real
+    /// history, not just what fell inside today's display range).
+    fn from_samples(
+        ranged_cost_samples: &[&UsageSample],
+        all_time_cost_samples: &[&UsageSample],
+    ) -> Self {
+        if all_time_cost_samples.is_empty() {
+            return Self {
+                origin: CostOrigin::Unavailable,
+                measurement_kind: CostMeasurementKind::Unknown,
+                currency_code: None,
+                period: "unknown".to_string(),
+                availability: CostAvailability::Unavailable,
+                pricing_status: PricingStatus::NotRequired,
+            };
+        }
+
+        // A pre-Phase-4A row has no recorded currency at all -- that is
+        // the one signal this schema can use to tell "legacy, semantics
+        // unknown" apart from "real, currency-tagged" data (see
+        // history.rs's `cost_currency_code` doc comment).
+        let has_legacy_untagged_row = all_time_cost_samples
+            .iter()
+            .any(|s| s.cost_currency_code.is_none());
+        let has_tagged_row = all_time_cost_samples
+            .iter()
+            .any(|s| s.cost_currency_code.is_some());
+
+        if !has_tagged_row {
+            // Every cost row on record predates the currency column --
+            // real numbers exist, but nothing here can prove what
+            // currency/period/reset semantics they follow.
+            return Self {
+                origin: CostOrigin::Unavailable,
+                measurement_kind: CostMeasurementKind::Unknown,
+                currency_code: None,
+                period: "unknown".to_string(),
+                availability: CostAvailability::LegacyAmbiguous,
+                pricing_status: PricingStatus::NotRequired,
+            };
+        }
+
+        // From here on, at least one tagged (Phase-4A-or-later) sample
+        // exists. Every tagged sample was written by `history_recorder.rs`
+        // directly from `CostSnapshot::used`/`currency_code`/`period` plus
+        // `provider_cost_measurement_kind(provider)` -- origin is always
+        // ProviderReported (no code path writes any other origin), but
+        // measurement KIND is proven per-provider, not assumed uniform
+        // (see `provider_cost_measurement_kind`'s doc comment: six
+        // providers write a point-in-time balance, not period spend, and
+        // `codex` is deliberately `Unknown`).
+        let relevant: &[&UsageSample] = if ranged_cost_samples.is_empty() {
+            all_time_cost_samples
+        } else {
+            ranged_cost_samples
+        };
+        let tagged: Vec<&&UsageSample> = relevant
+            .iter()
+            .filter(|s| s.cost_currency_code.is_some())
+            .collect();
+
+        let currencies: std::collections::BTreeSet<&str> = tagged
+            .iter()
+            .filter_map(|s| s.cost_currency_code.as_deref())
+            .collect();
+        let currency_code = match currencies.len() {
+            1 => currencies.into_iter().next().map(|c| c.to_string()),
+            _ => None, // 0 (nothing tagged in the ranged subset) or >1 (mixed) -- never guess.
+        };
+
+        let periods: std::collections::BTreeSet<&str> = tagged
+            .iter()
+            .filter_map(|s| s.window_label.as_deref())
+            .collect();
+        let period = match periods.len() {
+            1 => periods.into_iter().next().unwrap_or("unknown").to_string(),
+            _ => "unknown".to_string(),
+        };
+
+        // Measurement kind must be uniform across every tagged sample in
+        // scope to be trusted at all -- a mix of Cumulative (period
+        // spend) and PointInTime (prepaid balance) providers is not one
+        // quantity, so it collapses to `Unknown` (never aggregated as a
+        // single combined figure) rather than picking either kind.
+        let kinds: std::collections::BTreeSet<CostMeasurementKind> = tagged
+            .iter()
+            .map(|s| CostMeasurementKind::parse(s.cost_measurement_kind.as_deref()))
+            .collect();
+        let measurement_kind = match (kinds.len(), kinds.iter().next()) {
+            (1, Some(&only)) => only,
+            _ => CostMeasurementKind::Unknown,
+        };
+
+        // Both real tagged data and older untagged rows can coexist for
+        // an account (a Phase-4A upgrade doesn't retag old history) --
+        // the tagged data is still trustworthy on its own, so this stays
+        // `Available` rather than being downgraded by the presence of
+        // unrelated legacy rows. `has_legacy_untagged_row` is kept named
+        // here (not `_`) as a reminder this branch was reached in spite
+        // of legacy rows existing, should that ever need distinguishing.
+        let _ = has_legacy_untagged_row;
+
+        Self {
+            origin: CostOrigin::ProviderReported,
+            measurement_kind,
+            currency_code,
+            period,
+            availability: CostAvailability::Available,
+            pricing_status: PricingStatus::NotRequired,
+        }
+    }
+}
+
 /// One bucket of a usage-percentage trend for one provider/account. The
 /// value is the *last* sample captured inside the bucket (a "close" value,
 /// matching how a point-in-time gauge like quota-used% is naturally read
@@ -246,6 +552,15 @@ pub struct SpendDailyPoint {
     pub account_id: String,
     pub bucket_start: i64,
     pub cost_used: f64,
+    /// ISO 4217 currency code, when the sample that produced this bucket
+    /// carried one. `None` for a legacy (pre-Phase-4A) sample -- never
+    /// guessed as USD.
+    pub currency_code: Option<String>,
+    /// This bucket's measurement kind (see `CostMeasurementKind`) --
+    /// callers must not combine buckets/series of different kinds as if
+    /// they were the same quantity (e.g. a period-cumulative spend total
+    /// and a point-in-time prepaid balance).
+    pub measurement_kind: CostMeasurementKind,
 }
 
 /// Current-state summary for one provider/account -- its most recently
@@ -320,12 +635,22 @@ pub fn aggregate_spend(samples: &[UsageSample], tz: Tz, grain: Grain) -> Vec<Spe
                 && b.bucket_start == start
         }) {
             existing.cost_used = sample.cost_used.unwrap_or(existing.cost_used);
+            existing.currency_code = sample
+                .cost_currency_code
+                .clone()
+                .or_else(|| existing.currency_code.clone());
+            existing.measurement_kind =
+                CostMeasurementKind::parse(sample.cost_measurement_kind.as_deref());
         } else {
             buckets.push(SpendDailyPoint {
                 provider: sample.provider.clone(),
                 account_id: sample.account_id.clone(),
                 bucket_start: start,
                 cost_used: sample.cost_used.unwrap_or(0.0),
+                currency_code: sample.cost_currency_code.clone(),
+                measurement_kind: CostMeasurementKind::parse(
+                    sample.cost_measurement_kind.as_deref(),
+                ),
             });
         }
     }
@@ -381,6 +706,11 @@ pub struct DashboardSnapshot {
     pub providers: Vec<ProviderSummary>,
     pub usage_trend: Vec<UsageDailyPoint>,
     pub spend_trend: Vec<SpendDailyPoint>,
+    /// Phase 4A: the formal, structured description of what `spend_trend`
+    /// (and any KPI/total derived from it) actually means -- origin,
+    /// measurement kind, currency, period, availability, pricing status.
+    /// See this module's "Phase 4A: formal cost-measurement contract".
+    pub cost_contract: CostContract,
 }
 
 /// Build a `DashboardSnapshot` for `range` in `timezone`, optionally scoped
@@ -416,6 +746,15 @@ pub fn build_dashboard_snapshot(
         until: Some(now.timestamp()),
     })?;
 
+    let ranged_cost_samples: Vec<&UsageSample> = ranged
+        .iter()
+        .filter(|s| s.window_id.as_deref() == Some(COST_WINDOW_ID) && s.cost_used.is_some())
+        .collect();
+    let all_time_cost_samples: Vec<&UsageSample> = all_time
+        .iter()
+        .filter(|s| s.window_id.as_deref() == Some(COST_WINDOW_ID) && s.cost_used.is_some())
+        .collect();
+
     Ok(DashboardSnapshot {
         generated_at: now.timestamp(),
         range,
@@ -424,6 +763,7 @@ pub fn build_dashboard_snapshot(
         providers: latest_provider_summaries(&all_time),
         usage_trend: aggregate_usage(&ranged, tz, range.grain),
         spend_trend: aggregate_spend(&ranged, tz, range.grain),
+        cost_contract: CostContract::from_samples(&ranged_cost_samples, &all_time_cost_samples),
     })
 }
 
@@ -557,6 +897,17 @@ mod tests {
             used_percent: used,
             remaining_percent: 100.0 - used,
             cost_used: cost,
+            // Real (Phase-4A-era) samples always carry a currency -- see
+            // history_recorder.rs. Legacy-row tests construct their own
+            // `UsageSample { cost_currency_code: None, .. }` explicitly.
+            cost_currency_code: cost.map(|_| "USD".to_string()),
+            // Mirrors history_recorder.rs's real write-time behavior:
+            // stamp whatever this provider was proven to write.
+            cost_measurement_kind: cost.map(|_| {
+                provider_cost_measurement_kind(provider)
+                    .as_str()
+                    .to_string()
+            }),
             resets_at: None,
             captured_at: at,
         }
@@ -604,6 +955,498 @@ mod tests {
         let day0 = dt(2026, 9, 1, 6, 0, 0).timestamp();
         let samples = vec![sample("claude", "a1", "selected", 10.0, None, day0)];
         assert!(aggregate_spend(&samples, resolve_timezone("UTC"), Grain::Daily).is_empty());
+    }
+
+    // ── Phase 4A: monetary-semantics regression corpus ──────────────────
+    // docs/validation/PHASE4_DATA_ACCURACY_AUDIT.md "Phase 4A" section.
+    // Makes the original "sum every cumulative bucket" bug structurally
+    // impossible to reintroduce, and proves the new mixed-measurement-
+    // kind/multi-currency/multi-account/legacy-row handling.
+
+    fn cost_sample(
+        provider: &str,
+        account: &str,
+        cost: f64,
+        currency: Option<&str>,
+        kind: Option<CostMeasurementKind>,
+        at: i64,
+    ) -> UsageSample {
+        UsageSample {
+            account_id: account.to_string(),
+            provider: provider.to_string(),
+            window_id: Some(COST_WINDOW_ID.to_string()),
+            window_label: Some("Monthly".to_string()),
+            used_percent: 0.0,
+            remaining_percent: 0.0,
+            cost_used: Some(cost),
+            cost_currency_code: currency.map(|c| c.to_string()),
+            cost_measurement_kind: kind.map(|k| k.as_str().to_string()),
+            resets_at: None,
+            captured_at: at,
+        }
+    }
+
+    #[test]
+    fn cost_contract_unavailable_when_no_cost_samples_exist_at_all() {
+        let contract = CostContract::from_samples(&[], &[]);
+        assert_eq!(contract.origin, CostOrigin::Unavailable);
+        assert_eq!(contract.measurement_kind, CostMeasurementKind::Unknown);
+        assert_eq!(contract.availability, CostAvailability::Unavailable);
+        assert_eq!(contract.currency_code, None);
+    }
+
+    #[test]
+    fn cost_contract_legacy_ambiguous_when_only_pre_phase4a_rows_exist() {
+        let day0 = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        // No currency/kind tag at all -- exactly what a row written before
+        // this migration reads back as.
+        let legacy = cost_sample("claude", "a1", 5.0, None, None, day0);
+        let all: Vec<&UsageSample> = vec![&legacy];
+        let contract = CostContract::from_samples(&[], &all);
+        assert_eq!(contract.origin, CostOrigin::Unavailable);
+        assert_eq!(contract.measurement_kind, CostMeasurementKind::Unknown);
+        assert_eq!(contract.availability, CostAvailability::LegacyAmbiguous);
+    }
+
+    #[test]
+    fn cost_contract_available_and_cumulative_for_a_known_cumulative_provider() {
+        let day0 = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let s = cost_sample(
+            "claude",
+            "a1",
+            12.0,
+            Some("USD"),
+            Some(CostMeasurementKind::Cumulative),
+            day0,
+        );
+        let all: Vec<&UsageSample> = vec![&s];
+        let contract = CostContract::from_samples(&all, &all);
+        assert_eq!(contract.origin, CostOrigin::ProviderReported);
+        assert_eq!(contract.measurement_kind, CostMeasurementKind::Cumulative);
+        assert_eq!(contract.currency_code, Some("USD".to_string()));
+        assert_eq!(contract.availability, CostAvailability::Available);
+        assert_eq!(contract.pricing_status, PricingStatus::NotRequired);
+    }
+
+    #[test]
+    fn cost_contract_point_in_time_for_a_known_balance_provider() {
+        let day0 = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        // zenmux writes a prepaid PAYG balance into `used`, not spend.
+        let s = cost_sample(
+            "zenmux",
+            "a1",
+            30.0,
+            Some("USD"),
+            Some(CostMeasurementKind::PointInTime),
+            day0,
+        );
+        let all: Vec<&UsageSample> = vec![&s];
+        let contract = CostContract::from_samples(&all, &all);
+        assert_eq!(contract.measurement_kind, CostMeasurementKind::PointInTime);
+    }
+
+    #[test]
+    fn cost_contract_collapses_to_unknown_when_measurement_kinds_are_mixed() {
+        // Claude (Cumulative period spend) and ZenMux (PointInTime prepaid
+        // balance) are NOT the same quantity -- combining them must never
+        // silently pick one kind.
+        let day0 = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let claude = cost_sample(
+            "claude",
+            "a1",
+            12.0,
+            Some("USD"),
+            Some(CostMeasurementKind::Cumulative),
+            day0,
+        );
+        let zenmux = cost_sample(
+            "zenmux",
+            "a2",
+            30.0,
+            Some("USD"),
+            Some(CostMeasurementKind::PointInTime),
+            day0,
+        );
+        let all: Vec<&UsageSample> = vec![&claude, &zenmux];
+        let contract = CostContract::from_samples(&all, &all);
+        assert_eq!(contract.measurement_kind, CostMeasurementKind::Unknown);
+    }
+
+    #[test]
+    fn cost_contract_codex_dual_path_provider_is_unknown_not_guessed() {
+        let day0 = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let s = cost_sample(
+            "codex",
+            "a1",
+            5.0,
+            Some("USD"),
+            Some(provider_cost_measurement_kind("codex")),
+            day0,
+        );
+        let all: Vec<&UsageSample> = vec![&s];
+        let contract = CostContract::from_samples(&all, &all);
+        assert_eq!(contract.measurement_kind, CostMeasurementKind::Unknown);
+    }
+
+    #[test]
+    fn cost_contract_currency_is_none_when_currencies_differ() {
+        let day0 = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let usd = cost_sample(
+            "claude",
+            "a1",
+            12.0,
+            Some("USD"),
+            Some(CostMeasurementKind::Cumulative),
+            day0,
+        );
+        let eur = cost_sample(
+            "mistral",
+            "a2",
+            9.0,
+            Some("EUR"),
+            Some(CostMeasurementKind::Cumulative),
+            day0,
+        );
+        let all: Vec<&UsageSample> = vec![&usd, &eur];
+        let contract = CostContract::from_samples(&all, &all);
+        // Never silently pick one currency (or sum across them) -- see
+        // owner Phase 4A section 13.
+        assert_eq!(contract.currency_code, None);
+        // Same-kind Cumulative readings, so the kind itself is still
+        // known even though currency isn't -- these are separate facts.
+        assert_eq!(contract.measurement_kind, CostMeasurementKind::Cumulative);
+    }
+
+    #[test]
+    fn cost_contract_same_currency_across_two_accounts_is_available() {
+        let day0 = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let a1 = cost_sample(
+            "claude",
+            "a1",
+            12.0,
+            Some("USD"),
+            Some(CostMeasurementKind::Cumulative),
+            day0,
+        );
+        let a2 = cost_sample(
+            "claude",
+            "a2",
+            8.0,
+            Some("USD"),
+            Some(CostMeasurementKind::Cumulative),
+            day0,
+        );
+        let all: Vec<&UsageSample> = vec![&a1, &a2];
+        let contract = CostContract::from_samples(&all, &all);
+        assert_eq!(contract.currency_code, Some("USD".to_string()));
+        assert_eq!(contract.availability, CostAvailability::Available);
+    }
+
+    /// The core anti-regression proof: a cumulative-period series of
+    /// 1 -> 2 -> 3 -> 4 (each reading is a running total for the SAME
+    /// billing period, not a delta) must aggregate to the LATEST reading
+    /// (4), never the sum (10) -- reproduces, in miniature, the exact
+    /// shape of the original `estimatedSpendTotal` bug.
+    #[test]
+    fn latest_value_per_bucket_never_sums_a_cumulative_series() {
+        let day0 = dt(2026, 9, 1, 6, 0, 0).timestamp();
+        let samples = vec![
+            cost_sample(
+                "claude",
+                "a1",
+                1.0,
+                Some("USD"),
+                Some(CostMeasurementKind::Cumulative),
+                day0,
+            ),
+            cost_sample(
+                "claude",
+                "a1",
+                2.0,
+                Some("USD"),
+                Some(CostMeasurementKind::Cumulative),
+                day0 + 60,
+            ),
+            cost_sample(
+                "claude",
+                "a1",
+                3.0,
+                Some("USD"),
+                Some(CostMeasurementKind::Cumulative),
+                day0 + 120,
+            ),
+            cost_sample(
+                "claude",
+                "a1",
+                4.0,
+                Some("USD"),
+                Some(CostMeasurementKind::Cumulative),
+                day0 + 180,
+            ),
+        ];
+        let spend = aggregate_spend(&samples, resolve_timezone("UTC"), Grain::Daily);
+        assert_eq!(
+            spend.len(),
+            1,
+            "all four readings fall in the same day bucket"
+        );
+        assert_eq!(
+            spend[0].cost_used, 4.0,
+            "must be the LATEST reading, not 1+2+3+4=10"
+        );
+    }
+
+    /// Billing-period reset boundary: 8 -> 10 -> 0.5 (a genuine reset --
+    /// the provider's period rolled over and the counter restarted low).
+    /// The latest-value rule must report 0.5 honestly, never treat the
+    /// drop as a negative delta or clamp/interpolate it.
+    #[test]
+    fn cumulative_reset_boundary_reports_the_latest_reading_as_is() {
+        let day0 = dt(2026, 9, 1, 6, 0, 0).timestamp();
+        let samples = vec![
+            cost_sample(
+                "claude",
+                "a1",
+                8.0,
+                Some("USD"),
+                Some(CostMeasurementKind::Cumulative),
+                day0,
+            ),
+            cost_sample(
+                "claude",
+                "a1",
+                10.0,
+                Some("USD"),
+                Some(CostMeasurementKind::Cumulative),
+                day0 + 60,
+            ),
+            cost_sample(
+                "claude",
+                "a1",
+                0.5,
+                Some("USD"),
+                Some(CostMeasurementKind::Cumulative),
+                day0 + 120,
+            ),
+        ];
+        let spend = aggregate_spend(&samples, resolve_timezone("UTC"), Grain::Daily);
+        assert_eq!(spend.len(), 1);
+        assert_eq!(spend[0].cost_used, 0.5);
+    }
+
+    /// Ambiguous counter decrease (10 -> 9, no obvious reset): the same
+    /// latest-value rule applies -- report what the provider most
+    /// recently said, never invent a delta or reject the reading.
+    #[test]
+    fn counter_decrease_without_a_clear_reset_still_reports_latest_reading() {
+        let day0 = dt(2026, 9, 1, 6, 0, 0).timestamp();
+        let samples = vec![
+            cost_sample(
+                "claude",
+                "a1",
+                10.0,
+                Some("USD"),
+                Some(CostMeasurementKind::Cumulative),
+                day0,
+            ),
+            cost_sample(
+                "claude",
+                "a1",
+                9.0,
+                Some("USD"),
+                Some(CostMeasurementKind::Cumulative),
+                day0 + 60,
+            ),
+        ];
+        let spend = aggregate_spend(&samples, resolve_timezone("UTC"), Grain::Daily);
+        assert_eq!(spend.len(), 1);
+        assert_eq!(spend[0].cost_used, 9.0);
+    }
+
+    /// Duplicate readings (identical value, two captures) must not double
+    /// the bucket's total -- "latest wins" is naturally idempotent here.
+    #[test]
+    fn duplicate_readings_in_the_same_bucket_do_not_inflate_the_total() {
+        let day0 = dt(2026, 9, 1, 6, 0, 0).timestamp();
+        let samples = vec![
+            cost_sample(
+                "claude",
+                "a1",
+                5.0,
+                Some("USD"),
+                Some(CostMeasurementKind::Cumulative),
+                day0,
+            ),
+            cost_sample(
+                "claude",
+                "a1",
+                5.0,
+                Some("USD"),
+                Some(CostMeasurementKind::Cumulative),
+                day0 + 30,
+            ),
+        ];
+        let spend = aggregate_spend(&samples, resolve_timezone("UTC"), Grain::Daily);
+        assert_eq!(spend.len(), 1);
+        assert_eq!(spend[0].cost_used, 5.0);
+    }
+
+    /// Multi-account: two DIFFERENT accounts of the same provider must
+    /// remain two independent series, never merged into one counter.
+    #[test]
+    fn multi_account_cost_series_stay_independent_never_merged() {
+        let day0 = dt(2026, 9, 1, 6, 0, 0).timestamp();
+        let samples = vec![
+            cost_sample(
+                "claude",
+                "a1",
+                10.0,
+                Some("USD"),
+                Some(CostMeasurementKind::Cumulative),
+                day0,
+            ),
+            cost_sample(
+                "claude",
+                "a2",
+                25.0,
+                Some("USD"),
+                Some(CostMeasurementKind::Cumulative),
+                day0,
+            ),
+        ];
+        let spend = aggregate_spend(&samples, resolve_timezone("UTC"), Grain::Daily);
+        assert_eq!(
+            spend.len(),
+            2,
+            "two accounts must stay as two separate buckets"
+        );
+        let a1 = spend.iter().find(|p| p.account_id == "a1").unwrap();
+        let a2 = spend.iter().find(|p| p.account_id == "a2").unwrap();
+        assert_eq!(a1.cost_used, 10.0);
+        assert_eq!(a2.cost_used, 25.0);
+    }
+
+    /// Multi-currency: two series in different currencies must stay
+    /// tagged with their own currency, never coerced to one.
+    #[test]
+    fn multi_currency_series_keep_their_own_currency_tag() {
+        let day0 = dt(2026, 9, 1, 6, 0, 0).timestamp();
+        let samples = vec![
+            cost_sample(
+                "claude",
+                "a1",
+                10.0,
+                Some("USD"),
+                Some(CostMeasurementKind::Cumulative),
+                day0,
+            ),
+            cost_sample(
+                "mistral",
+                "a2",
+                9.0,
+                Some("EUR"),
+                Some(CostMeasurementKind::Cumulative),
+                day0,
+            ),
+        ];
+        let spend = aggregate_spend(&samples, resolve_timezone("UTC"), Grain::Daily);
+        let usd = spend.iter().find(|p| p.provider == "claude").unwrap();
+        let eur = spend.iter().find(|p| p.provider == "mistral").unwrap();
+        assert_eq!(usd.currency_code, Some("USD".to_string()));
+        assert_eq!(eur.currency_code, Some("EUR".to_string()));
+    }
+
+    /// Missing samples (a gap in captures) must simply produce fewer
+    /// buckets, never an interpolated/fabricated value for the gap.
+    #[test]
+    fn missing_samples_leave_a_real_gap_not_a_fabricated_bucket() {
+        let day0 = dt(2026, 9, 1, 6, 0, 0).timestamp();
+        let day2 = dt(2026, 9, 3, 6, 0, 0).timestamp(); // day 2 (Sep 2) has no sample at all
+        let samples = vec![
+            cost_sample(
+                "claude",
+                "a1",
+                5.0,
+                Some("USD"),
+                Some(CostMeasurementKind::Cumulative),
+                day0,
+            ),
+            cost_sample(
+                "claude",
+                "a1",
+                7.0,
+                Some("USD"),
+                Some(CostMeasurementKind::Cumulative),
+                day2,
+            ),
+        ];
+        let spend = aggregate_spend(&samples, resolve_timezone("UTC"), Grain::Daily);
+        assert_eq!(
+            spend.len(),
+            2,
+            "no bucket is fabricated for the missing middle day"
+        );
+    }
+
+    /// Bucket-granularity invariant (owner Phase 4A section 11): the same
+    /// underlying cumulative-period history queried at a finer grain
+    /// (more buckets) must not change the LATEST reading -- changing
+    /// chart granularity must never multiply or shrink the true total.
+    #[test]
+    fn changing_bucket_grain_does_not_change_the_latest_cumulative_reading() {
+        let day0 = dt(2026, 9, 1, 1, 0, 0).timestamp();
+        let samples = vec![
+            cost_sample(
+                "claude",
+                "a1",
+                3.0,
+                Some("USD"),
+                Some(CostMeasurementKind::Cumulative),
+                day0,
+            ),
+            cost_sample(
+                "claude",
+                "a1",
+                6.0,
+                Some("USD"),
+                Some(CostMeasurementKind::Cumulative),
+                day0 + 3600,
+            ),
+            cost_sample(
+                "claude",
+                "a1",
+                9.0,
+                Some("USD"),
+                Some(CostMeasurementKind::Cumulative),
+                day0 + 7200,
+            ),
+        ];
+        let tz = resolve_timezone("UTC");
+        let hourly = aggregate_spend(&samples, tz, Grain::Hourly);
+        let daily = aggregate_spend(&samples, tz, Grain::Daily);
+
+        let hourly_latest: f64 = hourly
+            .iter()
+            .map(|p| p.bucket_start)
+            .max()
+            .map(|max_bucket| {
+                hourly
+                    .iter()
+                    .filter(|p| p.bucket_start == max_bucket)
+                    .map(|p| p.cost_used)
+                    .fold(0.0, f64::max)
+            })
+            .unwrap_or(0.0);
+        let daily_latest: f64 = daily.iter().map(|p| p.cost_used).fold(0.0, f64::max);
+
+        // Hourly grain produces 3 distinct buckets (3.0, 6.0, 9.0); daily
+        // grain collapses them to one bucket holding the latest (9.0).
+        // Either way the TRUE current total ("what is my spend right
+        // now") is 9.0, not 3.0+6.0+9.0=18.0 from summing hourly buckets.
+        assert_eq!(hourly.len(), 3);
+        assert_eq!(daily.len(), 1);
+        assert_eq!(hourly_latest, 9.0);
+        assert_eq!(daily_latest, 9.0);
     }
 
     // ---- data availability ----
