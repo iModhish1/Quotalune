@@ -691,7 +691,13 @@ mod tests {
                 ),
             ])
             .unwrap();
-        let range = resolve_range(DashboardRangeKind::Today, resolve_timezone("UTC"), now);
+        // Last7Days rather than Today: a sample from "1 hour ago" can fall
+        // on the previous UTC calendar day depending on wall-clock time
+        // when the suite runs, which flaked this test right at UTC
+        // midnight. Last7Days comfortably contains "1 hour ago" regardless
+        // of day boundary while still exercising the same real-recorded-
+        // history path.
+        let range = resolve_range(DashboardRangeKind::Last7Days, resolve_timezone("UTC"), now);
         let snapshot = build_dashboard_snapshot(&store, range, "UTC", &[], &[]).unwrap();
         assert_eq!(snapshot.providers.len(), 1);
         assert_eq!(snapshot.providers[0].used_percent, 30.0);

@@ -472,6 +472,31 @@ locale_keys! {
     // (same English text, kept as a separate key per this repo's convention
     // of one key per UI surface, so a future translation can diverge).
     TabDashboard,
+    // 2D Analytics Dashboard (Phase 3): header, range selector, KPI row,
+    // usage/spend trend. One key per real, currently-supported string --
+    // no fabricated model/pricing text, per the Dashboard Studio honesty
+    // rule (a metric with no real data shows DashboardValueUnavailable /
+    // DashboardCollectingHistory, never an invented number).
+    DashboardSubtitle,
+    DashboardRangeToday,
+    DashboardRangeLast7Days,
+    DashboardRangeLast30Days,
+    DashboardRangeThisMonth,
+    DashboardRangeLast3Months,
+    DashboardRangeThisYear,
+    DashboardProviderFilterAll,
+    DashboardKpiActiveProviders,
+    DashboardKpiHighestUsage,
+    DashboardKpiNextReset,
+    DashboardKpiEstimatedSpend,
+    DashboardKpiAlerts,
+    DashboardValueUnavailable,
+    DashboardDataStatusCostUnavailable,
+    DashboardUsageTrendTitle,
+    DashboardMetricUsage,
+    DashboardMetricSpend,
+    DashboardTrendEmptyForRange,
+    DashboardCollectingHistory,
     TabProviderDisplay,
     TabCollections,
     CollectionsPageHelper,
