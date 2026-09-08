@@ -368,6 +368,12 @@ describe("PopOutPanel", () => {
       ],
       undefined,
       catalog,
+      // This test exercises catalog-order sorting, not enabled-provider
+      // filtering (see `useDashboardState.ts`'s `enabledProviders` filter,
+      // added to fix a real profile-switch bug) -- "cursor" must be
+      // explicitly enabled here or it would be correctly excluded rather
+      // than sorted last.
+      { enabledProviders: ["codex", "claude", "cursor"] },
     );
 
     await waitFor(() => {
@@ -386,7 +392,14 @@ describe("PopOutPanel", () => {
       provider(id, displayName, (index * 7) % 100),
     );
 
-    const { container } = renderPopOut(providers);
+    // This test exercises grid-expansion/pagination at scale, not enabled-
+    // provider filtering (see `useDashboardState.ts`'s `enabledProviders`
+    // filter, added to fix a real profile-switch bug) -- every provider in
+    // the shared test catalog must be explicitly enabled or most of them
+    // would be correctly excluded instead of counted into the grid.
+    const { container } = renderPopOut(providers, undefined, [], {
+      enabledProviders: TEST_PROVIDER_CATALOG.map(([id]) => id),
+    });
 
     await waitFor(() => {
       expect(container.querySelector(".provider-grid--compact")).not.toBeNull();

@@ -20,15 +20,35 @@ export function useDashboardState({
   settings: SettingsSnapshot;
   deepLinkProviderId?: string;
 }) {
+  // `orderProviderSnapshots` only SORTS -- it ranks a disabled/stale
+  // provider to the end but never excludes it. `providers` itself
+  // (from `useProviders()`) is not scoped to the active profile's
+  // account set either: it reflects the backend's global provider
+  // cache, which a profile switch does not clear or re-filter. Without
+  // this filter, switching to a profile with a different (or empty)
+  // `enabledProviders` list left the Dashboard showing the previous
+  // profile's providers -- the same real bug found and fixed for the 3D
+  // Dashboard (`Providers3DDashboard.tsx`); see
+  // docs/validation/PHASE5_3D_PROTOTYPE.md for the original
+  // investigation. `FloatBar.tsx`/`useTrayPanelController.ts` already
+  // filter by `enabledProviders` at their own point of use -- this hook
+  // is the shared point of use for every Dashboard surface
+  // (`AnalyticsDashboard.tsx`, `PopOutPanel.tsx`), so filtering fixes
+  // both at once.
+  const enabledProviders = useMemo(() => {
+    const enabled = new Set(settings.enabledProviders);
+    return providers.filter((p) => enabled.has(p.providerId));
+  }, [providers, settings.enabledProviders]);
+
   const sorted = useMemo(
     () =>
       orderProviderSnapshots(
-        providers,
+        enabledProviders,
         bootstrapProviders,
         settings.enabledProviders,
         settings.providerOrder,
       ),
-    [providers, bootstrapProviders, settings.enabledProviders, settings.providerOrder],
+    [enabledProviders, bootstrapProviders, settings.enabledProviders, settings.providerOrder],
   );
 
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(

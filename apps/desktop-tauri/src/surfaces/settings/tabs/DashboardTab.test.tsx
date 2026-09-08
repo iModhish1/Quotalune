@@ -162,12 +162,16 @@ function bootstrap(settingsOverride: Partial<SettingsSnapshot> = {}): BootstrapS
   };
 }
 
-function renderDashboardTab(providers: ProviderUsageSnapshot[], onOpenProviders = vi.fn()) {
+function renderDashboardTab(
+  providers: ProviderUsageSnapshot[],
+  onOpenProviders = vi.fn(),
+  settingsOverride: Partial<SettingsSnapshot> = {},
+) {
   tauriMocks.getCachedProviders.mockResolvedValue(providers);
-  tauriMocks.getSettingsSnapshot.mockResolvedValue(settings());
+  tauriMocks.getSettingsSnapshot.mockResolvedValue({ ...settings(), ...settingsOverride });
   return render(
     <LocaleProvider>
-      <DashboardTab state={bootstrap()} onOpenProviders={onOpenProviders} />
+      <DashboardTab state={bootstrap(settingsOverride)} onOpenProviders={onOpenProviders} />
     </LocaleProvider>,
   );
 }
@@ -194,6 +198,41 @@ describe("DashboardTab", () => {
     // No detached-window chrome: no title bar restore/close controls, no
     // footer Settings/About/Quit rows -- those are PopOutPanel-only.
     expect(screen.queryByText("MenuQuit")).not.toBeInTheDocument();
+  });
+
+  /**
+   * Regression test for a real bug found via native CDP proof (Phase 5.1
+   * follow-up, docs/validation/PHASE5_3D_PROTOTYPE.md): `useProviders()`'s
+   * cached provider list is not scoped to the active profile's account
+   * set -- a profile switch does not clear it. `useDashboardState`'s
+   * `orderProviderSnapshots` only sorts, it never excluded a provider
+   * absent from `settings.enabledProviders`, so switching to a profile
+   * with a different (or empty) account set left the 2D Dashboard
+   * showing the previous profile's providers -- the same bug already
+   * found and fixed for the 3D Dashboard (`Providers3DDashboard.tsx`).
+   */
+  it("shows the empty state, not stale providers, when the active profile has zero enabled providers", async () => {
+    renderDashboardTab(
+      [provider("claude", "Claude"), provider("codex", "Codex")],
+      vi.fn(),
+      { enabledProviders: [] },
+    );
+
+    expect(await screen.findByText("No providers configured")).toBeInTheDocument();
+    expect(screen.queryByText("Claude")).not.toBeInTheDocument();
+    expect(screen.queryByText("Codex")).not.toBeInTheDocument();
+  });
+
+  it("shows only the providers enabled by the active profile, not every cached provider", async () => {
+    renderDashboardTab(
+      [provider("claude", "Claude"), provider("codex", "Codex"), provider("cursor", "Cursor")],
+      vi.fn(),
+      { enabledProviders: ["claude"] },
+    );
+
+    expect((await screen.findAllByText("Claude", {}, { timeout: 5000 })).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Codex")).not.toBeInTheDocument();
+    expect(screen.queryByText("Cursor")).not.toBeInTheDocument();
   });
 
   it("routes the empty-state CTA to the Providers tab instead of opening a window", async () => {
