@@ -186,6 +186,18 @@ High Fidelity)، RTL/إتاحة، وإثبات native. قيد صريح: لا ح�
 هذا القسم تأسيسي فقط لهذه الموجة الضخمة (13 مرحلة مطلوبة من المالك) — لا يُقرأ
 أي بند أعلاه كمنجز حتى يُربط بدليل قبول native صريح، تماماً كبقية هذا السجل.
 
+## J — Single Analytics Dashboard (2026-09-09)
+
+Owner consolidation request supersedes I01/I04/I05's multi-mode direction.
+- J01: One Dashboard; retire 3D/Spatial/Hybrid selectors, engines, routes and dependencies.
+- J02: Legacy persisted modes resolve safely to Analytics without destructive file migration.
+- J03: Preserve deterministic user Demo Mode, snapshot truth and Spend/Balance/Credits distinctions.
+- J04: Limits and resets first; compact themed DOM/SVG observatory analytics, RTL and responsive.
+- J05: Fresh complete quality gates, native Dev screenshots and performance/bundle measurements.
+- J06: Personal untouched; retain historical docs; stop after acceptance, no new mode.
+
+All pending. Evidence and execution checkpoints: `docs/validation/DASHBOARD_CONSOLIDATION.md`.
+
 ## الإحالات والأدلة القائمة
 
 `REFERENCE_SELECTION_2026-09-06.md`، `DETAIL_VISIBILITY_2026-09-06.md`، `APP_APPEARANCE_2026-09-06.md`، `COLLECTIONS_PRODUCT_PLAN.md`، `THEME_RUNTIME_RECOVERY.md` مستندات أدلة تاريخية؛ لا تحول كلمة completed قديمة إلى قبول جديد.

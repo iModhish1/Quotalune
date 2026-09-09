@@ -638,51 +638,22 @@ impl LowPowerModePreference {
     }
 }
 
-/// Which Dashboard experience is currently selected. Exactly one mode is
-/// ever active at a time -- the frontend `DashboardHost` lazily mounts only
-/// the matching implementation and disposes the previous one on switch, so
-/// this field is purely "which one," never "which ones are enabled."
-///
-/// Distinct from [`LowPowerModePreference`]/`adaptive_refresh`, which
-/// govern provider *network polling* cadence, not Dashboard *rendering*
-/// work (see [`DashboardPerformancePreset`] for that).
+/// Compatibility field for previously persisted Dashboard modes.
+/// All retired values resolve to the single Analytics Dashboard on read.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum DashboardModeId {
-    /// The safest default: lowest rendering overhead, no 3D engine, and
-    /// the only mode with a real (non-placeholder) implementation today.
     #[default]
+    #[serde(alias = "providers3d", alias = "hybrid", alias = "spatial")]
     Analytics2d,
-    Providers3d,
-    Hybrid,
-    /// Spatial Observatory prototype (Phase S1): a lightweight 2.5D
-    /// dimensional provider overview built from DOM/SVG/CSS transforms --
-    /// no WebGL context, no Three.js. Distinct from `Providers3d` (full
-    /// WebGL scene, publicly relabeled "Experimental 3D") and `Hybrid`
-    /// (still an unimplemented placeholder). Additive: existing settings
-    /// files with `analytics2d`/`providers3d`/`hybrid` persisted are
-    /// unaffected, and an older build reading a `spatial` value falls
-    /// back to the default via the existing lenient parse (see
-    /// `settings/raw.rs::deserialize_dashboard_mode_lenient`).
-    Spatial,
 }
-
 impl DashboardModeId {
     pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Analytics2d => "analytics2d",
-            Self::Providers3d => "providers3d",
-            Self::Hybrid => "hybrid",
-            Self::Spatial => "spatial",
-        }
+        "analytics2d"
     }
-
     pub fn parse(value: &str) -> Option<Self> {
         match value.trim() {
-            "analytics2d" => Some(Self::Analytics2d),
-            "providers3d" => Some(Self::Providers3d),
-            "hybrid" => Some(Self::Hybrid),
-            "spatial" => Some(Self::Spatial),
+            "analytics2d" | "providers3d" | "hybrid" | "spatial" => Some(Self::Analytics2d),
             _ => None,
         }
     }
@@ -729,26 +700,16 @@ mod dashboard_mode_tests {
     }
 
     #[test]
-    fn dashboard_mode_round_trips_every_variant() {
-        for mode in [
-            DashboardModeId::Analytics2d,
-            DashboardModeId::Providers3d,
-            DashboardModeId::Hybrid,
-            DashboardModeId::Spatial,
-        ] {
-            assert_eq!(DashboardModeId::parse(mode.as_str()), Some(mode));
+    fn retired_dashboard_modes_resolve_to_analytics() {
+        for value in ["analytics2d", "providers3d", "hybrid", "spatial"] {
+            assert_eq!(
+                DashboardModeId::parse(value),
+                Some(DashboardModeId::Analytics2d)
+            );
+            let decoded: DashboardModeId =
+                serde_json::from_value(serde_json::json!(value)).unwrap();
+            assert_eq!(decoded, DashboardModeId::Analytics2d);
         }
-    }
-
-    #[test]
-    fn dashboard_mode_spatial_wire_value_is_stable() {
-        // Phase S1: locks the exact wire string so a future rename can't
-        // silently break already-persisted `spatial` settings values.
-        assert_eq!(DashboardModeId::Spatial.as_str(), "spatial");
-        assert_eq!(
-            DashboardModeId::parse("spatial"),
-            Some(DashboardModeId::Spatial)
-        );
     }
 
     #[test]

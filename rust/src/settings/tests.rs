@@ -949,7 +949,7 @@ fn test_settings_dashboard_fields_roundtrip() {
     use tempfile::NamedTempFile;
 
     let settings = Settings {
-        dashboard_mode: DashboardModeId::Providers3d,
+        dashboard_mode: DashboardModeId::Analytics2d,
         dashboard_performance_preset: DashboardPerformancePreset::HighFidelity,
         ..Settings::default()
     };
@@ -961,7 +961,7 @@ fn test_settings_dashboard_fields_roundtrip() {
     let content = std::fs::read_to_string(temp_file.path()).expect("failed to read settings");
     let loaded: Settings = serde_json::from_str(&content).expect("failed to deserialize settings");
 
-    assert_eq!(loaded.dashboard_mode, DashboardModeId::Providers3d);
+    assert_eq!(loaded.dashboard_mode, DashboardModeId::Analytics2d);
     assert_eq!(
         loaded.dashboard_performance_preset,
         DashboardPerformancePreset::HighFidelity
@@ -1597,7 +1597,7 @@ fn legacy_quotaarc_settings_fixture_survives_intact() {
     assert!(settings.show_reset_when_exhausted);
 
     // Dashboard mode + performance preset (Dashboard Studio, Phase 2)
-    assert_eq!(settings.dashboard_mode, DashboardModeId::Providers3d);
+    assert_eq!(settings.dashboard_mode, DashboardModeId::Analytics2d);
     assert_eq!(
         settings.dashboard_performance_preset,
         DashboardPerformancePreset::HighFidelity
