@@ -8,6 +8,7 @@ export interface QuotaSeries {
   current: QuotaHistoryPoint[]; previous: QuotaHistoryPoint[];
   invalid: boolean; comparison: MetricResult; velocity: MetricResult;
   minimum: MetricResult; maximum: MetricResult; mean: MetricResult;
+  start: MetricResult; end: MetricResult; change: MetricResult; missingBucketCount: number;
   sampleCount: number; bucketCount: number; firstObservedAt: number | null; lastObservedAt: number | null;
   maxGapSeconds: number | null;
 }
@@ -17,7 +18,14 @@ const valid = (p: QuotaHistoryPoint) => !p.hasConflictingSamples && Number.isFin
   && Math.abs(p.usedPercent + p.remainingPercent - 100) <= 0.1
   && Number.isFinite(p.bucketStart) && Number.isFinite(p.observedAt) && p.observedAt >= p.bucketStart
   && Number.isInteger(p.sampleCount) && p.sampleCount > 0;
-const mean = (points: QuotaHistoryPoint[]) => points.reduce((sum, p) => sum + p.usedPercent, 0) / points.length;
+const mean = (points: QuotaHistoryPoint[]) => {
+  const closing = new Map<number,QuotaHistoryPoint>();
+  for(const point of points) {
+    const previous=closing.get(point.bucketStart);
+    if(!previous || point.observedAt>previous.observedAt) closing.set(point.bucketStart,point);
+  }
+  return [...closing.values()].reduce((sum,point)=>sum+point.usedPercent,0)/closing.size;
+};
 const available = (value: number): MetricResult => ({state: "available", value});
 function identityGuard(points: QuotaHistoryPoint[]): MetricResult | null {
   if (!points.length) return missingMetric("insufficientHistory", "insufficientSamples");
@@ -87,8 +95,9 @@ export function buildQuotaAnalytics(points: readonly QuotaHistoryPoint[], range:
     for (const p of raw) {
       if (!valid(p)) invalid = true;
       const old = seen.get(p.observedAt);
-      if (old && (old.usedPercent !== p.usedPercent || old.remainingPercent !== p.remainingPercent || old.resetsAt !== p.resetsAt)) invalid = true;
+      if (old && (old.usedPercent !== p.usedPercent || old.remainingPercent !== p.remainingPercent || old.resetsAt !== p.resetsAt || old.sampleCount !== p.sampleCount)) invalid = true;
       if (!old) seen.set(p.observedAt, p);
+      else if (p.counterDecreased && !old.counterDecreased) seen.set(p.observedAt, {...old,counterDecreased:true});
     }
     const sorted = [...seen.values()].sort((a, b) => a.observedAt - b.observedAt);
     const first = sorted[0];
@@ -102,10 +111,14 @@ export function buildQuotaAnalytics(points: readonly QuotaHistoryPoint[], range:
       current, previous, invalid,
       comparison: error ?? compareQuotaPeriods(current, previous, range),
       velocity: error ?? quotaVelocity(current, range.grainSeconds),
+      start: statsGuard ?? available(current[0]?.usedPercent ?? NaN),
+      end: statsGuard ?? available(current[current.length - 1]?.usedPercent ?? NaN),
+      change: statsGuard ?? available((current[current.length - 1]?.usedPercent ?? NaN) - (current[0]?.usedPercent ?? NaN)),
+      missingBucketCount: current.reduce((count,p,i) => count + (i ? Math.max(0,Math.round((p.bucketStart-current[i-1].bucketStart)/range.grainSeconds)-1) : 0),0),
       minimum: statsGuard ?? available(current.reduce((min, p) => Math.min(min, p.usedPercent), Infinity)),
       maximum: statsGuard ?? available(current.reduce((max, p) => Math.max(max, p.usedPercent), -Infinity)),
       mean: statsGuard ?? available(mean(current)),
-      sampleCount: current.reduce((sum, p) => sum + (valid(p) ? p.sampleCount : 0), 0),
+      sampleCount: invalid ? 0 : current.reduce((sum, p) => sum + (valid(p) ? p.sampleCount : 0), 0),
       bucketCount: new Set(current.map(p => p.bucketStart)).size,
       firstObservedAt: current[0]?.observedAt ?? null,
       lastObservedAt: current[current.length - 1]?.observedAt ?? null,

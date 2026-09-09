@@ -1109,6 +1109,12 @@ pub fn has_cost_usage_sources() -> bool {
 /// cost OpenCode's own local database already computed (not derived here
 /// via `CostUsagePricing`), so it is unaffected by this gate.
 pub fn get_daily_cost_history(provider: &str, days: u32) -> Vec<(String, f64)> {
+    // Only these sources have a defined cost-history implementation.  Do
+    // not return the zero-initialized calendar for an unsupported id: a
+    // caller would render it as a real all-zero USD history.
+    if !matches!(provider, "codex" | "claude" | "opencodego") {
+        return Vec::new();
+    }
     if matches!(provider, "codex" | "claude") && !cli_log_cost_available() {
         return Vec::new();
     }
@@ -1924,5 +1930,11 @@ mod tests {
         // would misread as a real, known-zero spend history.
         assert!(get_daily_cost_history("codex", 30).is_empty());
         assert!(get_daily_cost_history("claude", 30).is_empty());
+    }
+
+    #[test]
+    fn get_daily_cost_history_rejects_unsupported_providers_without_scanning() {
+        assert!(get_daily_cost_history("openai", 30).is_empty());
+        assert!(get_daily_cost_history("unknown-provider", 30).is_empty());
     }
 }
