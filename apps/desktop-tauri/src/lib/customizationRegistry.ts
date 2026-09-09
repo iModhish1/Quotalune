@@ -1,0 +1,22 @@
+import type {LocaleKey} from "../i18n/keys";
+import {DEFAULT_ANALYTICS_PREFERENCES} from "./analytics/preferences";
+
+export interface CustomizationDefinition {
+  setting: string; labelKey: LocaleKey; category: string; scope: readonly string[];
+  defaultValue: unknown; authority: string; resolution: string;
+  control: "select" | "toggle" | "composer" | "theme" | "layout";
+  affectedSurfaces: readonly string[]; keywords: readonly string[];
+}
+/** Metadata is discoverability, never a second persistence store. Complex
+ * editors retain their validated dedicated commands. Secret fields are excluded. */
+export const CUSTOMIZATION_REGISTRY: readonly CustomizationDefinition[] = [
+  {setting: "workspacePreferences.density", labelKey: "WorkspaceDensity", category: "appearance", scope: ["global"], defaultValue: "comfortable", authority: "update_settings", resolution: "persisted > default", control: "select", affectedSurfaces: ["settings", "providers", "dashboard", "usageSpend"], keywords: ["density", "spacing", "compact", "dense", "كثافة"]},
+  {setting: "workspacePreferences.navigation", labelKey: "V2NavigationSurfaces", category: "surfaces", scope: ["global"], defaultValue: "side", authority: "update_settings", resolution: "persisted > legacy navigation > default", control: "select", affectedSurfaces: ["settings-window", "main-window"], keywords: ["navigation", "sidebar", "تنقل"]},
+  {setting: "catalogTheme", labelKey: "DashboardStructureTheme", category: "appearance", scope: ["global", "profile", "surface"], defaultValue: "01-obsidian-orbit", authority: "set_catalog_theme", resolution: "surface > profile > global > default", control: "theme", affectedSurfaces: ["workspace", "dashboard", "taskbar", "top", "edge", "hud", "quick"], keywords: ["theme", "structure", "ثيم"]},
+  {setting: "globalLimitPresentation", labelKey: "DashboardProviderPresentation", category: "appearance", scope: ["global", "provider override"], defaultValue: {shape: "horizontal", content: "both", direction: "forward", identity: "adaptive"}, authority: "set_global_limit_presentation / set_provider_limit_presentation", resolution: "provider override > global > default", control: "composer", affectedSurfaces: ["dashboard", "providers", "providerDisplay", "taskbar", "top", "edge", "hud", "quick"], keywords: ["identity", "provider presentation", "هوية"]},
+  {setting: "resetPresentation", labelKey: "TabResetDisplay", category: "reset", scope: ["global", "surface"], defaultValue: "ResetPresentationSettings::default()", authority: "set_reset_presentation / set_reset_presentation_surface_override", resolution: "surface > global > default; regional formatter shared", control: "composer", affectedSurfaces: ["dashboard", "providers", "tray", "taskbar", "top", "edge", "hud", "quick"], keywords: ["reset", "regional", "timezone", "clock", "وقت", "إقليمي"]},
+  {setting: "usageDisplayMode", labelKey: "TabProviderDisplay", category: "appearance", scope: ["global", "provider override"], defaultValue: "remaining", authority: "set_usage_settings", resolution: "provider override > global > default", control: "select", affectedSurfaces: ["dashboard", "providers", "tray", "taskbar", "top", "edge", "hud", "quick"], keywords: ["used", "remaining", "hybrid", "متبقي"]},
+  {setting: "enableAnimations", labelKey: "DashboardPerformance", category: "appearance", scope: ["global"], defaultValue: true, authority: "update_settings", resolution: "system reduced motion / lowCpu veto > user preference", control: "toggle", affectedSurfaces: ["charts", "workspace", "dashboard", "floating surfaces"], keywords: ["motion", "animation", "effects", "حركة"]},
+  {setting: "analyticsPreferences", labelKey: "DashboardPreferences", category: "dashboard", scope: ["global"], defaultValue: DEFAULT_ANALYTICS_PREFERENCES, authority: "update_settings", resolution: "persisted normalized preferences > product defaults", control: "layout", affectedSurfaces: ["dashboard", "shared charts", "current limits"], keywords: ["sections", "chart style", "quota template", "range", "ترتيب", "مخططات"]},
+  {setting: "demoModeEnabled", labelKey: "DashboardStudioDemoSectionTitle", category: "dashboard", scope: ["global"], defaultValue: false, authority: "update_settings", resolution: "effective-provider projection only; never history writes", control: "composer", affectedSurfaces: ["dashboard", "providers"], keywords: ["demo", "preview", "scenario", "seed", "تجريبي"]},
+];

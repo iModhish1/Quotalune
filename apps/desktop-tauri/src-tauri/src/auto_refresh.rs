@@ -112,6 +112,12 @@ fn resolve_refresh_interval(settings: &Settings) -> Option<Duration> {
     automatic_interval(requested, effective_low_power)
 }
 
+/// Read-only projection of the same scheduler policy used by automatic refresh.
+/// None means manual refresh, not a fabricated missed-refresh deadline.
+pub(crate) fn effective_refresh_interval_secs(settings: &Settings) -> Option<u64> {
+    resolve_refresh_interval(settings).map(|duration| duration.as_secs())
+}
+
 fn adaptive_delay_now(low_power_mode_enabled: bool) -> Duration {
     let decision = adaptive_next_delay(AdaptiveRefreshInput {
         last_menu_open_age: age_since(&LAST_MENU_OPEN),

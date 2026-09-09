@@ -684,6 +684,8 @@ pub struct SettingsSnapshot {
     dashboard_mode: &'static str,
     dashboard_performance_preset: &'static str,
     workspace_preferences: Option<quotalis_core::settings::WorkspacePreferences>,
+    analytics_preferences: Option<quotalis_core::settings::AnalyticsPreferences>,
+    effective_refresh_interval_secs: Option<u64>,
     demo_mode_enabled: bool,
     demo_provider_mode: &'static str,
     demo_provider_count: u32,
@@ -799,6 +801,8 @@ pub fn get_settings_snapshot() -> SettingsSnapshot {
 
 impl From<Settings> for SettingsSnapshot {
     fn from(settings: Settings) -> Self {
+        let effective_refresh_interval_secs =
+            crate::auto_refresh::effective_refresh_interval_secs(&settings);
         let avoid_keychain_prompts = settings.claude_avoid_keychain_prompts();
         let codex_spark_usage_visible = settings.codex_spark_usage_visible();
         let wayfinder_gateway_url = settings.gateway_url(ProviderId::Wayfinder).to_string();
@@ -828,6 +832,8 @@ impl From<Settings> for SettingsSnapshot {
             dashboard_mode: settings.dashboard_mode.as_str(),
             dashboard_performance_preset: settings.dashboard_performance_preset.as_str(),
             workspace_preferences: settings.workspace_preferences.clone(),
+            analytics_preferences: settings.analytics_preferences.clone(),
+            effective_refresh_interval_secs,
             demo_mode_enabled: settings.demo_mode_enabled,
             demo_provider_mode: settings.demo_provider_mode.as_str(),
             demo_provider_count: settings.demo_provider_count,

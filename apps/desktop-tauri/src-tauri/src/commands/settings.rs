@@ -20,6 +20,7 @@ pub struct SettingsUpdate {
     pub dashboard_mode: Option<String>,
     pub dashboard_performance_preset: Option<String>,
     pub workspace_preferences: Option<quotalis_core::settings::WorkspacePreferences>,
+    pub analytics_preferences: Option<quotalis_core::settings::AnalyticsPreferences>,
     pub demo_mode_enabled: Option<bool>,
     pub demo_provider_mode: Option<String>,
     pub demo_provider_count: Option<u32>,
@@ -206,6 +207,9 @@ impl SettingsUpdate {
             && let Some(preset) = quotalis_core::settings::DashboardPerformancePreset::parse(value)
         {
             settings.dashboard_performance_preset = preset;
+        }
+        if let Some(value) = &self.analytics_preferences {
+            settings.analytics_preferences = Some(value.clone().normalized());
         }
         if let Some(value) = &self.workspace_preferences {
             settings.workspace_preferences = Some(value.clone().normalized());

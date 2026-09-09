@@ -1,5 +1,39 @@
 use super::*;
 
+fn deserialize_analytics_preferences<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<super::AnalyticsPreferences>, D::Error> {
+    let value = serde_json::Value::deserialize(deserializer)?;
+    Ok(value.as_object().map(|obj| {
+        let defaults = super::AnalyticsPreferences::default();
+        let text = |key: &str, fallback: &str| {
+            obj.get(key)
+                .and_then(|v| v.as_str())
+                .unwrap_or(fallback)
+                .to_string()
+        };
+        let list = |key: &str, fallback: Vec<String>| {
+            obj.get(key)
+                .and_then(|v| v.as_array())
+                .map(|v| {
+                    v.iter()
+                        .filter_map(|item| item.as_str().map(str::to_string))
+                        .collect()
+                })
+                .unwrap_or(fallback)
+        };
+        super::AnalyticsPreferences {
+            section_order: list("sectionOrder", defaults.section_order),
+            hidden_sections: list("hiddenSections", defaults.hidden_sections),
+            chart_style: text("chartStyle", &defaults.chart_style),
+            quota_template: text("quotaTemplate", &defaults.quota_template),
+            default_range: text("defaultRange", &defaults.default_range),
+            provider_filter_scope: text("providerFilterScope", &defaults.provider_filter_scope),
+        }
+        .normalized()
+    }))
+}
+
 /// Deserialize a `dashboardMode` value leniently: a wrong-typed or unknown
 /// value falls back to the default variant instead of failing the whole
 /// settings file. Real typed enums like [`DashboardModeId`] normally hard-
@@ -85,6 +119,8 @@ pub(super) struct RawSettings {
     dashboard_performance_preset: super::DashboardPerformancePreset,
     #[serde(default, deserialize_with = "deserialize_workspace_preferences")]
     workspace_preferences: Option<super::WorkspacePreferences>,
+    #[serde(default, deserialize_with = "deserialize_analytics_preferences")]
+    analytics_preferences: Option<super::AnalyticsPreferences>,
 
     #[serde(default)]
     demo_mode_enabled: bool,
@@ -351,6 +387,7 @@ impl Default for RawSettings {
             dashboard_mode: s.dashboard_mode,
             dashboard_performance_preset: s.dashboard_performance_preset,
             workspace_preferences: s.workspace_preferences,
+            analytics_preferences: s.analytics_preferences,
             demo_mode_enabled: s.demo_mode_enabled,
             demo_provider_mode: s.demo_provider_mode,
             demo_provider_count: s.demo_provider_count,
@@ -726,6 +763,7 @@ impl From<RawSettings> for Settings {
             dashboard_mode: raw.dashboard_mode,
             dashboard_performance_preset: raw.dashboard_performance_preset,
             workspace_preferences: raw.workspace_preferences,
+            analytics_preferences: raw.analytics_preferences,
             demo_mode_enabled: raw.demo_mode_enabled,
             demo_provider_mode: raw.demo_provider_mode,
             // A corrupt/legacy value (0, or missing -> 0) must not silently

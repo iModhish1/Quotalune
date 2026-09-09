@@ -223,9 +223,21 @@ export interface ProviderSummary {
   order: number;
 }
 
-export interface WorkspacePreferences { density: "comfortable" | "compact"; navigation: "side" | "top" | "bottom"; }
+export interface AnalyticsPreferences {
+  sectionOrder: string[];
+  hiddenSections: string[];
+  chartStyle: "precision" | "minimal" | "detailed";
+  quotaTemplate: "precision" | "compact" | "dual" | "rail";
+  defaultRange: Exclude<DashboardRangeKind, "custom">;
+  providerFilterScope: "history" | "all";
+}
+
+export interface WorkspacePreferences { density: "comfortable" | "compact" | "dense"; navigation: "side" | "top" | "bottom"; }
 
 export interface SettingsSnapshot {
+  /** Effective native scheduler cadence, including adaptive/low-power policy.
+   * Null means manual; absent means old bridge/unavailable evidence. */
+  effectiveRefreshIntervalSecs?: number | null;
   enabledProviders: string[];
   providerOrder?: string[];
   refreshIntervalSecs: number;
@@ -236,6 +248,7 @@ export interface SettingsSnapshot {
   dashboardMode?: DashboardModeId;
   dashboardPerformancePreset?: DashboardPerformancePreset;
   workspacePreferences?: WorkspacePreferences | null;
+  analyticsPreferences?: AnalyticsPreferences | null;
   /** Phase 5.2 Demo Mode -- optional (rather than matching the Rust
    *  snapshot's always-present fields) so the many existing hand-built
    *  `SettingsSnapshot` test fixtures across the codebase don't all need
@@ -367,6 +380,7 @@ export interface SettingsUpdate {
   dashboardMode?: DashboardModeId;
   dashboardPerformancePreset?: DashboardPerformancePreset;
   workspacePreferences?: WorkspacePreferences | null;
+  analyticsPreferences?: AnalyticsPreferences | null;
   demoModeEnabled?: boolean;
   demoProviderMode?: DemoProviderMode;
   demoProviderCount?: number;
@@ -956,7 +970,10 @@ export type LocaleChangedPayload = Language;
 // ── Phase 6b — provider detail pane ──────────────────────────────────
 
 /** Aggregated per-provider payload powering the Settings detail pane. */
+export type ProviderAuthCapability = "noAuthRequired" | "credentialInput" | "deviceFlow" | "supervisedCli" | "externalDashboard" | "detectionOnly" | "unsupported";
+
 export interface ProviderDetail {
+  authCapability?: ProviderAuthCapability;
   id: string;
   displayName: string;
   enabled: boolean;
@@ -1208,6 +1225,25 @@ export type DashboardRangeKind =
   | "custom";
 
 /** The one normalized data contract every Dashboard widget consumes. */
+export interface QuotaHistoryPoint {
+  provider: string;
+  accountId: string;
+  /** Observed provider account identity, never a guessed profile membership. */
+  accountScope: "observed" | "unresolved" | "legacy";
+  windowKey: string;
+  windowLabel: string | null;
+  windowMinutes: number | null;
+  bucketStart: number;
+  observedAt: number;
+  usedPercent: number;
+  remainingPercent: number;
+  resetsAt: number | null;
+  sampleCount: number;
+  /** Raw observation integrity retained through bucket aggregation. */
+  hasConflictingSamples?: boolean;
+  counterDecreased?: boolean;
+}
+
 export interface DashboardSnapshot {
   generatedAt: number;
   rangeSince: number;
@@ -1219,4 +1255,7 @@ export interface DashboardSnapshot {
   usageTrend: UsageTrendPoint[];
   spendTrend: SpendTrendPoint[];
   costContract: CostContract;
+  /** Physical-window observations over requested and preceding comparable span.
+   * Older clients/fixtures omit this; absence never upgrades legacy selected data. */
+  quotaHistory?: QuotaHistoryPoint[];
 }

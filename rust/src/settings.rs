@@ -17,7 +17,9 @@ use std::path::PathBuf;
 
 use crate::core::ProviderId;
 
+mod analytics_preferences;
 mod api_keys;
+pub use analytics_preferences::AnalyticsPreferences;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct LimitPresentation {
     pub shape: String,
@@ -707,7 +709,7 @@ impl Default for WorkspacePreferences {
 }
 impl WorkspacePreferences {
     pub fn normalized(mut self) -> Self {
-        if self.density != "compact" {
+        if !matches!(self.density.as_str(), "compact" | "dense") {
             self.density = "comfortable".into();
         }
         if !matches!(self.navigation.as_str(), "side" | "top" | "bottom") {
@@ -964,6 +966,7 @@ pub struct Settings {
     pub dashboard_performance_preset: DashboardPerformancePreset,
     #[serde(default)]
     pub workspace_preferences: Option<WorkspacePreferences>,
+    pub analytics_preferences: Option<AnalyticsPreferences>,
 
     /// Phase 5.2: user-accessible Demo Mode -- previews Quotalis with
     /// simulated provider data, entirely generated on the frontend (this
@@ -1830,6 +1833,7 @@ impl Default for Settings {
             dashboard_mode: DashboardModeId::default(),
             dashboard_performance_preset: DashboardPerformancePreset::default(),
             workspace_preferences: None,
+            analytics_preferences: None,
             demo_mode_enabled: false,
             demo_provider_mode: DemoProviderMode::default(),
             demo_provider_count: DEFAULT_DEMO_PROVIDER_COUNT,

@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { DashboardSnapshot } from "../types/bridge";
 
@@ -50,6 +50,17 @@ describe("useDashboardSnapshot", () => {
   beforeEach(() => {
     tauriMocks.getDashboardSnapshot.mockReset();
     eventMocks.listen.mockReset().mockResolvedValue(() => {});
+  });
+
+  it("rejects late results from a superseded range or provider request", async () => {
+    const pending: ((value: DashboardSnapshot) => void)[] = [];
+    tauriMocks.getDashboardSnapshot.mockImplementation(() => new Promise(resolve => pending.push(resolve)));
+    const {result, rerender} = renderHook(({provider}) => useDashboardSnapshot("last7Days", undefined, [provider]), {initialProps: {provider: "codex"}});
+    rerender({provider: "claude"});
+    await act(async () => pending[1](snapshot({timezone: "new-result"})));
+    expect(result.current.snapshot?.timezone).toBe("new-result");
+    await act(async () => pending[0](snapshot({timezone: "old-result"})));
+    expect(result.current.snapshot?.timezone).toBe("new-result");
   });
 
   it("loads a snapshot on mount for the requested range", async () => {

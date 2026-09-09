@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getDashboardSnapshot } from "../lib/tauri";
 import type { DashboardRangeKind, DashboardSnapshot } from "../types/bridge";
@@ -19,14 +19,17 @@ export function useDashboardSnapshot(
   isLoading: boolean;
   reload: () => void;
 } {
-  const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
+  const [loaded, setLoaded] = useState<{key: string; snapshot: DashboardSnapshot} | null>(null);
+  const revision = useRef(0);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   // Stabilize the array identity so a new `[]`/`["codex"]` literal from the
   // caller's render doesn't re-trigger the fetch effect every render.
   const providersKey = providers && providers.length > 0 ? providers.join(",") : "";
+  const requestKey = JSON.stringify([range, timezone, providersKey]);
 
   const load = useCallback(() => {
+    const request = ++revision.current;
     setIsLoading(true);
     getDashboardSnapshot({
       range,
@@ -34,16 +37,19 @@ export function useDashboardSnapshot(
       providers: providersKey ? providersKey.split(",") : undefined,
     })
       .then((next) => {
-        setSnapshot(next);
+        if (request !== revision.current) return;
+        setLoaded({key: requestKey, snapshot: next});
         setError(null);
       })
       .catch((cause: unknown) => {
+        if (request !== revision.current) return;
+        setLoaded(null);
         setError(cause instanceof Error ? cause.message : String(cause));
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {if (request === revision.current) setIsLoading(false);});
     // eslint-disable-next-line react-hooks/exhaustive-deps -- providersKey
     // (the stabilized string) is the real dependency, not `providers`.
-  }, [range, timezone, providersKey]);
+  }, [range, timezone, providersKey, requestKey]);
 
   useEffect(() => {
     load();
@@ -52,10 +58,11 @@ export function useDashboardSnapshot(
       () => (() => {}) as () => void,
     );
     return () => {
+      ++revision.current;
       void unlistenRefresh.then((fn) => fn());
       void unlistenSettings.then((fn) => fn());
     };
   }, [load]);
 
-  return { snapshot, error, isLoading, reload: load };
+  return { snapshot: loaded?.key === requestKey ? loaded.snapshot : null, error, isLoading, reload: load };
 }
