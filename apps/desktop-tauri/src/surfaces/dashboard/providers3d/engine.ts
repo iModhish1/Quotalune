@@ -91,6 +91,38 @@ interface ProviderVisual {
   bodyMaterial: THREE.MeshStandardMaterial;
   usageRing: THREE.Mesh;
   usageRingMaterial: THREE.MeshBasicMaterial;
+  /** Phase 5.2 owner sections 22/58: a small, always-visible glyph label
+   *  above each body -- native proof of the default six-provider showcase
+   *  showed identically-shaped spheres that a first-time viewer could not
+   *  tell apart without hovering each one. A `THREE.Sprite` always faces
+   *  the camera regardless of orbit angle, so this stays legible from any
+   *  viewpoint without per-frame billboarding logic. Deliberately small
+   *  (a short label, not the full display name at a huge size) -- "do
+   *  not clutter the scene" is the explicit constraint this balances
+   *  against "the viewer should immediately see which providers they
+   *  are". */
+  label: THREE.Sprite;
+  labelMaterial: THREE.SpriteMaterial;
+  labelTexture: THREE.CanvasTexture;
+  labelCanvas: HTMLCanvasElement;
+}
+
+const LABEL_CANVAS_WIDTH = 256;
+const LABEL_CANVAS_HEIGHT = 64;
+
+/** Renders a short provider label onto a small offscreen canvas used as
+ *  a sprite texture. Redrawn (not recreated) whenever the provider's
+ *  name/dim state changes -- one canvas/texture per provider for its
+ *  whole lifetime, not one per frame. */
+function drawLabelTexture(canvas: HTMLCanvasElement, text: string, dim: boolean): void {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.font = "600 34px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = dim ? "rgba(232,234,237,0.55)" : "rgba(232,234,237,0.95)";
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2, canvas.width - 16);
 }
 
 /**
@@ -323,9 +355,27 @@ export class ProvidersUniverseEngine {
       usageRingMaterial,
     );
     usageRing.rotation.x = -Math.PI / 2;
-    group.add(body, usageRing);
+
+    const labelCanvas = document.createElement("canvas");
+    labelCanvas.width = LABEL_CANVAS_WIDTH;
+    labelCanvas.height = LABEL_CANVAS_HEIGHT;
+    const labelTexture = new THREE.CanvasTexture(labelCanvas);
+    const labelMaterial = new THREE.SpriteMaterial({
+      map: labelTexture,
+      transparent: true,
+      depthTest: false,
+    });
+    const label = new THREE.Sprite(labelMaterial);
+    label.scale.set(1.4, 1.4 * (LABEL_CANVAS_HEIGHT / LABEL_CANVAS_WIDTH), 1);
+    label.position.set(0, PROVIDER_BODY_RADIUS + 0.42, 0);
+    // Rendered after the body/ring (renderOrder + depthTest:false) so the
+    // label never gets z-fighting-clipped by a nearby provider's own
+    // geometry -- it's a UI-ish overlay, not a real occluding 3D object.
+    label.renderOrder = 10;
+
+    group.add(body, usageRing, label);
     body.userData.pickable = true;
-    return { group, body, bodyMaterial, usageRing, usageRingMaterial };
+    return { group, body, bodyMaterial, usageRing, usageRingMaterial, label, labelMaterial, labelTexture, labelCanvas };
   }
 
   private applyNodeToVisual(
@@ -365,6 +415,14 @@ export class ProvidersUniverseEngine {
     visual.usageRingMaterial.color = new THREE.Color(
       node.alertLevel === "critical" ? "#e0435a" : node.alertLevel === "warning" ? "#e0a83f" : node.identityColorHex,
     );
+
+    // Short, non-cluttering glyph label (owner sections 22/58) -- the
+    // full accessible name lives in the real provider navigator list;
+    // this is just enough for a sighted viewer to tell bodies apart at a
+    // glance without hovering each one.
+    const shortLabel = node.displayName.length > 12 ? `${node.displayName.slice(0, 11)}…` : node.displayName;
+    drawLabelTexture(visual.labelCanvas, shortLabel, node.authState !== "ready");
+    visual.labelTexture.needsUpdate = true;
   }
 
   private disposeProviderVisual(visual: ProviderVisual): void {
@@ -373,6 +431,8 @@ export class ProvidersUniverseEngine {
     visual.bodyMaterial.dispose();
     visual.usageRing.geometry.dispose();
     visual.usageRingMaterial.dispose();
+    visual.labelTexture.dispose();
+    visual.labelMaterial.dispose();
   }
 
   private handlePointerMove(event: PointerEvent): void {
