@@ -698,12 +698,21 @@ pub struct WorkspacePreferences {
     pub navigation: String,
 }
 impl Default for WorkspacePreferences {
-    fn default() -> Self { Self { density: "comfortable".into(), navigation: "side".into() } }
+    fn default() -> Self {
+        Self {
+            density: "comfortable".into(),
+            navigation: "side".into(),
+        }
+    }
 }
 impl WorkspacePreferences {
     pub fn normalized(mut self) -> Self {
-        if self.density != "compact" { self.density = "comfortable".into(); }
-        if !matches!(self.navigation.as_str(), "side" | "top" | "bottom") { self.navigation = "side".into(); }
+        if self.density != "compact" {
+            self.density = "comfortable".into();
+        }
+        if !matches!(self.navigation.as_str(), "side" | "top" | "bottom") {
+            self.navigation = "side".into();
+        }
         self
     }
 }
@@ -2045,7 +2054,7 @@ impl Settings {
         }
 
         let json = serde_json::to_string_pretty(self)?;
-        crate::secure_file::write_string(&path, &json)?;
+        crate::secure_file::write_string_atomic(&path, &json)?;
 
         Ok(())
     }

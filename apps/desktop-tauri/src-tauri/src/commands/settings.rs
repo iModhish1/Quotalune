@@ -1,5 +1,9 @@
 use super::*;
 
+// Serialize the entire shared-patch transaction, not just the final write.
+// Detached windows may invoke this async command concurrently.
+static SETTINGS_PATCH_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 // ── Settings mutation ─────────────────────────────────────────────────
 
 /// Partial settings update — every field is optional so the frontend can
@@ -203,7 +207,9 @@ impl SettingsUpdate {
         {
             settings.dashboard_performance_preset = preset;
         }
-        if let Some(value) = &self.workspace_preferences { settings.workspace_preferences = Some(value.clone().normalized()); }
+        if let Some(value) = &self.workspace_preferences {
+            settings.workspace_preferences = Some(value.clone().normalized());
+        }
         // Phase 5.2: Demo Mode is CONFIGURATION only -- this patches the
         // persisted settings, never generates or writes any simulated
         // observation. See docs/validation/PHASE5_DEMO_MODE.md.
@@ -538,6 +544,9 @@ pub async fn update_settings(
     app: tauri::AppHandle,
     patch: SettingsUpdate,
 ) -> Result<SettingsSnapshot, String> {
+    let transaction = SETTINGS_PATCH_LOCK
+        .lock()
+        .map_err(|error| error.to_string())?;
     let mut settings = Settings::load();
     let notify_float_bar = patch.notifies_float_bar();
     let refresh_provider_data = patch.refreshes_provider_data();
@@ -556,6 +565,7 @@ pub async fn update_settings(
     }
 
     settings.save().map_err(|e| e.to_string())?;
+    drop(transaction);
     if clear_local_usage_cache {
         crate::commands::clear_provider_local_usage_cache();
     }

@@ -100,6 +100,35 @@ pub fn write_string(path: &Path, contents: &str) -> io::Result<()> {
     Ok(())
 }
 
+/// Publish a complete protected document without exposing a truncated file to
+/// concurrent Settings readers. The previous file survives any pre-rename error.
+pub fn write_string_atomic(path: &Path, contents: &str) -> io::Result<()> {
+    use std::io::Write;
+    let bytes = protected_file_bytes(contents)?;
+    let mut name = path.as_os_str().to_os_string();
+    name.push(format!(".tmp-{}", uuid::Uuid::new_v4()));
+    let temporary = std::path::PathBuf::from(name);
+    let result = (|| {
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let mut file = options.open(&temporary)?;
+        restrict_file_permissions(&temporary)?;
+        file.write_all(&bytes)?;
+        file.sync_all()?;
+        drop(file);
+        std::fs::rename(&temporary, path)
+    })();
+    if result.is_err() {
+        let _cleanup = std::fs::remove_file(&temporary);
+    }
+    result
+}
+
 #[cfg(windows)]
 fn protected_file_bytes(contents: &str) -> io::Result<Vec<u8>> {
     let (protection, encrypted) = protect(contents.as_bytes())?;
@@ -244,6 +273,26 @@ fn restrict_file_permissions(_path: &Path) -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn atomic_settings_publication_never_exposes_partial_json() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        write_string_atomic(&path, "{\"revision\":0}").unwrap();
+        std::thread::scope(|scope| {
+            scope.spawn(|| {
+                for revision in 1..30 {
+                    write_string_atomic(&path, &format!("{{\"revision\":{revision}}}")).unwrap();
+                }
+            });
+            for _ in 0..100 {
+                let value: serde_json::Value =
+                    serde_json::from_str(&read_string(&path).unwrap()).unwrap();
+                assert!(value["revision"].is_number());
+            }
+        });
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
+    }
 
     #[test]
     fn reads_plaintext_json_without_wrapper() {

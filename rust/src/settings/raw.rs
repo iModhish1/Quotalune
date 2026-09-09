@@ -32,12 +32,25 @@ where
     }
 }
 
-fn deserialize_workspace_preferences<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<super::WorkspacePreferences>, D::Error> {
+fn deserialize_workspace_preferences<'de, D: serde::Deserializer<'de>>(
+    d: D,
+) -> Result<Option<super::WorkspacePreferences>, D::Error> {
     let value = serde_json::Value::deserialize(d)?;
-    Ok(value.as_object().map(|object| super::WorkspacePreferences {
-        density: object.get("density").and_then(|v| v.as_str()).unwrap_or("comfortable").into(),
-        navigation: object.get("navigation").and_then(|v| v.as_str()).unwrap_or("side").into(),
-    }.normalized()))
+    Ok(value.as_object().map(|object| {
+        super::WorkspacePreferences {
+            density: object
+                .get("density")
+                .and_then(|v| v.as_str())
+                .unwrap_or("comfortable")
+                .into(),
+            navigation: object
+                .get("navigation")
+                .and_then(|v| v.as_str())
+                .unwrap_or("side")
+                .into(),
+        }
+        .normalized()
+    }))
 }
 
 /// Raw on-disk shape of [`Settings`] used purely for deserialization.

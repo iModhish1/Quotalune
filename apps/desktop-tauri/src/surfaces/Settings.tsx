@@ -1,4 +1,5 @@
 import { workspaceThemeStyle } from "../design-system/workspaceTheme";
+import { useRememberSettingsTab } from "./settings/useRememberSettingsTab";
 import { WorkspacePreferencesControl } from "./settings/WorkspacePreferencesControl";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -237,10 +238,7 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
   // persists once settings have actually loaded, so a fresh/loading render
   // never overwrites a real remembered tab with the transient "general"
   // default state starts in.
-  useEffect(() => {
-    if (!settings || settings.lastSettingsTab === activeTab) return;
-    void update({ lastSettingsTab: activeTab });
-  }, [activeTab, settings, update]);
+  useRememberSettingsTab(activeTab, settings.lastSettingsTab, update);
 
   const set = (patch: SettingsUpdate) => void update(patch);
   const handleTabClick = useCallback((tab: SettingsTabId) => {
