@@ -1,17 +1,16 @@
 //! Records provider snapshots into the account-scoped history store.
 //!
-//! Account resolution: the first enabled account for the provider in the
-//! active profile; a stable synthetic `provider:<cli>` key when the provider
-//! has no registered account (history stays key-stable for when real
-//! accounts replace the synthetic ones — the synthetic key is a stable
-//! identifier, never a display name).
+//! Account resolution uses only identity evidence carried by the provider
+//! snapshot. Provider-reported email plus organization context becomes a
+//! domain-separated digest; snapshots without email evidence remain explicitly
+//! provider-scoped and unresolved.
 //!
 //! Recording is best-effort: history failures must never break the
 //! provider refresh path.
 
+use quotalis_core::core::{ProviderStateKind, sha256_hex};
 use quotalis_core::dashboard_data::classify_monetary_observation;
 use quotalis_core::history::{HistoryStore, UsageSample};
-use quotalis_core::profiles::ProfileStore;
 
 use crate::commands::ProviderUsageSnapshot;
 
@@ -21,64 +20,81 @@ fn store() -> &'static HistoryStore {
     STORE.get_or_init(HistoryStore::open)
 }
 
-/// Resolve the history key for a provider under the active profile.
-pub(crate) fn account_key_for(provider_cli: &str) -> String {
-    let store = ProfileStore::load();
-    for account in store.active_accounts() {
-        if account.provider == provider_cli && account.enabled {
-            return account.id.clone();
-        }
-    }
-    format!("provider:{provider_cli}")
-}
-
-fn epoch_secs_from_iso(timestamp: &str) -> Option<i64> {
-    // Snapshot timestamps are RFC3339 from chrono with variable precision.
-    // Parse just the fields we need to avoid a new dependency here.
-    let (date, time) = timestamp.split_once('T')?;
-    let mut date_parts = date.split('-');
-    let year: i64 = date_parts.next()?.parse().ok()?;
-    let month: i64 = date_parts.next()?.parse().ok()?;
-    let day: i64 = date_parts.next()?.parse().ok()?;
-    let time = time.trim_end_matches('Z');
-    let mut time_parts = time.split(':');
-    let hour: i64 = time_parts.next()?.parse().ok()?;
-    let minute: i64 = time_parts.next()?.parse().ok()?;
-    let second_raw = time_parts.next().unwrap_or("0");
-    let second: i64 = second_raw
-        .chars()
-        .take_while(|c| c.is_ascii_digit())
-        .collect::<String>()
-        .parse()
-        .ok()?;
-    // days-from-civil algorithm (Howard Hinnant), valid for the epoch era.
-    let y = if month <= 2 { year - 1 } else { year };
-    let era = if y >= 0 { y } else { y - 399 } / 400;
-    let yoe = y - era * 400;
-    let mp = (month + 9) % 12;
-    let doy = (153 * mp + 2) / 5 + day - 1;
-    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-    let days = era * 146_097 + doe - 719_468;
-    Some(days * 86_400 + hour * 3_600 + minute * 60 + second)
-}
-
 fn iso_to_epoch(timestamp: &str) -> Option<i64> {
-    epoch_secs_from_iso(timestamp)
+    chrono::DateTime::parse_from_rfc3339(timestamp)
+        .ok()
+        .map(|value| value.timestamp())
+}
+
+/// Resolve only identity the provider itself exposed with this snapshot.
+/// Profile ordering is presentation state, not evidence that a refresh came
+/// from that profile account. The digest is domain-separated and only the
+/// digest reaches history storage; the raw email/organization never does.
+fn account_identity(snapshot: &ProviderUsageSnapshot) -> (String, &'static str) {
+    let email = snapshot
+        .account_email
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_lowercase);
+    let organization = snapshot
+        .account_organization
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_lowercase);
+
+    if let Some(email) = email {
+        // Length-prefix each provider-controlled component so embedded
+        // separator characters cannot make two distinct identities hash to
+        // the same structured input. Organization absence is explicit and
+        // differs from any present organization value.
+        let organization_component = organization.as_deref().map_or_else(
+            || "absent".to_string(),
+            |value| format!("present:{}:{value}", value.len()),
+        );
+        let material = format!(
+            "quotalis-history-account-v2\0provider:{}:{}\0email:{}:{}\0organization:{organization_component}",
+            snapshot.provider_id.len(),
+            snapshot.provider_id,
+            email.len(),
+            email,
+        );
+        return (
+            format!("observed:{}", sha256_hex(material.as_bytes())),
+            "observed",
+        );
+    }
+
+    (format!("provider:{}", snapshot.provider_id), "unresolved")
+}
+
+fn valid_quota_window(window: &crate::commands::RateWindowSnapshot) -> bool {
+    !window.is_informational
+        && window.used_percent.is_finite()
+        && (0.0..=100.0).contains(&window.used_percent)
+        && window.remaining_percent.is_finite()
+        && (0.0..=100.0).contains(&window.remaining_percent)
+        && (window.used_percent + window.remaining_percent - 100.0).abs() <= 0.1
 }
 
 fn sample_for_window(
     account_key: &str,
+    account_scope: &str,
     provider_cli: &str,
-    window_id: String,
+    window_key: String,
     window_label: Option<String>,
     window: &crate::commands::RateWindowSnapshot,
     captured_at: i64,
 ) -> UsageSample {
     UsageSample {
         account_id: account_key.to_string(),
+        account_scope: Some(account_scope.to_string()),
         provider: provider_cli.to_string(),
-        window_id: Some(window_id),
+        window_id: Some(window_key.clone()),
+        window_key: Some(window_key),
         window_label,
+        window_minutes: window.window_minutes,
         used_percent: window.used_percent,
         remaining_percent: window.remaining_percent,
         cost_used: None,
@@ -96,50 +112,59 @@ fn sample_for_window(
 /// unit test contaminates the real on-disk `history.db`). Returns `None`
 /// for an error snapshot (nothing to record).
 fn samples_for_snapshot(snapshot: &ProviderUsageSnapshot) -> Option<Vec<UsageSample>> {
-    if snapshot.error.is_some() {
+    if snapshot.error.is_some() || snapshot.error_state != ProviderStateKind::Ready {
         return None;
     }
-    let account_key = account_key_for(&snapshot.provider_id);
-    let captured_at = iso_to_epoch(&snapshot.updated_at).unwrap_or_else(|| {
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs() as i64)
-            .unwrap_or(0)
-    });
+    let (account_key, account_scope) = account_identity(snapshot);
+    let captured_at = iso_to_epoch(&snapshot.updated_at)?;
 
     let mut samples = Vec::new();
-    let selected = crate::usage_metric::selected_usage_window(
-        snapshot,
-        &quotalis_core::settings::Settings::load(),
-    );
-    samples.push(sample_for_window(
-        &account_key,
-        &snapshot.provider_id,
-        "selected".to_string(),
-        Some("Selected".to_string()),
-        &selected,
-        captured_at,
-    ));
-    samples.push(sample_for_window(
-        &account_key,
-        &snapshot.provider_id,
-        format!(
-            "primary:{}",
-            snapshot.primary_label.as_deref().unwrap_or("")
-        ),
+    let mut push_window = |window_key: String,
+                           window_label: Option<String>,
+                           window: &crate::commands::RateWindowSnapshot| {
+        if valid_quota_window(window) {
+            samples.push(sample_for_window(
+                &account_key,
+                account_scope,
+                &snapshot.provider_id,
+                window_key,
+                window_label,
+                window,
+                captured_at,
+            ));
+        }
+    };
+
+    push_window(
+        "primary".to_string(),
         snapshot.primary_label.clone(),
         &snapshot.primary,
-        captured_at,
-    ));
+    );
+    if let Some(window) = &snapshot.secondary {
+        push_window(
+            "secondary".to_string(),
+            snapshot.secondary_label.clone(),
+            window,
+        );
+    }
+    if let Some(window) = &snapshot.model_specific {
+        push_window("modelSpecific".to_string(), None, window);
+    }
+    if let Some(window) = &snapshot.tertiary {
+        push_window(
+            "tertiary".to_string(),
+            snapshot.tertiary_label.clone(),
+            window,
+        );
+    }
     for extra in &snapshot.extra_rate_windows {
-        samples.push(sample_for_window(
-            &account_key,
-            &snapshot.provider_id,
-            format!("extra:{}", extra.id),
-            Some(extra.title.clone()),
-            &extra.window,
-            captured_at,
-        ));
+        if !extra.id.trim().is_empty() {
+            push_window(
+                format!("extra:{}", extra.id),
+                Some(extra.title.clone()),
+                &extra.window,
+            );
+        }
     }
     // Cost is a distinct fact from quota percentage -- recorded as its own
     // sample (window_id "cost") so dashboard spend queries never mix a
@@ -150,9 +175,12 @@ fn samples_for_snapshot(snapshot: &ProviderUsageSnapshot) -> Option<Vec<UsageSam
             classify_monetary_observation(&snapshot.provider_id, &cost.period);
         samples.push(UsageSample {
             account_id: account_key.clone(),
+            account_scope: Some(account_scope.to_string()),
             provider: snapshot.provider_id.clone(),
             window_id: Some("cost".to_string()),
+            window_key: Some("cost".to_string()),
             window_label: Some(cost.period.clone()),
+            window_minutes: None,
             used_percent: 0.0,
             remaining_percent: 0.0,
             cost_used: Some(cost.used),
@@ -205,10 +233,45 @@ mod tests {
     use super::*;
 
     #[test]
-    fn account_key_prefers_active_profile_account() {
-        // No profile store file in the test env: synthetic fallback key.
-        let key = account_key_for("some-unregistered-provider");
-        assert_eq!(key, "provider:some-unregistered-provider");
+    fn account_identity_hashes_provider_reported_identity_without_exposing_it() {
+        let mut snapshot = test_snapshot();
+        snapshot.account_email = Some(" Person@Example.COM ".to_string());
+        snapshot.account_organization = Some(" Acme Org ".to_string());
+        let (key, scope) = account_identity(&snapshot);
+        assert_eq!(scope, "observed");
+        assert!(key.starts_with("observed:"));
+        assert!(!key.contains("person"));
+        assert!(!key.contains("example.com"));
+        assert!(!key.contains("acme"));
+
+        let mut same = test_snapshot();
+        same.account_email = Some("person@example.com".to_string());
+        same.account_organization = Some("acme org".to_string());
+        assert_eq!(account_identity(&same).0, key);
+
+        let mut different_organization = same.clone();
+        different_organization.account_organization = Some("other org".to_string());
+        assert_ne!(account_identity(&different_organization).0, key);
+
+        let mut absent_organization = same;
+        absent_organization.account_organization = None;
+        assert_ne!(account_identity(&absent_organization).0, key);
+    }
+
+    #[test]
+    fn missing_provider_identity_stays_unresolved() {
+        let snapshot = test_snapshot();
+        assert_eq!(
+            account_identity(&snapshot),
+            ("provider:codex".to_string(), "unresolved")
+        );
+
+        let mut organization_only = test_snapshot();
+        organization_only.account_organization = Some("shared organization".to_string());
+        assert_eq!(
+            account_identity(&organization_only),
+            ("provider:codex".to_string(), "unresolved")
+        );
     }
 
     #[test]
@@ -219,6 +282,10 @@ mod tests {
             iso_to_epoch("2026-09-02T12:34:56.789Z"),
             Some(1_788_352_496)
         );
+        assert_eq!(
+            iso_to_epoch("2026-09-02T03:00:00+03:00"),
+            Some(1_788_307_200)
+        );
         assert_eq!(iso_to_epoch("not-a-date"), None);
     }
 
@@ -227,6 +294,82 @@ mod tests {
         let mut snapshot = test_snapshot();
         snapshot.error = Some("boom".to_string());
         assert!(samples_for_snapshot(&snapshot).is_none());
+    }
+
+    #[test]
+    fn unhealthy_snapshots_are_not_recorded() {
+        let mut snapshot = test_snapshot();
+        snapshot.error_state = ProviderStateKind::Unknown;
+        assert!(samples_for_snapshot(&snapshot).is_none());
+    }
+
+    #[test]
+    fn invalid_capture_timestamp_is_not_replaced_with_wall_clock_time() {
+        let mut snapshot = test_snapshot();
+        snapshot.updated_at = "not-a-timestamp".to_string();
+        assert!(samples_for_snapshot(&snapshot).is_none());
+    }
+
+    #[test]
+    fn records_each_physical_window_with_stable_slot_identity() {
+        let mut snapshot = test_snapshot();
+        let mut secondary = snapshot.primary.clone();
+        secondary.window_minutes = Some(10_080);
+        secondary.used_percent = 20.0;
+        secondary.remaining_percent = 80.0;
+        snapshot.secondary = Some(secondary.clone());
+        snapshot.secondary_label = Some("Weekly display label".to_string());
+        snapshot.model_specific = Some(secondary.clone());
+        snapshot.tertiary = Some(secondary.clone());
+        snapshot.tertiary_label = Some("Third display label".to_string());
+        snapshot.extra_rate_windows = vec![crate::commands::NamedRateWindowSnapshot {
+            id: "credits".to_string(),
+            title: "Credits display label".to_string(),
+            window: secondary,
+        }];
+
+        let samples = samples_for_snapshot(&snapshot).expect("healthy snapshot");
+        let keys: Vec<_> = samples
+            .iter()
+            .filter_map(|sample| sample.window_key.as_deref())
+            .collect();
+        assert_eq!(
+            keys,
+            [
+                "primary",
+                "secondary",
+                "modelSpecific",
+                "tertiary",
+                "extra:credits"
+            ]
+        );
+        assert!(!keys.contains(&"selected"));
+        assert!(samples.iter().all(|sample| {
+            sample.account_scope.as_deref() == Some("unresolved")
+                && sample.account_id == "provider:codex"
+        }));
+    }
+
+    #[test]
+    fn informational_and_invalid_percentage_windows_are_omitted() {
+        let mut snapshot = test_snapshot();
+        snapshot.primary.is_informational = true;
+        let mut invalid = snapshot.primary.clone();
+        invalid.is_informational = false;
+        invalid.used_percent = 101.0;
+        snapshot.secondary = Some(invalid);
+        let mut non_finite = snapshot.primary.clone();
+        non_finite.is_informational = false;
+        non_finite.used_percent = f64::NAN;
+        snapshot.model_specific = Some(non_finite);
+        let mut inconsistent_total = snapshot.primary.clone();
+        inconsistent_total.is_informational = false;
+        inconsistent_total.used_percent = 50.0;
+        inconsistent_total.remaining_percent = 40.0;
+        snapshot.tertiary = Some(inconsistent_total);
+
+        let samples = samples_for_snapshot(&snapshot).expect("healthy snapshot");
+        assert!(samples.is_empty());
     }
 
     #[test]

@@ -9,7 +9,7 @@
 //! system already owns display formatting for -- this module never
 //! formats a reset time itself, only aggregates the instant.
 
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 use chrono::{DateTime, Datelike, Duration, LocalResult, NaiveDate, TimeZone, Timelike, Utc};
 use chrono_tz::Tz;
@@ -685,6 +685,55 @@ pub struct UsageDailyPoint {
     pub sample_count: u32,
 }
 
+/// Account evidence attached to a quota-history series. Only `Observed`
+/// may participate in same-account comparison. `Unresolved` is an honest
+/// provider-scoped observation; `Legacy` predates the identity contract.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum QuotaAccountScope {
+    Observed,
+    Unresolved,
+    Legacy,
+}
+
+impl QuotaAccountScope {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Observed => "observed",
+            Self::Unresolved => "unresolved",
+            Self::Legacy => "legacy",
+        }
+    }
+
+    fn from_sample(sample: &UsageSample) -> Self {
+        match sample.account_scope.as_deref() {
+            Some("observed") => Self::Observed,
+            Some("unresolved") => Self::Unresolved,
+            _ => Self::Legacy,
+        }
+    }
+}
+
+/// One trusted-or-explicitly-qualified quota observation bucket. Window
+/// identity, duration, closing capture time, and reset endpoint stay in the
+/// contract so comparison code can fail closed instead of guessing.
+#[derive(Debug, Clone, PartialEq)]
+pub struct QuotaHistoryPoint {
+    pub provider: String,
+    pub account_id: String,
+    pub account_scope: QuotaAccountScope,
+    pub window_key: String,
+    pub window_label: Option<String>,
+    pub window_minutes: Option<u32>,
+    pub bucket_start: i64,
+    pub observed_at: i64,
+    pub used_percent: f64,
+    pub remaining_percent: f64,
+    pub resets_at: Option<i64>,
+    pub sample_count: u32,
+    pub has_conflicting_samples: bool,
+    pub counter_decreased: bool,
+}
+
 /// One bucket of a spend trend for one provider/account -- the last
 /// `cost_used` value captured inside the bucket. Always explicitly an
 /// *estimate*: it is whatever the provider reported as its own
@@ -742,22 +791,21 @@ fn bucket_start(captured_at: i64, tz: Tz, grain: Grain) -> i64 {
 /// Samples must already be in ascending `captured_at` order (as returned
 /// by `HistoryStore::query`).
 pub fn aggregate_usage(samples: &[UsageSample], tz: Tz, grain: Grain) -> Vec<UsageDailyPoint> {
-    let mut buckets: Vec<UsageDailyPoint> = Vec::new();
+    let mut buckets: HashMap<(String, String, i64), UsageDailyPoint> = HashMap::new();
     for sample in samples
         .iter()
         .filter(|s| s.window_id.as_deref() == Some(SELECTED_WINDOW_ID))
     {
         let start = bucket_start(sample.captured_at, tz, grain);
-        if let Some(existing) = buckets.iter_mut().find(|b| {
-            b.provider == sample.provider
-                && b.account_id == sample.account_id
-                && b.bucket_start == start
-        }) {
-            existing.used_percent = sample.used_percent;
-            existing.remaining_percent = sample.remaining_percent;
-            existing.sample_count += 1;
-        } else {
-            buckets.push(UsageDailyPoint {
+        let key = (sample.provider.clone(), sample.account_id.clone(), start);
+        buckets
+            .entry(key)
+            .and_modify(|existing| {
+                existing.used_percent = sample.used_percent;
+                existing.remaining_percent = sample.remaining_percent;
+                existing.sample_count = existing.sample_count.saturating_add(1);
+            })
+            .or_insert_with(|| UsageDailyPoint {
                 provider: sample.provider.clone(),
                 account_id: sample.account_id.clone(),
                 bucket_start: start,
@@ -765,8 +813,8 @@ pub fn aggregate_usage(samples: &[UsageSample], tz: Tz, grain: Grain) -> Vec<Usa
                 remaining_percent: sample.remaining_percent,
                 sample_count: 1,
             });
-        }
     }
+    let mut buckets: Vec<_> = buckets.into_values().collect();
     buckets.sort_by_key(|b| (b.bucket_start, b.provider.clone(), b.account_id.clone()));
     buckets
 }
@@ -774,28 +822,27 @@ pub fn aggregate_usage(samples: &[UsageSample], tz: Tz, grain: Grain) -> Vec<Usa
 /// Aggregate `cost`-window samples the same way -- only ever produces
 /// points for providers/accounts that actually reported cost data.
 pub fn aggregate_spend(samples: &[UsageSample], tz: Tz, grain: Grain) -> Vec<SpendDailyPoint> {
-    let mut buckets: Vec<SpendDailyPoint> = Vec::new();
+    let mut buckets: HashMap<(String, String, i64), SpendDailyPoint> = HashMap::new();
     for sample in samples
         .iter()
         .filter(|s| s.window_id.as_deref() == Some(COST_WINDOW_ID) && s.cost_used.is_some())
     {
         let start = bucket_start(sample.captured_at, tz, grain);
-        if let Some(existing) = buckets.iter_mut().find(|b| {
-            b.provider == sample.provider
-                && b.account_id == sample.account_id
-                && b.bucket_start == start
-        }) {
-            existing.cost_used = sample.cost_used.unwrap_or(existing.cost_used);
-            existing.currency_code = sample
-                .cost_currency_code
-                .clone()
-                .or_else(|| existing.currency_code.clone());
-            existing.measurement_kind =
-                CostMeasurementKind::parse(sample.cost_measurement_kind.as_deref());
-            existing.quantity_kind =
-                MonetaryQuantityKind::parse(sample.monetary_quantity_kind.as_deref());
-        } else {
-            buckets.push(SpendDailyPoint {
+        let key = (sample.provider.clone(), sample.account_id.clone(), start);
+        buckets
+            .entry(key)
+            .and_modify(|existing| {
+                existing.cost_used = sample.cost_used.unwrap_or(existing.cost_used);
+                existing.currency_code = sample
+                    .cost_currency_code
+                    .clone()
+                    .or_else(|| existing.currency_code.clone());
+                existing.measurement_kind =
+                    CostMeasurementKind::parse(sample.cost_measurement_kind.as_deref());
+                existing.quantity_kind =
+                    MonetaryQuantityKind::parse(sample.monetary_quantity_kind.as_deref());
+            })
+            .or_insert_with(|| SpendDailyPoint {
                 provider: sample.provider.clone(),
                 account_id: sample.account_id.clone(),
                 bucket_start: start,
@@ -808,20 +855,173 @@ pub fn aggregate_spend(samples: &[UsageSample], tz: Tz, grain: Grain) -> Vec<Spe
                     sample.monetary_quantity_kind.as_deref(),
                 ),
             });
-        }
     }
+    let mut buckets: Vec<_> = buckets.into_values().collect();
     buckets.sort_by_key(|b| (b.bucket_start, b.provider.clone(), b.account_id.clone()));
     buckets
 }
 
-/// Latest "selected" sample per (provider, account), independent of any
-/// display range.
+/// Aggregate physical quota-window history while retaining the evidence
+/// required by Product V2 comparison and velocity selectors. The reset
+/// endpoint is part of the bucket key: two cycles observed in one display
+/// bucket remain two records rather than being silently merged.
+pub fn aggregate_quota_history(
+    samples: &[UsageSample],
+    tz: Tz,
+    grain: Grain,
+) -> Vec<QuotaHistoryPoint> {
+    type Key = (
+        String,
+        String,
+        QuotaAccountScope,
+        String,
+        Option<u32>,
+        i64,
+        Option<i64>,
+    );
+
+    let mut buckets: HashMap<Key, QuotaHistoryPoint> = HashMap::new();
+    type SeriesKey = (
+        String,
+        String,
+        QuotaAccountScope,
+        String,
+        Option<u32>,
+        Option<i64>,
+    );
+    let mut previous: HashMap<SeriesKey, (i64, f64, f64)> = HashMap::new();
+    let mut ordered: Vec<_> = samples.iter().collect();
+    ordered.sort_by_key(|sample| sample.captured_at);
+    for sample in ordered {
+        if sample.cost_used.is_some()
+            || sample.window_id.as_deref() == Some(COST_WINDOW_ID)
+            || sample.window_id.as_deref() == Some(SELECTED_WINDOW_ID)
+            || sample.window_key.as_deref() == Some(SELECTED_WINDOW_ID)
+            || !sample.used_percent.is_finite()
+            || !(0.0..=100.0).contains(&sample.used_percent)
+            || !sample.remaining_percent.is_finite()
+            || !(0.0..=100.0).contains(&sample.remaining_percent)
+            || (sample.used_percent + sample.remaining_percent - 100.0).abs() > 0.1
+        {
+            continue;
+        }
+
+        let Some(window_key) = sample
+            .window_key
+            .as_deref()
+            .or(sample.window_id.as_deref())
+            .filter(|key| !key.is_empty())
+        else {
+            continue;
+        };
+        let account_scope = QuotaAccountScope::from_sample(sample);
+        let series_key = (
+            sample.provider.clone(),
+            sample.account_id.clone(),
+            account_scope,
+            window_key.to_string(),
+            sample.window_minutes,
+            sample.resets_at,
+        );
+        let prior = previous.get(&series_key);
+        let conflicting = prior.is_some_and(|(time, used, remaining)| {
+            *time == sample.captured_at
+                && (*used != sample.used_percent || *remaining != sample.remaining_percent)
+        });
+        let decreased = prior.is_some_and(|(time, used, _)| {
+            *time < sample.captured_at && sample.used_percent < *used
+        });
+        // Exact duplicate observations are not additional coverage.
+        if prior.is_some_and(|(time, used, remaining)| {
+            *time == sample.captured_at
+                && *used == sample.used_percent
+                && *remaining == sample.remaining_percent
+        }) {
+            continue;
+        }
+        previous.insert(
+            series_key,
+            (
+                sample.captured_at,
+                sample.used_percent,
+                sample.remaining_percent,
+            ),
+        );
+        let start = bucket_start(sample.captured_at, tz, grain);
+        let key = (
+            sample.provider.clone(),
+            sample.account_id.clone(),
+            account_scope,
+            window_key.to_string(),
+            sample.window_minutes,
+            start,
+            sample.resets_at,
+        );
+
+        buckets
+            .entry(key)
+            .and_modify(|existing| {
+                existing.has_conflicting_samples |= conflicting;
+                existing.counter_decreased |= decreased;
+                existing.sample_count = existing.sample_count.saturating_add(1);
+                if sample.captured_at >= existing.observed_at {
+                    existing.window_label = sample.window_label.clone();
+                    existing.observed_at = sample.captured_at;
+                    existing.used_percent = sample.used_percent;
+                    existing.remaining_percent = sample.remaining_percent;
+                }
+            })
+            .or_insert_with(|| QuotaHistoryPoint {
+                provider: sample.provider.clone(),
+                account_id: sample.account_id.clone(),
+                account_scope,
+                window_key: window_key.to_string(),
+                window_label: sample.window_label.clone(),
+                window_minutes: sample.window_minutes,
+                bucket_start: start,
+                observed_at: sample.captured_at,
+                used_percent: sample.used_percent,
+                remaining_percent: sample.remaining_percent,
+                resets_at: sample.resets_at,
+                sample_count: 1,
+                has_conflicting_samples: conflicting,
+                counter_decreased: decreased,
+            });
+    }
+
+    let mut out: Vec<_> = buckets.into_values().collect();
+    sort_quota_history(&mut out);
+    out
+}
+
+fn sort_quota_history(points: &mut [QuotaHistoryPoint]) {
+    points.sort_by(|a, b| {
+        a.bucket_start
+            .cmp(&b.bucket_start)
+            .then(a.observed_at.cmp(&b.observed_at))
+            .then(a.provider.cmp(&b.provider))
+            .then(a.account_id.cmp(&b.account_id))
+            .then(a.window_key.cmp(&b.window_key))
+            .then(a.window_minutes.cmp(&b.window_minutes))
+            .then(a.resets_at.cmp(&b.resets_at))
+    });
+}
+
+/// Latest physical primary per observed provider/account. Legacy selected rows
+/// are a fallback only for providers without physical recordings, never spliced
+/// across the identity migration.
 pub fn latest_provider_summaries(samples: &[UsageSample]) -> Vec<ProviderSummary> {
-    let mut latest: Vec<ProviderSummary> = Vec::new();
-    for sample in samples
+    let physical_providers: std::collections::HashSet<_> = samples
         .iter()
-        .filter(|s| s.window_id.as_deref() == Some(SELECTED_WINDOW_ID))
-    {
+        .filter(|sample| sample.window_key.as_deref() == Some("primary"))
+        .map(|sample| sample.provider.as_str())
+        .collect();
+    let mut latest: Vec<ProviderSummary> = Vec::new();
+    for sample in samples.iter().filter(|s| {
+        s.window_key.as_deref() == Some("primary")
+            || (!physical_providers.contains(s.provider.as_str())
+                && s.window_id.as_deref() == Some(SELECTED_WINDOW_ID))
+    }) {
         if let Some(existing) = latest
             .iter_mut()
             .find(|p| p.provider == sample.provider && p.account_id == sample.account_id)
@@ -862,6 +1062,9 @@ pub struct DashboardSnapshot {
     pub providers: Vec<ProviderSummary>,
     pub usage_trend: Vec<UsageDailyPoint>,
     pub spend_trend: Vec<SpendDailyPoint>,
+    /// Requested plus immediately preceding equal-duration physical quota
+    /// history. `range` still describes only the requested interval.
+    pub quota_history: Vec<QuotaHistoryPoint>,
     /// Phase 4A: the formal, structured description of what `spend_trend`
     /// (and any KPI/total derived from it) actually means -- origin,
     /// measurement kind, currency, period, availability, pricing status.
@@ -884,13 +1087,41 @@ pub fn build_dashboard_snapshot(
     let tz = resolve_timezone(timezone_name);
     let now = Utc::now();
 
-    // Range-scoped samples power the trend charts.
-    let ranged = store.query(&HistoryQuery {
+    // Query the requested interval and its immediately preceding
+    // equal-duration interval together. The public range remains the
+    // requested interval; consumers partition by observed_at using
+    // [range.since, range.until) and the adjacent preceding span.
+    let duration = range.until.saturating_sub(range.since);
+    let comparison_since = range.since.saturating_sub(duration);
+    let comparison = store.query(&HistoryQuery {
         account_ids: account_ids.to_vec(),
         providers: providers.to_vec(),
-        since: Some(range.since),
+        since: Some(comparison_since),
         until: Some(range.until),
     })?;
+    // HistoryQuery is inclusive for compatibility. Dashboard range
+    // semantics are half-open, so an observation exactly at `until` must
+    // not leak into either requested or comparison calculations.
+    let comparison: Vec<_> = comparison
+        .into_iter()
+        .filter(|sample| sample.captured_at < range.until)
+        .collect();
+    let ranged: Vec<_> = comparison
+        .iter()
+        .filter(|sample| sample.captured_at >= range.since)
+        .cloned()
+        .collect();
+    let previous: Vec<_> = comparison
+        .iter()
+        .filter(|sample| sample.captured_at < range.since)
+        .cloned()
+        .collect();
+    // Aggregate the adjacent periods independently so a non-bucket-aligned
+    // range boundary cannot collapse the previous closing capture into the
+    // requested period's first bucket.
+    let mut quota_history = aggregate_quota_history(&previous, tz, range.grain);
+    quota_history.extend(aggregate_quota_history(&ranged, tz, range.grain));
+    sort_quota_history(&mut quota_history);
 
     // Unbounded-by-range samples power "what is my quota right now" --
     // deliberately independent of the display range (see
@@ -919,6 +1150,7 @@ pub fn build_dashboard_snapshot(
         providers: latest_provider_summaries(&all_time),
         usage_trend: aggregate_usage(&ranged, tz, range.grain),
         spend_trend: aggregate_spend(&ranged, tz, range.grain),
+        quota_history,
         cost_contract: CostContract::from_samples(&ranged_cost_samples, &all_time_cost_samples),
     })
 }
@@ -1047,9 +1279,12 @@ mod tests {
     ) -> UsageSample {
         UsageSample {
             account_id: account.to_string(),
+            account_scope: None,
             provider: provider.to_string(),
             window_id: Some(window.to_string()),
+            window_key: None,
             window_label: None,
+            window_minutes: None,
             used_percent: used,
             remaining_percent: 100.0 - used,
             cost_used: cost,
@@ -1101,6 +1336,192 @@ mod tests {
         assert_eq!(points.len(), 3);
     }
 
+    fn quota_sample(
+        account_scope: Option<&str>,
+        window_id: &str,
+        window_key: Option<&str>,
+        window_minutes: Option<u32>,
+        used: f64,
+        resets_at: Option<i64>,
+        at: i64,
+    ) -> UsageSample {
+        UsageSample {
+            account_id: "account".to_string(),
+            account_scope: account_scope.map(str::to_string),
+            provider: "codex".to_string(),
+            window_id: Some(window_id.to_string()),
+            window_key: window_key.map(str::to_string),
+            window_label: Some("Display label".to_string()),
+            window_minutes,
+            used_percent: used,
+            remaining_percent: 100.0 - used,
+            cost_used: None,
+            cost_currency_code: None,
+            cost_measurement_kind: None,
+            monetary_quantity_kind: None,
+            resets_at,
+            captured_at: at,
+        }
+    }
+
+    #[test]
+    fn quota_history_excludes_legacy_selected_but_labels_legacy_physical_rows() {
+        let day = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let samples = vec![
+            quota_sample(None, "selected", None, None, 10.0, None, day + 1),
+            quota_sample(None, "primary", None, Some(300), 20.0, None, day + 2),
+        ];
+
+        let points = aggregate_quota_history(&samples, resolve_timezone("UTC"), Grain::Daily);
+        assert_eq!(points.len(), 1);
+        assert_eq!(points[0].window_key, "primary");
+        assert_eq!(points[0].account_scope, QuotaAccountScope::Legacy);
+    }
+
+    #[test]
+    fn quota_history_rejects_inconsistent_percentage_totals() {
+        let day = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let mut inconsistent = quota_sample(
+            Some("observed"),
+            "primary",
+            Some("primary"),
+            Some(300),
+            50.0,
+            None,
+            day,
+        );
+        inconsistent.remaining_percent = 40.0;
+        assert!(
+            aggregate_quota_history(&[inconsistent], resolve_timezone("UTC"), Grain::Daily)
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn quota_history_keeps_reset_cycles_separate_inside_one_display_bucket() {
+        let day = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let samples = vec![
+            quota_sample(
+                Some("observed"),
+                "primary",
+                Some("primary"),
+                Some(300),
+                40.0,
+                Some(day + 3_600),
+                day + 10,
+            ),
+            quota_sample(
+                Some("observed"),
+                "primary",
+                Some("primary"),
+                Some(300),
+                5.0,
+                Some(day + 7_200),
+                day + 20,
+            ),
+        ];
+
+        let points = aggregate_quota_history(&samples, resolve_timezone("UTC"), Grain::Daily);
+        assert_eq!(points.len(), 2);
+        assert_eq!(points[0].resets_at, Some(day + 3_600));
+        assert_eq!(points[1].resets_at, Some(day + 7_200));
+    }
+
+    #[test]
+    fn quota_history_uses_the_closing_capture_and_counts_bucket_samples() {
+        let day = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let samples = vec![
+            quota_sample(
+                Some("unresolved"),
+                "primary",
+                Some("primary"),
+                Some(300),
+                10.0,
+                Some(day + 7_200),
+                day + 10,
+            ),
+            quota_sample(
+                Some("unresolved"),
+                "primary",
+                Some("primary"),
+                Some(300),
+                30.0,
+                Some(day + 7_200),
+                day + 20,
+            ),
+        ];
+
+        let points = aggregate_quota_history(&samples, resolve_timezone("UTC"), Grain::Daily);
+        assert_eq!(points.len(), 1);
+        assert_eq!(points[0].account_scope, QuotaAccountScope::Unresolved);
+        assert_eq!(points[0].observed_at, day + 20);
+        assert_eq!(points[0].used_percent, 30.0);
+        assert_eq!(points[0].sample_count, 2);
+    }
+
+    #[test]
+    fn quota_bucket_retains_conflicts_and_hidden_counter_decreases() {
+        let day = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let make = |offset, used| {
+            quota_sample(
+                Some("observed"),
+                "primary",
+                Some("primary"),
+                Some(10080),
+                used,
+                Some(day + 604800),
+                day + offset,
+            )
+        };
+        let conflicts = aggregate_quota_history(
+            &[make(10, 20.0), make(10, 80.0), make(20, 90.0)],
+            resolve_timezone("UTC"),
+            Grain::Hourly,
+        );
+        assert!(conflicts[0].has_conflicting_samples);
+        assert_eq!(conflicts[0].used_percent, 90.0);
+        let drops = aggregate_quota_history(
+            &[
+                make(3601, 90.0),
+                make(3610, 30.0),
+                make(3620, 95.0),
+                make(10, 20.0),
+            ],
+            resolve_timezone("UTC"),
+            Grain::Hourly,
+        );
+        assert!(drops[1].counter_decreased);
+        assert!(!drops[1].has_conflicting_samples);
+        let duplicate = aggregate_quota_history(
+            &[make(10, 20.0), make(10, 20.0)],
+            resolve_timezone("UTC"),
+            Grain::Hourly,
+        );
+        assert_eq!(duplicate[0].sample_count, 1);
+    }
+
+    #[test]
+    fn summaries_follow_physical_primary_without_retaining_old_account_aliases() {
+        let legacy = sample("codex", "old-profile", "selected", 80.0, None, 100);
+        let mut physical = quota_sample(
+            Some("observed"),
+            "primary",
+            Some("primary"),
+            Some(300),
+            25.0,
+            None,
+            200,
+        );
+        physical.provider = "codex".into();
+        physical.account_id = "observed:new".into();
+        let fresh = latest_provider_summaries(std::slice::from_ref(&physical));
+        let migrated = latest_provider_summaries(&[legacy, physical]);
+        assert_eq!(fresh, migrated);
+        assert_eq!(fresh.len(), 1);
+        assert_eq!(fresh[0].used_percent, 25.0);
+        assert_eq!(fresh[0].last_sample_at, 200);
+    }
+
     #[test]
     fn aggregate_spend_ignores_percentage_windows() {
         let day0 = dt(2026, 9, 1, 6, 0, 0).timestamp();
@@ -1136,9 +1557,12 @@ mod tests {
     ) -> UsageSample {
         UsageSample {
             account_id: account.to_string(),
+            account_scope: None,
             provider: provider.to_string(),
             window_id: Some(COST_WINDOW_ID.to_string()),
+            window_key: None,
             window_label: Some("Monthly".to_string()),
+            window_minutes: None,
             used_percent: 0.0,
             remaining_percent: 0.0,
             cost_used: Some(cost),
@@ -1180,9 +1604,12 @@ mod tests {
     ) -> UsageSample {
         UsageSample {
             account_id: account.to_string(),
+            account_scope: None,
             provider: provider.to_string(),
             window_id: Some(COST_WINDOW_ID.to_string()),
+            window_key: None,
             window_label: Some("Monthly".to_string()),
+            window_minutes: None,
             used_percent: 0.0,
             remaining_percent: 0.0,
             cost_used: Some(cost),
@@ -1756,6 +2183,51 @@ mod tests {
         assert!(!snapshot.spend_trend.is_empty());
     }
 
+    #[test]
+    fn snapshot_quota_history_contains_requested_and_immediately_previous_ranges_only() {
+        let store = store();
+        let now = Utc::now().timestamp();
+        let range = ResolvedRange {
+            since: now - 100,
+            until: now,
+            grain: Grain::Hourly,
+        };
+        let mut before_previous = quota_sample(
+            Some("observed"),
+            "primary",
+            Some("primary"),
+            Some(300),
+            1.0,
+            Some(now + 300),
+            now - 201,
+        );
+        before_previous.account_id = "observed:abc".to_string();
+        let mut previous = before_previous.clone();
+        previous.used_percent = 10.0;
+        previous.remaining_percent = 90.0;
+        previous.captured_at = now - 150;
+        let mut requested = previous.clone();
+        requested.used_percent = 20.0;
+        requested.remaining_percent = 80.0;
+        requested.captured_at = now - 50;
+        let mut at_until = requested.clone();
+        at_until.used_percent = 30.0;
+        at_until.remaining_percent = 70.0;
+        at_until.captured_at = now;
+        store
+            .record_samples(&[before_previous, previous, requested, at_until])
+            .unwrap();
+
+        let snapshot = build_dashboard_snapshot(&store, range, "UTC", &[], &[]).unwrap();
+        let observed: Vec<_> = snapshot
+            .quota_history
+            .iter()
+            .map(|point| point.observed_at)
+            .collect();
+        assert_eq!(observed, vec![now - 150, now - 50]);
+        assert_eq!(snapshot.range, range);
+    }
+
     // ---- Quotalis rebrand: legacy QuotaArc history.db compatibility ----
     //
     // The Quotalis rebrand (docs/validation/QUOTALIS_WINDOWS_IDENTITY_MIGRATION.md,
@@ -2014,9 +2486,12 @@ mod tests {
         let day0 = dt(2026, 9, 1, 0, 0, 0).timestamp();
         let legacy = UsageSample {
             account_id: "a1".to_string(),
+            account_scope: None,
             provider: "claude".to_string(),
             window_id: Some(COST_WINDOW_ID.to_string()),
+            window_key: None,
             window_label: Some("Monthly".to_string()),
+            window_minutes: None,
             used_percent: 0.0,
             remaining_percent: 0.0,
             cost_used: Some(9.99),

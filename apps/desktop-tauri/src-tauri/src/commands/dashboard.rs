@@ -6,7 +6,7 @@
 use quotalis_core::dashboard_data::{
     self, CostAvailability, CostContract, CostMeasurementKind, CostOrigin, DashboardRangeKind,
     DashboardSnapshot, DataAvailability, MonetaryQuantityKind, PricingStatus, ProviderSummary,
-    SpendDailyPoint, UsageDailyPoint,
+    QuotaHistoryPoint, SpendDailyPoint, UsageDailyPoint,
 };
 use quotalis_core::history::HistoryStore;
 use serde::Serialize;
@@ -84,6 +84,46 @@ impl From<UsageDailyPoint> for UsageTrendPointBridge {
             used_percent: p.used_percent,
             remaining_percent: p.remaining_percent,
             sample_count: p.sample_count,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QuotaHistoryPointBridge {
+    pub provider: String,
+    pub account_id: String,
+    pub account_scope: &'static str,
+    pub window_key: String,
+    pub window_label: Option<String>,
+    pub window_minutes: Option<u32>,
+    pub bucket_start: i64,
+    pub observed_at: i64,
+    pub used_percent: f64,
+    pub remaining_percent: f64,
+    pub resets_at: Option<i64>,
+    pub sample_count: u32,
+    pub has_conflicting_samples: bool,
+    pub counter_decreased: bool,
+}
+
+impl From<QuotaHistoryPoint> for QuotaHistoryPointBridge {
+    fn from(p: QuotaHistoryPoint) -> Self {
+        Self {
+            provider: p.provider,
+            account_id: p.account_id,
+            account_scope: p.account_scope.as_str(),
+            window_key: p.window_key,
+            window_label: p.window_label,
+            window_minutes: p.window_minutes,
+            bucket_start: p.bucket_start,
+            observed_at: p.observed_at,
+            used_percent: p.used_percent,
+            remaining_percent: p.remaining_percent,
+            resets_at: p.resets_at,
+            sample_count: p.sample_count,
+            has_conflicting_samples: p.has_conflicting_samples,
+            counter_decreased: p.counter_decreased,
         }
     }
 }
@@ -187,6 +227,7 @@ pub struct DashboardSnapshotBridge {
     pub providers: Vec<ProviderSummaryBridge>,
     pub usage_trend: Vec<UsageTrendPointBridge>,
     pub spend_trend: Vec<SpendTrendPointBridge>,
+    pub quota_history: Vec<QuotaHistoryPointBridge>,
     /// Phase 4A: the formal, structured description of what `spend_trend`
     /// means -- origin/measurement kind/currency/period/availability/
     /// pricing status. The frontend must read this instead of guessing
@@ -209,6 +250,7 @@ impl From<DashboardSnapshot> for DashboardSnapshotBridge {
             providers: s.providers.into_iter().map(Into::into).collect(),
             usage_trend: s.usage_trend.into_iter().map(Into::into).collect(),
             spend_trend: s.spend_trend.into_iter().map(Into::into).collect(),
+            quota_history: s.quota_history.into_iter().map(Into::into).collect(),
             cost_contract: s.cost_contract.into(),
         }
     }
@@ -300,6 +342,47 @@ mod tests {
         assert_eq!(
             epoch_to_iso(1_788_307_200),
             Some("2026-09-02T00:00:00+00:00".to_string())
+        );
+    }
+
+    #[test]
+    fn quota_history_bridge_serializes_the_frozen_contract() {
+        let value = serde_json::to_value(QuotaHistoryPointBridge::from(QuotaHistoryPoint {
+            provider: "codex".to_string(),
+            account_id: "observed:abc".to_string(),
+            account_scope: quotalis_core::dashboard_data::QuotaAccountScope::Observed,
+            window_key: "secondary".to_string(),
+            window_label: Some("Weekly".to_string()),
+            window_minutes: Some(10_080),
+            bucket_start: 100,
+            observed_at: 120,
+            used_percent: 25.0,
+            remaining_percent: 75.0,
+            resets_at: Some(1_000),
+            sample_count: 3,
+            has_conflicting_samples: false,
+            counter_decreased: false,
+        }))
+        .expect("quota history bridge must serialize");
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "provider": "codex",
+                "accountId": "observed:abc",
+                "accountScope": "observed",
+                "windowKey": "secondary",
+                "windowLabel": "Weekly",
+                "windowMinutes": 10_080,
+                "bucketStart": 100,
+                "observedAt": 120,
+                "usedPercent": 25.0,
+                "remainingPercent": 75.0,
+                "resetsAt": 1_000,
+                "sampleCount": 3,
+                "hasConflictingSamples": false,
+                "counterDecreased": false
+            })
         );
     }
 

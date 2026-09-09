@@ -1,9 +1,9 @@
 //! Account-scoped local usage history.
 //!
-//! SQLite (WAL) store at `<config>/history.db`. Every sample is keyed by
-//! `account_id` (UUID from the profile store; a stable synthetic
-//! `provider:<cli>` key is used when a provider has no registered account
-//! yet) — never by display names, so history survives renames.
+//! SQLite (WAL) store at `<config>/history.db`. New quota samples carry an
+//! explicit account scope and stable physical-window key. Older rows retain
+//! NULL identity metadata so consumers cannot silently treat historical
+//! presentation/profile attribution as observed account identity.
 //!
 //! Deduplication: a sample is skipped when the newest row for the same
 //! (account, window) already carries the same usage within the dedup window,
@@ -26,9 +26,20 @@ pub const DEFAULT_RETENTION_DAYS: u32 = 90;
 #[derive(Debug, Clone, PartialEq)]
 pub struct UsageSample {
     pub account_id: String,
+    /// How confidently `account_id` identifies the account that produced
+    /// this observation. `None` is a legacy row and must never be promoted
+    /// into an account-comparable series.
+    pub account_scope: Option<String>,
     pub provider: String,
     pub window_id: Option<String>,
+    /// Stable physical quota-window identity for new rows. Unlike the
+    /// legacy `window_id == "selected"` alias, this never depends on a
+    /// presentation preference. `None` marks legacy identity evidence.
+    pub window_key: Option<String>,
     pub window_label: Option<String>,
+    /// Provider-reported window duration, when known. Duration participates
+    /// in series identity so a slot whose cadence changes is not compared.
+    pub window_minutes: Option<u32>,
     pub used_percent: f64,
     pub remaining_percent: f64,
     pub cost_used: Option<f64>,
@@ -203,6 +214,22 @@ impl HistoryStore {
                  COMMIT;",
             )?;
         }
+        if version < 5 {
+            // Product V2 analytics identity. Additive and deliberately not
+            // backfilled: older account/window attribution cannot be proven
+            // after the fact, especially the mutable legacy "selected"
+            // series. NULL therefore means legacy/unknown, not a default.
+            conn.execute_batch(
+                "BEGIN;
+                 ALTER TABLE usage_samples ADD COLUMN account_scope TEXT;
+                 ALTER TABLE usage_samples ADD COLUMN window_key TEXT;
+                 ALTER TABLE usage_samples ADD COLUMN window_minutes INTEGER;
+                 CREATE INDEX IF NOT EXISTS idx_usage_series_time
+                     ON usage_samples(provider, account_id, window_key, captured_at);
+                 PRAGMA user_version = 5;
+                 COMMIT;",
+            )?;
+        }
         Ok(())
     }
 
@@ -236,17 +263,27 @@ impl HistoryStore {
                         "SELECT EXISTS(
                              SELECT 1 FROM usage_samples
                              WHERE account_id = ?1
-                               AND window_id IS ?2
-                               AND used_percent = ?3
-                               AND cost_used IS ?4
-                               AND cost_currency_code IS ?5
-                               AND cost_measurement_kind IS ?6
-                               AND monetary_quantity_kind IS ?7
-                               AND captured_at >= ?8
+                               AND account_scope IS ?2
+                               AND provider = ?3
+                               AND window_id IS ?4
+                               AND window_key IS ?5
+                               AND window_minutes IS ?6
+                               AND resets_at IS ?7
+                               AND used_percent = ?8
+                               AND cost_used IS ?9
+                               AND cost_currency_code IS ?10
+                               AND cost_measurement_kind IS ?11
+                               AND monetary_quantity_kind IS ?12
+                               AND captured_at >= ?13
                          )",
                         rusqlite::params![
                             sample.account_id,
+                            sample.account_scope,
+                            sample.provider,
                             sample.window_id,
+                            sample.window_key,
+                            sample.window_minutes,
+                            sample.resets_at,
                             sample.used_percent,
                             sample.cost_used,
                             sample.cost_currency_code,
@@ -263,16 +300,20 @@ impl HistoryStore {
                 }
                 conn.execute(
                     "INSERT INTO usage_samples
-                         (account_id, provider, window_id, window_label,
+                         (account_id, account_scope, provider, window_id,
+                          window_key, window_label, window_minutes,
                           used_percent, remaining_percent, cost_used,
                           cost_currency_code, cost_measurement_kind,
                           monetary_quantity_kind, resets_at, captured_at)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
                     rusqlite::params![
                         sample.account_id,
+                        sample.account_scope,
                         sample.provider,
                         sample.window_id,
+                        sample.window_key,
                         sample.window_label,
+                        sample.window_minutes,
                         sample.used_percent,
                         sample.remaining_percent,
                         sample.cost_used,
@@ -293,7 +334,8 @@ impl HistoryStore {
     pub fn query(&self, filter: &HistoryQuery) -> Result<Vec<UsageSample>, String> {
         self.with_conn(|conn| {
             let mut sql = String::from(
-                "SELECT account_id, provider, window_id, window_label,
+                "SELECT account_id, account_scope, provider, window_id,
+                        window_key, window_label, window_minutes,
                         used_percent, remaining_percent, cost_used,
                         cost_currency_code, cost_measurement_kind,
                         monetary_quantity_kind, resets_at, captured_at
@@ -339,17 +381,20 @@ impl HistoryStore {
             let rows = stmt.query_map(refs.as_slice(), |r| {
                 Ok(UsageSample {
                     account_id: r.get(0)?,
-                    provider: r.get(1)?,
-                    window_id: r.get(2)?,
-                    window_label: r.get(3)?,
-                    used_percent: r.get(4)?,
-                    remaining_percent: r.get(5)?,
-                    cost_used: r.get(6)?,
-                    cost_currency_code: r.get(7)?,
-                    cost_measurement_kind: r.get(8)?,
-                    monetary_quantity_kind: r.get(9)?,
-                    resets_at: r.get(10)?,
-                    captured_at: r.get(11)?,
+                    account_scope: r.get(1)?,
+                    provider: r.get(2)?,
+                    window_id: r.get(3)?,
+                    window_key: r.get(4)?,
+                    window_label: r.get(5)?,
+                    window_minutes: r.get(6)?,
+                    used_percent: r.get(7)?,
+                    remaining_percent: r.get(8)?,
+                    cost_used: r.get(9)?,
+                    cost_currency_code: r.get(10)?,
+                    cost_measurement_kind: r.get(11)?,
+                    monetary_quantity_kind: r.get(12)?,
+                    resets_at: r.get(13)?,
+                    captured_at: r.get(14)?,
                 })
             })?;
             let mut out = Vec::new();
@@ -412,9 +457,12 @@ mod tests {
     fn sample(account: &str, provider: &str, window: &str, used: f64, at: i64) -> UsageSample {
         UsageSample {
             account_id: account.to_string(),
+            account_scope: None,
             provider: provider.to_string(),
             window_id: Some(window.to_string()),
+            window_key: None,
             window_label: Some("Window".to_string()),
+            window_minutes: None,
             used_percent: used,
             remaining_percent: 100.0 - used,
             cost_used: None,
@@ -430,6 +478,62 @@ mod tests {
     fn schema_created_and_versioned() {
         let store = store();
         assert_eq!(store.row_count().unwrap(), 0);
+        let version = store
+            .with_conn(|conn| conn.query_row("PRAGMA user_version", [], |row| row.get::<_, i64>(0)))
+            .unwrap();
+        assert_eq!(version, 5);
+        let columns = store
+            .with_conn(|conn| {
+                let mut statement = conn.prepare("PRAGMA table_info(usage_samples)")?;
+                statement
+                    .query_map([], |row| row.get::<_, String>(1))?
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .unwrap();
+        for expected in ["account_scope", "window_key", "window_minutes"] {
+            assert!(columns.iter().any(|column| column == expected));
+        }
+    }
+
+    #[test]
+    fn version_four_rows_migrate_without_inventing_identity_metadata() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("history.db");
+        {
+            let conn = Connection::open(&path).expect("create version four database");
+            conn.execute_batch(
+                "CREATE TABLE usage_samples (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    account_id TEXT NOT NULL,
+                    provider TEXT NOT NULL,
+                    window_id TEXT,
+                    window_label TEXT,
+                    used_percent REAL NOT NULL,
+                    remaining_percent REAL NOT NULL,
+                    cost_used REAL,
+                    resets_at INTEGER,
+                    captured_at INTEGER NOT NULL,
+                    cost_currency_code TEXT,
+                    cost_measurement_kind TEXT,
+                    monetary_quantity_kind TEXT
+                 );
+                 INSERT INTO usage_samples (
+                    account_id, provider, window_id, window_label,
+                    used_percent, remaining_percent, resets_at, captured_at
+                 ) VALUES ('profile-account', 'codex', 'selected', 'Weekly', 20, 80, 999, 123);
+                 PRAGMA user_version = 4;",
+            )
+            .expect("seed version four schema");
+        }
+
+        let store = HistoryStore::open_at(path);
+        let rows = store.query(&HistoryQuery::default()).unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].account_id, "profile-account");
+        assert_eq!(rows[0].window_id.as_deref(), Some("selected"));
+        assert_eq!(rows[0].account_scope, None);
+        assert_eq!(rows[0].window_key, None);
+        assert_eq!(rows[0].window_minutes, None);
     }
 
     #[test]
@@ -481,6 +585,35 @@ mod tests {
         );
     }
 
+    #[test]
+    fn dedup_preserves_quota_series_identity_duration_and_reset_cycle() {
+        let store = store();
+        let now = now_epoch();
+        let mut original = sample("a1", "codex", "primary", 42.0, now);
+        original.account_scope = Some("observed".to_string());
+        original.window_key = Some("primary".to_string());
+        original.window_minutes = Some(300);
+        original.resets_at = Some(now + 300);
+        assert_eq!(store.record_samples(&[original.clone()]).unwrap(), 1);
+        assert_eq!(store.record_samples(&[original.clone()]).unwrap(), 0);
+
+        let mut different_duration = original.clone();
+        different_duration.window_minutes = Some(10_080);
+        assert_eq!(store.record_samples(&[different_duration]).unwrap(), 1);
+
+        let mut different_window = original.clone();
+        different_window.window_key = Some("secondary".to_string());
+        assert_eq!(store.record_samples(&[different_window]).unwrap(), 1);
+
+        let mut different_scope = original.clone();
+        different_scope.account_scope = Some("unresolved".to_string());
+        assert_eq!(store.record_samples(&[different_scope]).unwrap(), 1);
+
+        let mut different_reset = original;
+        different_reset.resets_at = Some(now + 600);
+        assert_eq!(store.record_samples(&[different_reset]).unwrap(), 1);
+    }
+
     /// Regression test for the dedup key: a `used_percent`-only comparison
     /// would treat two different cost readings (both carrying the
     /// placeholder `used_percent: 0.0` a "cost" sample uses) as duplicates
@@ -491,9 +624,12 @@ mod tests {
         let now = now_epoch();
         let cost_sample = |cost: f64, at: i64| UsageSample {
             account_id: "a1".to_string(),
+            account_scope: None,
             provider: "codex".to_string(),
             window_id: Some("cost".to_string()),
+            window_key: None,
             window_label: Some("month".to_string()),
+            window_minutes: None,
             used_percent: 0.0,
             remaining_percent: 0.0,
             cost_used: Some(cost),
@@ -532,9 +668,12 @@ mod tests {
     ) -> UsageSample {
         UsageSample {
             account_id: account.to_string(),
+            account_scope: None,
             provider: "claude".to_string(),
             window_id: Some("cost".to_string()),
+            window_key: None,
             window_label: Some("Monthly".to_string()),
+            window_minutes: None,
             used_percent: 0.0,
             remaining_percent: 0.0,
             cost_used: Some(cost),
@@ -621,9 +760,12 @@ mod tests {
         let now = now_epoch();
         let legacy_unknown = UsageSample {
             account_id: "a1".to_string(),
+            account_scope: None,
             provider: "claude".to_string(),
             window_id: Some("cost".to_string()),
+            window_key: None,
             window_label: Some("Monthly".to_string()),
+            window_minutes: None,
             used_percent: 0.0,
             remaining_percent: 0.0,
             cost_used: Some(5.0),
