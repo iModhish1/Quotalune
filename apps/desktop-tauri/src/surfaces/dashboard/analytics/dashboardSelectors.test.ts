@@ -5,7 +5,8 @@ import {
   compareTrendHalves,
   computeKpis,
   rankProvidersByResetTime,
-  rankProvidersByShare,
+  rankProviderQuotas,
+  summarizeUsageTrend,
   resolveDataStatus,
 } from "./dashboardSelectors";
 import type {
@@ -133,27 +134,17 @@ function snapshot(overrides: Partial<DashboardSnapshot> = {}): DashboardSnapshot
   };
 }
 
-describe("rankProvidersByShare", () => {
-  it("returns [] when no provider has usage", () => {
-    expect(rankProvidersByShare([])).toEqual([]);
-    expect(rankProvidersByShare([providerSummary({ usedPercent: 0 })])).toEqual([]);
+describe("rankProviderQuotas", () => {
+  it("preserves independent percentages, including real zero", () => {
+    const result = rankProviderQuotas([providerSummary({provider: "a", usedPercent: 80}), providerSummary({provider: "b", usedPercent: 80}), providerSummary({provider: "c", usedPercent: 0})]);
+    expect(result.map(p => p.usedPercent)).toEqual([80, 80, 0]);
+    expect(result.every(p => !("share" in p))).toBe(true);
   });
-
-  it("ranks by descending share, summing to 1", () => {
-    const ranked = rankProvidersByShare([
-      providerSummary({ provider: "claude", usedPercent: 30 }),
-      providerSummary({ provider: "codex", usedPercent: 70 }),
-    ]);
-    expect(ranked.map((r) => r.provider)).toEqual(["codex", "claude"]);
-    expect(ranked[0].share).toBeCloseTo(0.7);
-    expect(ranked[1].share).toBeCloseTo(0.3);
+  it("never turns a lone 42% quota into 100%", () => {
+    expect(rankProviderQuotas([providerSummary({usedPercent: 42})])[0].usedPercent).toBe(42);
   });
-
-  it("never fabricates a 100% single-provider slice from a lone real data point", () => {
-    const ranked = rankProvidersByShare([providerSummary({ usedPercent: 42 })]);
-    expect(ranked).toHaveLength(1);
-    expect(ranked[0].share).toBe(1);
-    expect(ranked[0].usedPercent).toBe(42); // real value, not invented
+  it("rejects unknown or invalid observations", () => {
+    expect(rankProviderQuotas([providerSummary({usedPercent: NaN}), providerSummary({usedPercent: 101})])).toEqual([]);
   });
 });
 
@@ -691,4 +682,19 @@ describe("computeKpis", () => {
     expect(atHighQuota.reportedSpendTotal).toBe(12.5);
     expect(atLowQuota.reportedSpendTotal).toBe(atHighQuota.reportedSpendTotal);
   });
+});
+
+
+describe("scoped observations", () => {
+ it("keeps accounts separate and uses the last bucket, never a percentage average", () => {
+   const rows = summarizeUsageTrend([trendPoint({accountId:"a",bucketStart:1,usedPercent:80}),trendPoint({accountId:"a",bucketStart:2,usedPercent:10}),trendPoint({accountId:"b",bucketStart:1,usedPercent:90})]);
+   expect(rows.map(p=>[p.accountId,p.usedPercent])).toEqual([["a",10],["b",90]]);
+ });
+ it("refuses trends assembled from different accounts", () => {
+   expect(compareTrendHalves([0,1,2,3].map((n)=>trendPoint({accountId:String(n%2),bucketStart:n})))).toEqual({available:false});
+ });
+ it("refuses nonfinite monetary totals even with an available contract", () => {
+   const kpis=computeKpis({liveProviders:[],settings:{highUsageThreshold:80,criticalUsageThreshold:95},snapshot:snapshot({costContract:costContract({origin:"providerReported",availability:"available",quantityKind:"spend",measurementKind:"cumulative",currencyCode:"USD"}),spendTrend:[spendPoint({costUsed:NaN})]})});
+   expect(kpis.reportedSpendTotal).toBeNull();
+ });
 });

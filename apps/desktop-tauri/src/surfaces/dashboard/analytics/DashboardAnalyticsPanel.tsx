@@ -1,3 +1,4 @@
+import { summarizeUsageTrend } from "./dashboardSelectors";
 import { useMemo, useState } from "react";
 import { useLocale } from "../../../hooks/useLocale";
 import { useEffectiveDashboardSnapshot } from "../../../hooks/useEffectiveDashboardSnapshot";
@@ -129,7 +130,7 @@ export default function DashboardAnalyticsPanel({
       <h3 className="dashboard-analytics__eyebrow">{t("DashboardSelectedRangeEyebrow")}</h3>
       <div className="dashboard-analytics__row dashboard-analytics__row--primary">
         <UsageTrendSection snapshot={snapshot} />
-        <ProviderDistribution providers={snapshot?.providers ?? []} />
+        <ProviderDistribution providers={summarizeUsageTrend(snapshot?.usageTrend ?? [])} />
       </div>
       <div className="dashboard-analytics__row dashboard-analytics__row--single">
         <DataStatusPanel snapshot={snapshot} />

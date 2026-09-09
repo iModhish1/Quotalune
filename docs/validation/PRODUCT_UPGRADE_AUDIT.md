@@ -47,3 +47,14 @@ Stable destination IDs now grouped into Monitor, Workspace, Appearance & limits,
 Preferences and System. Side navigation exposes group labels; top/bottom layouts
 retain compact strips and the same keyboard traversal. No native route was added.
 Validation: 24 focused navigation tests passed; production build/typecheck passed.
+
+### Phase 4a: counterexample-driven analytics correction
+
+Removed cross-provider quota share normalization. The comparison table now uses
+last buckets from the selected history range, per provider/account, preserves true
+zero and rejects invalid percentages. Native `ProviderSummary` is current-state,
+not a historical mean (`rust/src/dashboard_data.rs`); the table therefore uses
+trend buckets explicitly. Trend comparison rejects mixed accounts/duplicate buckets.
+Spend totals reject non-finite values and any inconsistent point instead of silently
+presenting a partial total. Account rows use neutral labels to avoid exposing IDs.
+Validation: 68 analytics tests passed; production build/typecheck passed.

@@ -18,36 +18,21 @@ import type {
 import { normalizePercentage } from "../../../design-system/percent";
 import { selectSingleMetricUsageWindow } from "../../../lib/usageWindows";
 
-export interface ProviderShare {
-  provider: string;
-  accountId: string;
-  usedPercent: number;
-  share: number;
+/** Quota percentages have provider-specific denominators: never sum into shares. */
+export function rankProviderQuotas(providers: DashboardProviderSummary[]): DashboardProviderSummary[] {
+  return providers.filter(p => Number.isFinite(p.usedPercent) && p.usedPercent >= 0 && p.usedPercent <= 100)
+    .sort((a, b) => b.usedPercent - a.usedPercent || a.provider.localeCompare(b.provider) || a.accountId.localeCompare(b.accountId));
 }
 
-/**
- * Rank providers by their current used-quota share within the snapshot's
- * provider set. `share` is usedPercent's proportion of the sum of all
- * providers' usedPercent -- a distribution measure, not a second quota
- * calculation. Returns `[]` when there is nothing to rank (never a
- * single fabricated 100% slice).
- */
-export function rankProvidersByShare(
-  providers: DashboardProviderSummary[],
-): ProviderShare[] {
-  const withUsage = providers
-    .map((p) => ({ ...p, usedPercent: normalizePercentage(p.usedPercent) ?? 0 }))
-    .filter((p) => p.usedPercent > 0);
-  const total = withUsage.reduce((sum, p) => sum + p.usedPercent, 0);
-  if (total <= 0) return [];
-  return withUsage
-    .map((p) => ({
-      provider: p.provider,
-      accountId: p.accountId,
-      usedPercent: p.usedPercent,
-      share: p.usedPercent / total,
-    }))
-    .sort((a, b) => b.share - a.share);
+/** Last observed bucket per provider AND account inside the already-scoped range. */
+export function summarizeUsageTrend(points: UsageTrendPoint[]): DashboardProviderSummary[] {
+  const latest = new Map<string, UsageTrendPoint>();
+  for (const point of points) {
+    const key = JSON.stringify([point.provider, point.accountId]);
+    if (!latest.has(key) || point.bucketStart > latest.get(key)!.bucketStart) latest.set(key, point);
+  }
+  return [...latest.values()].map(p => ({provider: p.provider, accountId: p.accountId,
+    usedPercent: p.usedPercent, remainingPercent: p.remainingPercent, resetsAt: null, lastSampleAt: p.bucketStart}));
 }
 
 export type TrendComparisonResult =
@@ -63,7 +48,9 @@ export type TrendComparisonResult =
  */
 export function compareTrendHalves(trend: UsageTrendPoint[]): TrendComparisonResult {
   const sorted = [...trend].sort((a, b) => a.bucketStart - b.bucketStart);
-  if (sorted.length < 4) return { available: false };
+  if (sorted.length < 4 || new Set(sorted.map(p => JSON.stringify([p.provider, p.accountId]))).size !== 1
+    || sorted.some(p => !Number.isFinite(p.usedPercent) || p.usedPercent < 0 || p.usedPercent > 100)
+    || new Set(sorted.map(p => p.bucketStart)).size !== sorted.length) return { available: false };
   const mid = Math.floor(sorted.length / 2);
   const firstHalf = sorted.slice(0, mid);
   const secondHalf = sorted.slice(mid);
@@ -362,7 +349,7 @@ function totalReportedSpend(
   const spendPoints = snapshot?.spendTrend ?? [];
   const contract = snapshot?.costContract;
   if (!contract || spendPoints.length === 0) return null;
-  if (contract.availability !== "available") return null;
+  if (contract.availability !== "available" || contract.origin !== "providerReported") return null;
   if (contract.quantityKind !== "spend") return null;
   if (contract.measurementKind !== "cumulative") return null;
   if (!contract.currencyCode) return null;
@@ -376,10 +363,10 @@ function totalReportedSpend(
     // literal enforcement of the hard rule: a Balance/Credits/Unknown
     // point can NEVER reach the Spend KPI even if it slipped through
     // some future refactor of the contract-level gate above.
-    if (point.quantityKind !== "spend") continue;
-    if (point.measurementKind !== "cumulative") continue;
-    if (point.currencyCode !== contract.currencyCode) continue;
-    const key = `${point.provider}::${point.accountId}`;
+    if (point.quantityKind !== "spend") return null;
+    if (point.measurementKind !== "cumulative") return null;
+    if (point.currencyCode !== contract.currencyCode || !Number.isFinite(point.costUsed)) return null;
+    const key = JSON.stringify([point.provider, point.accountId]);
     const existing = latestBySeries.get(key);
     if (!existing || point.bucketStart > existing.bucketStart) {
       latestBySeries.set(key, point);
@@ -387,5 +374,5 @@ function totalReportedSpend(
   }
   if (latestBySeries.size === 0) return null;
   const total = Array.from(latestBySeries.values()).reduce((sum, p) => sum + p.costUsed, 0);
-  return { total, currencyCode: contract.currencyCode };
+  return Number.isFinite(total) ? { total, currencyCode: contract.currencyCode } : null;
 }
