@@ -10,7 +10,8 @@
 //! Storage: a versioned JSON document (`profiles.json`) persisted through the
 //! same DPAPI-capable secure-file layer as settings. Account records never
 //! contain secrets: only credential *references* (source + identifier) that
-//! resolve into the existing secure stores.
+//! describe an intended source. Runtime provider fetch currently uses its ambient
+//! credential configuration; profile membership does not switch credentials.
 //!
 //! Migration: schema 1 is created on first load. Existing 0.1.0
 //! installations migrate into a single "Default" profile with one "Main"

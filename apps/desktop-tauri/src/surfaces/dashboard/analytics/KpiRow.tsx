@@ -134,6 +134,7 @@ export default function KpiRow({
           <KpiCard key={kpi.label} {...kpi} />
         ))}
       </div>
+      {spendValue && <p className="dashboard-analytics__caption">{t("SpendReadingScope")}</p>}
       {compact.length > 0 && (
         <div className="dashboard-analytics__kpis-compact">
           {compact.map((kpi) => (

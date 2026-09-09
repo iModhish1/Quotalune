@@ -247,6 +247,17 @@ pub fn update_profile(
     Ok(())
 }
 
+// Profile entries currently select provider visibility, not a credential store.
+fn validate_profile_credential_reference(
+    source: Option<&str>,
+    id: Option<&str>,
+) -> Result<(), String> {
+    if source.is_some_and(|value| value != "none") || id.is_some() {
+        return Err("Profile credential linking is not supported. Manage credentials in Providers; profiles control monitoring membership.".into());
+    }
+    Ok(())
+}
+
 /// Add a provider account to a profile. The account references credentials
 /// only by source/id — never a secret.
 #[tauri::command]
@@ -258,6 +269,7 @@ pub fn add_account(
     credential_source: Option<String>,
     credential_id: Option<String>,
 ) -> Result<ProviderAccount, String> {
+    validate_profile_credential_reference(credential_source.as_deref(), credential_id.as_deref())?;
     let display_name = display_name.trim();
     if display_name.is_empty() {
         return Err("Account name cannot be empty".to_string());
@@ -1032,6 +1044,21 @@ mod tests {
         assert!(
             apply_account_profile_membership(&mut store, &account_id, "ghost-profile", true)
                 .is_err()
+        );
+    }
+}
+
+#[cfg(test)]
+mod profile_link_validation_tests {
+    #[test]
+    fn unresolved_credential_links_are_rejected_before_store_access() {
+        assert!(super::validate_profile_credential_reference(None, None).is_ok());
+        assert!(super::validate_profile_credential_reference(Some("none"), None).is_ok());
+        assert!(
+            super::validate_profile_credential_reference(Some("api-keys-store"), None).is_err()
+        );
+        assert!(
+            super::validate_profile_credential_reference(None, Some("unknown-account")).is_err()
         );
     }
 }

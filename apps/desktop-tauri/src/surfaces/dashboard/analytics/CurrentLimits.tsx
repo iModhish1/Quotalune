@@ -1,3 +1,4 @@
+import "./CurrentLimits.css";
 import { useMemo, type CSSProperties } from "react";
 import { useLocale } from "../../../hooks/useLocale";
 import { useResetStageOptions } from "../../../hooks/useResetStageOptions";
@@ -24,7 +25,7 @@ export default function CurrentLimits({ providers, settings }: {providers: Provi
       {stages.map((stage, index) => {
         const provider = providers[index];
         const metric = provider.selectedMetric ?? provider.primary;
-        const ready = provider.errorState === "ready";
+        const ready = provider.errorState === "ready" && !provider.error;
         const quantity = providerMonetaryQuantityKind(stage.id);
         const cost = provider.cost;
         const used = normalizePercentage(metric.usedPercent);
@@ -40,7 +41,7 @@ export default function CurrentLimits({ providers, settings }: {providers: Provi
             </div>
             {(stage.windows?.length ?? 0) > 0 ? <UsageWindowList providerId={stage.id} windows={stage.windows ?? []} hidden={stage.detailsHidden} presentation={stage.limitPresentation} /> : <small><bdi>{stage.reset}</bdi></small>}
           </> : <p className="dashboard-limits__unavailable">{t("DashboardValueUnavailable")}</p>}
-          {ready && cost && Number.isFinite(cost.used) && quantity !== "unknown" && <p className="dashboard-limits__remaining">
+          {ready && cost && Number.isFinite(cost.used) && quantity !== "unknown" && (quantity === "credits" || !!cost.currencyCode) && <p className="dashboard-limits__remaining">
             <span>{t(quantity === "spend" ? "DashboardMetricSpend" : quantity === "balance" ? "DashboardBalance" : "DashboardCredits")}</span>
             <bdi dir="ltr">{cost.used.toLocaleString(undefined, {maximumFractionDigits: 2})}{quantity !== "credits" && cost.currencyCode ? ` ${cost.currencyCode}` : ""}</bdi>
           </p>}

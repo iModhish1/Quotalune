@@ -313,7 +313,8 @@ export default function ProfilesTab() {
             </section>
 
             <section className="profiles-page__field">
-              <span className="profiles-page__field-label">Accounts visible in this profile</span>
+              <span className="profiles-page__field-label">{t("ProfileProviderMembership")}</span>
+              <p className="profiles-page__empty-hint">{t("ProfileMembershipHelp")}</p>
               {store.accounts.length === 0 ? (
                 <p className="profiles-page__empty-hint">No provider accounts yet.</p>
               ) : (

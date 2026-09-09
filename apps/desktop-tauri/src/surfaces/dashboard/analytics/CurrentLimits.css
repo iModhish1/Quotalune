@@ -1,0 +1,21 @@
+.dashboard-limits h2{margin:0 0 10px;font-size:13px;color:var(--qa-ink-1);letter-spacing:.04em}
+.dashboard-limits__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,235px),1fr));gap:10px}
+.dashboard-limits__instrument{min-width:0;padding:12px 14px;border:1px solid var(--qa-analytics-hairline);border-block-start:2px solid var(--qa-analytics-hairline-strong);border-radius:10px;background:var(--qa-analytics-surface-primary);color:var(--qa-analytics-text-primary);--surface-text:var(--qa-analytics-text-primary);--surface-muted:var(--qa-analytics-text-secondary);--surface-track:var(--qa-analytics-hairline);--surface-accent:var(--provider-color)}
+.dashboard-limits__instrument header{display:flex;align-items:center;gap:8px;min-width:0}
+.dashboard-limits__instrument header strong{font-size:12px;overflow-wrap:anywhere}
+.dashboard-limits__instrument>small{display:block;margin-block:5px;color:var(--qa-analytics-text-secondary);font-size:10px}
+.dashboard-limits__status{margin-inline-start:auto;font-size:9px;color:var(--qa-status-warning,#d5a65c);text-align:end}
+.dashboard-limits__status[data-ready=true]{color:var(--qa-analytics-text-secondary)}
+.dashboard-limits__remaining{display:flex;justify-content:space-between;gap:8px;margin:8px 0 0;padding-block-start:6px;border-block-start:1px solid var(--qa-analytics-hairline);font-size:10px;color:var(--qa-analytics-text-secondary)}
+.dashboard-limits__unavailable{font-size:12px;color:var(--qa-analytics-text-secondary)}
+.dashboard-limits__reading{display:flex;align-items:center;gap:12px;margin-block:8px}
+.dashboard-limits__reading svg{width:44px;height:44px;flex:none;transform:rotate(-90deg)}
+.dashboard-limits__reading circle{fill:none;stroke-width:2.5}
+.dashboard-limits__track{stroke:var(--qa-analytics-hairline-strong)}
+.dashboard-limits__arc{stroke:var(--provider-color)}
+.dashboard-limits__reading div{display:flex;flex-direction:column;gap:2px}
+.dashboard-limits__reading strong{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+.dashboard-limits__reading span{font-size:10px;color:var(--qa-analytics-text-secondary)}
+.dashboard-limits__instrument .quota-window-list{max-height:none;overflow:visible;font-size:10px}
+.dashboard-limits__instrument .quota-window-row{margin:2px 0 5px}
+.dashboard-limits__instrument p.dashboard-limits__remaining{margin:6px 0 0;padding:5px 0 0}

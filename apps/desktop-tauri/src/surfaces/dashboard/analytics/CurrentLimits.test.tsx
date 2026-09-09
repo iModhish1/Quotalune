@@ -9,6 +9,12 @@ function provider(id: string): ProviderUsageSnapshot {
   return {providerId: id, displayName: id, primary: metric, selectedMetric: metric, secondary: null, tertiary: null, modelSpecific: null, extraRateWindows: [], cost: null, errorState: "ready", error: null, planName: null, accountEmail: null, accountOrganization: null, pace: null, trayStatusLabel: null, updatedAt: "2026-09-09T00:00:00Z", sourceLabel: "test"};
 }
 describe("Current Limits", () => {
+  it("does not display money when the provider currency is missing", () => {
+    const p: ProviderUsageSnapshot = {...provider("devin"), cost: {used: 12, currencyCode: "", limit: null, remaining: null, period: "balance", resetsAt: null, formattedUsed: "12", formattedLimit: null}};
+    render(<CurrentLimits providers={[p]} settings={settings} />);
+    expect(screen.queryByText("DashboardBalance")).not.toBeInTheDocument();
+    expect(screen.queryByText("12")).not.toBeInTheDocument();
+  });
   it("renders all 24 providers instead of the seven-entry compact-surface cap", () => {
     render(<CurrentLimits providers={Array.from({length: 24}, (_, i) => provider(`test-${i}`))} settings={settings} />);
     expect(screen.getAllByRole("article")).toHaveLength(24);
@@ -24,7 +30,7 @@ describe("Current Limits", () => {
     expect(screen.getByText("DashboardNeedsAttention")).toBeInTheDocument();
   });
   it("keeps a provider balance distinct from reported spend", () => {
-    const p = {...provider("devin"), cost: {used: 12, currencyCode: "EUR", limit: null, remaining: null, period: "balance"}} as ProviderUsageSnapshot;
+    const p: ProviderUsageSnapshot = {...provider("devin"), cost: {used: 12, currencyCode: "EUR", limit: null, remaining: null, period: "balance", resetsAt: null, formattedUsed: "12 EUR", formattedLimit: null}};
     render(<CurrentLimits providers={[p]} settings={settings} />);
     expect(screen.getByText("DashboardBalance")).toBeInTheDocument();
     expect(screen.getByText("12 EUR")).toBeInTheDocument();

@@ -698,3 +698,12 @@ describe("scoped observations", () => {
    expect(kpis.reportedSpendTotal).toBeNull();
  });
 });
+
+it("does not promote an errored Ready snapshot into healthy KPIs or quota alerts", () => {
+  const p = provider({error: "refresh failed", primary: rateWindow({usedPercent: 98})});
+  const settings = {highUsageThreshold: 80, criticalUsageThreshold: 95};
+  const kpis = computeKpis({liveProviders: [p], snapshot: null, settings});
+  expect(kpis.activeProviderCount).toBe(0);
+  expect(kpis.highestUsageProvider).toBeNull();
+  expect(buildAlerts([p], settings).map(a=>a.kind)).toEqual(["unavailable"]);
+});

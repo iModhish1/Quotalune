@@ -96,7 +96,7 @@ export function buildAlerts(
       });
       continue;
     }
-    if (p.errorState === "localRuntimeOffline" || p.errorState === "unknown") {
+    if (p.errorState !== "ready" || !!p.error) {
       alerts.push({
         id: `unavailable-${p.providerId}`,
         severity: "warning",
@@ -164,7 +164,7 @@ export function rankProvidersByResetTime(
   providers: ProviderUsageSnapshot[],
 ): ProviderResetSchedule[] {
   const now = Date.now();
-  const connected = providers.filter((p) => p.errorState === "ready");
+  const connected = providers.filter((p) => p.errorState === "ready" && !p.error);
   const withResets: ProviderResetSchedule[] = [];
   for (const p of connected) {
     const metric = selectSingleMetricUsageWindow(p);
@@ -279,7 +279,7 @@ export interface KpiValues {
  * whichever fields come back null/empty rather than a fabricated zero.
  */
 export function computeKpis({ liveProviders, snapshot, settings }: KpiInputs): KpiValues {
-  const connected = liveProviders.filter((p) => p.errorState === "ready");
+  const connected = liveProviders.filter((p) => p.errorState === "ready" && !p.error);
 
   let highest: KpiValues["highestUsageProvider"] = null;
   for (const p of connected) {
@@ -352,7 +352,7 @@ function totalReportedSpend(
   if (contract.availability !== "available" || contract.origin !== "providerReported") return null;
   if (contract.quantityKind !== "spend") return null;
   if (contract.measurementKind !== "cumulative") return null;
-  if (!contract.currencyCode) return null;
+  if (!contract.currencyCode || !contract.period || contract.period.toLowerCase() === "unknown") return null;
 
   const latestBySeries = new Map<string, (typeof spendPoints)[number]>();
   for (const point of spendPoints) {
