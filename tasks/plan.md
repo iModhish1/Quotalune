@@ -315,3 +315,9 @@ Architecture, evidence and acceptance: docs/validation/PRODUCT_UPGRADE_AUDIT.md.
 Completed scoped implementation at `17c99c02`; final evidence and limitations in
 `docs/validation/PRODUCT_UPGRADE_VALIDATION.md`. Native testing additionally closed
 a cross-window settings feedback race. No release/Personal promotion performed.
+
+## Product V2 — L01–L09
+Follow the controlled nine-wave dependency order in
+`docs/validation/QUOTALIS_PRODUCT_ARCHITECTURE_V2_AUDIT.md`.
+Freeze settings/metric interfaces before independent implementation. Preserve all
+legacy tab IDs. Run affected gates per wave and native proof on the final binary.

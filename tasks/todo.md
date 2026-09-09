@@ -1039,3 +1039,14 @@ Evidence: `docs/validation/DASHBOARD_CONSOLIDATION.md`.
 Scoped engineering acceptance: `docs/validation/PRODUCT_UPGRADE_VALIDATION.md`.
 External consent completion and credential-store/profile resolver migration are
 not claimed complete; see that report's remaining scope.
+
+## Product V2 — L01–L09
+- [ ] Wave 0: source audit, architecture and acceptance contract.
+- [ ] Wave 1: Settings/Workspace consolidation, search, legacy links and navigation tests.
+- [ ] Wave 2: metric registry, aggregation/comparison and deterministic corpus.
+- [ ] Wave 3: shared analytical primitives and chart correctness.
+- [ ] Wave 4: Dashboard V2 and persisted meaningful presentation.
+- [ ] Wave 5: Provider Operations and supported auth lifecycle.
+- [ ] Wave 6: unified customization/reset/default propagation.
+- [ ] Wave 7: RTL/accessibility/responsive and performance benchmarks.
+- [ ] Wave 8: native evidence, all gates, final acceptance report.

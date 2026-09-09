@@ -224,3 +224,18 @@ K01–K09: scoped implementation and engineering validation completed on 2026-09
 at implementation revision `17c99c02`. Evidence and explicit external-auth/profile
 limitations: `docs/validation/PRODUCT_UPGRADE_VALIDATION.md`. No claim of 70 live
 authenticated providers, owner visual approval, or Personal promotion.
+
+## L — Major Product Evolution V2 (2026-09-09)
+
+Owner accepts K and requests a second structural evolution from clean `6fbe7a6b`.
+- L01: Fresh architecture audit, controlled waves and coherent commits.
+- L02: Five primary destinations, Workspace shell and searchable Settings Center; preserve legacy links.
+- L03: Central customization metadata, safe section resets, persisted Dashboard layout/style/templates and live propagation.
+- L04: Authoritative metric registry, availability/comparison/velocity contracts and invariant corpus.
+- L05: Dashboard V2 analytical templates, multi-window limits, attention, reset horizon, sortable comparison and quality.
+- L06: Provider Operations V2, explicit auth capabilities, prominent supported actions and cancellable bounded login.
+- L07: Central Demo controls, deterministic scenarios, no live data/credential mutations from Demo.
+- L08: English/Arabic, accessible and responsive surfaces, measured large-history behavior, no idle polling regression.
+- L09: Native Dev evidence board and full gates; final 31-item report. Personal untouched; no 3D/Spatial/Hybrid.
+
+Pending. Architecture and wave acceptance: `docs/validation/QUOTALIS_PRODUCT_ARCHITECTURE_V2_AUDIT.md`.
