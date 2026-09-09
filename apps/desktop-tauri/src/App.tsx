@@ -1,3 +1,4 @@
+import { WorkspacePresentation } from "./design-system/WorkspacePresentation";
 import { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -224,6 +225,10 @@ function AppInner() {
     );
   }
 
+  return <WorkspacePresentation initial={state.settings}><AppSurfaces state={state} surface={surface}/></WorkspacePresentation>;
+}
+
+function AppSurfaces({state, surface}: {state: BootstrapState; surface: SurfaceSnapshot}) {
   // Detached settings window — render Settings directly, skip SurfaceRouter.
   if (isSettingsWindow()) {
     return <DetachedSettingsApp state={state} />;

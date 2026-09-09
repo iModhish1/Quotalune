@@ -223,6 +223,8 @@ export interface ProviderSummary {
   order: number;
 }
 
+export interface WorkspacePreferences { density: "comfortable" | "compact"; navigation: "side" | "top" | "bottom"; }
+
 export interface SettingsSnapshot {
   enabledProviders: string[];
   providerOrder?: string[];
@@ -233,6 +235,7 @@ export interface SettingsSnapshot {
   lowPowerModePreference?: "off" | "on" | "automatic";
   dashboardMode?: DashboardModeId;
   dashboardPerformancePreset?: DashboardPerformancePreset;
+  workspacePreferences?: WorkspacePreferences | null;
   /** Phase 5.2 Demo Mode -- optional (rather than matching the Rust
    *  snapshot's always-present fields) so the many existing hand-built
    *  `SettingsSnapshot` test fixtures across the codebase don't all need
@@ -363,6 +366,7 @@ export interface SettingsUpdate {
   lowPowerModePreference?: "off" | "on" | "automatic";
   dashboardMode?: DashboardModeId;
   dashboardPerformancePreset?: DashboardPerformancePreset;
+  workspacePreferences?: WorkspacePreferences | null;
   demoModeEnabled?: boolean;
   demoProviderMode?: DemoProviderMode;
   demoProviderCount?: number;
@@ -967,6 +971,8 @@ export interface ProviderDetail {
 
   // Usage windows — mirror RateWindowSnapshot.
   session: RateWindowSnapshot | null;
+  sessionLabel?: string | null;
+  weeklyLabel?: string | null;
   weekly: RateWindowSnapshot | null;
   modelSpecific: RateWindowSnapshot | null;
   tertiary: RateWindowSnapshot | null;

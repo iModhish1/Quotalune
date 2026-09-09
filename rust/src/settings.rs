@@ -690,6 +690,24 @@ impl DashboardPerformancePreset {
     }
 }
 
+/// Shared desktop workspace presentation; no provider data or credentials.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default, rename_all = "camelCase")]
+pub struct WorkspacePreferences {
+    pub density: String,
+    pub navigation: String,
+}
+impl Default for WorkspacePreferences {
+    fn default() -> Self { Self { density: "comfortable".into(), navigation: "side".into() } }
+}
+impl WorkspacePreferences {
+    pub fn normalized(mut self) -> Self {
+        if self.density != "compact" { self.density = "comfortable".into(); }
+        if !matches!(self.navigation.as_str(), "side" | "top" | "bottom") { self.navigation = "side".into(); }
+        self
+    }
+}
+
 #[cfg(test)]
 mod dashboard_mode_tests {
     use super::{DashboardModeId, DashboardPerformancePreset};
@@ -935,6 +953,8 @@ pub struct Settings {
     /// `low_power_mode_preference` (which governs provider polling).
     #[serde(default)]
     pub dashboard_performance_preset: DashboardPerformancePreset,
+    #[serde(default)]
+    pub workspace_preferences: Option<WorkspacePreferences>,
 
     /// Phase 5.2: user-accessible Demo Mode -- previews Quotalis with
     /// simulated provider data, entirely generated on the frontend (this
@@ -1800,6 +1820,7 @@ impl Default for Settings {
             low_power_mode_preference: LowPowerModePreference::Off,
             dashboard_mode: DashboardModeId::default(),
             dashboard_performance_preset: DashboardPerformancePreset::default(),
+            workspace_preferences: None,
             demo_mode_enabled: false,
             demo_provider_mode: DemoProviderMode::default(),
             demo_provider_count: DEFAULT_DEMO_PROVIDER_COUNT,

@@ -1,3 +1,4 @@
+import { useWorkspacePresentation } from "../../design-system/WorkspacePresentation";
 import { useEffect, useRef, useState } from "react";
 
 /**
@@ -41,7 +42,8 @@ export function useChartAnimation(
   const startRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
   const prefersReduced = usePrefersReducedMotion();
-  const skip = !enabled || prefersReduced || count === 0;
+  const shared = useWorkspacePresentation();
+  const skip = !enabled || !shared.animations || prefersReduced || count === 0;
 
   useEffect(() => {
     if (skip) {

@@ -1,3 +1,5 @@
+import { workspaceThemeStyle } from "../design-system/workspaceTheme";
+import { WorkspacePreferencesControl } from "./settings/WorkspacePreferencesControl";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import type {
@@ -173,9 +175,10 @@ export function resetSettingsPanelScroll(panel: HTMLElement | null): void {
 }
 
 export default function Settings({ state, initialTab: propTab }: { state: BootstrapState; initialTab?: string }) {
-  const [navigation,setNavigation]=useState(()=>{try{return normalizeSettingsNavigation(localStorage.getItem(SETTINGS_NAVIGATION_KEY));}catch{return normalizeSettingsNavigation(null);}});
-  const [navigationError,setNavigationError]=useState(false);
+  const [legacyNavigation]=useState(()=>{try{return normalizeSettingsNavigation(localStorage.getItem(SETTINGS_NAVIGATION_KEY));}catch{return normalizeSettingsNavigation(null);}});
+
   const { settings, saving, error, update } = useSettings(state.settings);
+  const navigation = settings.workspacePreferences?.navigation ?? legacyNavigation;
   const { t } = useLocale();
   const shellTarget = useSurfaceTarget("settings");
   const initialTab: SettingsTabId =
@@ -252,6 +255,7 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
   return (
     <div
       className={`settings settings-studio${activeTab === "providers" ? " settings--providers-active" : ""}`}
+      style={workspaceThemeStyle(settings)}
       data-navigation={navigation}
     >
       <SettingsShellHeader section={t(TAB_META.find(tab=>tab.id===activeTab)!.labelKey)}>
@@ -313,10 +317,9 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
           <DashboardTab state={state} onOpenProviders={() => handleTabClick("providers")} />
         )}
         {activeTab === "general" && (
-          <><NavigationPreference value={navigation} error={navigationError} onChange={next=>{
-            setNavigation(next);
-            try{localStorage.setItem(SETTINGS_NAVIGATION_KEY,next);setNavigationError(false);}catch{setNavigationError(true);}
-          }}/><GeneralTab mode="general" settings={settings} set={set} saving={saving} /></>
+          <><NavigationPreference value={navigation} error={!!error} onChange={next=>{
+            void update({workspacePreferences: {density: settings.workspacePreferences?.density ?? "comfortable", navigation: next}});
+          }}/><WorkspacePreferencesControl settings={settings} navigation={navigation} update={update} disabled={saving}/><GeneralTab mode="general" settings={settings} set={set} saving={saving} /></>
         )}
         {activeTab === "providers" && (
           <ProvidersTab

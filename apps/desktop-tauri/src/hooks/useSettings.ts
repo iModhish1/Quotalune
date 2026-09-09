@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import type { SettingsSnapshot, SettingsUpdate } from "../types/bridge";
 import { getSettingsSnapshot, updateSettings } from "../lib/tauri";
@@ -18,15 +18,17 @@ export function useSettings(initial: SettingsSnapshot): UseSettingsReturn {
   const [settings, setSettings] = useState<SettingsSnapshot>(initial);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const revision = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
 
     setSettings(initial);
 
+    const request = ++revision.current;
     getSettingsSnapshot()
       .then((fresh) => {
-        if (!cancelled) {
+        if (!cancelled && request === revision.current) {
           setSettings(fresh);
         }
       })
@@ -38,6 +40,16 @@ export function useSettings(initial: SettingsSnapshot): UseSettingsReturn {
       cancelled = true;
     };
   }, [initial]);
+
+  // Share successful patches between multiple consumers in this webview as well.
+  useEffect(() => {
+    const receive = (event: Event) => {
+      const next = (event as CustomEvent<SettingsSnapshot>).detail;
+      if (next) { revision.current++; setSettings(next); }
+    };
+    window.addEventListener("quotalis:settings-updated", receive);
+    return () => window.removeEventListener("quotalis:settings-updated", receive);
+  }, []);
 
   // Live-sync when settings change in ANOTHER window. The detached Settings
   // window and the main/PopOut window are separate webviews with separate
@@ -53,8 +65,9 @@ export function useSettings(initial: SettingsSnapshot): UseSettingsReturn {
     for (const eventName of ["settings-changed", "quotalis:settings-updated"]) {
     Promise.resolve(
       listen(eventName, () => {
+        const request = ++revision.current;
         getSettingsSnapshot()
-          .then((fresh) => { if(active)setSettings(fresh); })
+          .then((fresh) => { if(active && request === revision.current)setSettings(fresh); })
           .catch(() => {
             // Keep the current copy if the refresh fails.
           });
@@ -80,6 +93,7 @@ export function useSettings(initial: SettingsSnapshot): UseSettingsReturn {
     setError(null);
     try {
       const next = await updateSettings(patch);
+      revision.current++;
       setSettings(next);
       if (typeof window !== "undefined") {
         window.dispatchEvent(

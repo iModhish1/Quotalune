@@ -212,3 +212,13 @@
 .settings-studio[data-navigation="top"] .settings-nav-group,.settings-studio[data-navigation="bottom"] .settings-nav-group{flex-direction:row;align-items:center;flex:none;margin:0;padding-inline-end:10px;border-inline-end:1px solid var(--border-color)}
 .settings-studio[data-navigation="top"] .settings-nav-group__label,.settings-studio[data-navigation="bottom"] .settings-nav-group__label{display:none}
 @media(max-width:560px){.settings-studio[data-navigation="side"] .settings-nav-group__label{display:none}.settings-studio[data-navigation="side"] .settings-nav-group+.settings-nav-group{border-top:1px solid var(--border-color);padding-top:8px}}
+
+/* One Structure Theme projection for the entire preferences workspace. */
+.settings.settings-studio{background:var(--workspace-bg,#101113);color:var(--text-primary)}
+.settings-studio .settings-body,.settings-studio .settings-tabs{background:var(--workspace-bg,#101113)}
+.settings-studio :is(.settings-section,.settings-studio-toolbar){background:var(--workspace-surface,#181b20);border-color:var(--workspace-edge,#30363f)}
+.settings-studio :is(.settings-section__title,.settings-shell-brand h1,.settings-studio-toolbar strong){color:var(--text-primary)}
+.settings-studio :is(.settings-section__description,.settings-field__description,.settings-tab,.settings-studio-toolbar span){color:var(--text-secondary)}
+.settings-studio .settings-tab--active{background:var(--provider-row-bg-selected);border-color:var(--workspace-edge);color:var(--text-primary)}
+.settings-studio :is(select,input:not([type="checkbox"]):not([type="range"])){background:var(--workspace-surface,#202328);color:var(--text-primary);border-color:var(--workspace-edge)}
+.settings-studio .settings-field{border-color:var(--workspace-edge)}

@@ -24,9 +24,9 @@ export interface CatalogThemeSettings {
  */
 export function resolveCatalogTheme(
   settings: CatalogThemeSettings,
-  surface: CatalogSurfaceId,
+  surface?: CatalogSurfaceId,
 ): { slug: string; source: CatalogThemeSource } {
-  const candidates = [[settings.surfaceCatalogThemes?.[surface],"surface"],
+  const candidates = [[surface ? settings.surfaceCatalogThemes?.[surface] : undefined,"surface"],
     [settings.activeProfileCatalogTheme,"profile"],[settings.catalogTheme,"global"]] as const;
   for(const [value,source] of candidates){
     const theme=value ? catalogBySlug(value) : undefined;

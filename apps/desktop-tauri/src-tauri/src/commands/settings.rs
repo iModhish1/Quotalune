@@ -15,6 +15,7 @@ pub struct SettingsUpdate {
     pub low_power_mode_preference: Option<String>,
     pub dashboard_mode: Option<String>,
     pub dashboard_performance_preset: Option<String>,
+    pub workspace_preferences: Option<quotalis_core::settings::WorkspacePreferences>,
     pub demo_mode_enabled: Option<bool>,
     pub demo_provider_mode: Option<String>,
     pub demo_provider_count: Option<u32>,
@@ -202,6 +203,7 @@ impl SettingsUpdate {
         {
             settings.dashboard_performance_preset = preset;
         }
+        if let Some(value) = &self.workspace_preferences { settings.workspace_preferences = Some(value.clone().normalized()); }
         // Phase 5.2: Demo Mode is CONFIGURATION only -- this patches the
         // persisted settings, never generates or writes any simulated
         // observation. See docs/validation/PHASE5_DEMO_MODE.md.

@@ -1706,3 +1706,17 @@ fn demo_history_days_only_ever_persists_7_or_30() {
             .expect("an odd demo_history_days must normalize, not fail");
     assert_eq!(odd.demo_history_days, 7);
 }
+
+
+#[test]
+fn workspace_preferences_roundtrip_and_invalid_field_isolation() {
+    let settings: Settings = serde_json::from_str(r#"{"workspace_preferences":{"density":"compact","navigation":"bottom"},"refresh_interval_secs":123}"#).unwrap();
+    assert_eq!(settings.workspace_preferences.as_ref().unwrap().density, "compact");
+    assert_eq!(settings.workspace_preferences.as_ref().unwrap().navigation, "bottom");
+    let encoded = serde_json::to_string(&settings).unwrap();
+    let restored: Settings = serde_json::from_str(&encoded).unwrap();
+    assert_eq!(restored.workspace_preferences, settings.workspace_preferences);
+    let invalid: Settings = serde_json::from_str(r#"{"workspace_preferences":{"density":false,"navigation":"invalid"},"refresh_interval_secs":123}"#).unwrap();
+    assert_eq!(invalid.workspace_preferences.unwrap(), WorkspacePreferences::default());
+    assert_eq!(invalid.refresh_interval_secs, 123);
+}

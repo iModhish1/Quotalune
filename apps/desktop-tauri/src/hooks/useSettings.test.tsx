@@ -80,3 +80,15 @@ describe("useSettings live sync", () => {
     await waitFor(()=>expect(eventMocks.listeners['quotalis:settings-updated']).toBeUndefined());
   });
 });
+
+
+it("accepts a same-window persisted patch and rejects an older bootstrap fetch", async () => {
+  let resolve!: (value: SettingsSnapshot) => void;
+  tauriMocks.getSettingsSnapshot.mockReturnValueOnce(new Promise<SettingsSnapshot>(r => {resolve=r;}));
+  const initial = snapshot(100);
+  const {result} = renderHook(() => useSettings(initial));
+  act(() => window.dispatchEvent(new CustomEvent("quotalis:settings-updated", {detail:snapshot(175)})));
+  expect(result.current.settings.windowScalePercent).toBe(175);
+  await act(async () => resolve(snapshot(100)));
+  expect(result.current.settings.windowScalePercent).toBe(175);
+});

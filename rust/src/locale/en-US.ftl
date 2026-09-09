@@ -1124,3 +1124,33 @@ NavCustomize = Appearance & limits
 NavPreferences = Preferences
 
 NavSystem = System
+
+ProviderWorkspaceHelp = Manage monitoring, connections and account configuration. Enabled does not mean connected.
+
+ProviderWorkspaceFilter = Show
+
+ProviderDemoReadOnly = Simulated provider — read-only preview. Exit Demo to manage real connections and credentials.
+
+WorkspaceDensity = Workspace density
+
+WorkspaceDensityHelp = Apply consistent spacing to provider lists, detail cards, settings and analytics tables.
+
+WorkspaceComfortable = Comfortable
+
+WorkspaceCompact = Compact
+
+MonetaryReportingPeriod = Reporting period
+
+ChartLocalLogScope = Device-local session logs for this provider. These totals are not scoped to the selected signed-in account.
+
+ProfileProviderMembership = Provider membership
+
+ProfileMembershipHelp = Profiles choose which providers are monitored. They do not sign in or switch credentials; manage actual accounts in Providers.
+
+SpendReadingScope = Latest provider-reported cumulative readings in this range, not spending accrued during the selected dates.
+
+ProviderWorkspaceOverview = Overview
+
+ProviderWorkspaceConnections = Connections & accounts
+
+ProviderWorkspacePresentation = Display preferences

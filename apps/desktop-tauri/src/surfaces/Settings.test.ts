@@ -8,10 +8,10 @@ describe("Settings navigation", () => {
     // that opens a separate window -- so it leads this list.
     expect(TAB_META.slice(0, 5)).toEqual([
       { id: "dashboard", labelKey: "TabDashboard" },
-      { id: "providerDisplay", labelKey: "TabProviderDisplay" },
+      { id: "usageSpend", labelKey: "TabUsageSpend" },
+      { id: "providers", labelKey: "TabProviders" },
       { id: "collections", labelKey: "TabCollections" },
       { id: "profiles", labelKey: "TabProfiles" },
-      { id: "providers", labelKey: "TabProviders" },
     ]);
   });
 

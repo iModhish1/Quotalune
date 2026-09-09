@@ -32,6 +32,14 @@ where
     }
 }
 
+fn deserialize_workspace_preferences<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<super::WorkspacePreferences>, D::Error> {
+    let value = serde_json::Value::deserialize(d)?;
+    Ok(value.as_object().map(|object| super::WorkspacePreferences {
+        density: object.get("density").and_then(|v| v.as_str()).unwrap_or("comfortable").into(),
+        navigation: object.get("navigation").and_then(|v| v.as_str()).unwrap_or("side").into(),
+    }.normalized()))
+}
+
 /// Raw on-disk shape of [`Settings`] used purely for deserialization.
 ///
 /// It mirrors the canonical `Settings` fields but ALSO accepts the legacy
@@ -62,6 +70,8 @@ pub(super) struct RawSettings {
         deserialize_with = "deserialize_dashboard_performance_preset_lenient"
     )]
     dashboard_performance_preset: super::DashboardPerformancePreset,
+    #[serde(default, deserialize_with = "deserialize_workspace_preferences")]
+    workspace_preferences: Option<super::WorkspacePreferences>,
 
     #[serde(default)]
     demo_mode_enabled: bool,
@@ -327,6 +337,7 @@ impl Default for RawSettings {
             low_power_mode_preference: Some(s.low_power_mode_preference),
             dashboard_mode: s.dashboard_mode,
             dashboard_performance_preset: s.dashboard_performance_preset,
+            workspace_preferences: s.workspace_preferences,
             demo_mode_enabled: s.demo_mode_enabled,
             demo_provider_mode: s.demo_provider_mode,
             demo_provider_count: s.demo_provider_count,
@@ -701,6 +712,7 @@ impl From<RawSettings> for Settings {
             low_power_mode_preference,
             dashboard_mode: raw.dashboard_mode,
             dashboard_performance_preset: raw.dashboard_performance_preset,
+            workspace_preferences: raw.workspace_preferences,
             demo_mode_enabled: raw.demo_mode_enabled,
             demo_provider_mode: raw.demo_provider_mode,
             // A corrupt/legacy value (0, or missing -> 0) must not silently

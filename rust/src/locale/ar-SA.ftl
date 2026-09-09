@@ -347,3 +347,33 @@ NavCustomize = المظهر والحدود
 NavPreferences = التفضيلات
 
 NavSystem = النظام
+
+ProviderWorkspaceHelp = إدارة المتابعة والاتصالات وإعدادات الحساب. التفعيل لا يعني اكتمال الاتصال.
+
+ProviderWorkspaceFilter = عرض
+
+ProviderDemoReadOnly = مزوّد محاكاة — معاينة للقراءة فقط. اخرج من الوضع التجريبي لإدارة الاتصالات وبيانات الاعتماد الحقيقية.
+
+WorkspaceDensity = كثافة مساحة العمل
+
+WorkspaceDensityHelp = تطبيق مسافات متناسقة على قوائم المزوّدين وبطاقات التفاصيل والإعدادات وجداول التحليلات.
+
+WorkspaceComfortable = مريح
+
+WorkspaceCompact = مكثّف
+
+MonetaryReportingPeriod = فترة التقرير
+
+ChartLocalLogScope = سجلات الجلسات المحلية لهذا المزوّد على الجهاز. هذه الإجماليات غير مقصورة على الحساب المسجّل المحدد.
+
+ProfileProviderMembership = عضوية المزوّدين
+
+ProfileMembershipHelp = تحدد الملفات المزوّدين المشمولين بالمتابعة، ولا تسجّل الدخول أو تبدّل بيانات الاعتماد. تُدار الحسابات الفعلية من صفحة المزوّدين.
+
+SpendReadingScope = آخر قراءات الإنفاق التراكمي المُبلّغ عنها ضمن النطاق، وليست الإنفاق المتحقق خلال التواريخ المحددة.
+
+ProviderWorkspaceOverview = نظرة عامة
+
+ProviderWorkspaceConnections = الاتصالات والحسابات
+
+ProviderWorkspacePresentation = تفضيلات العرض
