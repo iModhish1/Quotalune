@@ -403,3 +403,24 @@ ProviderStatusError = خطأ في التحديث
 ProviderStatusDisabled = غير مفعّل
 
 ProviderStatusLoading = جارٍ التحديث
+
+# Product V2 settings center
+V2Workspace = مساحة العمل
+V2Settings = الإعدادات
+V2SettingsHelp = مكان واحد لتخصيص Quotalis. تُطبّق التغييرات ضمن نطاقها المحدد.
+V2WorkspaceHelp = نظّم ملفات المتابعة ومجموعات المزوّدين. يحتفظ كل منها بإعداداته المستقلة.
+V2SearchSettings = البحث في الإعدادات
+V2SearchPlaceholder = الثيم، إعادة التعيين، الكثافة…
+V2SearchEmpty = لا توجد إعدادات مطابقة. جرّب كلمة أخرى.
+V2SettingsCategories = فئات الإعدادات
+V2PrimaryNavigation = التنقل الرئيسي
+V2Appearance = المظهر
+V2LimitsReset = الحدود وإعادة التعيين
+V2NavigationSurfaces = التنقل والنوافذ
+V2GeneralHelp = بدء التشغيل واللغة والتفضيلات الأساسية
+V2AppearanceHelp = ثيم البنية وهوية المزوّدين وكثافة العرض
+V2DashboardHelp = التحليلات والتخطيط والأداء والوضع التجريبي
+V2ResetHelp = عرض إعادة التعيين والوقت والتنسيق الإقليمي
+V2NotificationsHelp = التنبيهات والحدود والأصوات
+V2SurfacesHelp = التنقل والقوائم والنوافذ العائمة
+V2AdvancedHelp = التشخيص والبيانات المحلية وإصدار التطبيق

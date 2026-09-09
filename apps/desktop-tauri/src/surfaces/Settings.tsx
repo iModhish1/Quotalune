@@ -12,7 +12,7 @@ import { useSettings } from "../hooks/useSettings";
 import { useSurfaceTarget } from "../hooks/useSurfaceMode";
 import { useLocale } from "../hooks/useLocale";
 import { setSurfaceMode } from "../lib/tauri";
-import { TAB_META, SETTINGS_GROUPS, isSettingsTab } from "./settings/settingsTabs";
+import { isSettingsTab } from "./settings/settingsTabs";
 import GeneralTab from "./settings/tabs/GeneralTab";
 import DisplayTab from "./settings/tabs/DisplayTab";
 import AdvancedTab from "./settings/tabs/AdvancedTab";
@@ -32,6 +32,14 @@ import NavigationPreference from "./settings/NavigationPreference";
 import "./settings/SettingsStudio.css";
 import SettingsWindowActions from "./settings/SettingsWindowActions";
 import SettingsShellHeader from "./settings/SettingsShellHeader";
+import SettingsShell, {WorkspaceShell} from "./settings/SettingsShell";
+import {PRIMARY_GROUPS, PRIMARY_DESTINATIONS, primaryDestination} from "./settings/settingsCenterRegistry";
+
+function ContentShell({tab, navigate, children}: {tab: SettingsTabId; navigate: (tab: SettingsTabId) => void; children: ReactNode}) {
+  const destination = primaryDestination(tab);
+  return destination === "settings" ? <SettingsShell activeTab={tab} onNavigate={navigate}>{children}</SettingsShell>
+    : destination === "workspace" ? <WorkspaceShell activeTab={tab} onNavigate={navigate}>{children}</WorkspaceShell> : <>{children}</>;
+}
 
 // Inline monochrome SVG icons stand in for the upstream macOS SF Symbols
 // (gearshape / square.grid.2x2 / eye / slider.horizontal.3 / info.circle).
@@ -250,24 +258,25 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
     }
   }, [shellTarget]);
 
+  const primary = primaryDestination(activeTab);
   return (
     <div
       className={`settings settings-studio${activeTab === "providers" ? " settings--providers-active" : ""}`}
       style={workspaceThemeStyle(settings)}
       data-navigation={navigation}
     >
-      <SettingsShellHeader section={t(TAB_META.find(tab=>tab.id===activeTab)!.labelKey)}>
+      <SettingsShellHeader section={t(PRIMARY_DESTINATIONS.find(tab=>tab.id===primary)!.labelKey)}>
         <SettingsWindowActions />
       </SettingsShellHeader>
       {/* tab bar */}
-      <nav className="settings-tabs" role="tablist" aria-label="Settings sections" aria-orientation={navigation==="side"?"vertical":"horizontal"} onWheel={event=>{
+      <nav className="settings-tabs" role="tablist" aria-label={t("V2PrimaryNavigation")} aria-orientation={navigation==="side"?"vertical":"horizontal"} onWheel={event=>{
         if(navigation==="side")return;
         const delta=horizontalNavigationScrollDelta(event.deltaX,event.deltaY);
         if(delta===0)return;
         event.currentTarget.scrollLeft+=delta;
         event.preventDefault();
       }}>
-        {SETTINGS_GROUPS.map(group => <div className="settings-nav-group" role="group" aria-label={t(group.labelKey)} key={group.labelKey}>
+        {PRIMARY_GROUPS.map(group => <div className="settings-nav-group" role="group" aria-label={t(group.labelKey)} key={group.labelKey}>
           <span className="settings-nav-group__label" aria-hidden="true">{t(group.labelKey)}</span>
           {group.tabs.map((tab) => (
           <button
@@ -276,24 +285,25 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
             role="tab"
             id={`settings-tab-${tab.id}`}
             aria-controls="settings-active-panel"
-            tabIndex={activeTab === tab.id ? 0 : -1}
-            aria-selected={activeTab === tab.id}
-            className={`settings-tab ${activeTab === tab.id ? "settings-tab--active" : ""}`}
-            onClick={() => handleTabClick(tab.id)}
+            tabIndex={primary === tab.id ? 0 : -1}
+            aria-selected={primary === tab.id}
+            className={`settings-tab ${primary === tab.id ? "settings-tab--active" : ""}`}
+            onClick={() => handleTabClick(tab.target)}
             onKeyDown={(event) => {
-              const previous = navigation === "side" ? "ArrowUp" : "ArrowLeft";
-              const next = navigation === "side" ? "ArrowDown" : "ArrowRight";
-              const index = TAB_META.findIndex(item => item.id === tab.id);
-              const target = event.key === "Home" ? 0 : event.key === "End" ? TAB_META.length - 1
-                : event.key === next ? (index + 1) % TAB_META.length
-                : event.key === previous ? (index - 1 + TAB_META.length) % TAB_META.length : -1;
+              const rtl = document.documentElement.dir === "rtl";
+              const previous = navigation === "side" ? "ArrowUp" : rtl ? "ArrowRight" : "ArrowLeft";
+              const next = navigation === "side" ? "ArrowDown" : rtl ? "ArrowLeft" : "ArrowRight";
+              const index = PRIMARY_DESTINATIONS.findIndex(item => item.id === tab.id);
+              const target = event.key === "Home" ? 0 : event.key === "End" ? PRIMARY_DESTINATIONS.length - 1
+                : event.key === next ? (index + 1) % PRIMARY_DESTINATIONS.length
+                : event.key === previous ? (index - 1 + PRIMARY_DESTINATIONS.length) % PRIMARY_DESTINATIONS.length : -1;
               if (target < 0) return;
               event.preventDefault();
-              handleTabClick(TAB_META[target].id);
-              document.getElementById(`settings-tab-${TAB_META[target].id}`)?.focus();
+              handleTabClick(PRIMARY_DESTINATIONS[target].target);
+              document.getElementById(`settings-tab-${PRIMARY_DESTINATIONS[target].id}`)?.focus();
             }}
           >
-            <span className="settings-tab__icon">{TabIcons[tab.id]}</span>
+            <span className="settings-tab__icon">{TabIcons[tab.target]}</span>
             <span className="settings-tab__label">{t(tab.labelKey)}</span>
           </button>
         ))}
@@ -310,14 +320,13 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
       )}
 
       {/* tab panels */}
-      <div ref={panelRef} id="settings-active-panel" role="tabpanel" aria-labelledby={`settings-tab-${activeTab}`} tabIndex={0} data-tab={activeTab} className={`settings-body${activeTab === "providers" ? " settings-body--providers" : ""}`}>
+      <div ref={panelRef} id="settings-active-panel" role="tabpanel" aria-labelledby={`settings-tab-${primary}`} tabIndex={0} data-tab={activeTab} className={`settings-body${activeTab === "providers" ? " settings-body--providers" : ""}`}>
+        <ContentShell tab={activeTab} navigate={handleTabClick}>
         {activeTab === "dashboard" && (
           <DashboardTab state={state} onOpenProviders={() => handleTabClick("providers")} />
         )}
         {activeTab === "general" && (
-          <><NavigationPreference value={navigation} error={!!error} onChange={next=>{
-            void update({workspacePreferences: {density: settings.workspacePreferences?.density ?? "comfortable", navigation: next}});
-          }}/><WorkspacePreferencesControl settings={settings} navigation={navigation} update={update} disabled={saving}/><GeneralTab mode="general" settings={settings} set={set} saving={saving} /></>
+          <GeneralTab mode="general" settings={settings} set={set} saving={saving} />
         )}
         {activeTab === "providers" && (
           <ProvidersTab
@@ -355,7 +364,9 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
           />
         )}
         {activeTab === "menuBar" && (
-          <DisplayTab mode="menuBar" settings={settings} set={set} saving={saving} />
+          <><NavigationPreference value={navigation} error={!!error} onChange={next=>{
+            void update({workspacePreferences: {density: settings.workspacePreferences?.density ?? "comfortable", navigation: next}});
+          }}/><DisplayTab mode="menuBar" settings={settings} set={set} saving={saving} /></>
         )}
         {activeTab === "menu" && (
           <DisplayTab mode="menu" settings={settings} set={set} saving={saving} />
@@ -365,7 +376,7 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
         )}
         {activeTab === "surfaces" && <SurfacesTab />}
         {activeTab === "themes" && (
-          <ThemeGallery />
+          <><WorkspacePreferencesControl settings={settings} navigation={navigation} update={update} disabled={saving}/><ThemeGallery /></>
         )}
         {activeTab === "advanced" && (
           <AdvancedTab settings={settings} set={set} saving={saving} />
@@ -373,6 +384,7 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
         {activeTab === "about" && (
           <AboutTab settings={settings} set={set} saving={saving} />
         )}
+        </ContentShell>
       </div>
     </div>
   );

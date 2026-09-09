@@ -18,7 +18,6 @@ import { useEffectiveProviders } from "../../../hooks/useEffectiveProviders";
 import { providerOperationalState } from "../providers/providerOperationalState";
 import CurrentLimits from "../../dashboard/analytics/CurrentLimits";
 import DemoIndicator from "../../../demoMode/DemoIndicator";
-import DemoSettingsSection from "../../../demoMode/DemoSettingsSection";
 import "../providers/ProviderWorkspace.css";
 
 interface ProvidersTabProps {
@@ -126,7 +125,6 @@ export default function ProvidersTab({
         <div className="provider-workspace__counts"><span><strong>{rows.filter(p => p.enabled).length}</strong> {t("ProviderEnabled")}</span><span><strong>{rows.filter(p => p.enabled && p.status !== "ok").length}</strong> {t("DashboardNeedsAttention")}</span></div>
       </header>
       {isDemo && <DemoIndicator providerCount={snapshots.length} onExit={() => set({demoModeEnabled: false})} />}
-      <details className="provider-workspace__demo"><summary>{t("DashboardStudioDemoSectionTitle")}</summary><DemoSettingsSection settings={settings} update={set} catalog={providers} /></details>
       <div className="provider-workspace__toolbar"><label>{t("ProviderWorkspaceFilter")} <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
         <option value="all">{t("PanelAllProviders")}</option><option value="enabled">{t("ProviderEnabled")}</option><option value="attention">{t("DashboardNeedsAttention")}</option><option value="disabled">{t("ProviderDisabled")}</option>
       </select></label><span>{visibleRows.length} / {rows.length}</span></div>

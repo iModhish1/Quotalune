@@ -1158,3 +1158,24 @@ ProviderWorkspacePresentation = Display preferences
 ActionSignIn = Sign in
 
 ProviderDeviceCodeHelp = Enter this code on the GitHub verification page opened in your browser. Keep this panel open until sign-in finishes.
+
+# Product V2 settings center
+V2Workspace = Workspace
+V2Settings = Settings
+V2SettingsHelp = One place to shape Quotalis. Changes apply to their stated scope.
+V2WorkspaceHelp = Organize monitoring profiles and provider collections. Each keeps its own configuration.
+V2SearchSettings = Search settings
+V2SearchPlaceholder = Theme, reset, density…
+V2SearchEmpty = No matching settings. Try another keyword.
+V2SettingsCategories = Settings categories
+V2PrimaryNavigation = Primary navigation
+V2Appearance = Appearance
+V2LimitsReset = Limits & Reset
+V2NavigationSurfaces = Navigation & Surfaces
+V2GeneralHelp = Startup, language and basic preferences
+V2AppearanceHelp = Structure Theme, provider identity and density
+V2DashboardHelp = Analytics, layout, performance and Demo
+V2ResetHelp = Reset presentation, time and regional formatting
+V2NotificationsHelp = Alerts, thresholds and sounds
+V2SurfacesHelp = Navigation, menus and floating windows
+V2AdvancedHelp = Diagnostics, local data and application version
