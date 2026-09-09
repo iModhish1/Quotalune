@@ -1,7 +1,8 @@
+import { useWorkspacePresentation } from "../../../../../design-system/WorkspacePresentation";
 import { type CSSProperties, useEffect, useState } from "react";
-import { getProviderChartData, getSettingsSnapshot } from "../../../../../lib/tauri";
+import { getProviderChartData } from "../../../../../lib/tauri";
 import { providerSupportsChartData } from "../../../../../lib/providerCharts";
-import type { ProviderChartData, SettingsSnapshot } from "../../../../../types/bridge";
+import type { ProviderChartData } from "../../../../../types/bridge";
 import type { useLocale } from "../../../../../hooks/useLocale";
 import { CostHistoryChart } from "./CostHistoryChart";
 import { CreditsHistoryChart } from "./CreditsHistoryChart";
@@ -32,7 +33,7 @@ type TabKey = "tokens" | "cost" | "credits" | "usage";
 export function ChartsSection({ providerId, accountEmail, accentColor, t }: Props) {
   const [data, setData] = useState<ProviderChartData | null>(null);
   const [active, setActive] = useState<TabKey | null>(null);
-  const [animations, setAnimations] = useState(true);
+  const { animations } = useWorkspacePresentation();
 
   useEffect(() => {
     let cancelled = false;
@@ -54,22 +55,6 @@ export function ChartsSection({ providerId, accountEmail, accentColor, t }: Prop
       cancelled = true;
     };
   }, [providerId, accountEmail]);
-
-  useEffect(() => {
-    let cancelled = false;
-    getSettingsSnapshot()
-      .then((s: SettingsSnapshot) => {
-        if (!cancelled) {
-          setAnimations(s.enableAnimations);
-        }
-      })
-      .catch(() => {
-        // Keep defaults on failure.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [providerId]);
 
   if (!data) return null;
 
@@ -122,6 +107,7 @@ export function ChartsSection({ providerId, accountEmail, accentColor, t }: Prop
         ))}
       </div>
       <div className="provider-detail-charts__body" role="tabpanel">
+        {current === "tokens" && <p className="settings-section__description">{t("ChartLocalLogScope")}</p>}
         {current === "tokens" && (
           <TokensHistoryChart
             data={data.tokensHistory}

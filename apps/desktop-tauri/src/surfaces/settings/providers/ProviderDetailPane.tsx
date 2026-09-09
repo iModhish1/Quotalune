@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer } from "react";
+import { useCallback, useEffect, useReducer, useRef } from "react";
 import type { SettingsSnapshot, SettingsUpdate } from "../../../types/bridge";
 import { useLocale } from "../../../hooks/useLocale";
 import {
@@ -21,6 +21,7 @@ import {
   providerDetailPaneReducer,
 } from "./providerDetailPaneState";
 import { buildSubtitle } from "./providerDetailFormat";
+import { ProviderDetailWorkspace } from "./ProviderDetailWorkspace";
 import { IdentitySection } from "./sections/IdentitySection";
 import { UsageSection } from "./sections/UsageSection";
 import { PaceSection } from "./sections/PaceSection";
@@ -72,6 +73,12 @@ export function ProviderDetailPane({
   onSettingsChange,
 }: Props) {
   const { t } = useLocale();
+  const selectedProviderRef = useRef(providerId);
+  const actionSequenceRef = useRef(0);
+  if (selectedProviderRef.current !== providerId) {
+    actionSequenceRef.current += 1;
+  }
+  selectedProviderRef.current = providerId;
   const [state, dispatch] = useReducer(
     providerDetailPaneReducer,
     { wayfinderGatewayUrl, providerId },
@@ -105,6 +112,7 @@ export function ProviderDetailPane({
     dispatch({ type: "SET_BUSY", busy: value });
 
   const load = useCallback(async (id: string, signal?: { stale: boolean }) => {
+    if (selectedProviderRef.current !== id) return;
     dispatch({ type: "LOAD_START" });
     try {
       const [next, cookieOpts, regionOpts, storageStatus] = await Promise.all([
@@ -113,7 +121,7 @@ export function ProviderDetailPane({
         getProviderRegionOptions(id),
         getCredentialStorageStatus(),
       ]);
-      if (signal?.stale) return;
+      if (signal?.stale || selectedProviderRef.current !== id) return;
       dispatch({
         type: "LOAD_SUCCESS",
         detail: next,
@@ -122,12 +130,14 @@ export function ProviderDetailPane({
         credentialStatus: storageStatus,
       });
     } catch (e) {
-      if (signal?.stale) return;
+      if (signal?.stale || selectedProviderRef.current !== id) return;
       dispatch({ type: "LOAD_ERROR", error: String(e) });
     } finally {
       // Keep stale guard — concurrent provider switches must not clear loading
       // for the in-flight replacement load.
-      if (!signal?.stale) dispatch({ type: "LOAD_FINISH" });
+      if (!signal?.stale && selectedProviderRef.current === id) {
+        dispatch({ type: "LOAD_FINISH" });
+      }
     }
   }, []);
 
@@ -210,53 +220,76 @@ export function ProviderDetailPane({
   const credKey = `${detail.id}-${credentialRevision}`;
 
   const handleRefresh = async () => {
+    const actionProviderId = detail.id;
+    const sequence = ++actionSequenceRef.current;
+    const isCurrent = () =>
+      selectedProviderRef.current === actionProviderId &&
+      actionSequenceRef.current === sequence;
     setBusy(true);
+    dispatch({ type: "SET_ERROR", error: null });
     try {
       await refreshProviders();
     } catch (e) {
-      setErr(e);
+      if (isCurrent()) setErr(e);
     } finally {
-      setBusy(false);
+      if (isCurrent()) setBusy(false);
     }
   };
 
   const handleSwitchAccount = async () => {
+    const actionProviderId = detail.id;
+    const sequence = ++actionSequenceRef.current;
+    const isCurrent = () =>
+      selectedProviderRef.current === actionProviderId &&
+      actionSequenceRef.current === sequence;
     setBusy(true);
+    dispatch({ type: "SET_ERROR", error: null });
     try {
-      await triggerProviderLogin(detail.id);
+      await triggerProviderLogin(actionProviderId);
+      if (!isCurrent()) return;
       dispatch({ type: "BUMP_CREDENTIAL_REVISION" });
       await refreshProviders();
-      await load(detail.id);
+      if (!isCurrent()) return;
+      await load(actionProviderId);
     } catch (e) {
-      setErr(e);
+      if (isCurrent()) setErr(e);
     } finally {
-      setBusy(false);
+      if (isCurrent()) setBusy(false);
     }
   };
 
   const handleRevokeCredentials = async () => {
+    const actionProviderId = detail.id;
+    const sequence = ++actionSequenceRef.current;
+    const isCurrent = () =>
+      selectedProviderRef.current === actionProviderId &&
+      actionSequenceRef.current === sequence;
     setBusy(true);
     dispatch({ type: "SET_ERROR", error: null });
     try {
-      await revokeProviderCredentials(detail.id);
+      await revokeProviderCredentials(actionProviderId);
+      if (!isCurrent()) return;
       dispatch({ type: "BUMP_CREDENTIAL_REVISION" });
-      await load(detail.id);
+      await load(actionProviderId);
     } catch (e) {
-      setErr(e);
+      if (isCurrent()) setErr(e);
     } finally {
-      setBusy(false);
+      if (isCurrent()) setBusy(false);
     }
   };
 
+  const reportCurrentActionError = (e: unknown) => {
+    if (selectedProviderRef.current === detail.id) setErr(e);
+  };
   const handleOpenDashboard = () => {
-    void openProviderDashboard(detail.id).catch(setErr);
+    void openProviderDashboard(detail.id).catch(reportCurrentActionError);
   };
   const handleOpenStatusPage = () => {
-    void openProviderStatusPage(detail.id).catch(setErr);
+    void openProviderStatusPage(detail.id).catch(reportCurrentActionError);
   };
   const handleBuyCredits = () => {
     if (detail.buyCreditsUrl) {
-      void openProviderDashboard(detail.id).catch(setErr);
+      void openProviderDashboard(detail.id).catch(reportCurrentActionError);
     }
   };
 
@@ -266,6 +299,11 @@ export function ProviderDetailPane({
 
       {detail.lastError && (
         <ProviderIssueNotice detail={detail} t={t} />
+      )}
+      {error && (
+        <div className="provider-detail-error" role="alert">
+          {error}
+        </div>
       )}
 
       <div className="provider-detail-overview">
@@ -286,7 +324,18 @@ export function ProviderDetailPane({
         />
       </div>
 
-      <div className="provider-detail-workspace">
+      <ProviderDetailWorkspace key={detail.id}
+        overview={<>
+          <PaceSection pace={detail.errorState === "ready" ? detail.pace : null} t={t} />
+          <CostSection providerId={detail.id} cost={detail.errorState === "ready" ? detail.cost : null} relative={resetTimeRelative} t={t} />
+        <ChartsSection
+          providerId={detail.id}
+          accountEmail={detail.email}
+          accentColor={providerAccentColors[detail.id]}
+          t={t}
+        />
+        </>}
+        connections={<>
         {detail.id === "wayfinder" && (
           <WayfinderGatewaySection
             draft={gatewayDraft}
@@ -300,22 +349,6 @@ export function ProviderDetailPane({
             t={t}
           />
         )}
-        <MenuBarMetricSection
-          provider={detail}
-          providerMetrics={providerMetrics}
-          disabled={settingsDisabled}
-          t={t}
-          onChange={onSettingsChange}
-        />
-        <AccentColorSection
-          providerId={detail.id}
-          accentColor={providerAccentColors[detail.id] ?? null}
-          t={t}
-          onChange={onSettingsChange}
-        />
-        <PaceSection pace={detail.pace} t={t} />
-        <CostSection cost={detail.cost} t={t} />
-
         <GrokUsageSourceSection
           providerId={detail.id}
           currentValue={detail.usageSource}
@@ -358,13 +391,23 @@ export function ProviderDetailPane({
           providerId={detail.id}
           cookieDomain={cookieDomain}
         />
-        <ChartsSection
-          providerId={detail.id}
-          accountEmail={detail.email}
-          accentColor={providerAccentColors[detail.id]}
+        </>}
+        presentation={<>
+        <MenuBarMetricSection
+          provider={detail}
+          providerMetrics={providerMetrics}
+          disabled={settingsDisabled}
           t={t}
+          onChange={onSettingsChange}
         />
-      </div>
+        <AccentColorSection
+          providerId={detail.id}
+          accentColor={providerAccentColors[detail.id] ?? null}
+          t={t}
+          onChange={onSettingsChange}
+        />
+        </>}
+      />
 
     </div>
   );

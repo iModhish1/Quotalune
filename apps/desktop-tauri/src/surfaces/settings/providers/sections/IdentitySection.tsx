@@ -1,3 +1,5 @@
+import { useLocale } from "../../../../hooks/useLocale";
+import { resolveIntlLocale } from "../../../../i18n/resolveIntlLocale";
 import type { ProviderDetail } from "../../../../types/bridge";
 import type { LocaleKey } from "../../../../i18n/keys";
 import { ProviderIcon } from "../../../../components/providers/ProviderIcon";
@@ -16,11 +18,15 @@ interface Props {
  * `rust/src/native_ui/preferences.rs::render_provider_detail_panel` (~4301).
  */
 export function IdentitySection({ provider, subtitle, t }: Props) {
+  const { language } = useLocale();
+  const observedAt = provider.lastUpdated ? new Date(provider.lastUpdated) : null;
+  const observedLabel = observedAt && Number.isFinite(observedAt.getTime()) ? new Intl.DateTimeFormat(resolveIntlLocale(language), {dateStyle:"medium", timeStyle:"short", numberingSystem:"latn"}).format(observedAt) : t("NeverUpdated");
   const rows: { label: string; value: string | null }[] = [
     { label: t("Account"), value: provider.email ?? provider.organization },
     { label: t("Plan"), value: displayIdentityValue(provider.plan, t) },
     { label: t("AuthType"), value: provider.authType },
     { label: t("DataSource"), value: provider.sourceLabel },
+    { label: t("LastUpdated"), value: observedLabel },
   ];
   const visible = rows.filter(
     (r): r is { label: string; value: string } =>

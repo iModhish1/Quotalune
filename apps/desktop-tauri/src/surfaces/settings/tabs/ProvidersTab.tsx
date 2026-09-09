@@ -10,12 +10,16 @@ import type { LocaleKey } from "../../../i18n/keys";
 import {
   ProvidersSidebar,
   type ProviderSidebarRow,
-  type ProviderSidebarStatus,
 } from "../providers/ProvidersSidebar";
 import { ProviderDetailPane } from "../providers/ProviderDetailPane";
 import { reorderProviders } from "../../../lib/tauri";
 import { selectSingleMetricUsageWindow } from "../../../lib/usageWindows";
-import { useProviders } from "../../../hooks/useProviders";
+import { useEffectiveProviders } from "../../../hooks/useEffectiveProviders";
+import { providerOperationalState } from "../providers/providerOperationalState";
+import CurrentLimits from "../../dashboard/analytics/CurrentLimits";
+import DemoIndicator from "../../../demoMode/DemoIndicator";
+import DemoSettingsSection from "../../../demoMode/DemoSettingsSection";
+import "../providers/ProviderWorkspace.css";
 
 interface ProvidersTabProps {
   settings: BootstrapState["settings"];
@@ -31,9 +35,11 @@ export default function ProvidersTab({
   saving,
 }: ProvidersTabProps) {
   const { t } = useLocale();
-  const { providers: snapshots } = useProviders();
+  const { providers: snapshots, provenance } = useEffectiveProviders(settings, providers);
+  const isDemo = provenance === "demo";
+  const [statusFilter, setStatusFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(
-    providers[0]?.id ?? null,
+    providers.find(p => settings.enabledProviders.includes(p.id))?.id ?? providers[0]?.id ?? null,
   );
   // Locally-owned catalog order so drag-reorder feels instant before the
   // backend `reorder_providers` round-trip settles.
@@ -47,8 +53,8 @@ export default function ProvidersTab({
   }
 
   const enabled = useMemo(
-    () => new Set(settings.enabledProviders),
-    [settings.enabledProviders],
+    () => new Set(isDemo ? snapshots.map(p => p.providerId) : settings.enabledProviders),
+    [settings.enabledProviders, isDemo, snapshots],
   );
 
   const toggle = (id: string, on: boolean) => {
@@ -65,32 +71,25 @@ export default function ProvidersTab({
 
   const rows: ProviderSidebarRow[] = useMemo(() => {
     const snapshotMap = new Map(snapshots.map((s) => [s.providerId, s]));
-    return orderedProviders.map((p) => {
+    return orderedProviders.filter(p => !isDemo || snapshotMap.has(p.id)).map((p) => {
       const isOn = enabled.has(p.id);
       const snap = snapshotMap.get(p.id) ?? null;
       return {
         id: p.id,
         displayName: p.displayName,
         enabled: isOn,
-        status: deriveProviderStatus(isOn, snap),
+        status: providerOperationalState(isOn, snap),
         subtitlePrimary: providerSidebarSubtitle(p.id, isOn, snap, t),
-        subtitleSecondary: providerSidebarMetric(snap),
+        subtitleSecondary: isOn ? providerSidebarMetric(snap) : undefined,
       };
     });
-  }, [enabled, orderedProviders, snapshots, t]);
+  }, [enabled, orderedProviders, snapshots, t, isDemo]);
 
   const normalizedSearch = searchText.trim().toLowerCase();
-  const visibleRows = useMemo(
-    () =>
-      normalizedSearch
-        ? rows.filter((row) => {
-            const name = row.displayName.toLowerCase();
-            const id = row.id.toLowerCase();
-            return name.includes(normalizedSearch) || id.includes(normalizedSearch);
-          })
-        : rows,
-    [normalizedSearch, rows],
-  );
+  const visibleRows = useMemo(() => rows.filter(row =>
+    (!normalizedSearch || row.displayName.toLowerCase().includes(normalizedSearch) || row.id.toLowerCase().includes(normalizedSearch)) &&
+    (statusFilter === "all" || (statusFilter === "enabled" ? row.enabled : statusFilter === "attention" ? row.enabled && row.status !== "ok" : !row.enabled))),
+    [rows, normalizedSearch, statusFilter]);
 
   // Derive selection from visible rows — no effect to mirror/adjust state.
   const resolvedSelectedId =
@@ -102,7 +101,7 @@ export default function ProvidersTab({
 
   const handleReorder = (ids: string[]) => {
     const byId = new Map(orderedProviders.map((p) => [p.id, p]));
-    const nextIds = normalizedSearch
+    const nextIds = normalizedSearch || statusFilter !== "all"
       ? mergeFilteredOrder(
           orderedProviders.map((p) => p.id),
           new Set(visibleRows.map((row) => row.id)),
@@ -122,7 +121,16 @@ export default function ProvidersTab({
     orderedProviders.find((p) => p.id === resolvedSelectedId) ?? null;
 
   return (
-    <div className="provider-split">
+    <div className="provider-workspace">
+      <header className="provider-workspace__header"><div><h2>{t("TabProviders")}</h2><p>{t("ProviderWorkspaceHelp")}</p></div>
+        <div className="provider-workspace__counts"><span><strong>{rows.filter(p => p.enabled).length}</strong> {t("ProviderEnabled")}</span><span><strong>{rows.filter(p => p.enabled && p.status !== "ok").length}</strong> {t("DashboardNeedsAttention")}</span></div>
+      </header>
+      {isDemo && <DemoIndicator providerCount={snapshots.length} onExit={() => set({demoModeEnabled: false})} />}
+      <details className="provider-workspace__demo"><summary>{t("DashboardStudioDemoSectionTitle")}</summary><DemoSettingsSection settings={settings} update={set} catalog={providers} /></details>
+      <div className="provider-workspace__toolbar"><label>{t("ProviderWorkspaceFilter")} <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+        <option value="all">{t("PanelAllProviders")}</option><option value="enabled">{t("ProviderEnabled")}</option><option value="attention">{t("DashboardNeedsAttention")}</option><option value="disabled">{t("ProviderDisabled")}</option>
+      </select></label><span>{visibleRows.length} / {rows.length}</span></div>
+      <div className="provider-split">
       <ProvidersSidebar
         providers={visibleRows}
         selectedId={resolvedSelectedId}
@@ -131,9 +139,9 @@ export default function ProvidersTab({
         onSelect={setSelectedId}
         onReorder={handleReorder}
         onToggleEnabled={toggle}
-        disabled={saving}
+        disabled={saving || isDemo}
       />
-      <ProviderDetailPane
+      {isDemo ? <div className="provider-detail"><p role="note">{t("ProviderDemoReadOnly")}</p><CurrentLimits providers={snapshots.filter(p => p.providerId === resolvedSelectedId)} settings={settings} /></div> : <ProviderDetailPane
         providerId={resolvedSelectedId}
         cookieDomain={selectedEntry?.cookieDomain ?? null}
         resetTimeRelative={settings.resetTimeRelative}
@@ -142,7 +150,8 @@ export default function ProvidersTab({
         wayfinderGatewayUrl={settings.wayfinderGatewayUrl ?? "http://127.0.0.1:8088"}
         settingsDisabled={saving}
         onSettingsChange={set}
-      />
+      />}
+      </div>
     </div>
   );
 }
@@ -160,21 +169,6 @@ function mergeFilteredOrder(
 
 // ── Provider sidebar subtitle helpers (port of
 //    rust/src/native_ui/preferences.rs::provider_sidebar_subtitle). ─────
-
-function deriveProviderStatus(
-  isEnabled: boolean,
-  snap: ProviderUsageSnapshot | null,
-): ProviderSidebarStatus {
-  if (!isEnabled) return "disabled";
-  if (!snap) return "loading";
-  if (snap.error) return "error";
-  const updatedMs = new Date(snap.updatedAt).getTime();
-  if (Number.isFinite(updatedMs)) {
-    const ageMins = (Date.now() - updatedMs) / 60_000;
-    if (ageMins > 10) return "stale";
-  }
-  return "ok";
-}
 
 /**
  * Minimal port of `provider_sidebar_source_hint`
@@ -264,7 +258,7 @@ function providerSourceHintShort(
 function providerSidebarMetric(
   snap: ProviderUsageSnapshot | null,
 ): string | undefined {
-  if (!snap) return undefined;
+  if (!snap || snap.errorState !== "ready") return undefined;
   const rate = selectSingleMetricUsageWindow(snap);
   if (Number.isFinite(rate.usedPercent)) {
     return `${Math.round(Math.max(0, rate.usedPercent))}%`;

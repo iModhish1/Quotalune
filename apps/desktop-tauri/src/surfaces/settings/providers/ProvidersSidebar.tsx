@@ -12,12 +12,8 @@ import { ProviderIcon } from "../../../components/providers/ProviderIcon";
 import { getProviderIcon } from "../../../components/providers/providerIcons";
 
 /** Last-fetch state mapped from a ProviderUsageSnapshot / settings pair. */
-export type ProviderSidebarStatus =
-  | "ok"
-  | "stale"
-  | "error"
-  | "disabled"
-  | "loading";
+export type { ProviderOperationalState as ProviderSidebarStatus } from "./providerOperationalState";
+import type { ProviderOperationalState as ProviderSidebarStatus } from "./providerOperationalState";
 
 export interface ProviderSidebarRow {
   id: string;
@@ -47,6 +43,9 @@ const STATUS_TO_KEY: Record<ProviderSidebarStatus, LocaleKey> = {
   error: "ProviderStatusError",
   disabled: "ProviderStatusDisabled",
   loading: "ProviderStatusLoading",
+  authRequired: "ProviderIssueAuthRequired",
+  offline: "ProviderIssueLocalRuntimeOffline",
+  unavailable: "DashboardValueUnavailable",
 };
 
 /**
@@ -282,6 +281,7 @@ export function ProvidersSidebar({
                 <span className="providers-sidebar__name">{p.displayName}</span>
                 <span className="providers-sidebar__subtitle">
                   <span className="providers-sidebar__subtitle-primary">
+                    {t(STATUS_TO_KEY[p.status])} ·
                     {p.subtitlePrimary}
                   </span>
                   {p.subtitleSecondary && (

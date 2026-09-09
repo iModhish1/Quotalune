@@ -9,17 +9,19 @@ import type {
 
 const hookMocks = vi.hoisted(() => ({
   useProviders: vi.fn(),
+  detail: vi.fn(() => null),
 }));
 
 vi.mock("../../../hooks/useProviders", () => hookMocks);
 vi.mock("../../../hooks/useLocale", () => ({
   useLocale: () => ({ t: (key: string) => key }),
+  useOptionalLocale: () => ({ t: (key: string) => key }),
 }));
 vi.mock("../../../lib/tauri", () => ({
   reorderProviders: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../providers/ProviderDetailPane", () => ({
-  ProviderDetailPane: () => null,
+  ProviderDetailPane: hookMocks.detail,
 }));
 
 import ProvidersTab from "./ProvidersTab";
@@ -88,4 +90,14 @@ describe("ProvidersTab", () => {
 
     expect(screen.getByText("42%")).toBeInTheDocument();
   });
+});
+
+
+it("Demo previews never mount the real credential detail pane or enable provider mutations", () => {
+ hookMocks.detail.mockClear();
+ hookMocks.useProviders.mockReturnValue({providers: []});
+ render(<ProvidersTab settings={{...settings, demoModeEnabled:true,demoProviderCount:1,providerAccentColors:{}}} providers={[provider]} set={vi.fn()} saving={false}/>);
+ expect(hookMocks.detail).not.toHaveBeenCalled();
+ expect(screen.getByText("ProviderDemoReadOnly")).toBeInTheDocument();
+ expect(screen.getByRole("checkbox",{name:"Codex ProviderEnabled"})).toBeDisabled();
 });

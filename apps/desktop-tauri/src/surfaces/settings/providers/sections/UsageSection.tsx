@@ -23,18 +23,19 @@ interface BarSpec {
  * `rust/src/native_ui/preferences.rs::render_provider_detail_panel`.
  */
 export function UsageSection({ provider, resetTimeRelative, t }: Props) {
+  if (provider.errorState !== "ready") return <section className="provider-detail-section"><h4>{t("ProviderUsage")}</h4><p>{t("DashboardValueUnavailable")}</p></section>;
   const bars: BarSpec[] = [];
   if (provider.session) {
     bars.push({
       key: "session",
-      label: t("ProviderSessionLabel"),
+      label: provider.sessionLabel || t("ProviderSessionLabel"),
       rate: provider.session,
     });
   }
   if (provider.weekly) {
     bars.push({
       key: "weekly",
-      label: t("ProviderWeeklyLabel"),
+      label: provider.weeklyLabel || t("ProviderWeeklyLabel"),
       rate: provider.weekly,
     });
   }
@@ -91,7 +92,8 @@ function UsageBar({
   resetTimeRelative: boolean;
   t: (key: LocaleKey) => string;
 }) {
-  const usedPct = Number.isFinite(rate.usedPercent) ? Math.max(0, rate.usedPercent) : 0;
+  const validUsage = Number.isFinite(rate.usedPercent) && rate.usedPercent >= 0;
+  const usedPct = validUsage ? rate.usedPercent : 0;
   const pct = Math.min(100, usedPct);
   const isInformational = rate.isInformational === true;
   const formattedReset = useFormattedResetTime(
@@ -115,6 +117,7 @@ function UsageBar({
         >
           {isInformational
             ? rate.resetDescription?.trim() || formattedReset || "—"
+            : !validUsage ? t("DashboardValueUnavailable")
             : rate.isExhausted
             ? usedPct > 100
               ? `${usedPct.toFixed(0)}%`
@@ -122,7 +125,7 @@ function UsageBar({
             : `${usedPct.toFixed(0)}%`}
         </span>
       </div>
-      {!isInformational && (
+      {!isInformational && validUsage && (
         <div className="provider-usage-bar__track">
           <div
             className="provider-usage-bar__fill"

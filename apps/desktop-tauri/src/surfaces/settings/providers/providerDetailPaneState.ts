@@ -125,6 +125,8 @@ export function providerDetailPaneReducer(
         ...state,
         syncedProviderId: action.providerId,
         syncedGatewayUrl: action.wayfinderGatewayUrl,
+        busy: false,
+        error: null,
         gatewayDraft:
           action.providerId === "wayfinder"
             ? action.wayfinderGatewayUrl

@@ -1,15 +1,9 @@
-import { useEffect, useState } from "react";
+import { resolveIntlLocale } from "../i18n/resolveIntlLocale";
+import { useEffect, useMemo, useState } from "react";
 import { useLocale } from "./useLocale";
 import { computeCountdownParts, countdownRefreshIntervalMs } from "../lib/resetPresentation";
 
 export type ResetTimeFormatMode = "reset" | "expires";
-
-const absoluteResetFormatter = new Intl.DateTimeFormat(undefined, {
-  month: "short",
-  day: "numeric",
-  hour: "numeric",
-  minute: "2-digit",
-});
 
 /**
  * Format a provider's reset timestamp for display.
@@ -38,7 +32,8 @@ export function useFormattedResetTime(
   relative: boolean,
   mode: ResetTimeFormatMode = "reset",
 ): string | null {
-  const { t } = useLocale();
+  const { t, language } = useLocale();
+  const absoluteResetFormatter = useMemo(() => new Intl.DateTimeFormat(resolveIntlLocale(language), {month:"short",day:"numeric",hour:"numeric",minute:"2-digit",numberingSystem:"latn"}), [language]);
   const [now, setNow] = useState(() => Date.now());
 
   const target = resetsAt ? Date.parse(resetsAt) : Number.NaN;

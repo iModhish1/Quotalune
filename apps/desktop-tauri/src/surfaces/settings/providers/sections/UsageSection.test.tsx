@@ -54,7 +54,7 @@ function provider(): ProviderDetail {
     cost: null,
     pace: null,
     lastError: null,
-    errorState: null,
+    errorState: "ready",
     dashboardUrl: null,
     statusPageUrl: null,
     buyCreditsUrl: null,
@@ -100,4 +100,12 @@ describe("UsageSection", () => {
     expect(label.parentElement).toHaveTextContent("No active 5h session");
     expect(label.parentElement?.querySelector(".provider-usage-bar__track")).toBeNull();
   });
+});
+
+
+it("does not show stale quotas while authentication is required", () => {
+ const detail=provider();detail.errorState="needsAuthentication";
+ render(<UsageSection provider={detail} resetTimeRelative={false} t={key=>key}/>);
+ expect(screen.getByText("DashboardValueUnavailable")).toBeInTheDocument();
+ expect(screen.queryByText("42%")).toBeNull();
 });

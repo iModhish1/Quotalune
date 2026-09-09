@@ -233,6 +233,20 @@ describe("providerDetailPaneReducer — gateway sync", () => {
     });
     expect(next.syncedProviderId).toBeNull();
   });
+
+  it("SYNC_PROPS clears an action error and busy state when the provider changes", () => {
+    const state = initialState(WAYFINDER_URL, "claude");
+    state.busy = true;
+    state.error = "Claude login failed";
+    const next = providerDetailPaneReducer(state, {
+      type: "SYNC_PROPS",
+      providerId: "codex",
+      wayfinderGatewayUrl: WAYFINDER_URL,
+    });
+
+    expect(next.busy).toBe(false);
+    expect(next.error).toBeNull();
+  });
 });
 
 describe("providerDetailPaneReducer — gateway draft / save", () => {

@@ -46,7 +46,6 @@ export function QuickActionsSection({
             className="btn btn--primary"
             onClick={onConnect}
             disabled={busy}
-            title={`Sign in to ${provider.displayName}`}
           >
             {t("ActionSwitchAccount")}
           </button>
