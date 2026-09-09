@@ -1,4 +1,6 @@
+import {physicalWindowLabel,observedAccountLabel} from "../../../lib/analytics/metricLabels";
 import {defaultResetPresentationConfig, resolveResetTimeZone} from "../../../lib/resetPresentation";
+import {summarizeCoverage} from "../../../lib/analytics/dashboardIntelligence";
 import {useMemo, useState} from "react";
 import {useLocale} from "../../../hooks/useLocale";
 import {useResetStageOptions} from "../../../hooks/useResetStageOptions";
@@ -19,13 +21,12 @@ export function QuotaCoverage({series, snapshot, settings}: {series: QuotaSeries
   const options = useResetStageOptions(settings,"dashboard");
   const number = new Intl.NumberFormat(options.locale,{maximumFractionDigits:0,numberingSystem:"latn"});
   const date = new Intl.DateTimeFormat(options.locale,{dateStyle:"medium",timeZone:resolveResetTimeZone({...defaultResetPresentationConfig(),...options.config}),numberingSystem:"latn"});
-  const points = series.flatMap(row=>row.current);
-  const first = points.reduce<number | null>((value,p)=>value===null || p.observedAt<value?p.observedAt:value,null);
-  const last = points.reduce<number | null>((value,p)=>value===null || p.observedAt>value?p.observedAt:value,null);
+  const {samples,first,last,missingBuckets}=summarizeCoverage(series);
   return <MetricRibbon>
     <ComparisonStat label={t("DashboardSelectedRangeEyebrow")} state={snapshot ? "available" : "unavailable"} value={snapshot ? <bdi>{date.format(snapshot.rangeSince*1000)} — {date.format(snapshot.rangeUntil*1000)}</bdi> : t("DashboardValueUnavailable")} detail={t("V2PhysicalWindow")}/>
-    <ComparisonStat label={t("V2Samples")} state={points.length ? "available" : "insufficientHistory"} value={number.format(points.reduce((sum,p)=>sum+p.sampleCount,0))} detail={t("V2HistoryValues")}/>
+    <ComparisonStat label={t("V2Samples")} state={samples ? "available" : "insufficientHistory"} value={samples ? number.format(samples) : t("V2InsufficientHistory")} detail={t("V2HistoryValues")}/>
     <ComparisonStat label={t("V2ObservedAt")} state={first !== null ? "partial" : "insufficientHistory"} value={first !== null && last !== null ? <bdi>{date.format(first*1000)} — {date.format(last*1000)}</bdi> : t("V2InsufficientHistory")} detail={t("V2HistoryHelp")}/>
+    <ComparisonStat label={t("V24MissingBuckets")} state={samples ? "partial" : "insufficientHistory"} value={samples ? number.format(missingBuckets) : t("V2InsufficientHistory")} detail={t("V24CoverageHelp")}/>
   </MetricRibbon>;
 }
 export function QuotaComparison({series, providers, settings}: {series: QuotaSeries[]; providers: ProviderUsageSnapshot[]; settings: SettingsSnapshot}) {
@@ -40,11 +41,11 @@ export function QuotaComparison({series, providers, settings}: {series: QuotaSer
   return <AnalyticsSection title={t("V2ProviderComparison")} description={t("V2ComparisonHelp")}>
     <AnalyticsTable rows={series} rowKey={row => row.key} caption={t("V2ComparisonCaveat")} emptyLabel={t("V2NoPhysicalHistory")} columns={[
       {id:"provider",title:t("TabProviders"),cell:row=><bdi>{names.get(row.provider) ?? row.provider}</bdi>,sortValue:row=>names.get(row.provider) ?? row.provider},
-      {id:"window",title:t("V2LimitWindow"),cell:row=><><bdi>{row.windowLabel ?? row.windowKey}</bdi><small className="analytics-account-scope">{row.accountScope === "observed" ? row.accountId : t("V2IdentityUnknown")}</small></>},
+      {id:"window",title:t("V2LimitWindow"),cell:row=><><bdi>{physicalWindowLabel(row.windowLabel,t)}</bdi><small className="analytics-account-scope">{observedAccountLabel(row,series,t)}</small></>},
       {id:"mean",title:t("V2QuotaMean"),cell:row=>metric(row.mean,"%"),sortValue:row=>row.mean.value},
       {id:"comparison",title:t("V2PeriodDifference"),cell:row=>metric(row.comparison,t("V2Points"),true),sortValue:row=>row.comparison.value},
       {id:"velocity",title:t("V2Velocity"),cell:row=>metric(row.velocity,t("V2PointsHour")),sortValue:row=>row.velocity.value},
-      {id:"samples",title:t("V2Samples"),cell:row=>number.format(row.sampleCount),sortValue:row=>row.sampleCount},
+      {id:"samples",title:t("V2Samples"),cell:row=>row.invalid?t("V2InvalidSamples"):number.format(row.sampleCount),sortValue:row=>row.invalid?null:row.sampleCount},
     ]}/>
   </AnalyticsSection>;
 }
@@ -58,10 +59,10 @@ export function QuotaHistory({series, snapshot, settings, preferences}: {series:
   const time = new Intl.DateTimeFormat(options.locale, {numberingSystem:"latn",month:"short",day:"numeric",hour:"numeric",minute:"2-digit", timeZone: resolveResetTimeZone({...defaultResetPresentationConfig(), ...options.config})});
   const number = new Intl.NumberFormat(options.locale,{maximumFractionDigits:1,numberingSystem:"latn"});
   const points = useMemo(() => active?.current.map(p => ({time:p.observedAt,value:p.usedPercent,cycle:p.resetsAt})) ?? [],[active]);
-  return <AnalyticsSection title={t("V2DetailedHistory")} description={t("V2HistoryHelp")} action={candidates.length > 0 && <select aria-label={t("V2HistorySeries")} value={active?.key} onChange={event=>setSelected(event.target.value)}>{candidates.map(row=><option key={row.key} value={row.key}>{row.provider} · {row.windowLabel ?? row.windowKey} · {row.accountScope === "observed" ? row.accountId : t("V2IdentityUnknown")}</option>)}</select>}>
+  return <AnalyticsSection title={t("V2DetailedHistory")} description={t("V2HistoryHelp")} action={candidates.length > 0 && <select aria-label={t("V2HistorySeries")} value={active?.key} onChange={event=>setSelected(event.target.value)}>{candidates.map(row=><option key={row.key} value={row.key}>{row.provider} · {physicalWindowLabel(row.windowLabel,t)} · {observedAccountLabel(row,series,t)}</option>)}</select>}>
     {active && snapshot ? <>
       <TimeSeriesChart points={points} since={snapshot.rangeSince} until={snapshot.rangeUntil} step={snapshot.grain === "hourly" ? 3600 : 86400}
-        label={`${active.provider} · ${active.windowLabel ?? active.windowKey}`} unit="%" formatTime={value=>time.format(value*1000)} formatValue={value=>number.format(value)} style={preferences.chartStyle}/>
+        label={`${active.provider} · ${physicalWindowLabel(active.windowLabel,t)}`} unit="%" formatTime={value=>time.format(value*1000)} formatValue={value=>number.format(value)} style={preferences.chartStyle}/>
       <CoveragePanel title={t("V2HistoryValues")}><AnalyticsTable rows={active.current} rowKey={row=>String(row.observedAt)} caption={t("V2HistoryValues")} emptyLabel={t("V2InsufficientHistory")} columns={[
         {id:"time",title:t("V2ObservedAt"),cell:row=><bdi>{time.format(row.observedAt*1000)}</bdi>,sortValue:row=>row.observedAt},
         {id:"quota",title:t("V2UsedQuota"),cell:row=><bdi>{number.format(row.usedPercent)}%</bdi>,sortValue:row=>row.usedPercent},

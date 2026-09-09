@@ -9,6 +9,20 @@ function provider(id: string): ProviderUsageSnapshot {
   return {providerId: id, displayName: id, primary: metric, selectedMetric: metric, secondary: null, tertiary: null, modelSpecific: null, extraRateWindows: [], cost: null, errorState: "ready", error: null, planName: null, accountEmail: null, accountOrganization: null, pace: null, trayStatusLabel: null, updatedAt: "2026-09-09T00:00:00Z", sourceLabel: "test"};
 }
 describe("Current Limits", () => {
+  it("keeps readings invariant across theme, density, chart style and limit template changes", () => {
+    const source=Object.freeze(provider("codex"));
+    const before=JSON.stringify(source);
+    const view=render(<CurrentLimits providers={[source]} settings={settings}/>);
+    for(const quotaTemplate of ["precision","compact","dual","rail"] as const) {
+      for(const density of ["comfortable","compact","dense"] as const) {
+        view.rerender(<CurrentLimits providers={[source]} settings={{...settings,catalogTheme:"02-smoked-silver",
+          workspacePreferences:{density,navigation:"side"},analyticsPreferences:{sectionOrder:[],hiddenSections:[],defaultRange:"last7Days",providerFilterScope:"history",quotaTemplate,chartStyle:density==="dense"?"minimal":"detailed"}}}/>);
+        expect(screen.getByText("64%")).toBeInTheDocument();
+        expect(screen.getByText("36%")).toBeInTheDocument();
+        expect(JSON.stringify(source)).toBe(before);
+      }
+    }
+  });
   it("does not display money when the provider currency is missing", () => {
     const p: ProviderUsageSnapshot = {...provider("devin"), cost: {used: 12, currencyCode: "", limit: null, remaining: null, period: "balance", resetsAt: null, formattedUsed: "12", formattedLimit: null}};
     render(<CurrentLimits providers={[p]} settings={settings} />);

@@ -12,7 +12,7 @@ import type {LocaleKey} from '../../i18n/keys';
 import {usageTone} from './usageTone';
 export type {LimitPresentation} from '../../design-system/limitPresentation';
 
-interface UsageWindowListProps {providerId?:string;windows:StageUsageWindow[];hidden?:boolean;presentation?:LimitPresentation}
+interface UsageWindowListProps {providerId?:string;windows:StageUsageWindow[];hidden?:boolean;paginate?:boolean;presentation?:LimitPresentation}
 
 export default function UsageWindowList(props:UsageWindowListProps){
   // Reset only when the provider or ordered selection changes, not on quota refresh.
@@ -20,14 +20,14 @@ export default function UsageWindowList(props:UsageWindowListProps){
   return <PagedUsageWindows key={identity} {...props}/>;
 }
 
-function PagedUsageWindows({windows,hidden=false,presentation}:UsageWindowListProps){
+function PagedUsageWindows({windows,hidden=false,presentation,paginate=true}:UsageWindowListProps){
   const locale=useOptionalLocale();
   const text=(key:LocaleKey,fallback:string)=>locale?.t(key)??fallback;
   const [page,setPage]=useState(0);
   const lastWheel=useRef(-Infinity);
-  const pages=presentation?Math.max(1,Math.ceil(windows.length/2)):1;
+  const pages=presentation&&paginate?Math.max(1,Math.ceil(windows.length/2)):1;
   const activePage=Math.min(page,pages-1);
-  const visible=presentation?windows.slice(activePage*2,activePage*2+2):windows;
+  const visible=presentation&&paginate?windows.slice(activePage*2,activePage*2+2):windows;
   const shape=presentation?.shape??'horizontal',content=presentation?.content??'both';
   const presentationIdentity=presentation?.identity??'adaptive';
   const identityTokens=PROVIDER_PRESENTATION_IDENTITY_TOKENS[presentationIdentity];
@@ -42,8 +42,8 @@ function PagedUsageWindows({windows,hidden=false,presentation}:UsageWindowListPr
   } as CSSProperties;
   const advance=(delta:number)=>setPage((activePage+delta+pages)%pages);
   if(hidden)return <p className="quota-window-list">Limit details are hidden for this provider.</p>;
-  return <div className="quota-window-list" style={identityStyle} data-provider-identity={presentationIdentity} data-shape={content==='value'?'none':shape} data-paged={!!presentation} data-direction={presentation?.direction??'forward'} tabIndex={0} aria-label="Usage limits" onWheel={event=>{
-    if(!presentation)return;
+  return <div className="quota-window-list" style={identityStyle} data-provider-identity={presentationIdentity} data-shape={content==='value'?'none':shape} data-paged={!!presentation&&paginate} data-direction={presentation?.direction??'forward'} tabIndex={0} aria-label="Usage limits" onWheel={event=>{
+    if(!presentation||!paginate)return;
     event.stopPropagation();
     if(event.ctrlKey||pages<2)return;
     const delta=Math.abs(event.deltaX)>Math.abs(event.deltaY)?event.deltaX:event.deltaY;

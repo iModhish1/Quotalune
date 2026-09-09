@@ -3,7 +3,7 @@ import type {LocaleKey} from "../../i18n/keys";
 import {useLocale} from "../../hooks/useLocale";
 import {analyticsPreferences, DEFAULT_ANALYTICS_PREFERENCES} from "../../lib/analytics/preferences";
 import {SettingsPreview, SettingsResetAction, SettingsRow, SettingsSection, SettingsSelect, SettingsToggle} from "./SettingsControls";
-export const SECTION_LABELS: Record<string, LocaleKey> = {limits: "DashboardLimitsNow", attention: "V2Attention", overview: "V2AnalyticsOverview", resets: "V2ResetHorizon", comparison: "V2ProviderComparison", history: "V2DetailedHistory", quality: "V2DataQuality"};
+export const SECTION_LABELS: Record<string, LocaleKey> = {limits: "DashboardLimitsNow", attention: "V2Attention", overview: "V24Trends", resets: "V2ResetHorizon", comparison: "V2ProviderComparison", history: "V2DetailedHistory", quality: "V2DataQuality"};
 const ranges = {today: "DashboardRangeToday", last7Days: "DashboardRangeLast7Days", last30Days: "DashboardRangeLast30Days", thisMonth: "DashboardRangeThisMonth", last3Months: "DashboardRangeLast3Months", thisYear: "DashboardRangeThisYear"} as const;
 export default function AnalyticsPreferencesControl({settings, update, disabled}: {settings: SettingsSnapshot; update: (patch: SettingsUpdate) => Promise<unknown>; disabled: boolean}) {
   const {t} = useLocale();
@@ -26,7 +26,7 @@ export default function AnalyticsPreferencesControl({settings, update, disabled}
         <SettingsToggle label={t(SECTION_LABELS[id])} disabled={disabled} checked={!prefs.hiddenSections.includes(id)} onChange={visible => {void set({hiddenSections: visible ? prefs.hiddenSections.filter(value => value !== id) : [...prefs.hiddenSections, id]});}} />
         <span>{[-1,1].map(direction => <button type="button" key={direction} disabled={disabled || index + direction < 0 || index + direction >= prefs.sectionOrder.length} aria-label={`${t(direction < 0 ? "ProviderSidebarMoveUp" : "ProviderSidebarMoveDown")} ${t(SECTION_LABELS[id])}`} onClick={() => {const order = [...prefs.sectionOrder]; [order[index], order[index + direction]] = [order[index + direction], order[index]]; void set({sectionOrder: order});}}>{direction < 0 ? "↑" : "↓"}</button>)}</span>
       </li>)}</ol>
-      <SettingsResetAction label={t("V2ResetDashboard")} onReset={() => update({analyticsPreferences: structuredClone(DEFAULT_ANALYTICS_PREFERENCES)})}/>
+      <SettingsResetAction label={t("V24ResetLayout")} onReset={() => set({sectionOrder:[...DEFAULT_ANALYTICS_PREFERENCES.sectionOrder],hiddenSections:[...DEFAULT_ANALYTICS_PREFERENCES.hiddenSections]})}/>
     </SettingsSection>
   </>;
 }

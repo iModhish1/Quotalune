@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, within, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const tauriMocks = vi.hoisted(() => ({
@@ -21,6 +21,9 @@ import type { DashboardSnapshot, ProviderUsageSnapshot, SettingsSnapshot } from 
 const LOCALE_ENTRIES = {
   V2HistoryScope: "Provider filter: history only",
   V2AnalyticsOverview: "Analytics overview",
+  V24Trends:"Trend intelligence",
+  V24Attention:"Needs action",
+  TabProviders:"Providers",
   TabDashboard: "Dashboard",
   DashboardSubtitle: "What you're using, what's left, and what changed",
   DashboardRangeToday: "Today",
@@ -182,7 +185,7 @@ describe("DashboardAnalyticsPanel", () => {
     // on the rest so this isn't racing the header's synchronous render.
     expect(await screen.findByText("Data Status")).toBeInTheDocument();
     expect(screen.getByText("Provider filter: history only")).toBeInTheDocument();
-    expect(screen.getByText("Analytics overview")).toBeInTheDocument();
+    expect(screen.getByText("Trend intelligence")).toBeInTheDocument();
     expect(screen.getByText("Active Providers")).toBeInTheDocument();
     expect(screen.getByText("Usage Trend")).toBeInTheDocument();
     expect(screen.getByText("V2LegacyHistory")).toBeInTheDocument();
@@ -249,7 +252,7 @@ describe("DashboardAnalyticsPanel", () => {
       snapshot(),
       onOpenProviders,
     );
-    fireEvent.click(await screen.findByRole("button", { name: "Reconnect" }));
+    fireEvent.click(within(await screen.findByRole("region",{name:"Needs action"})).getByRole("button", { name: "Providers" }));
     expect(onOpenProviders).toHaveBeenCalledTimes(1);
   });
 

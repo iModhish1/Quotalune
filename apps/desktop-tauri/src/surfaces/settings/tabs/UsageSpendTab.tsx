@@ -77,7 +77,7 @@ function renderSharePng(summary: UsageSpendSummary, title: string): string {
 
   ctx.fillStyle = "#8b9bb4";
   ctx.font = "12px system-ui,Segoe UI,sans-serif";
-  ctx.fillText("Quotalis · local estimates · no account emails", pad, pad + 36);
+  ctx.fillText("Quotalis · source-specific readings · no account emails", pad, pad + 36);
 
   const headers = ["Provider", "7 days", "30 days", "Currency", "Source"];
   let x = pad;
