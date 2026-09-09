@@ -1,3 +1,4 @@
+import {useSettingsCopy} from "../useSettingsCopy";
 import {useEffect,useState} from "react";
 import {listen} from "@tauri-apps/api/event";
 import FlowSurface from "../../flow-surface/FlowSurface";
@@ -11,6 +12,7 @@ import {FLOW_SURFACE_FORM_CATALOG,type FlowSurfaceForm} from "../../../design-sy
 import {catalogMotion} from "../../../design-system/themeMotion";
 
 export default function ThemeGallery() {
+  const tr = useSettingsCopy();
   const [snapshot,setSnapshot]=useState<CatalogThemeSettings>({});
   const [previewForm,setPreviewForm]=useState<FlowSurfaceForm>('lens');
   const [previewExpanded,setPreviewExpanded]=useState<string|null>(null);
@@ -40,32 +42,32 @@ export default function ThemeGallery() {
     <section className="settings-section theme-gallery">
       <div className="theme-gallery__heading">
         <div>
-          <h3 className="settings-section__title">Surface identities</h3>
+          <h3 className="settings-section__title">{tr("Surface identities")}</h3>
           <p className="settings-section__description">
-            Change the complete visual identity—finish, rim, icon frame, typography and depth—without changing placement or quota data.
+            {tr("Change the complete visual identity—finish, rim, icon frame, typography and depth—without changing placement or quota data.")}
           </p>
         </div>
         <div className="theme-gallery__provenance" data-source={resolved.source}>
-          <span>Effective source: {resolved.source}</span>
+          <span>{tr("Effective source")}: {tr(resolved.source === "global" ? "Global" : resolved.source === "profile" ? "Current profile" : resolved.source)}</span>
           <strong>{catalogBySlug(active)?.name}</strong>
         </div>
       </div>
       <div className="theme-gallery__assignment">
-        <label>Apply theme to
-          <select aria-label="Theme assignment" value={scope} disabled={saving||!ready} onChange={e=>setScope(e.target.value as CatalogThemeScope)}>
-            <option value="global">Global default</option><option value="profile">Current profile</option>
+        <label>{tr("Apply theme to")}
+          <select aria-label={tr("Theme assignment")} value={scope} disabled={saving||!ready} onChange={e=>setScope(e.target.value as CatalogThemeScope)}>
+            <option value="global">{tr("Global default")}</option><option value="profile">{tr("Current profile")}</option>
             {(['taskbar','top','edge','hud','quick','dashboard'] as const).map(id=><option key={id} value={`surface:${id}`}>{id} surface</option>)}
           </select>
         </label>
-        {scope!=='global' && <button type="button" disabled={!ready||saving||!hasOverride} onClick={()=>void apply('')}>Use inherited theme</button>}
-        <p>Surface overrides profile; profile overrides global. Provider brand colors remain independent from the selected theme.</p>
+        {scope!=='global' && <button type="button" disabled={!ready||saving||!hasOverride} onClick={()=>void apply('')}>{tr("Use inherited theme")}</button>}
+        <p>{tr("Surface overrides profile; profile overrides global. Provider brand colors remain independent from the selected theme.")}</p>
       </div>
       {error && <p role="alert" className="theme-gallery__error">{error}</p>}
       <div className="theme-gallery__preview-controls">
-        <label>Preview structure <select aria-label="Theme preview structure" value={previewForm} onChange={e=>setPreviewForm(e.target.value as FlowSurfaceForm)}>
+        <label>{tr("Preview structure")} <select aria-label={tr("Theme preview structure")} value={previewForm} onChange={e=>setPreviewForm(e.target.value as FlowSurfaceForm)}>
           {FLOW_SURFACE_FORM_CATALOG.map(form=><option key={form.id} value={form.id}>{form.name}</option>)}
         </select></label>
-        <p>Hover or focus a card to reveal details. This preview does not change your desktop structure.</p>
+        <p>{tr("Hover or focus a card to reveal details. This preview does not change your desktop structure.")}</p>
       </div>
       <div className="theme-gallery__grid">
         {THEME_CATALOG.map(theme=><article key={theme.slug} className="theme-gallery__tile" data-active={active===theme.slug}
@@ -78,11 +80,11 @@ export default function ThemeGallery() {
             <span className="theme-gallery__swatches" aria-hidden="true"><i style={{background:theme.accent}}/><i style={{background:theme.accent2}}/><i style={{background:theme.accent3}}/></span>
           </div>
           <dl className="theme-gallery__facets">
-            <div><dt>Frame</dt><dd>{theme.identity?.edgeStyle} · {theme.identity?.detailRadius}px</dd></div>
-            <div><dt>Meter</dt><dd>{theme.identity?.meterCap}</dd></div>
-            <div><dt>Motion</dt><dd>{theme.expansionMs}ms</dd></div>
+            <div><dt>{tr("Frame")}</dt><dd>{theme.identity?.edgeStyle} · {theme.identity?.detailRadius}px</dd></div>
+            <div><dt>{tr("Meter")}</dt><dd>{theme.identity?.meterCap}</dd></div>
+            <div><dt>{tr("Motion")}</dt><dd>{theme.expansionMs}ms</dd></div>
           </dl>
-          <button type="button" aria-label={`Apply ${theme.name}`} aria-pressed={active===theme.slug} disabled={!ready||saving} onClick={()=>void apply(theme.slug)}>{active===theme.slug?"Selected":"Apply theme"}</button>
+          <button type="button" aria-label={`Apply ${theme.name}`} aria-pressed={active===theme.slug} disabled={!ready||saving} onClick={()=>void apply(theme.slug)}>{tr(active===theme.slug?"Selected":"Apply theme")}</button>
         </article>)}
       </div>
     </section>

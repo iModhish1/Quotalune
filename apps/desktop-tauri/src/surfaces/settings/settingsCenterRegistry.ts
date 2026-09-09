@@ -1,5 +1,6 @@
 import type {LocaleKey} from "../../i18n/keys";
 import type {SettingsTabId} from "../../types/bridge";
+import {CUSTOMIZATION_REGISTRY} from "../../lib/customizationRegistry";
 
 export type PrimaryDestination = "dashboard" | "usageSpend" | "providers" | "workspace" | "settings";
 export const PRIMARY_GROUPS: {labelKey: LocaleKey; tabs: {id: PrimaryDestination; target: SettingsTabId; labelKey: LocaleKey}[]}[] = [
@@ -32,6 +33,7 @@ export function searchSettings(query: string, translate: (key: LocaleKey) => str
   const words = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
   return SETTINGS_CATEGORIES.filter(category => {
     const haystack = [translate(category.labelKey), translate(category.descriptionKey), ...category.keywords,
+      ...CUSTOMIZATION_REGISTRY.filter(entry => entry.category === category.id).flatMap(entry => [translate(entry.labelKey), ...entry.keywords]),
       ...category.tabs.map(tab => translate(labels.get(tab)!))].join(" ").toLocaleLowerCase();
     return words.every(word => haystack.includes(word));
   });

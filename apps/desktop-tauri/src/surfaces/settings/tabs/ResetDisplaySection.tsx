@@ -1,3 +1,4 @@
+import {useSettingsCopy} from "../useSettingsCopy";
 /**
  * Reset Display — production Settings section.
  *
@@ -100,6 +101,7 @@ function ResetConfigEditor({
   onPersist: (next: ResetPresentationSettingsDto) => void;
   previewLabel: string;
 }) {
+  const tr = useSettingsCopy();
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [previewNow] = useState(() => Date.now());
   const { config, regionalFormat, regionalLocale }: ResolvedEditable = useMemo(
@@ -182,7 +184,7 @@ function ResetConfigEditor({
   return (
     <div className="reset-display__editor">
       <div className="reset-display__field">
-        <label htmlFor={`${idPrefix}-preset`}>Preset</label>
+        <label htmlFor={`${idPrefix}-preset`}>{tr("Preset")}</label>
         <select
           id={`${idPrefix}-preset`}
           className="select"
@@ -191,17 +193,17 @@ function ResetConfigEditor({
         >
           {PRESET_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
-              {option.label}
+              {tr(option.label)}
             </option>
           ))}
         </select>
-        <small>{PRESET_OPTIONS.find((o) => o.value === config.preset)?.hint}</small>
+
       </div>
 
       {config.preset === "custom" && (
         <div className="reset-display__field reset-display__custom">
           <fieldset>
-            <legend>Modules shown</legend>
+            <legend>{tr("Modules shown")}</legend>
             {ALL_MODULES.map((module) => (
               <label key={module} className="reset-display__checkbox">
                 <input
@@ -209,22 +211,22 @@ function ResetConfigEditor({
                   checked={config.modules.includes(module)}
                   onChange={() => toggleModule(module)}
                 />
-                {MODULE_LABELS[module]}
+                {tr(MODULE_LABELS[module])}
               </label>
             ))}
           </fieldset>
 
           <fieldset>
-            <legend>Order</legend>
+            <legend>{tr("Order")}</legend>
             <ol className="reset-display__order">
               {visibleOrder.map((module, index) => (
                 <li key={module}>
-                  <span>{index + 1}. {MODULE_LABELS[module]}</span>
+                  <span>{index + 1}. {tr(MODULE_LABELS[module])}</span>
                   <span className="reset-display__order-controls">
                     <button
                       type="button"
                       disabled={index === 0}
-                      aria-label={`Move ${MODULE_LABELS[module]} up`}
+                      aria-label={`Move ${tr(MODULE_LABELS[module])} up`}
                       onClick={() => moveModule(module, -1)}
                     >
                       ↑
@@ -232,7 +234,7 @@ function ResetConfigEditor({
                     <button
                       type="button"
                       disabled={index === visibleOrder.length - 1}
-                      aria-label={`Move ${MODULE_LABELS[module]} down`}
+                      aria-label={`Move ${tr(MODULE_LABELS[module])} down`}
                       onClick={() => moveModule(module, 1)}
                     >
                       ↓
@@ -250,18 +252,18 @@ function ResetConfigEditor({
         open={advancedOpen}
         onToggle={(e) => setAdvancedOpen((e.target as HTMLDetailsElement).open)}
       >
-        <summary>Advanced formatting</summary>
+        <summary>{tr("Advanced formatting")}</summary>
         <div className="reset-display__grid">
           <div className="reset-display__field">
-            <label htmlFor={`${idPrefix}-tz-mode`}>Timezone</label>
+            <label htmlFor={`${idPrefix}-tz-mode`}>{tr("Timezone")}</label>
             <select
               id={`${idPrefix}-tz-mode`}
               className="select"
               value={config.timezoneMode}
               onChange={(e) => patchConfig({ timezoneMode: e.target.value as typeof config.timezoneMode })}
             >
-              <option value="system">Follow System</option>
-              <option value="custom">Custom</option>
+              <option value="system">{tr("Follow System")}</option>
+              <option value="custom">{tr("Custom")}</option>
             </select>
             {config.timezoneMode === "system" ? (
               <small>Currently resolved: {config.customTimeZone || (() => {
@@ -279,16 +281,16 @@ function ResetConfigEditor({
           </div>
 
           <div className="reset-display__field">
-            <label htmlFor={`${idPrefix}-regional`}>Regional Format</label>
+            <label htmlFor={`${idPrefix}-regional`}>{tr("Regional Format")}</label>
             <select
               id={`${idPrefix}-regional`}
               className="select"
               value={regionalFormat}
               onChange={(e) => setRegionalFormat(e.target.value as ResetRegionalFormat)}
             >
-              <option value="system">Follow System</option>
-              <option value="uiLanguage">Follow UI Language</option>
-              <option value="custom">Custom</option>
+              <option value="system">{tr("Follow System")}</option>
+              <option value="uiLanguage">{tr("Follow UI Language")}</option>
+              <option value="custom">{tr("Custom")}</option>
             </select>
             {regionalFormat === "custom" && (
               <input
@@ -302,21 +304,21 @@ function ResetConfigEditor({
           </div>
 
           <div className="reset-display__field">
-            <label htmlFor={`${idPrefix}-clock`}>Clock Format</label>
+            <label htmlFor={`${idPrefix}-clock`}>{tr("Clock Format")}</label>
             <select
               id={`${idPrefix}-clock`}
               className="select"
               value={config.clockFormat}
               onChange={(e) => patchConfig({ clockFormat: e.target.value as typeof config.clockFormat })}
             >
-              <option value="system">Follow System</option>
+              <option value="system">{tr("Follow System")}</option>
               <option value="h12">12-hour</option>
               <option value="h24">24-hour</option>
             </select>
           </div>
 
           <div className="reset-display__field">
-            <label htmlFor={`${idPrefix}-meridiem`}>Meridiem</label>
+            <label htmlFor={`${idPrefix}-meridiem`}>{tr("Meridiem")}</label>
             <select
               id={`${idPrefix}-meridiem`}
               className="select"
@@ -325,26 +327,26 @@ function ResetConfigEditor({
             >
               <option value="auto">Auto / Localized</option>
               <option value="latin">Latin AM/PM</option>
-              <option value="localized">Localized</option>
+              <option value="localized">{tr("Localized")}</option>
             </select>
           </div>
 
           <div className="reset-display__field">
-            <label htmlFor={`${idPrefix}-month`}>Month</label>
+            <label htmlFor={`${idPrefix}-month`}>{tr("Month")}</label>
             <select
               id={`${idPrefix}-month`}
               className="select"
               value={config.monthStyle}
               onChange={(e) => patchConfig({ monthStyle: e.target.value as typeof config.monthStyle })}
             >
-              <option value="numeric">Numeric</option>
-              <option value="short">Short Name</option>
-              <option value="full">Full Name</option>
+              <option value="numeric">{tr("Numeric")}</option>
+              <option value="short">{tr("Short Name")}</option>
+              <option value="full">{tr("Full Name")}</option>
             </select>
           </div>
 
           <div className="reset-display__field">
-            <label htmlFor={`${idPrefix}-weekday`}>Weekday</label>
+            <label htmlFor={`${idPrefix}-weekday`}>{tr("Weekday")}</label>
             <select
               id={`${idPrefix}-weekday`}
               className="select"
@@ -352,8 +354,8 @@ function ResetConfigEditor({
               onChange={(e) => patchConfig({ weekdayStyle: e.target.value as typeof config.weekdayStyle })}
             >
               <option value="off">Off</option>
-              <option value="short">Short</option>
-              <option value="full">Full</option>
+              <option value="short">{tr("Short")}</option>
+              <option value="full">{tr("Full")}</option>
             </select>
           </div>
 
@@ -372,16 +374,16 @@ function ResetConfigEditor({
           </div>
 
           <div className="reset-display__field">
-            <label htmlFor={`${idPrefix}-countdown-detail`}>Countdown Detail</label>
+            <label htmlFor={`${idPrefix}-countdown-detail`}>{tr("Countdown Detail")}</label>
             <select
               id={`${idPrefix}-countdown-detail`}
               className="select"
               value={config.countdownDetail}
               onChange={(e) => patchConfig({ countdownDetail: e.target.value as typeof config.countdownDetail })}
             >
-              <option value="adaptive">Adaptive</option>
-              <option value="compact">Compact</option>
-              <option value="detailed">Detailed</option>
+              <option value="adaptive">{tr("Adaptive")}</option>
+              <option value="compact">{tr("Compact")}</option>
+              <option value="detailed">{tr("Detailed")}</option>
             </select>
           </div>
         </div>
@@ -390,7 +392,7 @@ function ResetConfigEditor({
       <div className="reset-display__preview" aria-label={`${previewLabel} live preview`}>
         <strong>{previewLabel} Preview</strong>
         <div className="reset-display__preview-row">
-          <span className="reset-display__preview-label">English</span>
+          <span className="reset-display__preview-label">{tr("English")}</span>
           <span dir="ltr">{previewText(previewEn) || "—"}</span>
         </div>
         <div className="reset-display__preview-row">
@@ -408,6 +410,7 @@ function ResetConfigEditor({
 }
 
 export default function ResetDisplaySection() {
+  const tr = useSettingsCopy();
   const [dto, setDto] = useState<ResetPresentationSettingsDto>(defaultDto);
   const [overrides, setOverrides] = useState<Record<string, ResetPresentationSettingsDto>>({});
   const [saving, setSaving] = useState(false);
@@ -465,44 +468,42 @@ export default function ResetDisplaySection() {
   );
 
   return (
-    <section className="reset-display" aria-label="Reset Display">
+    <section className="reset-display" aria-label={tr("Reset Display")}>
       <header className="reset-display__header">
         <div>
-          <span className="reset-display__eyebrow">Reset Display</span>
-          <h3>How reset times are shown</h3>
+          <span className="reset-display__eyebrow">{tr("Reset Display")}</span>
+          <h3>{tr("How reset times are shown")}</h3>
           <p>
-            Controls when and how a provider&rsquo;s quota reset is displayed across every surface
-            (taskbar, top, edge, HUD, quick panel, dashboard, provider display, tray). The exact
-            reset instant is never changed by these preferences &mdash; only how it&rsquo;s presented.
+            {tr("Reset presentation changes formatting only; the reported reset instant stays unchanged.")}
           </p>
         </div>
-        {saving && <span className="reset-display__saving">Saving…</span>}
+        {saving && <span className="reset-display__saving">{tr("Saving…")}</span>}
       </header>
 
       {error && <p className="reset-display__error" role="alert">{error}</p>}
 
       <div className="reset-display__scope">
-        <span className="reset-display__scope-label">Apply to</span>
-        <div className="reset-display__scope-toggle" role="radiogroup" aria-label="Apply to">
+        <span className="reset-display__scope-label">{tr("Apply to")}</span>
+        <div className="reset-display__scope-toggle" role="radiogroup" aria-label={tr("Apply to")}>
           <button
             type="button"
             aria-pressed={!customizeBySurface}
             onClick={() => { setCustomizeBySurface(false); setEditingSurface(null); }}
           >
-            Global
+            {tr("Global")}
           </button>
           <button
             type="button"
             aria-pressed={customizeBySurface}
             onClick={() => setCustomizeBySurface(true)}
           >
-            Customize by surface
+            {tr("Customize by surface")}
           </button>
         </div>
       </div>
 
       {!customizeBySurface && (
-        <ResetConfigEditor idPrefix="reset-display" dto={dto} onPersist={persistGlobal} previewLabel="Global" />
+        <ResetConfigEditor idPrefix="reset-display" dto={dto} onPersist={persistGlobal} previewLabel={tr("Global")} />
       )}
 
       {customizeBySurface && (
@@ -513,11 +514,11 @@ export default function ResetDisplaySection() {
             return (
               <div key={id} className="reset-display__surface-row">
                 <div className="reset-display__surface-heading">
-                  <span className="reset-display__surface-name">{label}</span>
+                  <span className="reset-display__surface-name">{tr(label)}</span>
                   <span
                     className={`reset-display__surface-status${hasOverride ? " reset-display__surface-status--custom" : ""}`}
                   >
-                    {hasOverride ? "Custom" : "Follow Global"}
+                    {tr(hasOverride ? "Custom" : "Follow Global")}
                   </span>
                   <span className="reset-display__surface-actions">
                     {!isEditing && (
@@ -534,12 +535,12 @@ export default function ResetDisplaySection() {
                           }
                         }}
                       >
-                        {hasOverride ? "Edit" : "Customize"}
+                        {tr(hasOverride ? "Edit" : "Customize")}
                       </button>
                     )}
                     {isEditing && (
                       <button type="button" onClick={() => setEditingSurface(null)}>
-                        Done
+                        {tr("Done")}
                       </button>
                     )}
                     {hasOverride && (
@@ -550,7 +551,7 @@ export default function ResetDisplaySection() {
                           if (isEditing) setEditingSurface(null);
                         }}
                       >
-                        Reset to Global
+                        {tr("Reset to Global")}
                       </button>
                     )}
                   </span>

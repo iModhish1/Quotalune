@@ -9,8 +9,8 @@ export function WorkspacePreferencesControl({settings, navigation, update, disab
   return <section className="settings-section">
     <h3>{t("WorkspaceDensity")}</h3><p className="settings-section__description">{t("WorkspaceDensityHelp")}</p>
     <select aria-label={t("WorkspaceDensity")} disabled={disabled} value={settings.workspacePreferences?.density ?? "comfortable"}
-      onChange={e => update({workspacePreferences:{navigation,density:e.target.value === "compact" ? "compact" : "comfortable"}})}>
-      <option value="comfortable">{t("WorkspaceComfortable")}</option><option value="compact">{t("WorkspaceCompact")}</option>
+      onChange={e => update({workspacePreferences:{navigation,density:e.target.value as "comfortable" | "compact" | "dense"}})}>
+      <option value="comfortable">{t("WorkspaceComfortable")}</option><option value="compact">{t("WorkspaceCompact")}</option><option value="dense">{t("V2Dense")}</option>
     </select>
   </section>;
 }

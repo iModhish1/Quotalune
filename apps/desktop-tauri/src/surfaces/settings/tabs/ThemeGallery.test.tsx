@@ -29,13 +29,13 @@ describe("ThemeGallery canonical foundation", () => {
     render(<ThemeGallery/>);
     await waitFor(()=>expect(screen.getByRole('button',{name:'Apply Ember Alloy'})).not.toBeDisabled());
     fireEvent.change(screen.getByLabelText('Theme assignment'),{target:{value:'surface:top'}});
-    expect(screen.getByText('Effective source: profile')).toBeInTheDocument();
+    expect(screen.getByText('Effective source: Current profile')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button',{name:'Apply Ember Alloy'}));
     await waitFor(()=>expect(api.setCatalogTheme).toHaveBeenCalledWith('ember-alloy','surface:top'));
     await waitFor(()=>expect(screen.getByText('Effective source: surface')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button',{name:'Use inherited theme'}));
     await waitFor(()=>expect(api.setCatalogTheme).toHaveBeenCalledWith('','surface:top'));
-    await waitFor(()=>expect(screen.getByText('Effective source: profile')).toBeInTheDocument());
+    await waitFor(()=>expect(screen.getByText('Effective source: Current profile')).toBeInTheDocument());
   });
   it("keeps the previous selection when persistence fails", async()=>{
     api.getSettingsSnapshot.mockResolvedValue({catalogTheme:"01-obsidian-orbit"});

@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render as baseRender, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BootstrapState, SettingsSnapshot } from "../../../types/bridge";
 
 const tauriMocks = vi.hoisted(() => ({
+  getLocaleStrings: vi.fn().mockResolvedValue({language:"english",entries:{DashboardPreferences:"Dashboard Preferences",DashboardLowCpu:"Low CPU",V2Appearance:"Appearance"}}),
   getSettingsSnapshot: vi.fn(),
   updateSettings: vi.fn(),
 }));
@@ -14,6 +15,9 @@ vi.mock("../../../lib/tauri", () => tauriMocks);
 vi.mock("@tauri-apps/api/event", () => eventMocks);
 
 import DashboardStudioTab from "./DashboardStudioTab";
+import {LocaleProvider} from "../../../i18n/LocaleProvider";
+import type {ReactNode} from "react";
+const render = (node:ReactNode) => baseRender(<LocaleProvider>{node}</LocaleProvider>);
 
 function settings(overrides: Partial<SettingsSnapshot> = {}): SettingsSnapshot {
   return {
@@ -133,7 +137,7 @@ describe("DashboardStudioTab", () => {
     render(
       <DashboardStudioTab state={bootstrap()} onOpenThemes={onOpenThemes} onOpenProviderDisplay={onOpenProviderDisplay} />,
     );
-    const changeButtons = await screen.findAllByRole("button", { name: "Change" });
+    const changeButtons = await screen.findAllByRole("button", { name: "Appearance" });
     fireEvent.click(changeButtons[0]);
     expect(onOpenThemes).toHaveBeenCalledTimes(1);
     fireEvent.click(changeButtons[1]);
