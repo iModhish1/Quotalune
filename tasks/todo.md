@@ -1066,3 +1066,15 @@ not claimed complete; see that report's remaining scope.
 - [x] 1001 frontend tests, full Rust gates, native Dev build and screenshot matrix.
 - [x] Restore Dev presentation baseline; stop before further Providers redesign.
 - [ ] Owner Dashboard V2 visual acceptance.
+
+### L12 — Analytics V3 visualization platform (Wave 4.5)
+- [x] Official ECharts/visx/internal SVG and TanStack audit; modular ECharts 6.1.0/SVG selected.
+- [x] Shared analytics model, registry-gated specs, lifecycle, theme/identity and HTML reading alternatives.
+- [x] Compact limit instruments, metric/attention rails, trends/comparison/atlas, reset timeline, tables and coverage diagnostics.
+- [x] Fresh native Demo6, real Dev, Arabic, dense/narrow and four-theme proof; owner review board and matched V2/V3 images.
+- [x] Renderer 100–100k, model/backend 25k–250k, five-sample native interactions/idle and twenty unmount cycles.
+- [x] 1,017 frontend tests / 167 files; Rust 469 + 1,638 + 1 passed, one existing ignored; build, clippy, fmt, 1,323-key parity and scans green.
+- [x] Restore Dev presentation; keep Personal untouched; stop before Providers V2.1.
+- [ ] Owner Analytics V3 visual acceptance.
+
+Engineering/evidence verdict: ANALYTICS V3 PASS. Report: `docs/validation/ANALYTICS_V3_VALIDATION.md`.

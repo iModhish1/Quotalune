@@ -247,3 +247,8 @@ Replace the duplicate in-content Settings category column with expandable/collap
 
 ## L11 — Analytics Waves 2–4 continuation — 2026-09-09
 Settings/IA L10 accepted. Freeze navigation except regressions. Complete exhaustive source-backed metric audit and typed registry, truthful shared analytics, current limits/templates, ranked attention, period comparisons/velocity (projection fails closed), Reset Horizon, comparison, coverage/freshness/quality, chart/table semantics, customization/invariants/performance corpus and real Dev screenshots. Six-provider Demo showcase plus separate real data. Stop at Dashboard V2 visual review; do not begin another Providers redesign. Full request: attachment a11693e1-564c-4a2e-8893-9593eaca8af4/pasted-text.txt.
+
+## L12 — Wave 4.5 professional analytics presentation
+Owner accepts Wave 4 truth, rejects visual presentation. Adopt an audited modular chart platform, one view model/spec/theme boundary, compact limits, advanced trend/comparison/heatmap/table templates, native review cycles, accessibility and measured lifecycle/performance. Keep Personal untouched and stop before Providers redesign. Source: attachment 6e81bf11-f2b9-48fc-ac63-afe52477426d.
+
+Engineering/evidence completed; owner visual acceptance pending. See `docs/validation/ANALYTICS_V3_VALIDATION.md` and the Analytics V3 review board. This checkpoint does not accept the rejected V2 visuals or authorize the next Providers wave.

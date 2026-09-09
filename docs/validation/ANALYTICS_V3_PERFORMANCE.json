@@ -1,0 +1,1079 @@
+{
+  "renderer": [
+    {
+      "count": 100,
+      "renderer": "svg",
+      "elements": 47,
+      "samplesMs": [
+        8.599999997764826,
+        13,
+        5.299999997019768,
+        15.100000001490116,
+        5.099999997764826
+      ],
+      "medianMs": 8.599999997764826
+    },
+    {
+      "count": 100,
+      "renderer": "canvas",
+      "elements": 2,
+      "samplesMs": [
+        11.699999999254942,
+        13.300000000745058,
+        6.5,
+        10.299999997019768,
+        10
+      ],
+      "medianMs": 10.299999997019768
+    },
+    {
+      "count": 1000,
+      "renderer": "svg",
+      "elements": 47,
+      "samplesMs": [
+        12.199999999254942,
+        7.799999997019768,
+        12.399999998509884,
+        13.100000001490116,
+        14.800000000745058
+      ],
+      "medianMs": 12.399999998509884
+    },
+    {
+      "count": 1000,
+      "renderer": "canvas",
+      "elements": 2,
+      "samplesMs": [
+        13.200000002980232,
+        12.100000001490116,
+        12.5,
+        7.800000000745058,
+        13.099999997764826
+      ],
+      "medianMs": 12.5
+    },
+    {
+      "count": 10000,
+      "renderer": "svg",
+      "elements": 47,
+      "samplesMs": [
+        21.199999999254942,
+        17.600000001490116,
+        20.5,
+        15.400000002235174,
+        29.899999998509884
+      ],
+      "medianMs": 20.5
+    },
+    {
+      "count": 10000,
+      "renderer": "canvas",
+      "elements": 2,
+      "samplesMs": [
+        23,
+        29.800000000745058,
+        29.800000000745058,
+        15.699999999254942,
+        13.5
+      ],
+      "medianMs": 23
+    },
+    {
+      "count": 100000,
+      "renderer": "svg",
+      "elements": 47,
+      "samplesMs": [
+        129.19999999925494,
+        130.10000000149012,
+        168.20000000298023,
+        138.5,
+        152.60000000149012
+      ],
+      "medianMs": 138.5
+    },
+    {
+      "count": 100000,
+      "renderer": "canvas",
+      "elements": 2,
+      "samplesMs": [
+        131.40000000223517,
+        131.5,
+        136.5,
+        123.5,
+        176.20000000298023
+      ],
+      "medianMs": 131.5
+    }
+  ],
+  "frontendRaw": [
+    {
+      "count": 25000,
+      "samplesMs": [
+        61.316100000000006,
+        58.90100000000007,
+        64.54040000000009,
+        66.95100000000002,
+        58.67800000000011
+      ],
+      "medianMs": 61.316100000000006
+    },
+    {
+      "count": 100000,
+      "samplesMs": [
+        264.01469999999995,
+        264.5345000000002,
+        264.58420000000024,
+        266.3951000000002,
+        260.55690000000004
+      ],
+      "medianMs": 264.5345000000002
+    },
+    {
+      "count": 250000,
+      "samplesMs": [
+        661.8782999999999,
+        684.0069999999996,
+        680.7852000000003,
+        647.1386999999995,
+        654.8444
+      ],
+      "medianMs": 661.8782999999999
+    }
+  ],
+  "nativeLifecycleDemo": {
+    "loadedBefore": false,
+    "coldMs": 397.19999999925494,
+    "initialCount": 2,
+    "cycles": [
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 114.60000000149012
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 121.80000000074506
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 80.60000000149012
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 106.90000000223517
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 112.09999999776483
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 89.39999999850988
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 110.60000000149012
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 75.89999999850988
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 148
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 100.10000000149012
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 145.80000000074506
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 109
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 68.69999999925494
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 78.89999999850988
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 106.5
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 83.09999999776483
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 76.19999999925494
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 96.40000000223517
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 159
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 77.89999999850988
+      }
+    ],
+    "loadedAfter": true,
+    "resources": [
+      {
+        "duration": 56.69999999925494,
+        "size": 625546
+      }
+    ],
+    "width": 1280,
+    "height": 784,
+    "metrics": [
+      {
+        "name": "JSEventListeners",
+        "value": 561
+      },
+      {
+        "name": "Nodes",
+        "value": 8344
+      },
+      {
+        "name": "JSHeapUsedSize",
+        "value": 24796100
+      },
+      {
+        "name": "JSHeapTotalSize",
+        "value": 51118080
+      }
+    ]
+  },
+  "nativeLifecycleReal": {
+    "loadedBefore": false,
+    "coldMs": 606.1999999992549,
+    "initialCount": 2,
+    "cycles": [
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 215.80000000074506
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 198.79999999701977
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 258.20000000298023
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 249
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 228.80000000074506
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 231.89999999850988
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 193.59999999776483
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 172.89999999850988
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 201
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 174
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 193.10000000149012
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 233.20000000298023
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 179.30000000074506
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 207.69999999925494
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 204.30000000074506
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 230.89999999850988
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 196.89999999850988
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 179.5
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 196.89999999850988
+      },
+      {
+        "off": {
+          "charts": 0,
+          "observers": 0
+        },
+        "on": 2,
+        "observers": 2,
+        "warmMs": 206.80000000074506
+      }
+    ],
+    "loadedAfter": true,
+    "resources": [
+      {
+        "duration": 49.5,
+        "size": 625546
+      }
+    ],
+    "width": 1216,
+    "height": 688,
+    "metrics": [
+      {
+        "name": "JSEventListeners",
+        "value": 508
+      },
+      {
+        "name": "Nodes",
+        "value": 7958
+      },
+      {
+        "name": "JSHeapUsedSize",
+        "value": 19484180
+      },
+      {
+        "name": "JSHeapTotalSize",
+        "value": 46137344
+      }
+    ]
+  },
+  "nativeInteractions": {
+    "viewport": {
+      "width": 1280,
+      "height": 784
+    },
+    "scope": "Native WebView2 action through changed SVG and two animation frames; includes React commit, not a pure engine benchmark",
+    "range": [
+      109.10000000149012,
+      97.30000000074506,
+      60.900000002235174,
+      112.10000000149012,
+      74.59999999776483
+    ],
+    "provider": [
+      147.5,
+      130.69999999925494,
+      63.79999999701977,
+      117.30000000074506,
+      117.19999999925494
+    ],
+    "theme": [
+      {
+        "slug": "01-obsidian-orbit",
+        "ms": 102.40000000223517,
+        "sameInstances": true,
+        "textColors": [
+          "#475763",
+          "#475763",
+          "#475763"
+        ]
+      },
+      {
+        "slug": "smoked-silver",
+        "ms": 308.5,
+        "sameInstances": true,
+        "textColors": [
+          "#abb5c0",
+          "#abb5c0",
+          "#abb5c0"
+        ]
+      },
+      {
+        "slug": "sapphire-observatory",
+        "ms": 311.80000000074506,
+        "sameInstances": true,
+        "textColors": [
+          "#bec9d9",
+          "#bec9d9",
+          "#bec9d9"
+        ]
+      },
+      {
+        "slug": "ceramic-pearl-material",
+        "ms": 311.79999999701977,
+        "sameInstances": true,
+        "textColors": [
+          "#475763",
+          "#475763",
+          "#475763"
+        ]
+      },
+      {
+        "slug": "01-obsidian-orbit",
+        "ms": 312,
+        "sameInstances": true,
+        "textColors": [
+          "#aeb9c5",
+          "#aeb9c5",
+          "#aeb9c5"
+        ]
+      }
+    ],
+    "resize": [
+      124,
+      124.10000000149012,
+      124.59999999776483,
+      125.39999999850988,
+      124.30000000074506
+    ]
+  },
+  "idleV3": {
+    "targetPid": 48956,
+    "scope": "Dev process and descendant WebView2 processes; no CDP sampling during interval",
+    "samples": [
+      {
+        "elapsedSeconds": 5.592,
+        "oneCoreCpuPercent": 13.691434191702433,
+        "workingSetBytes": 932376576,
+        "privateBytes": 340209664,
+        "processCount": 8
+      },
+      {
+        "elapsedSeconds": 5.579,
+        "oneCoreCpuPercent": 0.5601362251299516,
+        "workingSetBytes": 929796096,
+        "privateBytes": 340135936,
+        "processCount": 8
+      },
+      {
+        "elapsedSeconds": 5.572,
+        "oneCoreCpuPercent": 1.1216798277099784,
+        "workingSetBytes": 927825920,
+        "privateBytes": 338067456,
+        "processCount": 8
+      },
+      {
+        "elapsedSeconds": 5.549,
+        "oneCoreCpuPercent": 0,
+        "workingSetBytes": 927797248,
+        "privateBytes": 338022400,
+        "processCount": 8
+      },
+      {
+        "elapsedSeconds": 5.524,
+        "oneCoreCpuPercent": 0.5657132512671976,
+        "workingSetBytes": 927215616,
+        "privateBytes": 337424384,
+        "processCount": 8
+      }
+    ]
+  },
+  "idleV2Historical": {
+    "targetPid": 43972,
+    "scope": "Dev process and descendant WebView2 processes; no CDP sampling during interval",
+    "samples": [
+      {
+        "elapsedSeconds": 5.605,
+        "oneCoreCpuPercent": 0.8363068688670829,
+        "workingSetBytes": 857571328.0,
+        "privateBytes": 282976256.0,
+        "processCount": 8
+      },
+      {
+        "elapsedSeconds": 5.586,
+        "oneCoreCpuPercent": 0.27971715001790187,
+        "workingSetBytes": 857571328.0,
+        "privateBytes": 282976256.0,
+        "processCount": 8
+      },
+      {
+        "elapsedSeconds": 5.548,
+        "oneCoreCpuPercent": 1.1265320836337418,
+        "workingSetBytes": 857268224.0,
+        "privateBytes": 282644480.0,
+        "processCount": 8
+      },
+      {
+        "elapsedSeconds": 5.533,
+        "oneCoreCpuPercent": 0.5647930598228809,
+        "workingSetBytes": 857284608.0,
+        "privateBytes": 282652672.0,
+        "processCount": 8
+      },
+      {
+        "elapsedSeconds": 5.551,
+        "oneCoreCpuPercent": 0.562961628535399,
+        "workingSetBytes": 857337856.0,
+        "privateBytes": 282726400.0,
+        "processCount": 8
+      }
+    ]
+  },
+  "accessibility": {
+    "chart": {
+      "x": 392,
+      "y": 295.5,
+      "width": 672,
+      "height": 270,
+      "aria": "Claude · شهري · حساب مرصود مستقل 1 · الحصة المستخدمة",
+      "direction": "ltr",
+      "axis": [
+        "0%",
+        "50%",
+        "100%",
+        "3 سبتمبر، 12:00 ص",
+        "5 سبتمبر، 12:00 ص",
+        "7 سبتمبر، 12:00 ص",
+        "9 سبتمبر، 12:00 ص",
+        "37.7%"
+      ]
+    },
+    "tip": {
+      "text": "Claude · شهري · حساب مرصود مستقل 17 سبتمبر، 11:51 مالحصة المستخدمة: 39.1%قراءة المزوّد · السجل المحلي",
+      "direction": "rtl",
+      "width": 230.9875030517578,
+      "clipped": false
+    },
+    "keyboard": {
+      "open": true,
+      "rows": 7,
+      "headers": 3,
+      "focused": "SUMMARY"
+    },
+    "reducedMotion": true
+  },
+  "identity": {
+    "before": {
+      "id": "ec_1788987086714",
+      "metrics": [
+        "33.5%",
+        "41.9%",
+        "37.7%",
+        "+8.4 pp"
+      ],
+      "strokes": [
+        "#e0a884",
+        "#e0a884"
+      ]
+    },
+    "independent": {
+      "id": "ec_1788987086714",
+      "metrics": [
+        "33.5%",
+        "41.9%",
+        "37.7%",
+        "+8.4 pp"
+      ],
+      "strokes": [
+        "rgb(204, 124, 94)",
+        "rgb(204, 124, 94)"
+      ]
+    },
+    "valuesStable": true,
+    "sameInstance": true,
+    "immediatePostRestore": {
+      "id": "ec_1788987086714",
+      "metrics": [
+        "33.5%",
+        "41.9%",
+        "37.7%",
+        "+8.4 pp"
+      ],
+      "strokes": [
+        "rgb(204, 124, 94)",
+        "rgb(204, 124, 94)"
+      ]
+    }
+  },
+  "restoredPresentation": {
+    "demoModeEnabled": false,
+    "demoProviderCount": 6,
+    "demoScenario": "connectedShowcase",
+    "demoHistoryDays": 7,
+    "uiLanguage": "english",
+    "workspacePreferences": {
+      "density": "comfortable",
+      "navigation": "side"
+    },
+    "surfaceCatalogThemes": {},
+    "globalLimitPresentation": {
+      "shape": "horizontal",
+      "content": "both",
+      "direction": "forward",
+      "identity": "adaptive"
+    },
+    "providerLimitPresentation": {},
+    "resetPresentationOverrides": {}
+  },
+  "sourceScans": {
+    "baseline": "376d41823ba543d133d978c3083e8b5de83caf90",
+    "scope": "Added tracked and untracked source lines under apps/rust. Targeted credential patterns, not comprehensive secret detection. No source content emitted.",
+    "credentialPatternFindings": {
+      "privateKey": 0,
+      "providerToken": 0
+    },
+    "newSkippedOrFocusedTests": 0
+  },
+  "sqliteAndRust": [
+    {
+      "input": 25000,
+      "output": 70,
+      "samplesMs": [
+        183.59300000000002,
+        184.3659,
+        192.056,
+        195.82659999999998,
+        208.11669999999998
+      ],
+      "sqliteReadAndRustAggregateMedianMs": 192.056
+    },
+    {
+      "input": 100000,
+      "output": 140,
+      "samplesMs": [
+        773.7265,
+        776.5468,
+        779.7369,
+        785.4679,
+        794.9142
+      ],
+      "sqliteReadAndRustAggregateMedianMs": 779.7369
+    },
+    {
+      "input": 250000,
+      "output": 280,
+      "samplesMs": [
+        1960.2545,
+        1967.9379,
+        1969.3928999999998,
+        1971.8416,
+        2001.6605
+      ],
+      "sqliteReadAndRustAggregateMedianMs": 1969.3928999999998
+    }
+  ],
+  "scope": "Windows Dev only. Synthetic renderer benchmarks are isolated from product data. Historical V2 timings are context, not a controlled improvement experiment. Immediate post-command identity sampling can precede the asynchronous settings event; restoredPresentation is the final read-back.",
+  "nativeCaptures": {
+    "QUOTALIS_ANALYTICS_V3_ATTENTION": {
+      "width": 1280,
+      "height": 784,
+      "dir": "ltr",
+      "density": "comfortable",
+      "demo": true,
+      "overflow": false,
+      "instances": 2,
+      "paths": 86
+    },
+    "QUOTALIS_ANALYTICS_V3_COMPARISON": {
+      "width": 1280,
+      "height": 784,
+      "dir": "ltr",
+      "density": "comfortable",
+      "demo": true,
+      "overflow": false,
+      "instances": 3,
+      "paths": 118
+    },
+    "QUOTALIS_ANALYTICS_V3_CURRENT_LIMITS": {
+      "width": 1280,
+      "height": 784,
+      "dir": "ltr",
+      "density": "comfortable",
+      "demo": true,
+      "overflow": false,
+      "instances": 2,
+      "paths": 86
+    },
+    "QUOTALIS_ANALYTICS_V3_DATA_QUALITY": {
+      "width": 1280,
+      "height": 784,
+      "dir": "ltr",
+      "density": "comfortable",
+      "demo": true,
+      "overflow": false,
+      "instances": 2,
+      "paths": 86
+    },
+    "QUOTALIS_ANALYTICS_V3_DENSE": {
+      "width": 718,
+      "height": 706,
+      "dir": "ltr",
+      "density": "dense",
+      "demo": true,
+      "overflow": false,
+      "instances": 3,
+      "paths": 113
+    },
+    "QUOTALIS_ANALYTICS_V3_DENSE_TREND": {
+      "width": 718,
+      "height": 706,
+      "dir": "ltr",
+      "density": "dense",
+      "demo": true,
+      "overflow": false,
+      "instances": 3,
+      "paths": 113
+    },
+    "QUOTALIS_ANALYTICS_V3_HEATMAP": {
+      "width": 1280,
+      "height": 784,
+      "dir": "ltr",
+      "density": "comfortable",
+      "demo": true,
+      "overflow": false,
+      "instances": 2,
+      "paths": 86
+    },
+    "QUOTALIS_ANALYTICS_V3_MONETARY_SEMANTICS": {
+      "width": 1280,
+      "height": 784,
+      "dir": "ltr",
+      "density": "comfortable",
+      "demo": true,
+      "overflow": false,
+      "instances": 3,
+      "paths": 104
+    },
+    "QUOTALIS_ANALYTICS_V3_OVERVIEW": {
+      "width": 1280,
+      "height": 784,
+      "dir": "ltr",
+      "density": "comfortable",
+      "demo": true,
+      "overflow": false,
+      "instances": 2,
+      "paths": 86
+    },
+    "QUOTALIS_ANALYTICS_V3_OVERVIEW_MATCHED": {
+      "width": 1280,
+      "height": 784,
+      "dir": "ltr",
+      "density": "comfortable",
+      "demo": true,
+      "overflow": false,
+      "instances": 2,
+      "paths": 86
+    },
+    "QUOTALIS_ANALYTICS_V3_PROVIDER_TABLE": {
+      "width": 1280,
+      "height": 784,
+      "dir": "ltr",
+      "density": "comfortable",
+      "demo": true,
+      "overflow": false,
+      "instances": 2,
+      "paths": 86
+    },
+    "QUOTALIS_ANALYTICS_V3_REAL_COVERAGE": {
+      "width": 1280,
+      "height": 784,
+      "dir": "ltr",
+      "density": "comfortable",
+      "demo": false,
+      "overflow": false,
+      "instances": 2,
+      "paths": 124
+    },
+    "QUOTALIS_ANALYTICS_V3_REAL_DATA": {
+      "width": 1280,
+      "height": 784,
+      "dir": "ltr",
+      "density": "comfortable",
+      "demo": false,
+      "overflow": false,
+      "instances": 2,
+      "paths": 124
+    },
+    "QUOTALIS_ANALYTICS_V3_RESET_HORIZON": {
+      "width": 1280,
+      "height": 784,
+      "dir": "ltr",
+      "density": "comfortable",
+      "demo": true,
+      "overflow": false,
+      "instances": 2,
+      "paths": 86
+    },
+    "QUOTALIS_ANALYTICS_V3_RTL": {
+      "width": 1280,
+      "height": 784,
+      "dir": "rtl",
+      "density": "comfortable",
+      "demo": true,
+      "overflow": false,
+      "instances": 3,
+      "paths": 114
+    },
+    "QUOTALIS_ANALYTICS_V3_THEME_CERAMIC": {
+      "width": 1280,
+      "height": 784,
+      "dir": "ltr",
+      "density": "comfortable",
+      "demo": true,
+      "overflow": false,
+      "instances": 2,
+      "paths": 86
+    },
+    "QUOTALIS_ANALYTICS_V3_THEME_OBSIDIAN": {
+      "width": 1280,
+      "height": 784,
+      "dir": "ltr",
+      "density": "comfortable",
+      "demo": true,
+      "overflow": false,
+      "instances": 2,
+      "paths": 86
+    },
+    "QUOTALIS_ANALYTICS_V3_THEME_SILVER": {
+      "width": 1280,
+      "height": 784,
+      "dir": "ltr",
+      "density": "comfortable",
+      "demo": true,
+      "overflow": false,
+      "instances": 2,
+      "paths": 86
+    },
+    "QUOTALIS_ANALYTICS_V3_THEME_WARM": {
+      "width": 1280,
+      "height": 784,
+      "dir": "ltr",
+      "density": "comfortable",
+      "demo": true,
+      "overflow": false,
+      "instances": 2,
+      "paths": 86
+    },
+    "QUOTALIS_ANALYTICS_V3_TREND": {
+      "width": 1280,
+      "height": 784,
+      "dir": "ltr",
+      "density": "comfortable",
+      "demo": true,
+      "overflow": false,
+      "instances": 2,
+      "paths": 86
+    }
+  }
+}
