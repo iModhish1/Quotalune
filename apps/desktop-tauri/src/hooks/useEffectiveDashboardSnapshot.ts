@@ -10,6 +10,7 @@ import { useDashboardSnapshot } from "./useDashboardSnapshot";
 import type { DashboardRangeKind, DashboardSnapshot, ProviderCatalogEntry, SettingsSnapshot } from "../types/bridge";
 import { resolveDemoConfig } from "../demoMode/types";
 import { buildDemoDashboardSnapshot } from "../demoMode/dashboardSnapshot";
+import { scopeDemoSnapshot } from "../demoMode/scopeSnapshot";
 
 export function useEffectiveDashboardSnapshot(
   range: DashboardRangeKind,
@@ -46,12 +47,12 @@ export function useEffectiveDashboardSnapshot(
     ],
   );
   const catalogKey = catalog.map((p) => p.id).join(",");
-  const demoNow = useMemo(() => Date.now(), [demoConfig, catalogKey, range]);
+  const demoNow = useMemo(() => Date.now(), [demoConfig, catalogKey]);
   const demoSnapshot = useMemo(
-    () => (demoConfig.enabled ? buildDemoDashboardSnapshot(demoConfig, catalog, range, demoNow) : null),
-    [demoConfig, catalogKey, range, demoNow],
+    () => (demoConfig.enabled ? buildDemoDashboardSnapshot(demoConfig, catalog, "last30Days", demoNow) : null),
+    [demoConfig, catalogKey, demoNow],
   );
 
   if (!demoConfig.enabled) return live;
-  return { snapshot: demoSnapshot, error: null, isLoading: false, reload: () => {} };
+  return { snapshot: demoSnapshot ? scopeDemoSnapshot(demoSnapshot, range, providers) : null, error: null, isLoading: false, reload: () => {} };
 }
