@@ -615,3 +615,21 @@ V24NoAttention = لا توجد مشكلات حالية في القراءات ا�
 V24ResetLayout = إعادة تعيين تخطيط لوحة المعلومات
 V24ScopeCaption = لكل حصة أساس حساب مستقل. الترتيب لا يقارن الرموز أو القيمة الشرائية.
 SectionTheme = المظهر
+
+V45Current = الفترة الحالية
+V45Previous = الفترة السابقة القابلة للمقارنة
+V45MissingCells = الخلايا الفارغة تعني عدم وجود قراءات، وليس صفرًا.
+V45VisualZoom = تكبير بصري فقط · Ctrl + التمرير للفحص
+V45SourceObservation = قراءة المزوّد · السجل المحلي
+V45CoverageHeatmap = تغطية القراءات
+V45SmallMultiples = أطلس اتجاهات المزوّدين
+V45PeriodComparison = الفترات القابلة للمقارنة
+V45TableColumns = الأعمدة
+V45TablePreviousPage = الصفحة السابقة
+V45TableNextPage = الصفحة التالية
+V45TablePage = الصفحة
+V45ResetCalibration = الوقت المنقضي · مقياس خطي
+V45Later = لاحقًا
+V45Mean = متوسط القراءات
+
+V45TableFreshness = حداثة البيانات

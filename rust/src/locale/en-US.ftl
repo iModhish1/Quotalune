@@ -1369,3 +1369,21 @@ V24Attention = Needs action
 V24NoAttention = No current issues in the available observations.
 V24ResetLayout = Reset Dashboard Layout
 V24ScopeCaption = Each quota retains its own denominator. Ordering does not compare tokens or purchasing value.
+
+V45Current = Current period
+V45Previous = Previous comparable period
+V45MissingCells = Blank cells mean no observations, not zero.
+V45VisualZoom = Visual zoom only · Ctrl + scroll to inspect
+V45SourceObservation = Provider observation · local history
+V45CoverageHeatmap = Observation coverage
+V45SmallMultiples = Provider trend atlas
+V45PeriodComparison = Comparable periods
+V45TableColumns = Columns
+V45TablePreviousPage = Previous page
+V45TableNextPage = Next page
+V45TablePage = Page
+V45ResetCalibration = Elapsed time · linear scale
+V45Later = Later
+V45Mean = Observed mean
+
+V45TableFreshness = Freshness
