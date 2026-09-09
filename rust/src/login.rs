@@ -10,6 +10,10 @@
 use regex_lite::Regex;
 use std::io;
 use std::process::{Command, ExitStatus};
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
 use std::time::{Duration, Instant};
 mod process;
 use process::{LoginProcess, read_available};
@@ -31,9 +35,28 @@ pub struct LoginResult {
 pub enum LoginOutcome {
     Success,
     TimedOut,
+    Canceled,
     Failed { status: i32 },
     MissingBinary,
     LaunchFailed(String),
+}
+
+/// Cloneable, request-scoped cancellation signal for a supervised login.
+#[derive(Debug, Clone, Default)]
+pub struct LoginCancellation(Arc<AtomicBool>);
+
+impl LoginCancellation {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn cancel(&self) {
+        self.0.store(true, Ordering::Release);
+    }
+
+    pub fn is_canceled(&self) -> bool {
+        self.0.load(Ordering::Acquire)
+    }
 }
 
 /// Phase of the login process
@@ -50,7 +73,25 @@ pub async fn run_claude_login<F>(timeout_secs: u64, on_phase: F) -> LoginResult
 where
     F: Fn(LoginPhase) + Send + 'static,
 {
-    run_cli_login("claude", &["auth", "login"], timeout_secs, on_phase).await
+    run_claude_login_cancellable(timeout_secs, LoginCancellation::new(), on_phase).await
+}
+
+pub async fn run_claude_login_cancellable<F>(
+    timeout_secs: u64,
+    cancellation: LoginCancellation,
+    on_phase: F,
+) -> LoginResult
+where
+    F: Fn(LoginPhase) + Send + 'static,
+{
+    run_cli_login(
+        "claude",
+        &["auth", "login"],
+        timeout_secs,
+        cancellation,
+        on_phase,
+    )
+    .await
 }
 
 /// Run Codex CLI login
@@ -58,7 +99,18 @@ pub async fn run_codex_login<F>(timeout_secs: u64, on_phase: F) -> LoginResult
 where
     F: Fn(LoginPhase) + Send + 'static,
 {
-    run_cli_login("codex", &["login"], timeout_secs, on_phase).await
+    run_codex_login_cancellable(timeout_secs, LoginCancellation::new(), on_phase).await
+}
+
+pub async fn run_codex_login_cancellable<F>(
+    timeout_secs: u64,
+    cancellation: LoginCancellation,
+    on_phase: F,
+) -> LoginResult
+where
+    F: Fn(LoginPhase) + Send + 'static,
+{
+    run_cli_login("codex", &["login"], timeout_secs, cancellation, on_phase).await
 }
 
 /// Run the Google Cloud application-default login used by Vertex AI.
@@ -66,10 +118,22 @@ pub async fn run_vertexai_login<F>(timeout_secs: u64, on_phase: F) -> LoginResul
 where
     F: Fn(LoginPhase) + Send + 'static,
 {
+    run_vertexai_login_cancellable(timeout_secs, LoginCancellation::new(), on_phase).await
+}
+
+pub async fn run_vertexai_login_cancellable<F>(
+    timeout_secs: u64,
+    cancellation: LoginCancellation,
+    on_phase: F,
+) -> LoginResult
+where
+    F: Fn(LoginPhase) + Send + 'static,
+{
     run_cli_login(
         "gcloud",
         &["auth", "application-default", "login"],
         timeout_secs,
+        cancellation,
         on_phase,
     )
     .await
@@ -80,11 +144,29 @@ pub async fn run_copilot_login<F>(timeout_secs: u64, on_phase: F) -> LoginResult
 where
     F: Fn(LoginPhase) + Send + 'static,
 {
-    run_cli_login("gh", &["auth", "login", "-w"], timeout_secs, on_phase).await
+    run_cli_login(
+        "gh",
+        &["auth", "login", "-w"],
+        timeout_secs,
+        LoginCancellation::new(),
+        on_phase,
+    )
+    .await
 }
 
 /// Run Kiro CLI login
 pub async fn run_kiro_login<F>(timeout_secs: u64, on_phase: F) -> LoginResult
+where
+    F: Fn(LoginPhase) + Send + 'static,
+{
+    run_kiro_login_cancellable(timeout_secs, LoginCancellation::new(), on_phase).await
+}
+
+pub async fn run_kiro_login_cancellable<F>(
+    timeout_secs: u64,
+    cancellation: LoginCancellation,
+    on_phase: F,
+) -> LoginResult
 where
     F: Fn(LoginPhase) + Send + 'static,
 {
@@ -95,7 +177,14 @@ where
         None => return missing_binary_result("kiro-cli"),
     };
 
-    run_cli_login_path(&binary_path, &["login"], timeout_secs, on_phase).await
+    run_cli_login_path(
+        &binary_path,
+        &["login"],
+        timeout_secs,
+        cancellation,
+        on_phase,
+    )
+    .await
 }
 
 /// Generic CLI login runner (resolves binary via PATH)
@@ -103,6 +192,7 @@ async fn run_cli_login<F>(
     binary: &str,
     args: &[&str],
     timeout_secs: u64,
+    cancellation: LoginCancellation,
     on_phase: F,
 ) -> LoginResult
 where
@@ -113,7 +203,7 @@ where
         Err(_) => return missing_binary_result(binary),
     };
 
-    run_cli_login_path(&binary_path, args, timeout_secs, on_phase).await
+    run_cli_login_path(&binary_path, args, timeout_secs, cancellation, on_phase).await
 }
 
 /// Generic CLI login runner (uses a pre-resolved binary path).
@@ -123,6 +213,7 @@ async fn run_cli_login_path<F>(
     binary_path: &std::path::Path,
     args: &[&str],
     timeout_secs: u64,
+    cancellation: LoginCancellation,
     on_phase: F,
 ) -> LoginResult
 where
@@ -131,7 +222,12 @@ where
     let mut command = Command::new(binary_path);
     command.args(args);
     match tokio::task::spawn_blocking(move || {
-        supervise_login(command, Duration::from_secs(timeout_secs), on_phase)
+        supervise_login_cancellable(
+            command,
+            Duration::from_secs(timeout_secs),
+            cancellation,
+            on_phase,
+        )
     })
     .await
     {
@@ -140,11 +236,30 @@ where
     }
 }
 
-fn supervise_login<F>(mut command: Command, timeout: Duration, on_phase: F) -> LoginResult
+fn supervise_login<F>(command: Command, timeout: Duration, on_phase: F) -> LoginResult
+where
+    F: Fn(LoginPhase),
+{
+    supervise_login_cancellable(command, timeout, LoginCancellation::new(), on_phase)
+}
+
+fn supervise_login_cancellable<F>(
+    mut command: Command,
+    timeout: Duration,
+    cancellation: LoginCancellation,
+    on_phase: F,
+) -> LoginResult
 where
     F: Fn(LoginPhase),
 {
     on_phase(LoginPhase::Requesting);
+    if cancellation.is_canceled() {
+        return LoginResult {
+            outcome: LoginOutcome::Canceled,
+            output: String::new(),
+            auth_link: None,
+        };
+    }
     let deadline = Instant::now() + timeout;
     let mut process = match LoginProcess::spawn(&mut command) {
         Ok(process) => process,
@@ -156,6 +271,12 @@ where
     let mut stdout_line = Vec::new();
     let mut stderr_line = Vec::new();
     loop {
+        if cancellation.is_canceled() {
+            process.stop();
+            state.finish_line(&mut stdout_line);
+            state.finish_line(&mut stderr_line);
+            return state.into_result(LoginOutcome::Canceled);
+        }
         if Instant::now() >= deadline {
             process.stop();
             state.finish_line(&mut stdout_line);

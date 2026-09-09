@@ -8,6 +8,8 @@ interface Props {
   provider: ProviderDetail;
   subtitle: string;
   t: (key: LocaleKey) => string;
+  onConnect?: () => void;
+  busy?: boolean;
 }
 
 /**
@@ -17,7 +19,7 @@ interface Props {
  * Port of the identity portion of
  * `rust/src/native_ui/preferences.rs::render_provider_detail_panel` (~4301).
  */
-export function IdentitySection({ provider, subtitle, t }: Props) {
+export function IdentitySection({ provider, subtitle, t, onConnect, busy }: Props) {
   const { language } = useLocale();
   const observedAt = provider.lastUpdated ? new Date(provider.lastUpdated) : null;
   const observedLabel = observedAt && Number.isFinite(observedAt.getTime()) ? new Intl.DateTimeFormat(resolveIntlLocale(language), {dateStyle:"medium", timeStyle:"short", numberingSystem:"latn"}).format(observedAt) : t("NeverUpdated");
@@ -41,6 +43,9 @@ export function IdentitySection({ provider, subtitle, t }: Props) {
           <div className="provider-detail-title">{provider.displayName}</div>
           <div className="provider-detail-subtitle">{subtitle}</div>
         </div>
+        {provider.canConnect && onConnect && <button type="button" className="btn btn--primary provider-connect-primary" onClick={onConnect} disabled={busy}>
+          {t(provider.errorState === "expiredSession" ? "DashboardReconnect" : provider.errorState === "ready" && !provider.lastError ? "ActionSwitchAccount" : "ActionSignIn")}
+        </button>}
       </div>
       {visible.length > 0 && (
         <dl className="provider-detail-grid">
@@ -52,6 +57,7 @@ export function IdentitySection({ provider, subtitle, t }: Props) {
           ))}
         </dl>
       )}
+      {(provider.canConnect || !provider.authCapability || provider.authCapability === "credentialInput") && <p className="provider-connection-help">{t(provider.canConnect ? "V2ManagedConnection" : "V2ConfiguredConnection")}</p>}
     </header>
   );
 }

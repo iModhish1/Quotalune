@@ -374,6 +374,7 @@ fn main() {
             commands::open_provider_status_page,
             commands::get_provider_detail,
             commands::trigger_provider_login,
+            commands::cancel_provider_login,
             commands::revoke_provider_credentials,
             commands::get_available_languages,
             commands::get_locale_strings,

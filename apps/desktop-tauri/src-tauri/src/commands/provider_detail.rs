@@ -3,6 +3,18 @@ use super::*;
 // ── Provider detail pane (Phase 6b) ──────────────────────────────────
 
 /// DTO for the provider detail pane in the Settings Providers tab.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ProviderAuthCapability {
+    NoAuthRequired,
+    CredentialInput,
+    DeviceFlow,
+    SupervisedCli,
+    ExternalDashboard,
+    DetectionOnly,
+    Unsupported,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProviderDetail {
@@ -44,6 +56,8 @@ pub struct ProviderDetail {
     /// provider. Kept separate from `dashboard_url`: Copilot and Kiro use
     /// their own device/CLI flows.
     pub can_connect: bool,
+    /// One audited primary authentication capability for action selection.
+    pub auth_capability: ProviderAuthCapability,
 
     // True if the shared backend has produced any snapshot yet.
     pub has_snapshot: bool,
@@ -77,6 +91,7 @@ pub(crate) fn build_provider_detail(provider_id: &str) -> Result<ProviderDetail,
         metadata.dashboard_url.map(|s| s.to_string())
     };
     let can_connect = super::system::provider_login_transport(id).is_some();
+    let auth_capability = provider_auth_capability_for(id, dashboard_url.as_deref());
 
     Ok(ProviderDetail {
         id: id.cli_name().to_string(),
@@ -104,11 +119,56 @@ pub(crate) fn build_provider_detail(provider_id: &str) -> Result<ProviderDetail,
         // No verified dedicated purchase URL is available. Dashboard remains separate.
         buy_credits_url: None,
         can_connect,
+        auth_capability,
         has_snapshot: false,
         usage_source: provider_usage_source_lookup(&settings, id.cli_name()),
         cookie_source: provider_cookie_source_lookup(&settings, id.cli_name()),
         region: provider_region_lookup(&settings, id.cli_name()),
     })
+}
+
+/// Resolve one primary capability from existing, concrete support registries.
+/// Managed transports take precedence over credential extension slots, and an
+/// external dashboard is offered only when Quotalis has no stronger action.
+fn provider_auth_capability_for(
+    id: ProviderId,
+    dashboard_url: Option<&str>,
+) -> ProviderAuthCapability {
+    match super::system::provider_login_transport(id) {
+        Some(super::system::ProviderLoginTransport::Device) => {
+            return ProviderAuthCapability::DeviceFlow;
+        }
+        Some(super::system::ProviderLoginTransport::Cli) => {
+            return ProviderAuthCapability::SupervisedCli;
+        }
+        None => {}
+    }
+
+    // Wayfinder's provider contract is an unauthenticated loopback gateway.
+    if id == ProviderId::Wayfinder {
+        return ProviderAuthCapability::NoAuthRequired;
+    }
+
+    let has_api_key_input = quotalis_core::settings::get_api_key_providers()
+        .iter()
+        .any(|provider| provider.id == id);
+    let has_cookie_input = id.cookie_domain().is_some();
+    let has_token_input = quotalis_core::core::TokenAccountSupport::is_supported(id);
+    if has_api_key_input || has_cookie_input || has_token_input {
+        return ProviderAuthCapability::CredentialInput;
+    }
+
+    // This is the only provider whose connection surface is backed solely by
+    // an installed-IDE detection command and path override.
+    if id == ProviderId::JetBrains {
+        return ProviderAuthCapability::DetectionOnly;
+    }
+
+    if dashboard_url.is_some() {
+        ProviderAuthCapability::ExternalDashboard
+    } else {
+        ProviderAuthCapability::Unsupported
+    }
 }
 
 #[tauri::command]
@@ -232,5 +292,51 @@ mod tests {
         assert!(build_provider_detail("vertexai").unwrap().can_connect);
         assert!(!build_provider_detail("mistral").unwrap().can_connect);
         assert!(!build_provider_detail("sub2api").unwrap().can_connect);
+    }
+
+    #[test]
+    fn auth_capability_uses_only_audited_support_surfaces() {
+        assert_eq!(
+            build_provider_detail("codex").unwrap().auth_capability,
+            ProviderAuthCapability::SupervisedCli
+        );
+        assert_eq!(
+            build_provider_detail("copilot").unwrap().auth_capability,
+            ProviderAuthCapability::DeviceFlow
+        );
+        assert_eq!(
+            build_provider_detail("openrouter").unwrap().auth_capability,
+            ProviderAuthCapability::CredentialInput
+        );
+        assert_eq!(
+            build_provider_detail("jetbrains").unwrap().auth_capability,
+            ProviderAuthCapability::DetectionOnly
+        );
+        assert_eq!(
+            build_provider_detail("wayfinder").unwrap().auth_capability,
+            ProviderAuthCapability::NoAuthRequired
+        );
+        assert_eq!(
+            build_provider_detail("windsurf").unwrap().auth_capability,
+            ProviderAuthCapability::ExternalDashboard
+        );
+        assert_eq!(
+            build_provider_detail("litellm").unwrap().auth_capability,
+            ProviderAuthCapability::CredentialInput
+        );
+    }
+
+    #[test]
+    fn every_registered_provider_has_one_explicit_auth_capability() {
+        for id in ProviderId::all() {
+            let detail = build_provider_detail(id.cli_name()).unwrap();
+            assert_eq!(
+                detail.can_connect,
+                matches!(
+                    detail.auth_capability,
+                    ProviderAuthCapability::DeviceFlow | ProviderAuthCapability::SupervisedCli
+                )
+            );
+        }
     }
 }

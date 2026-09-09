@@ -1,5 +1,6 @@
 import { ProviderLoginChallengeNotice } from "./ProviderLoginChallengeNotice";
-import type { ProviderLoginChallenge } from "../../../lib/tauri";
+import {ProviderConnectionSummary} from "./ProviderConnectionSummary";
+import type { ProviderLoginChallenge, ProviderLoginHandle, ProviderLoginPhaseName } from "../../../lib/tauri";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { SettingsSnapshot, SettingsUpdate } from "../../../types/bridge";
 import { useLocale } from "../../../hooks/useLocale";
@@ -14,7 +15,7 @@ import {
   refreshProviders,
   revokeProviderCredentials,
   setProviderGatewayUrl,
-  triggerProviderLogin,
+  startProviderLogin,
 } from "../../../lib/tauri";
 import { listen } from "@tauri-apps/api/event";
 
@@ -76,7 +77,19 @@ export function ProviderDetailPane({
 }: Props) {
   const { t } = useLocale();
   const [challenge, setChallenge] = useState<ProviderLoginChallenge | null>(null);
-  useEffect(() => setChallenge(null), [providerId]);
+  const loginHandle = useRef<ProviderLoginHandle | null>(null);
+  const loginPhaseRef = useRef<ProviderLoginPhaseName | null>(null);
+  const [loginPhase, setLoginPhase] = useState<ProviderLoginPhaseName | null>(null);
+  const [canceling, setCanceling] = useState(false);
+  useEffect(() => {
+    setChallenge(null); setLoginPhase(null); setCanceling(false);
+    return () => {
+      actionSequenceRef.current++;
+      const pending = loginHandle.current;
+      loginHandle.current = null;
+      if (pending) void pending.cancel().catch(() => {});
+    };
+  }, [providerId]);
   const selectedProviderRef = useRef(providerId);
   const actionSequenceRef = useRef(0);
   if (selectedProviderRef.current !== providerId) {
@@ -250,16 +263,27 @@ export function ProviderDetailPane({
     dispatch({ type: "SET_ERROR", error: null });
     try {
       setChallenge(null);
-      await triggerProviderLogin(actionProviderId, next => { if (isCurrent()) setChallenge(next); });
+      loginPhaseRef.current = "starting";
+      setLoginPhase("starting"); setCanceling(false);
+      const attempt = startProviderLogin(actionProviderId, {
+        onChallenge: next => { if (isCurrent()) setChallenge(next); },
+        onPhase: next => { if (isCurrent()) {loginPhaseRef.current = next.phase; setLoginPhase(next.phase);} },
+      });
+      loginHandle.current = attempt;
+      await attempt.completion;
+      // The event callback can update the ref while completion is pending.
+      const latestPhase = (): ProviderLoginPhaseName | null => loginPhaseRef.current;
+      if (latestPhase() === "canceled") return;
+      if (isCurrent()) {loginPhaseRef.current = "completed"; setLoginPhase("completed");}
       if (!isCurrent()) return;
       dispatch({ type: "BUMP_CREDENTIAL_REVISION" });
       await refreshProviders();
       if (!isCurrent()) return;
       await load(actionProviderId);
     } catch (e) {
-      if (isCurrent()) setErr(e);
+      if (isCurrent() && loginPhaseRef.current !== "canceled") {setErr(e); if(loginPhaseRef.current !== "timedOut") setLoginPhase("failed");}
     } finally {
-      if (isCurrent()) { setBusy(false); setChallenge(null); }
+      if (isCurrent()) { loginHandle.current = null; setBusy(false); setChallenge(null); setCanceling(false); }
     }
   };
 
@@ -300,7 +324,8 @@ export function ProviderDetailPane({
 
   return (
     <div className="provider-detail">
-      <IdentitySection provider={detail} subtitle={subtitle} t={t} />
+      <IdentitySection provider={detail} subtitle={subtitle} t={t} onConnect={handleSwitchAccount} busy={busy} />
+      <ProviderConnectionSummary capability={detail.authCapability}/>
 
       {detail.lastError && (
         <ProviderIssueNotice detail={detail} t={t} />
@@ -311,7 +336,21 @@ export function ProviderDetailPane({
         </div>
       )}
 
-      <ProviderLoginChallengeNotice challenge={challenge?.providerId === detail.id ? challenge : null} />
+      {loginPhase && <div className="provider-login-progress" role="status">
+        <strong>{t(({starting:"V2LoginStarting",waiting:"V2LoginWaiting",completed:"V2LoginCompleted",failed:"V2LoginFailed",timedOut:"V2LoginTimedOut",canceled:"V2LoginCanceled"} as const)[loginPhase])}</strong>
+        {(loginPhase === "starting" || loginPhase === "waiting") && <button type="button" disabled={canceling} onClick={() => {
+          const attempt = loginHandle.current;
+          const sequence = actionSequenceRef.current;
+          const providerId = detail.id;
+          if (!attempt) return;
+          setCanceling(true);
+          void attempt.cancel().catch(cause => {
+            if (selectedProviderRef.current !== providerId || actionSequenceRef.current !== sequence || loginHandle.current !== attempt) return;
+            setErr(cause); setCanceling(false);
+          });
+        }}>{t("V2Cancel")}</button>}
+      </div>}
+      <ProviderLoginChallengeNotice key={detail.id} challenge={challenge?.providerId === detail.id ? challenge : null} />
       <div className="provider-detail-overview">
         <QuickActionsSection
           provider={detail}
@@ -334,13 +373,13 @@ export function ProviderDetailPane({
         />
           <PaceSection pace={detail.errorState === "ready" ? detail.pace : null} t={t} />
           <CostSection providerId={detail.id} cost={detail.errorState === "ready" ? detail.cost : null} relative={resetTimeRelative} t={t} />
-        <ChartsSection
+        </>}
+        limits={<ChartsSection
           providerId={detail.id}
           accountEmail={detail.email}
           accentColor={providerAccentColors[detail.id]}
           t={t}
-        />
-        </>}
+        />}
         connections={<>
         {detail.id === "wayfinder" && (
           <WayfinderGatewaySection

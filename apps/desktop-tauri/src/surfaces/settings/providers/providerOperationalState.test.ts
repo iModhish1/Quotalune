@@ -17,6 +17,12 @@ it("separates offline from expired credentials", () => {
   expect(providerOperationalState(true, snapshot({errorState: "localRuntimeOffline"}), now)).toBe("offline");
 });
 it("does not call unknown or old timestamps fresh", () => {
-  expect(providerOperationalState(true, snapshot({updatedAt: "invalid"}), now)).toBe("stale");
-  expect(providerOperationalState(true, snapshot({updatedAt: new Date(now-660_000).toISOString()}), now)).toBe("stale");
+  expect(providerOperationalState(true, snapshot({updatedAt: "invalid"}), now)).toBe("unavailable");
+  expect(providerOperationalState(true, snapshot({updatedAt: new Date(now-660_000).toISOString()}), now, 120)).toBe("stale");
+});
+
+it("does not invent staleness under manual refresh or a slower cadence", () => {
+  const old = snapshot({updatedAt:new Date(now-660_000).toISOString()});
+  expect(providerOperationalState(true,old,now,null)).toBe("ok");
+  expect(providerOperationalState(true,old,now,900)).toBe("ok");
 });

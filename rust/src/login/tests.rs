@@ -175,6 +175,44 @@ fn timed_out_wrapper_cannot_leave_descendant_or_block_on_inherited_pipe() {
     check_descendant_cleanup("descendant_timeout", true);
 }
 
+#[test]
+fn cancellation_stops_the_owned_cli_process_tree() {
+    let temp = tempfile::tempdir().unwrap();
+    let pid_path = temp.path().join("pid");
+    let descendant_path = pid_path.with_extension("descendant");
+    let cancellation = LoginCancellation::new();
+    let cancel_from_watcher = cancellation.clone();
+    let descendant_for_watcher = descendant_path.clone();
+    let watcher = std::thread::spawn(move || {
+        let deadline = Instant::now() + Duration::from_secs(3);
+        while !descendant_for_watcher.exists() && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        assert!(
+            descendant_for_watcher.exists(),
+            "fixture descendant started"
+        );
+        cancel_from_watcher.cancel();
+    });
+
+    let start = Instant::now();
+    let result = supervise_login_cancellable(
+        fixture_command("descendant_timeout", &pid_path),
+        Duration::from_secs(10),
+        cancellation,
+        |_| {},
+    );
+    watcher.join().unwrap();
+
+    assert!(
+        matches!(result.outcome, LoginOutcome::Canceled),
+        "{result:?}"
+    );
+    assert!(start.elapsed() < Duration::from_secs(5));
+    assert_process_stopped(&pid_path);
+    assert_process_stopped(&descendant_path);
+}
+
 fn check_descendant_cleanup(scenario: &str, timed_out: bool) {
     let temp = tempfile::tempdir().unwrap();
     let pid_path = temp.path().join("pid");

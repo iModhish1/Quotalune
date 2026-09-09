@@ -77,17 +77,17 @@ export default function ProvidersTab({
         id: p.id,
         displayName: p.displayName,
         enabled: isOn,
-        status: providerOperationalState(isOn, snap),
+        status: providerOperationalState(isOn, snap, Date.now(), settings.effectiveRefreshIntervalSecs),
         subtitlePrimary: providerSidebarSubtitle(p.id, isOn, snap, t),
         subtitleSecondary: isOn ? providerSidebarMetric(snap) : undefined,
       };
     });
-  }, [enabled, orderedProviders, snapshots, t, isDemo]);
+  }, [enabled, orderedProviders, snapshots, t, isDemo, settings.effectiveRefreshIntervalSecs]);
 
   const normalizedSearch = searchText.trim().toLowerCase();
   const visibleRows = useMemo(() => rows.filter(row =>
     (!normalizedSearch || row.displayName.toLowerCase().includes(normalizedSearch) || row.id.toLowerCase().includes(normalizedSearch)) &&
-    (statusFilter === "all" || (statusFilter === "enabled" ? row.enabled : statusFilter === "attention" ? row.enabled && row.status !== "ok" : !row.enabled))),
+    (statusFilter === "all" || (statusFilter === "enabled" ? row.enabled : statusFilter === "ready" ? row.enabled && row.status === "ok" : statusFilter === "attention" ? row.enabled && row.status !== "ok" : !row.enabled))),
     [rows, normalizedSearch, statusFilter]);
 
   // Derive selection from visible rows — no effect to mirror/adjust state.
@@ -122,12 +122,15 @@ export default function ProvidersTab({
   return (
     <div className="provider-workspace">
       <header className="provider-workspace__header"><div><h2>{t("TabProviders")}</h2><p>{t("ProviderWorkspaceHelp")}</p></div>
-        <div className="provider-workspace__counts"><span><strong>{rows.filter(p => p.enabled).length}</strong> {t("ProviderEnabled")}</span><span><strong>{rows.filter(p => p.enabled && p.status !== "ok").length}</strong> {t("DashboardNeedsAttention")}</span></div>
       </header>
       {isDemo && <DemoIndicator providerCount={snapshots.length} onExit={() => set({demoModeEnabled: false})} />}
-      <div className="provider-workspace__toolbar"><label>{t("ProviderWorkspaceFilter")} <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-        <option value="all">{t("PanelAllProviders")}</option><option value="enabled">{t("ProviderEnabled")}</option><option value="attention">{t("DashboardNeedsAttention")}</option><option value="disabled">{t("ProviderDisabled")}</option>
-      </select></label><span>{visibleRows.length} / {rows.length}</span></div>
+      <div className="provider-workspace__toolbar" role="group" aria-label={t("ProviderWorkspaceFilter")}>
+        {([{id:"all",label:"PanelAllProviders",count:rows.length},{id:"enabled",label:"ProviderEnabled",count:rows.filter(p=>p.enabled).length},
+          {id:"ready",label:"V2ProviderReady",count:rows.filter(p=>p.enabled && p.status === "ok").length},
+          {id:"attention",label:"DashboardNeedsAttention",count:rows.filter(p=>p.enabled && p.status !== "ok").length},
+          {id:"disabled",label:"ProviderDisabled",count:rows.filter(p=>!p.enabled).length}] as const).map(filter =>
+          <button key={filter.id} type="button" aria-pressed={statusFilter === filter.id} onClick={()=>setStatusFilter(filter.id)}>{t(filter.label)} <strong>{filter.count}</strong></button>)}
+      </div>
       <div className="provider-split">
       <ProvidersSidebar
         providers={visibleRows}

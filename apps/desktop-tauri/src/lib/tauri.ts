@@ -439,16 +439,134 @@ export interface ProviderLoginChallenge {
   verificationUri: string;
 }
 
-export async function triggerProviderLogin(providerId: string, onChallenge?: (challenge: ProviderLoginChallenge) => void): Promise<void> {
-  const loginRequestId = crypto.randomUUID();
-  const stop = onChallenge ? await listen<ProviderLoginChallenge>("provider-login-challenge", event => {
-    if (event.payload.providerId === providerId && event.payload.requestId === loginRequestId) onChallenge(event.payload);
-  }) : undefined;
-  try {
-    await invoke<void>("trigger_provider_login", { providerId, loginRequestId });
-  } finally {
-    stop?.();
-  }
+export type ProviderLoginPhaseName =
+  | "starting"
+  | "waiting"
+  | "completed"
+  | "failed"
+  | "timedOut"
+  | "canceled";
+
+export interface ProviderLoginPhase {
+  providerId: string;
+  requestId: string;
+  phase: ProviderLoginPhaseName;
+  message?: string | null;
+}
+
+export interface ProviderLoginOptions {
+  onChallenge?: (challenge: ProviderLoginChallenge) => void;
+  onPhase?: (phase: ProviderLoginPhase) => void;
+}
+
+export interface ProviderLoginHandle {
+  requestId: string;
+  completion: Promise<void>;
+  cancel: () => Promise<boolean>;
+}
+
+/** Start one request-scoped login and expose its completion and cancel controls. */
+export function startProviderLogin(
+  providerId: string,
+  options: ProviderLoginOptions = {},
+): ProviderLoginHandle {
+  const requestId = crypto.randomUUID();
+  let started = false;
+  let cancelRequested = false;
+  let cancelInFlight: Promise<boolean> | null = null;
+  const listenerSetups = [
+    options.onChallenge
+      ? listen<ProviderLoginChallenge>("provider-login-challenge", (event) => {
+          if (
+            event.payload.providerId === providerId &&
+            event.payload.requestId === requestId
+          ) {
+            options.onChallenge?.(event.payload);
+          }
+        })
+      : Promise.resolve(undefined),
+    options.onPhase
+      ? listen<ProviderLoginPhase>("provider-login-phase", (event) => {
+          if (
+            event.payload.providerId === providerId &&
+            event.payload.requestId === requestId
+          ) {
+            options.onPhase?.(event.payload);
+          }
+        })
+      : Promise.resolve(undefined),
+  ];
+  const listens = (async () => {
+    const results = await Promise.allSettled(listenerSetups);
+    const stops = results
+      .filter(
+        (result): result is PromiseFulfilledResult<(() => void) | undefined> =>
+          result.status === "fulfilled",
+      )
+      .map((result) => result.value);
+    const failed = results.find(
+      (result): result is PromiseRejectedResult => result.status === "rejected",
+    );
+    if (failed) {
+      for (const stop of stops) stop?.();
+      throw failed.reason;
+    }
+    return stops;
+  })();
+
+  const completion = (async () => {
+    const stops = await listens;
+    try {
+      if (cancelRequested) {
+        options.onPhase?.({ providerId, requestId, phase: "canceled" });
+        return;
+      }
+      started = true;
+      await invoke<void>("trigger_provider_login", {
+        providerId,
+        loginRequestId: requestId,
+      });
+    } finally {
+      for (const stop of stops) stop?.();
+    }
+  })();
+
+  return {
+    requestId,
+    completion,
+    cancel: () => {
+      if (cancelRequested && !cancelInFlight) return Promise.resolve(false);
+      if (cancelInFlight) return cancelInFlight;
+      cancelRequested = true;
+      cancelInFlight = (async () => {
+        try {
+          await listens;
+          if (!started) return true;
+          const accepted = await invoke<boolean>("cancel_provider_login", {
+            providerId,
+            loginRequestId: requestId,
+          });
+          if (!accepted) cancelRequested = false;
+          return accepted;
+        } catch (error) {
+          cancelRequested = false;
+          throw error;
+        } finally {
+          cancelInFlight = null;
+        }
+      })();
+      return cancelInFlight;
+    },
+  };
+}
+
+/** Compatibility wrapper for existing callers that only await completion. */
+export function triggerProviderLogin(
+  providerId: string,
+  onChallenge?: (challenge: ProviderLoginChallenge) => void,
+  onPhase?: (phase: ProviderLoginPhase) => void,
+): Promise<void> {
+  return startProviderLogin(providerId, { onChallenge, onPhase }).completion;
 }
 
 export function revokeProviderCredentials(providerId: string): Promise<void> {

@@ -256,16 +256,268 @@ pub async fn trigger_provider_login(
     login_request_id: Option<String>,
 ) -> Result<(), String> {
     let id = parse_provider_arg(&provider_id)?;
-
-    match provider_login_transport(id).ok_or_else(|| {
+    let transport = provider_login_transport(id).ok_or_else(|| {
         format!(
             "Quotalis cannot start a sign-in flow for '{}'; configure its credentials in Provider settings or open its dashboard.",
             id.display_name()
         )
-    })? {
-        ProviderLoginTransport::Device => run_copilot_device_login(&app, login_request_id.as_deref()).await,
-        ProviderLoginTransport::Cli => run_cli_provider_login(&app, id, 120).await,
+    })?;
+    let request_id = validated_login_request_id(login_request_id)?;
+    let registry = provider_login_registry();
+    let control = match registry.start(id, &request_id) {
+        Ok(control) => control,
+        Err(error) => {
+            emit_provider_login_phase(
+                &app,
+                id,
+                &request_id,
+                ProviderLoginPhase::Failed,
+                Some(&error),
+            );
+            return Err(error);
+        }
+    };
+
+    emit_provider_login_phase(&app, id, &request_id, ProviderLoginPhase::Starting, None);
+    let result = match transport {
+        ProviderLoginTransport::Device => {
+            run_copilot_device_login(&app, &request_id, control.clone()).await
+        }
+        ProviderLoginTransport::Cli => {
+            run_cli_provider_login(&app, id, &request_id, 120, control.cancellation()).await
+        }
+    };
+    let result = control.finish_result(result);
+    registry.finish(id, &request_id);
+
+    let (phase, message) = match &result {
+        ProviderLoginRunResult::Completed => (ProviderLoginPhase::Completed, None),
+        ProviderLoginRunResult::Canceled => (ProviderLoginPhase::Canceled, None),
+        ProviderLoginRunResult::TimedOut(message) => {
+            (ProviderLoginPhase::TimedOut, Some(message.as_str()))
+        }
+        ProviderLoginRunResult::Failed(message) => {
+            (ProviderLoginPhase::Failed, Some(message.as_str()))
+        }
+    };
+    emit_provider_login_phase(&app, id, &request_id, phase, message);
+
+    match result {
+        ProviderLoginRunResult::Completed | ProviderLoginRunResult::Canceled => Ok(()),
+        ProviderLoginRunResult::TimedOut(message) | ProviderLoginRunResult::Failed(message) => {
+            Err(message)
+        }
     }
+}
+
+#[tauri::command]
+pub fn cancel_provider_login(
+    provider_id: String,
+    login_request_id: String,
+) -> Result<bool, String> {
+    let id = parse_provider_arg(&provider_id)?;
+    validate_login_request_id(&login_request_id)?;
+    provider_login_registry().cancel(id, &login_request_id)
+}
+
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(rename_all = "camelCase")]
+enum ProviderLoginPhase {
+    Starting,
+    Waiting,
+    Completed,
+    Failed,
+    TimedOut,
+    Canceled,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ProviderLoginPhasePayload<'a> {
+    provider_id: &'a str,
+    request_id: &'a str,
+    phase: ProviderLoginPhase,
+    message: Option<&'a str>,
+}
+
+fn emit_provider_login_phase(
+    app: &tauri::AppHandle,
+    provider: ProviderId,
+    request_id: &str,
+    phase: ProviderLoginPhase,
+    message: Option<&str>,
+) {
+    let _result = app.emit(
+        "provider-login-phase",
+        ProviderLoginPhasePayload {
+            provider_id: provider.cli_name(),
+            request_id,
+            phase,
+            message,
+        },
+    );
+}
+
+fn validated_login_request_id(request_id: Option<String>) -> Result<String, String> {
+    let request_id = request_id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    validate_login_request_id(&request_id)?;
+    Ok(request_id)
+}
+
+fn validate_login_request_id(request_id: &str) -> Result<(), String> {
+    if request_id.is_empty()
+        || request_id.len() > 128
+        || !request_id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+    {
+        return Err("Login request ID is invalid".to_string());
+    }
+    Ok(())
+}
+
+#[derive(Clone)]
+struct ActiveProviderLogin {
+    request_id: String,
+    control: ProviderLoginControl,
+}
+
+const LOGIN_REQUEST_ACTIVE: u8 = 0;
+const LOGIN_REQUEST_CANCELED: u8 = 1;
+const LOGIN_REQUEST_COMMITTING: u8 = 2;
+
+#[derive(Clone)]
+struct ProviderLoginControl {
+    state: std::sync::Arc<std::sync::atomic::AtomicU8>,
+    cancellation: login::LoginCancellation,
+}
+
+impl ProviderLoginControl {
+    fn new() -> Self {
+        Self {
+            state: std::sync::Arc::new(std::sync::atomic::AtomicU8::new(LOGIN_REQUEST_ACTIVE)),
+            cancellation: login::LoginCancellation::new(),
+        }
+    }
+
+    fn cancellation(&self) -> login::LoginCancellation {
+        self.cancellation.clone()
+    }
+
+    fn cancel(&self) -> bool {
+        if self
+            .state
+            .compare_exchange(
+                LOGIN_REQUEST_ACTIVE,
+                LOGIN_REQUEST_CANCELED,
+                std::sync::atomic::Ordering::AcqRel,
+                std::sync::atomic::Ordering::Acquire,
+            )
+            .is_err()
+        {
+            return false;
+        }
+        self.cancellation.cancel();
+        true
+    }
+
+    /// Atomically choose persistence over cancellation. Once this succeeds,
+    /// later cancel requests return false and cannot produce a canceled phase.
+    fn begin_commit(&self) -> bool {
+        self.state
+            .compare_exchange(
+                LOGIN_REQUEST_ACTIVE,
+                LOGIN_REQUEST_COMMITTING,
+                std::sync::atomic::Ordering::AcqRel,
+                std::sync::atomic::Ordering::Acquire,
+            )
+            .is_ok()
+    }
+
+    fn commit_if_active<T>(&self, commit: impl FnOnce() -> T) -> Option<T> {
+        self.begin_commit().then(commit)
+    }
+
+    /// Resolve terminal delivery and cancellation through the same atomic state.
+    /// Device persistence may already own COMMITTING; CLI completion claims it here.
+    fn finish_result(&self, result: ProviderLoginRunResult) -> ProviderLoginRunResult {
+        if self.begin_commit()
+            || self.state.load(std::sync::atomic::Ordering::Acquire) == LOGIN_REQUEST_COMMITTING
+        {
+            result
+        } else {
+            ProviderLoginRunResult::Canceled
+        }
+    }
+}
+
+#[derive(Default)]
+struct ProviderLoginRegistry {
+    active: std::sync::Mutex<HashMap<ProviderId, ActiveProviderLogin>>,
+}
+
+impl ProviderLoginRegistry {
+    fn start(
+        &self,
+        provider: ProviderId,
+        request_id: &str,
+    ) -> Result<ProviderLoginControl, String> {
+        let mut active = self
+            .active
+            .lock()
+            .map_err(|_| "Provider login registry is unavailable".to_string())?;
+        if active.contains_key(&provider) {
+            return Err(format!(
+                "A {} sign-in request is already running",
+                provider.display_name()
+            ));
+        }
+        let control = ProviderLoginControl::new();
+        active.insert(
+            provider,
+            ActiveProviderLogin {
+                request_id: request_id.to_string(),
+                control: control.clone(),
+            },
+        );
+        Ok(control)
+    }
+
+    fn cancel(&self, provider: ProviderId, request_id: &str) -> Result<bool, String> {
+        let active = self
+            .active
+            .lock()
+            .map_err(|_| "Provider login registry is unavailable".to_string())?;
+        let Some(request) = active.get(&provider) else {
+            return Ok(false);
+        };
+        if request.request_id != request_id {
+            return Ok(false);
+        }
+        Ok(request.control.cancel())
+    }
+
+    fn finish(&self, provider: ProviderId, request_id: &str) {
+        if let Ok(mut active) = self.active.lock()
+            && active
+                .get(&provider)
+                .is_some_and(|request| request.request_id == request_id)
+        {
+            active.remove(&provider);
+        }
+    }
+}
+
+fn provider_login_registry() -> &'static ProviderLoginRegistry {
+    static REGISTRY: std::sync::OnceLock<ProviderLoginRegistry> = std::sync::OnceLock::new();
+    REGISTRY.get_or_init(ProviderLoginRegistry::default)
+}
+
+enum ProviderLoginRunResult {
+    Completed,
+    Failed(String),
+    TimedOut(String),
+    Canceled,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -291,40 +543,64 @@ pub(super) fn provider_login_transport(id: ProviderId) -> Option<ProviderLoginTr
 async fn run_cli_provider_login(
     app: &tauri::AppHandle,
     id: ProviderId,
+    request_id: &str,
     timeout_secs: u64,
-) -> Result<(), String> {
+    cancellation: login::LoginCancellation,
+) -> ProviderLoginRunResult {
     let app_handle = app.clone();
-    let provider_id_owned = id.cli_name().to_string();
+    let request_id_owned = request_id.to_string();
     let display_name = id.display_name();
     let emit_phase = move |phase| {
-        let phase_str = match phase {
+        let legacy_phase = match phase {
             LoginPhase::Idle => "idle",
             LoginPhase::Requesting => "requesting",
             LoginPhase::WaitingBrowser => "waiting-browser",
             LoginPhase::Complete => "complete",
         };
-        events::emit_login_phase(&app_handle, &provider_id_owned, phase_str, None);
+        events::emit_login_phase(&app_handle, id.cli_name(), legacy_phase, None);
+        if phase == LoginPhase::WaitingBrowser {
+            emit_provider_login_phase(
+                &app_handle,
+                id,
+                &request_id_owned,
+                ProviderLoginPhase::Waiting,
+                None,
+            );
+        }
     };
     let result = match id {
-        ProviderId::Codex => login::run_codex_login(timeout_secs, emit_phase).await,
-        ProviderId::Claude => login::run_claude_login(timeout_secs, emit_phase).await,
-        ProviderId::Kiro => login::run_kiro_login(timeout_secs, emit_phase).await,
-        ProviderId::VertexAI => login::run_vertexai_login(timeout_secs, emit_phase).await,
+        ProviderId::Codex => {
+            login::run_codex_login_cancellable(timeout_secs, cancellation, emit_phase).await
+        }
+        ProviderId::Claude => {
+            login::run_claude_login_cancellable(timeout_secs, cancellation, emit_phase).await
+        }
+        ProviderId::Kiro => {
+            login::run_kiro_login_cancellable(timeout_secs, cancellation, emit_phase).await
+        }
+        ProviderId::VertexAI => {
+            login::run_vertexai_login_cancellable(timeout_secs, cancellation, emit_phase).await
+        }
         _ => {
-            return Err(format!(
+            return ProviderLoginRunResult::Failed(format!(
                 "No CLI login flow is registered for {display_name}"
             ));
         }
     };
 
     match result.outcome {
-        LoginOutcome::Success => Ok(()),
-        LoginOutcome::MissingBinary => Err(format!(
+        LoginOutcome::Success => ProviderLoginRunResult::Completed,
+        LoginOutcome::Canceled => ProviderLoginRunResult::Canceled,
+        LoginOutcome::MissingBinary => ProviderLoginRunResult::Failed(format!(
             "{display_name} CLI not found. Install it and ensure it is on your PATH."
         )),
-        LoginOutcome::LaunchFailed(e) => Err(format!("Failed to launch {display_name} login: {e}")),
-        LoginOutcome::TimedOut => Err(format!("{display_name} login timed out")),
-        LoginOutcome::Failed { status } => Err(format!(
+        LoginOutcome::LaunchFailed(e) => {
+            ProviderLoginRunResult::Failed(format!("Failed to launch {display_name} login: {e}"))
+        }
+        LoginOutcome::TimedOut => {
+            ProviderLoginRunResult::TimedOut(format!("{display_name} login timed out"))
+        }
+        LoginOutcome::Failed { status } => ProviderLoginRunResult::Failed(format!(
             "{display_name} login failed with exit code {status}"
         )),
     }
@@ -332,37 +608,69 @@ async fn run_cli_provider_login(
 
 async fn run_copilot_device_login(
     app: &tauri::AppHandle,
-    request_id: Option<&str>,
-) -> Result<(), String> {
+    request_id: &str,
+    control: ProviderLoginControl,
+) -> ProviderLoginRunResult {
+    let cancellation = control.cancellation();
     let flow = CopilotDeviceFlow::new();
-    let device = flow
-        .start_flow()
-        .await
-        .map_err(|e| format!("GitHub device login failed: {e}"))?;
+    let device = tokio::select! {
+        result = flow.start_flow() => match result {
+            Ok(device) => device,
+            Err(error) => return ProviderLoginRunResult::Failed(format!("GitHub device login failed: {error}")),
+        },
+        () = wait_for_login_cancellation(&cancellation) => return ProviderLoginRunResult::Canceled,
+    };
 
     // Only the public user-facing challenge crosses IPC, never device_code/token.
-    app.emit(
+    if let Err(error) = app.emit(
         "provider-login-challenge",
         serde_json::json!({
-            "providerId": "copilot", "requestId": request_id.unwrap_or_default(),
+            "providerId": "copilot", "requestId": request_id,
             "userCode": device.user_code, "verificationUri": device.verification_uri,
         }),
-    )
-    .map_err(|error| error.to_string())?;
-    open_url_in_browser(device.verification_url_to_open())?;
+    ) {
+        return ProviderLoginRunResult::Failed(error.to_string());
+    }
+    emit_provider_login_phase(
+        app,
+        ProviderId::Copilot,
+        request_id,
+        ProviderLoginPhase::Waiting,
+        None,
+    );
+    if cancellation.is_canceled() {
+        return ProviderLoginRunResult::Canceled;
+    }
+    if let Err(error) = open_url_in_browser(device.verification_url_to_open()) {
+        return ProviderLoginRunResult::Failed(error);
+    }
 
-    let token = flow
-        .wait_for_token(&device.device_code, device.interval, device.expires_in)
-        .await
-        .map_err(|e| format!("GitHub device login failed: {e}"))?;
+    let token = tokio::select! {
+        result = flow.wait_for_token(&device.device_code, device.interval, device.expires_in) => match result {
+            Ok(token) => token,
+            Err(quotalis_core::providers::copilot::device_flow::DeviceFlowError::ExpiredToken) => {
+                return ProviderLoginRunResult::TimedOut("GitHub device login timed out".to_string());
+            }
+            Err(error) => return ProviderLoginRunResult::Failed(format!("GitHub device login failed: {error}")),
+        },
+        () = wait_for_login_cancellation(&cancellation) => return ProviderLoginRunResult::Canceled,
+    };
+    if cancellation.is_canceled() {
+        return ProviderLoginRunResult::Canceled;
+    }
 
     let api = CopilotApi::new();
-    let identity = api.fetch_identity_with_token(&token, None).await.ok();
-    let plan = api
-        .fetch_usage_with_token(&token, None)
-        .await
-        .ok()
-        .and_then(|usage| usage.login_method);
+    let identity = tokio::select! {
+        result = api.fetch_identity_with_token(&token, None) => result.ok(),
+        () = wait_for_login_cancellation(&cancellation) => return ProviderLoginRunResult::Canceled,
+    };
+    let plan = tokio::select! {
+        result = api.fetch_usage_with_token(&token, None) => result.ok().and_then(|usage| usage.login_method),
+        () = wait_for_login_cancellation(&cancellation) => return ProviderLoginRunResult::Canceled,
+    };
+    if cancellation.is_canceled() {
+        return ProviderLoginRunResult::Canceled;
+    }
 
     let login = identity.as_ref().map(|identity| identity.login.clone());
     let label = match (login.as_deref(), plan.as_deref()) {
@@ -373,9 +681,10 @@ async fn run_copilot_device_login(
     };
 
     let store = TokenAccountStore::new();
-    let mut data = store
-        .load_provider(ProviderId::Copilot)
-        .map_err(|e| e.to_string())?;
+    let mut data = match store.load_provider(ProviderId::Copilot) {
+        Ok(data) => data,
+        Err(error) => return ProviderLoginRunResult::Failed(error.to_string()),
+    };
     let existing_index = login.as_deref().and_then(|login| {
         data.accounts.iter().position(|account| {
             account.label == login || account.label.starts_with(&format!("{login} ("))
@@ -393,15 +702,23 @@ async fn run_copilot_device_login(
         data.set_active(data.accounts.len().saturating_sub(1));
     }
 
-    store
-        .save_provider(ProviderId::Copilot, &data)
-        .map_err(|e| e.to_string())?;
+    match control.commit_if_active(|| store.save_provider(ProviderId::Copilot, &data)) {
+        None => return ProviderLoginRunResult::Canceled,
+        Some(Err(error)) => return ProviderLoginRunResult::Failed(error.to_string()),
+        Some(Ok(())) => {}
+    }
 
     let _ = app.emit(
         "provider-updated",
         serde_json::json!({ "providerId": "copilot" }),
     );
-    Ok(())
+    ProviderLoginRunResult::Completed
+}
+
+async fn wait_for_login_cancellation(cancellation: &login::LoginCancellation) {
+    while !cancellation.is_canceled() {
+        tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+    }
 }
 
 #[cfg(test)]
@@ -465,5 +782,71 @@ mod tests {
             Some(ProviderLoginTransport::Cli)
         );
         assert_eq!(provider_login_transport(ProviderId::Mistral), None);
+    }
+
+    #[test]
+    fn login_registry_rejects_duplicate_provider_and_ignores_stale_request() {
+        let registry = ProviderLoginRegistry::default();
+        let control = registry.start(ProviderId::Copilot, "request-one").unwrap();
+
+        assert!(registry.start(ProviderId::Copilot, "request-two").is_err());
+        assert!(!registry.cancel(ProviderId::Copilot, "stale").unwrap());
+        assert!(!control.cancellation().is_canceled());
+        assert!(registry.cancel(ProviderId::Copilot, "request-one").unwrap());
+        assert!(control.cancellation().is_canceled());
+
+        registry.finish(ProviderId::Copilot, "stale");
+        assert!(registry.start(ProviderId::Copilot, "request-two").is_err());
+        registry.finish(ProviderId::Copilot, "request-one");
+        assert!(registry.start(ProviderId::Copilot, "request-two").is_ok());
+    }
+
+    #[test]
+    fn device_commit_boundary_has_one_atomic_winner() {
+        let canceled_first = ProviderLoginControl::new();
+        assert!(canceled_first.cancel());
+        let wrote_after_cancel = std::cell::Cell::new(false);
+        assert!(
+            canceled_first
+                .commit_if_active(|| wrote_after_cancel.set(true))
+                .is_none()
+        );
+        assert!(!wrote_after_cancel.get());
+
+        let commit_first = ProviderLoginControl::new();
+        let wrote_after_commit = std::cell::Cell::new(false);
+        assert!(
+            commit_first
+                .commit_if_active(|| wrote_after_commit.set(true))
+                .is_some()
+        );
+        assert!(wrote_after_commit.get());
+        assert!(!commit_first.cancel());
+        assert!(!commit_first.cancellation().is_canceled());
+    }
+
+    #[test]
+    fn terminal_delivery_and_cancel_have_one_winner() {
+        let canceled = ProviderLoginControl::new();
+        assert!(canceled.cancel());
+        assert!(matches!(
+            canceled.finish_result(ProviderLoginRunResult::Completed),
+            ProviderLoginRunResult::Canceled
+        ));
+        let completed = ProviderLoginControl::new();
+        assert!(matches!(
+            completed.finish_result(ProviderLoginRunResult::Completed),
+            ProviderLoginRunResult::Completed
+        ));
+        assert!(!completed.cancel());
+    }
+
+    #[test]
+    fn login_request_ids_are_bounded_and_transport_safe() {
+        assert!(validate_login_request_id("87c4735e-3889-46a6-80ab").is_ok());
+        assert!(validate_login_request_id("request_2").is_ok());
+        assert!(validate_login_request_id("").is_err());
+        assert!(validate_login_request_id("request with spaces").is_err());
+        assert!(validate_login_request_id(&"a".repeat(129)).is_err());
     }
 }
