@@ -234,6 +234,8 @@ export const ALL_LOCALE_KEYS = [
   "StatusUnableToGetUsage",
   "ActionRefresh",
   "ActionSwitchAccount",
+  "ActionSignIn",
+  "ProviderDeviceCodeHelp",
   "ActionUsageDashboard",
   "ActionStatusPage",
   "ActionCopyError",

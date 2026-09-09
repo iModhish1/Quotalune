@@ -93,10 +93,17 @@ windows = { version = "0.58", features = [
     "Win32_Security_Cryptography",
     "Win32_Media_Audio",
     "Win32_System_LibraryLoader",
+    "Win32_System_JobObjects",
+    "Win32_System_Pipes",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_Threading",
     "Win32_UI_WindowsAndMessaging",
 ] }
 
 winreg = "0.55"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
 
 [dev-dependencies]
 tokio-test = "0.4"

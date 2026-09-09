@@ -47,7 +47,7 @@ export function QuickActionsSection({
             onClick={onConnect}
             disabled={busy}
           >
-            {t("ActionSwitchAccount")}
+            {t(provider.errorState === "expiredSession" ? "DashboardReconnect" : provider.errorState === "ready" && !provider.lastError ? "ActionSwitchAccount" : "ActionSignIn")}
           </button>
         )}
         {provider.dashboardUrl && (

@@ -454,6 +454,8 @@ locale_keys! {
     // Main popup - Provider detail actions
     ActionRefresh,
     ActionSwitchAccount,
+    ActionSignIn,
+    ProviderDeviceCodeHelp,
     ActionUsageDashboard,
     ActionStatusPage,
     ActionCopyError,

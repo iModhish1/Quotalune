@@ -1154,3 +1154,7 @@ ProviderWorkspaceOverview = Overview
 ProviderWorkspaceConnections = Connections & accounts
 
 ProviderWorkspacePresentation = Display preferences
+
+ActionSignIn = Sign in
+
+ProviderDeviceCodeHelp = Enter this code on the GitHub verification page opened in your browser. Keep this panel open until sign-in finishes.

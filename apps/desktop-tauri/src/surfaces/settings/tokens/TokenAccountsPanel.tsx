@@ -1,3 +1,5 @@
+import { ProviderLoginChallengeNotice } from "../providers/ProviderLoginChallengeNotice";
+import type { ProviderLoginChallenge } from "../../../lib/tauri";
 import { useCallback, useEffect, useState } from "react";
 import type { ProviderTokenAccountsBridge } from "../../../types/bridge";
 import { useLocale } from "../../../hooks/useLocale";
@@ -32,6 +34,7 @@ interface Props {
  */
 export function TokenAccountsPanel({ providerId, compact = false }: Props) {
   const { t } = useLocale();
+  const [challenge, setChallenge] = useState<ProviderLoginChallenge | null>(null);
   const [data, setData] = useState<ProviderTokenAccountsBridge | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -116,12 +119,14 @@ export function TokenAccountsPanel({ providerId, compact = false }: Props) {
     setBusy(true);
     setError(null);
     try {
-      await triggerProviderLogin(providerId);
+      setChallenge(null);
+      await triggerProviderLogin(providerId, setChallenge);
       await load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(false);
+      setChallenge(null);
     }
   };
 
@@ -132,6 +137,7 @@ export function TokenAccountsPanel({ providerId, compact = false }: Props) {
 
   const body = (
     <>
+      <ProviderLoginChallengeNotice challenge={challenge} />
       {subtitle && !compact && (
         <p className="settings-section__hint">{subtitle}</p>
       )}

@@ -557,10 +557,11 @@ impl ProviderAccountData {
     pub fn remove_account(&mut self, id: Uuid) -> Option<TokenAccount> {
         let pos = self.accounts.iter().position(|a| a.id == id)?;
         let removed = self.accounts.remove(pos);
-        // Adjust active index if needed
-        if self.active_index >= self.accounts.len() && !self.accounts.is_empty() {
-            self.active_index = self.accounts.len() - 1;
+        // Preserve the selected account's identity when a preceding row is removed.
+        if pos < self.active_index {
+            self.active_index -= 1;
         }
+        self.active_index = self.active_index.min(self.accounts.len().saturating_sub(1));
         Some(removed)
     }
 
@@ -881,5 +882,40 @@ mod tests {
 
         data.set_active(1);
         assert_eq!(data.active_account().unwrap().label, "Account 2");
+    }
+}
+
+#[cfg(test)]
+mod selection_regressions {
+    use super::*;
+
+    #[test]
+    fn removing_preceding_account_preserves_active_identity() {
+        let mut data = ProviderAccountData::new();
+        let first = TokenAccount::new("First", "fixture-first");
+        let selected = TokenAccount::new("Selected", "fixture-selected");
+        let last = TokenAccount::new("Last", "fixture-last");
+        let first_id = first.id;
+        let selected_id = selected.id;
+        data.add_account(first);
+        data.add_account(selected);
+        data.add_account(last);
+        assert!(data.set_active_by_id(selected_id));
+        assert!(data.remove_account(first_id).is_some());
+        assert_eq!(data.active_account().unwrap().id, selected_id);
+        assert!(!data.set_active_by_id(first_id));
+        assert_eq!(data.active_account().unwrap().id, selected_id);
+    }
+
+    #[test]
+    fn removing_only_account_clears_selection() {
+        let mut data = ProviderAccountData::new();
+        let account = TokenAccount::new("Only", "fixture-only");
+        let id = account.id;
+        data.add_account(account);
+        assert!(data.remove_account(id).is_some());
+        assert_eq!(data.active_index, 0);
+        assert!(data.active_account().is_none());
+        assert!(data.remove_account(id).is_none());
     }
 }

@@ -19,6 +19,8 @@ pub struct ProviderDetail {
     pub last_updated: Option<String>,
 
     // Usage windows — reuse existing RateWindowSnapshot shape.
+    pub session_label: Option<String>,
+    pub weekly_label: Option<String>,
     pub session: Option<RateWindowSnapshot>,
     pub weekly: Option<RateWindowSnapshot>,
     pub model_specific: Option<RateWindowSnapshot>,
@@ -74,7 +76,7 @@ pub(crate) fn build_provider_detail(provider_id: &str) -> Result<ProviderDetail,
     } else {
         metadata.dashboard_url.map(|s| s.to_string())
     };
-    let can_connect = provider_supports_connection(id, dashboard_url.is_some());
+    let can_connect = super::system::provider_login_transport(id).is_some();
 
     Ok(ProviderDetail {
         id: id.cli_name().to_string(),
@@ -86,6 +88,8 @@ pub(crate) fn build_provider_detail(provider_id: &str) -> Result<ProviderDetail,
         source_label: None,
         organization: None,
         last_updated: None,
+        session_label: Some(metadata.session_label.to_string()),
+        weekly_label: Some(metadata.weekly_label.to_string()),
         session: None,
         weekly: None,
         model_specific: None,
@@ -97,23 +101,14 @@ pub(crate) fn build_provider_detail(provider_id: &str) -> Result<ProviderDetail,
         error_state: None,
         dashboard_url: dashboard_url.clone(),
         status_page_url: metadata.status_page_url.map(|s| s.to_string()),
-        // Buy-credits currently mirrors the dashboard URL for providers that
-        // support credit top-ups; refine once a dedicated URL lands upstream.
-        buy_credits_url: if metadata.supports_credits {
-            dashboard_url
-        } else {
-            None
-        },
+        // No verified dedicated purchase URL is available. Dashboard remains separate.
+        buy_credits_url: None,
         can_connect,
         has_snapshot: false,
         usage_source: provider_usage_source_lookup(&settings, id.cli_name()),
         cookie_source: provider_cookie_source_lookup(&settings, id.cli_name()),
         region: provider_region_lookup(&settings, id.cli_name()),
     })
-}
-
-fn provider_supports_connection(id: ProviderId, has_dashboard: bool) -> bool {
-    has_dashboard || matches!(id, ProviderId::Copilot | ProviderId::Kiro)
 }
 
 #[tauri::command]
@@ -145,7 +140,11 @@ pub fn get_provider_detail(
             Some(snapshot.source_label.clone())
         };
         detail.last_updated = Some(snapshot.updated_at.clone());
-        if snapshot.error.is_none() {
+        detail.session_label = snapshot.primary_label.clone().or(detail.session_label);
+        detail.weekly_label = snapshot.secondary_label.clone().or(detail.weekly_label);
+        if snapshot.error.is_none()
+            && snapshot.error_state == quotalis_core::core::ProviderStateKind::Ready
+        {
             detail.session = Some(snapshot.primary.clone());
             detail.weekly = snapshot.secondary.clone();
             detail.model_specific = snapshot.model_specific.clone();
@@ -227,10 +226,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn connection_capability_includes_browser_and_device_flows() {
-        assert!(provider_supports_connection(ProviderId::Codex, true));
-        assert!(provider_supports_connection(ProviderId::Copilot, false));
-        assert!(provider_supports_connection(ProviderId::Kiro, false));
-        assert!(!provider_supports_connection(ProviderId::Claude, false));
+    fn connection_capability_comes_from_the_login_registry() {
+        assert!(build_provider_detail("codex").unwrap().can_connect);
+        assert!(build_provider_detail("copilot").unwrap().can_connect);
+        assert!(build_provider_detail("vertexai").unwrap().can_connect);
+        assert!(!build_provider_detail("mistral").unwrap().can_connect);
+        assert!(!build_provider_detail("sub2api").unwrap().can_connect);
     }
 }

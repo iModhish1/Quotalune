@@ -377,3 +377,29 @@ ProviderWorkspaceOverview = نظرة عامة
 ProviderWorkspaceConnections = الاتصالات والحسابات
 
 ProviderWorkspacePresentation = تفضيلات العرض
+
+ActionSignIn = تسجيل الدخول
+
+ProviderDeviceCodeHelp = أدخل هذا الرمز في صفحة التحقق من GitHub المفتوحة في المتصفح. أبقِ هذه اللوحة مفتوحة حتى يكتمل تسجيل الدخول.
+
+TabCollections = المجموعات
+
+TabProfiles = الملفات الشخصية
+
+PanelAllProviders = كل المزودين
+
+PanelAllProvidersShort = الكل
+
+ProviderSidebarSearch = بحث
+
+ProviderSidebarClearSearch = مسح البحث عن المزودين
+
+ProviderStatusOk = محدّث
+
+ProviderStatusStale = بيانات قديمة
+
+ProviderStatusError = خطأ في التحديث
+
+ProviderStatusDisabled = غير مفعّل
+
+ProviderStatusLoading = جارٍ التحديث

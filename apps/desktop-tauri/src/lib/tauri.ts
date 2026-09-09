@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import type {
   ApiKeyInfoBridge,
   ApiKeyProviderInfoBridge,
@@ -431,8 +432,23 @@ export function openProviderStatusPage(providerId: string): Promise<void> {
   return invoke<void>("open_provider_status_page", { providerId });
 }
 
-export function triggerProviderLogin(providerId: string): Promise<void> {
-  return invoke<void>("trigger_provider_login", { providerId });
+export interface ProviderLoginChallenge {
+  providerId: string;
+  requestId: string;
+  userCode: string;
+  verificationUri: string;
+}
+
+export async function triggerProviderLogin(providerId: string, onChallenge?: (challenge: ProviderLoginChallenge) => void): Promise<void> {
+  const loginRequestId = crypto.randomUUID();
+  const stop = onChallenge ? await listen<ProviderLoginChallenge>("provider-login-challenge", event => {
+    if (event.payload.providerId === providerId && event.payload.requestId === loginRequestId) onChallenge(event.payload);
+  }) : undefined;
+  try {
+    await invoke<void>("trigger_provider_login", { providerId, loginRequestId });
+  } finally {
+    stop?.();
+  }
 }
 
 export function revokeProviderCredentials(providerId: string): Promise<void> {

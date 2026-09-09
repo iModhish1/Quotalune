@@ -100,7 +100,11 @@ pub struct CopilotDeviceFlow {
 impl CopilotDeviceFlow {
     pub fn new() -> Self {
         Self {
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .connect_timeout(Duration::from_secs(10))
+                .timeout(Duration::from_secs(30))
+                .build()
+                .expect("static HTTP client configuration"),
         }
     }
 
@@ -200,34 +204,31 @@ impl CopilotDeviceFlow {
         initial_interval: u32,
         expires_in: u32,
     ) -> Result<String, DeviceFlowError> {
-        let mut interval = initial_interval;
-        let start = std::time::Instant::now();
-        let timeout = Duration::from_secs(u64::from(expires_in));
-
-        loop {
-            // Check if we've exceeded the timeout
-            if start.elapsed() >= timeout {
-                return Err(DeviceFlowError::ExpiredToken);
-            }
-
-            // Wait the required interval
-            tokio::time::sleep(Duration::from_secs(u64::from(interval))).await;
-
-            match self.poll_for_token(device_code).await {
-                Ok(token) => return Ok(token),
-                Err(DeviceFlowError::AuthorizationPending) => {
-                    // Continue polling
-                    continue;
+        // Bound both sleep and in-flight HTTP requests by device expiry.
+        let expiry = Duration::from_secs(u64::from(expires_in.min(900)));
+        within_device_expiry(expiry, async {
+            let mut interval = initial_interval.max(1);
+            loop {
+                tokio::time::sleep(Duration::from_secs(u64::from(interval))).await;
+                match self.poll_for_token(device_code).await {
+                    Ok(token) => return Ok(token),
+                    Err(DeviceFlowError::AuthorizationPending) => {}
+                    Err(DeviceFlowError::SlowDown) => interval = interval.saturating_add(5),
+                    Err(error) => return Err(error),
                 }
-                Err(DeviceFlowError::SlowDown) => {
-                    // Increase interval by 5 seconds as per OAuth spec
-                    interval += 5;
-                    continue;
-                }
-                Err(e) => return Err(e),
             }
-        }
+        })
+        .await
     }
+}
+
+async fn within_device_expiry<T>(
+    expiry: Duration,
+    work: impl std::future::Future<Output = Result<T, DeviceFlowError>>,
+) -> Result<T, DeviceFlowError> {
+    tokio::time::timeout(expiry, work)
+        .await
+        .map_err(|_| DeviceFlowError::ExpiredToken)?
 }
 
 impl Default for CopilotDeviceFlow {
@@ -239,6 +240,15 @@ impl Default for CopilotDeviceFlow {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn pending_network_future_cannot_outlive_device_expiry() {
+        let start = std::time::Instant::now();
+        let result: Result<(), _> =
+            within_device_expiry(Duration::from_millis(30), std::future::pending()).await;
+        assert!(matches!(result, Err(DeviceFlowError::ExpiredToken)));
+        assert!(start.elapsed() < Duration::from_secs(2));
+    }
 
     #[test]
     fn test_device_flow_new() {

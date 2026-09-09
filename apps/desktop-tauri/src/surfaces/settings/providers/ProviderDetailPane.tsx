@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { ProviderLoginChallengeNotice } from "./ProviderLoginChallengeNotice";
+import type { ProviderLoginChallenge } from "../../../lib/tauri";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { SettingsSnapshot, SettingsUpdate } from "../../../types/bridge";
 import { useLocale } from "../../../hooks/useLocale";
 import {
@@ -73,6 +75,8 @@ export function ProviderDetailPane({
   onSettingsChange,
 }: Props) {
   const { t } = useLocale();
+  const [challenge, setChallenge] = useState<ProviderLoginChallenge | null>(null);
+  useEffect(() => setChallenge(null), [providerId]);
   const selectedProviderRef = useRef(providerId);
   const actionSequenceRef = useRef(0);
   if (selectedProviderRef.current !== providerId) {
@@ -232,7 +236,7 @@ export function ProviderDetailPane({
     } catch (e) {
       if (isCurrent()) setErr(e);
     } finally {
-      if (isCurrent()) setBusy(false);
+      if (isCurrent()) { setBusy(false); setChallenge(null); }
     }
   };
 
@@ -245,7 +249,8 @@ export function ProviderDetailPane({
     setBusy(true);
     dispatch({ type: "SET_ERROR", error: null });
     try {
-      await triggerProviderLogin(actionProviderId);
+      setChallenge(null);
+      await triggerProviderLogin(actionProviderId, next => { if (isCurrent()) setChallenge(next); });
       if (!isCurrent()) return;
       dispatch({ type: "BUMP_CREDENTIAL_REVISION" });
       await refreshProviders();
@@ -254,7 +259,7 @@ export function ProviderDetailPane({
     } catch (e) {
       if (isCurrent()) setErr(e);
     } finally {
-      if (isCurrent()) setBusy(false);
+      if (isCurrent()) { setBusy(false); setChallenge(null); }
     }
   };
 
@@ -274,7 +279,7 @@ export function ProviderDetailPane({
     } catch (e) {
       if (isCurrent()) setErr(e);
     } finally {
-      if (isCurrent()) setBusy(false);
+      if (isCurrent()) { setBusy(false); setChallenge(null); }
     }
   };
 
@@ -306,12 +311,8 @@ export function ProviderDetailPane({
         </div>
       )}
 
+      <ProviderLoginChallengeNotice challenge={challenge?.providerId === detail.id ? challenge : null} />
       <div className="provider-detail-overview">
-        <UsageSection
-          provider={detail}
-          resetTimeRelative={resetTimeRelative}
-          t={t}
-        />
         <QuickActionsSection
           provider={detail}
           busy={busy}
@@ -326,6 +327,11 @@ export function ProviderDetailPane({
 
       <ProviderDetailWorkspace key={detail.id}
         overview={<>
+        <UsageSection
+          provider={detail}
+          resetTimeRelative={resetTimeRelative}
+          t={t}
+        />
           <PaceSection pace={detail.errorState === "ready" ? detail.pace : null} t={t} />
           <CostSection providerId={detail.id} cost={detail.errorState === "ready" ? detail.cost : null} relative={resetTimeRelative} t={t} />
         <ChartsSection

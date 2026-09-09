@@ -18,13 +18,13 @@ describe("QuickActionsSection", () => {
         t={(key) => {
           if (key === "QuickActions") return "Quick actions";
           if (key === "ActionRefresh") return "Refresh";
-          if (key === "ActionSwitchAccount") return "Sign in / switch account";
+          if (key === "ActionSignIn") return "Sign in";
           return key;
         }}
       />,
     );
 
-    const button = screen.getByRole("button", { name: "Sign in / switch account" });
+    const button = screen.getByRole("button", { name: "Sign in" });
     expect(button).toHaveClass("btn--primary");
     fireEvent.click(button);
     expect(connect).toHaveBeenCalledOnce();
@@ -43,14 +43,19 @@ describe("QuickActionsSection", () => {
         t={(key) => {
           if (key === "QuickActions") return "Quick actions";
           if (key === "ActionRefresh") return "Refresh";
-          if (key === "ActionSwitchAccount") return "Sign in / switch account";
+          if (key === "ActionSignIn") return "Sign in";
           return key;
         }}
       />,
     );
 
     expect(
-      screen.queryByRole("button", { name: "Sign in / switch account" }),
+      screen.queryByRole("button", { name: "Sign in" }),
     ).not.toBeInTheDocument();
   });
+});
+
+it.each([["ready", "ActionSwitchAccount"], ["expiredSession", "DashboardReconnect"], ["needsAuthentication", "ActionSignIn"]])("labels the supported connection action from observed %s state", (errorState, label) => {
+  render(<QuickActionsSection provider={{canConnect: true,errorState} as never} busy={false} onRefresh={vi.fn()} onConnect={vi.fn()} onOpenDashboard={vi.fn()} onOpenStatusPage={vi.fn()} onBuyCredits={vi.fn()} t={key=>key}/>);
+  expect(screen.getByRole("button", {name: label})).toBeInTheDocument();
 });

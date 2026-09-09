@@ -8,11 +8,15 @@
 )]
 
 use regex_lite::Regex;
-use std::io::{BufRead, BufReader, Read};
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
-use std::process::{Child, Command, Stdio};
+use std::io;
+use std::process::{Command, ExitStatus};
 use std::time::{Duration, Instant};
+mod process;
+use process::{LoginProcess, read_available};
+
+const MAX_OUTPUT_BYTES: usize = 64 * 1024;
+const MAX_LINE_BYTES: usize = 8 * 1024;
+const POLL_INTERVAL: Duration = Duration::from_millis(10);
 
 /// Result of a login attempt
 #[derive(Debug, Clone)]
@@ -46,18 +50,7 @@ pub async fn run_claude_login<F>(timeout_secs: u64, on_phase: F) -> LoginResult
 where
     F: Fn(LoginPhase) + Send + 'static,
 {
-    run_cli_login(
-        "claude",
-        &["/login"],
-        timeout_secs,
-        on_phase,
-        &[
-            "Successfully logged in",
-            "Login successful",
-            "Logged in successfully",
-        ],
-    )
-    .await
+    run_cli_login("claude", &["auth", "login"], timeout_secs, on_phase).await
 }
 
 /// Run Codex CLI login
@@ -65,31 +58,19 @@ pub async fn run_codex_login<F>(timeout_secs: u64, on_phase: F) -> LoginResult
 where
     F: Fn(LoginPhase) + Send + 'static,
 {
-    run_cli_login(
-        "codex",
-        &["auth", "login"],
-        timeout_secs,
-        on_phase,
-        &[
-            "Successfully logged in",
-            "Login successful",
-            "Logged in successfully",
-        ],
-    )
-    .await
+    run_cli_login("codex", &["login"], timeout_secs, on_phase).await
 }
 
-/// Run Gemini/gcloud login
-pub async fn run_gemini_login<F>(timeout_secs: u64, on_phase: F) -> LoginResult
+/// Run the Google Cloud application-default login used by Vertex AI.
+pub async fn run_vertexai_login<F>(timeout_secs: u64, on_phase: F) -> LoginResult
 where
     F: Fn(LoginPhase) + Send + 'static,
 {
     run_cli_login(
         "gcloud",
-        &["auth", "login"],
+        &["auth", "application-default", "login"],
         timeout_secs,
         on_phase,
-        &["You are now logged in", "Credentials saved"],
     )
     .await
 }
@@ -99,14 +80,7 @@ pub async fn run_copilot_login<F>(timeout_secs: u64, on_phase: F) -> LoginResult
 where
     F: Fn(LoginPhase) + Send + 'static,
 {
-    run_cli_login(
-        "gh",
-        &["auth", "login", "-w"],
-        timeout_secs,
-        on_phase,
-        &["Logged in as", "Authentication complete"],
-    )
-    .await
+    run_cli_login("gh", &["auth", "login", "-w"], timeout_secs, on_phase).await
 }
 
 /// Run Kiro CLI login
@@ -121,18 +95,7 @@ where
         None => return missing_binary_result("kiro-cli"),
     };
 
-    run_cli_login_path(
-        &binary_path,
-        &["login"],
-        timeout_secs,
-        on_phase,
-        &[
-            "Successfully logged in",
-            "Login successful",
-            "Logged in successfully",
-        ],
-    )
-    .await
+    run_cli_login_path(&binary_path, &["login"], timeout_secs, on_phase).await
 }
 
 /// Generic CLI login runner (resolves binary via PATH)
@@ -141,7 +104,6 @@ async fn run_cli_login<F>(
     args: &[&str],
     timeout_secs: u64,
     on_phase: F,
-    success_markers: &[&str],
 ) -> LoginResult
 where
     F: Fn(LoginPhase) + Send + 'static,
@@ -151,48 +113,122 @@ where
         Err(_) => return missing_binary_result(binary),
     };
 
-    run_cli_login_path(&binary_path, args, timeout_secs, on_phase, success_markers).await
+    run_cli_login_path(&binary_path, args, timeout_secs, on_phase).await
 }
 
-/// Generic CLI login runner (uses a pre-resolved binary path)
+/// Generic CLI login runner (uses a pre-resolved binary path).
+/// The one blocking worker polls bounded, nonblocking reads; it never creates
+/// pipe reader threads or waits for EOF from a browser/CLI descendant.
 async fn run_cli_login_path<F>(
     binary_path: &std::path::Path,
     args: &[&str],
     timeout_secs: u64,
     on_phase: F,
-    success_markers: &[&str],
 ) -> LoginResult
 where
     F: Fn(LoginPhase) + Send + 'static,
 {
+    let mut command = Command::new(binary_path);
+    command.args(args);
+    match tokio::task::spawn_blocking(move || {
+        supervise_login(command, Duration::from_secs(timeout_secs), on_phase)
+    })
+    .await
+    {
+        Ok(result) => result,
+        Err(error) => launch_failed_result(format!("login worker failed: {error}")),
+    }
+}
+
+fn supervise_login<F>(mut command: Command, timeout: Duration, on_phase: F) -> LoginResult
+where
+    F: Fn(LoginPhase),
+{
     on_phase(LoginPhase::Requesting);
-
-    let mut child = match spawn_login_process(binary_path, args) {
-        Ok(c) => c,
-        Err(e) => return launch_failed_result(e),
+    let deadline = Instant::now() + timeout;
+    let mut process = match LoginProcess::spawn(&mut command) {
+        Ok(process) => process,
+        Err(error) => return launch_failed_result(error.to_string()),
     };
-
-    let mut state = CliLoginState::new(timeout_secs, &on_phase, success_markers);
-
-    if let Some(outcome) = read_login_stream(child.stdout.take(), &mut state) {
-        return stop_child_with_outcome(&mut child, state, outcome);
+    let mut state = CliLoginState::new(&on_phase);
+    let mut stdout = process.child.stdout.take().expect("piped stdout");
+    let mut stderr = process.child.stderr.take().expect("piped stderr");
+    let mut stdout_line = Vec::new();
+    let mut stderr_line = Vec::new();
+    loop {
+        if Instant::now() >= deadline {
+            process.stop();
+            state.finish_line(&mut stdout_line);
+            state.finish_line(&mut stderr_line);
+            return state.into_result(LoginOutcome::TimedOut);
+        }
+        // At most 32 KiB per stream per tick: output pressure cannot starve
+        // the deadline/exit checks or allocate an unbounded queue or line.
+        drain_stream(&mut stdout, &mut stdout_line, &mut state);
+        drain_stream(&mut stderr, &mut stderr_line, &mut state);
+        match process.child.try_wait() {
+            Ok(Some(status)) => {
+                // End surviving descendants before closing/draining their pipes.
+                // Success is the CLI exit status, never a message it printed.
+                process.stop();
+                drain_stream(&mut stdout, &mut stdout_line, &mut state);
+                drain_stream(&mut stderr, &mut stderr_line, &mut state);
+                state.finish_line(&mut stdout_line);
+                state.finish_line(&mut stderr_line);
+                return exit_status_result(status, state, &on_phase);
+            }
+            Ok(None) => std::thread::sleep(POLL_INTERVAL),
+            Err(error) => {
+                process.stop();
+                return state.into_result(LoginOutcome::LaunchFailed(error.to_string()));
+            }
+        }
     }
+}
 
-    if let Some(outcome) = read_login_stream(child.stderr.take(), &mut state) {
-        return stop_child_with_outcome(&mut child, state, outcome);
+#[cfg(windows)]
+trait LoginStream: io::Read + std::os::windows::io::AsRawHandle {}
+#[cfg(windows)]
+impl<T: io::Read + std::os::windows::io::AsRawHandle> LoginStream for T {}
+#[cfg(not(windows))]
+trait LoginStream: io::Read {}
+#[cfg(not(windows))]
+impl<T: io::Read> LoginStream for T {}
+
+fn drain_stream<F: Fn(LoginPhase)>(
+    stream: &mut impl LoginStream,
+    pending: &mut Vec<u8>,
+    state: &mut CliLoginState<'_, F>,
+) {
+    let mut buffer = [0_u8; 4096];
+    for _ in 0..8 {
+        match read_available(stream, &mut buffer) {
+            Ok(0) | Err(_) => return,
+            Ok(count) => {
+                for byte in &buffer[..count] {
+                    if *byte == b'\n' {
+                        state.finish_line(pending);
+                    } else if pending.len() < MAX_LINE_BYTES {
+                        pending.push(*byte);
+                    } else {
+                        // Bound even newline-free output. Process this fragment
+                        // as text, then continue draining to avoid backpressure.
+                        state.finish_line(pending);
+                        pending.push(*byte);
+                    }
+                }
+            }
+        }
     }
-
-    wait_for_login_exit(child, state, &on_phase)
 }
 
 fn missing_binary_result(binary: &str) -> LoginResult {
     LoginResult {
         outcome: LoginOutcome::MissingBinary,
-        output: format!("{} not found in PATH", binary),
+        output: format!("{binary} not found in PATH"),
         auth_link: None,
     }
 }
-
 fn launch_failed_result(error: String) -> LoginResult {
     LoginResult {
         outcome: LoginOutcome::LaunchFailed(error),
@@ -201,82 +237,49 @@ fn launch_failed_result(error: String) -> LoginResult {
     }
 }
 
-fn spawn_login_process(binary_path: &std::path::Path, args: &[&str]) -> Result<Child, String> {
-    #[cfg(windows)]
-    const CREATE_NO_WINDOW: u32 = 0x08000000;
-
-    let mut cmd = Command::new(binary_path);
-    cmd.args(args).stdout(Stdio::piped()).stderr(Stdio::piped());
-    #[cfg(windows)]
-    cmd.creation_flags(CREATE_NO_WINDOW);
-
-    cmd.spawn().map_err(|e| e.to_string())
-}
-
-struct CliLoginState<'a, F>
-where
-    F: Fn(LoginPhase),
-{
+struct CliLoginState<'a, F: Fn(LoginPhase)> {
     output: String,
     auth_link: Option<String>,
     url_regex: Regex,
     on_phase: &'a F,
-    success_markers: &'a [&'a str],
-    start: Instant,
-    timeout: Duration,
 }
-
-impl<'a, F> CliLoginState<'a, F>
-where
-    F: Fn(LoginPhase),
-{
-    fn new(timeout_secs: u64, on_phase: &'a F, success_markers: &'a [&'a str]) -> Self {
+impl<'a, F: Fn(LoginPhase)> CliLoginState<'a, F> {
+    fn new(on_phase: &'a F) -> Self {
         Self {
             output: String::new(),
             auth_link: None,
             url_regex: Regex::new(r"https?://[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+").unwrap(),
             on_phase,
-            success_markers,
-            start: Instant::now(),
-            timeout: Duration::from_secs(timeout_secs),
         }
     }
-
-    fn handle_line(&mut self, line: &str) -> Option<LoginOutcome> {
-        self.output.push_str(line);
-        self.output.push('\n');
-        self.capture_auth_link(line);
-
-        if self
-            .success_markers
-            .iter()
-            .any(|marker| line.contains(marker))
+    fn finish_line(&mut self, pending: &mut Vec<u8>) {
+        if pending.is_empty() {
+            return;
+        }
+        self.handle_line(&String::from_utf8_lossy(pending));
+        pending.clear();
+    }
+    fn handle_line(&mut self, line: &str) {
+        let mut bytes = line
+            .len()
+            .min(MAX_OUTPUT_BYTES.saturating_sub(self.output.len()));
+        while !line.is_char_boundary(bytes) {
+            bytes -= 1;
+        }
+        self.output.push_str(&line[..bytes]);
+        if self.output.len() < MAX_OUTPUT_BYTES {
+            self.output.push('\n');
+        }
+        // Continue discovering the login link after the diagnostic output cap.
+        if self.auth_link.is_none()
+            && let Some(found) = self.url_regex.find(line)
         {
-            (self.on_phase)(LoginPhase::Complete);
-            return Some(LoginOutcome::Success);
+            self.auth_link = Some(found.as_str().to_string());
+            (self.on_phase)(LoginPhase::WaitingBrowser);
+            // Opening a browser must not wait for the browser to exit.
+            let _result = open::that_detached(found.as_str());
         }
-
-        self.start
-            .elapsed()
-            .gt(&self.timeout)
-            .then_some(LoginOutcome::TimedOut)
     }
-
-    fn capture_auth_link(&mut self, line: &str) {
-        if self.auth_link.is_some() {
-            return;
-        }
-
-        let Some(m) = self.url_regex.find(line) else {
-            return;
-        };
-
-        self.auth_link = Some(m.as_str().to_string());
-        (self.on_phase)(LoginPhase::WaitingBrowser);
-        // Best-effort browser open; the link stays on screen for manual use.
-        let _opened_browser = open::that(m.as_str());
-    }
-
     fn into_result(self, outcome: LoginOutcome) -> LoginResult {
         LoginResult {
             outcome,
@@ -285,57 +288,23 @@ where
         }
     }
 }
-
-fn read_login_stream<R, F>(
-    stream: Option<R>,
-    state: &mut CliLoginState<'_, F>,
-) -> Option<LoginOutcome>
-where
-    R: Read,
-    F: Fn(LoginPhase),
-{
-    let reader = BufReader::new(stream?);
-    reader
-        .lines()
-        .map_while(Result::ok)
-        .find_map(|line| state.handle_line(&line))
-}
-
-fn stop_child_with_outcome<F>(
-    child: &mut Child,
-    state: CliLoginState<'_, F>,
-    outcome: LoginOutcome,
-) -> LoginResult
-where
-    F: Fn(LoginPhase),
-{
-    // Best-effort teardown; the child may already have exited.
-    let _killed = child.kill();
-    state.into_result(outcome)
-}
-
-fn wait_for_login_exit<F>(
-    mut child: Child,
+fn exit_status_result<F: Fn(LoginPhase)>(
+    status: ExitStatus,
     state: CliLoginState<'_, F>,
     on_phase: &F,
-) -> LoginResult
-where
-    F: Fn(LoginPhase),
-{
-    match child.wait() {
-        Ok(status) => {
-            if status.success() {
-                on_phase(LoginPhase::Complete);
-                state.into_result(LoginOutcome::Success)
-            } else {
-                state.into_result(LoginOutcome::Failed {
-                    status: status.code().unwrap_or(-1),
-                })
-            }
-        }
-        Err(e) => state.into_result(LoginOutcome::LaunchFailed(e.to_string())),
+) -> LoginResult {
+    if status.success() {
+        on_phase(LoginPhase::Complete);
+        state.into_result(LoginOutcome::Success)
+    } else {
+        state.into_result(LoginOutcome::Failed {
+            status: status.code().unwrap_or(-1),
+        })
     }
 }
+
+#[cfg(test)]
+mod tests;
 
 /// Open a URL in the default browser
 pub fn open_auth_url(url: &str) -> anyhow::Result<()> {

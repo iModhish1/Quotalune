@@ -149,7 +149,8 @@ pub fn remove_token_account(
     let uuid = uuid::Uuid::parse_str(&account_id).map_err(|e| e.to_string())?;
     let store = TokenAccountStore::new();
     let mut data = store.load_provider(id).map_err(|e| e.to_string())?;
-    data.remove_account(uuid);
+    data.remove_account(uuid)
+        .ok_or_else(|| "Token account no longer exists; refresh the account list".to_string())?;
     store.save_provider(id, &data).map_err(|e| e.to_string())?;
     let active = data.clamped_active_index();
     Ok(build_provider_token_accounts(
@@ -172,7 +173,9 @@ pub fn set_active_token_account(
     let uuid = uuid::Uuid::parse_str(&account_id).map_err(|e| e.to_string())?;
     let store = TokenAccountStore::new();
     let mut data = store.load_provider(id).map_err(|e| e.to_string())?;
-    data.set_active_by_id(uuid);
+    if !data.set_active_by_id(uuid) {
+        return Err("Token account no longer exists; refresh the account list".to_string());
+    }
     store.save_provider(id, &data).map_err(|e| e.to_string())?;
     let active = data.clamped_active_index();
     Ok(build_provider_token_accounts(

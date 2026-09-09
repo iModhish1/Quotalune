@@ -253,39 +253,37 @@ pub fn open_provider_status_page(provider_id: String) -> Result<(), String> {
 pub async fn trigger_provider_login(
     app: tauri::AppHandle,
     provider_id: String,
+    login_request_id: Option<String>,
 ) -> Result<(), String> {
     let id = parse_provider_arg(&provider_id)?;
-    let provider_id = id.cli_name().to_string();
 
-    match provider_login_transport(id) {
-        ProviderLoginTransport::Device => run_copilot_device_login(&app).await,
+    match provider_login_transport(id).ok_or_else(|| {
+        format!(
+            "Quotalis cannot start a sign-in flow for '{}'; configure its credentials in Provider settings or open its dashboard.",
+            id.display_name()
+        )
+    })? {
+        ProviderLoginTransport::Device => run_copilot_device_login(&app, login_request_id.as_deref()).await,
         ProviderLoginTransport::Cli => run_cli_provider_login(&app, id, 120).await,
-        ProviderLoginTransport::Dashboard => {
-            let url = dashboard_url_for_provider(&provider_id).ok_or_else(|| {
-                format!("Login flow for '{provider_id}' is not yet wired through the Tauri shell")
-            })?;
-            open_url_in_browser(&url)
-        }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ProviderLoginTransport {
+pub(super) enum ProviderLoginTransport {
     Cli,
     Device,
-    Dashboard,
 }
 
 /// Prefer a provider-owned CLI OAuth flow over a generic usage dashboard.
 /// Providers without a safely supported interactive flow still get the
 /// metadata-owned dashboard route rather than an invented auth integration.
-fn provider_login_transport(id: ProviderId) -> ProviderLoginTransport {
+pub(super) fn provider_login_transport(id: ProviderId) -> Option<ProviderLoginTransport> {
     match id {
-        ProviderId::Codex | ProviderId::Claude | ProviderId::Gemini | ProviderId::Kiro => {
-            ProviderLoginTransport::Cli
+        ProviderId::Codex | ProviderId::Claude | ProviderId::Kiro | ProviderId::VertexAI => {
+            Some(ProviderLoginTransport::Cli)
         }
-        ProviderId::Copilot => ProviderLoginTransport::Device,
-        _ => ProviderLoginTransport::Dashboard,
+        ProviderId::Copilot => Some(ProviderLoginTransport::Device),
+        _ => None,
     }
 }
 
@@ -310,8 +308,8 @@ async fn run_cli_provider_login(
     let result = match id {
         ProviderId::Codex => login::run_codex_login(timeout_secs, emit_phase).await,
         ProviderId::Claude => login::run_claude_login(timeout_secs, emit_phase).await,
-        ProviderId::Gemini => login::run_gemini_login(timeout_secs, emit_phase).await,
         ProviderId::Kiro => login::run_kiro_login(timeout_secs, emit_phase).await,
+        ProviderId::VertexAI => login::run_vertexai_login(timeout_secs, emit_phase).await,
         _ => {
             return Err(format!(
                 "No CLI login flow is registered for {display_name}"
@@ -332,13 +330,25 @@ async fn run_cli_provider_login(
     }
 }
 
-async fn run_copilot_device_login(app: &tauri::AppHandle) -> Result<(), String> {
+async fn run_copilot_device_login(
+    app: &tauri::AppHandle,
+    request_id: Option<&str>,
+) -> Result<(), String> {
     let flow = CopilotDeviceFlow::new();
     let device = flow
         .start_flow()
         .await
         .map_err(|e| format!("GitHub device login failed: {e}"))?;
 
+    // Only the public user-facing challenge crosses IPC, never device_code/token.
+    app.emit(
+        "provider-login-challenge",
+        serde_json::json!({
+            "providerId": "copilot", "requestId": request_id.unwrap_or_default(),
+            "userCode": device.user_code, "verificationUri": device.verification_uri,
+        }),
+    )
+    .map_err(|error| error.to_string())?;
     open_url_in_browser(device.verification_url_to_open())?;
 
     let token = flow
@@ -415,26 +425,45 @@ mod tests {
     }
 
     #[test]
+    fn all_registered_providers_have_an_explicit_safe_connection_decision() {
+        let ids = ProviderId::all();
+        assert_eq!(ids.len(), 70);
+        let offered: Vec<_> = ids
+            .iter()
+            .filter(|id| provider_login_transport(**id).is_some())
+            .map(|id| id.cli_name())
+            .collect();
+        assert_eq!(offered.len(), 5);
+        for id in ids {
+            assert_eq!(
+                provider_login_transport(*id).is_some(),
+                matches!(
+                    id.cli_name(),
+                    "codex" | "claude" | "copilot" | "kiro" | "vertexai"
+                )
+            );
+        }
+    }
+
+    #[test]
     fn sign_in_uses_the_provider_cli_when_a_real_oauth_flow_exists() {
         assert_eq!(
             provider_login_transport(ProviderId::Codex),
-            ProviderLoginTransport::Cli
+            Some(ProviderLoginTransport::Cli)
         );
         assert_eq!(
             provider_login_transport(ProviderId::Claude),
-            ProviderLoginTransport::Cli
+            Some(ProviderLoginTransport::Cli)
         );
-        assert_eq!(
-            provider_login_transport(ProviderId::Gemini),
-            ProviderLoginTransport::Cli
-        );
+        assert_eq!(provider_login_transport(ProviderId::Gemini), None);
         assert_eq!(
             provider_login_transport(ProviderId::Copilot),
-            ProviderLoginTransport::Device
+            Some(ProviderLoginTransport::Device)
         );
         assert_eq!(
-            provider_login_transport(ProviderId::Mistral),
-            ProviderLoginTransport::Dashboard
+            provider_login_transport(ProviderId::VertexAI),
+            Some(ProviderLoginTransport::Cli)
         );
+        assert_eq!(provider_login_transport(ProviderId::Mistral), None);
     }
 }
