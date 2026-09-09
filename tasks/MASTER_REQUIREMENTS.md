@@ -243,3 +243,7 @@ Pending. Architecture and wave acceptance: `docs/validation/QUOTALIS_PRODUCT_ARC
 
 ## L10 — Owner navigation correction — 2026-09-09
 Replace the duplicate in-content Settings category column with expandable/collapsible subnavigation directly beneath Settings in the primary sidebar. Expose existing useful destinations, retain clear grouping, and repair wasted width and settings card layout. No additional dropdown selector. Preserve ongoing V2 correctness and validation obligations.
+
+
+## L11 — Analytics Waves 2–4 continuation — 2026-09-09
+Settings/IA L10 accepted. Freeze navigation except regressions. Complete exhaustive source-backed metric audit and typed registry, truthful shared analytics, current limits/templates, ranked attention, period comparisons/velocity (projection fails closed), Reset Horizon, comparison, coverage/freshness/quality, chart/table semantics, customization/invariants/performance corpus and real Dev screenshots. Six-provider Demo showcase plus separate real data. Stop at Dashboard V2 visual review; do not begin another Providers redesign. Full request: attachment a11693e1-564c-4a2e-8893-9593eaca8af4/pasted-text.txt.

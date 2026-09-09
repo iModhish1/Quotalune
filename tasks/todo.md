@@ -1058,4 +1058,11 @@ not claimed complete; see that report's remaining scope.
 - [x] Preserve destination IDs, search draft state, keyboard and collapsed semantics.
 - [x] 992 frontend tests, TypeScript, production/native Dev build, 520 RTL/720 LTR/maximized screenshots.
 - [x] Restore Dev presentation baseline after proof.
-- [ ] Owner visual acceptance; overall L01–L09 runtime matrix remains open.
+- [x] Owner accepted L10; overall L01–L09 runtime matrix remains open.
+
+### L11 Dashboard Waves 2–4 checkpoint
+- [x] Typed metric inventory, observation edge-case fixes and independent review.
+- [x] Current Limits, Trend Intelligence, attention, Reset Horizon and coverage integration.
+- [x] 1001 frontend tests, full Rust gates, native Dev build and screenshot matrix.
+- [x] Restore Dev presentation baseline; stop before further Providers redesign.
+- [ ] Owner Dashboard V2 visual acceptance.
