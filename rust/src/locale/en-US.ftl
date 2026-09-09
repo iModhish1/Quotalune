@@ -1114,3 +1114,13 @@ DashboardHighFidelity = High Fidelity
 DashboardLowCpuHelp = Reduced decoration and shadows.
 DashboardBalancedHelp = Clear instruments with restrained depth.
 DashboardHighFidelityHelp = Full static surface detail.
+
+NavMonitor = Monitor
+
+NavManage = Workspace
+
+NavCustomize = Appearance & limits
+
+NavPreferences = Preferences
+
+NavSystem = System

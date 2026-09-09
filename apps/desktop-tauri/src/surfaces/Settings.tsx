@@ -9,7 +9,7 @@ import { useSettings } from "../hooks/useSettings";
 import { useSurfaceTarget } from "../hooks/useSurfaceMode";
 import { useLocale } from "../hooks/useLocale";
 import { setSurfaceMode } from "../lib/tauri";
-import { TAB_META, isSettingsTab } from "./settings/settingsTabs";
+import { TAB_META, SETTINGS_GROUPS, isSettingsTab } from "./settings/settingsTabs";
 import GeneralTab from "./settings/tabs/GeneralTab";
 import DisplayTab from "./settings/tabs/DisplayTab";
 import AdvancedTab from "./settings/tabs/AdvancedTab";
@@ -265,7 +265,9 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
         event.currentTarget.scrollLeft+=delta;
         event.preventDefault();
       }}>
-        {TAB_META.map((tab) => (
+        {SETTINGS_GROUPS.map(group => <div className="settings-nav-group" role="group" aria-label={t(group.labelKey)} key={group.labelKey}>
+          <span className="settings-nav-group__label" aria-hidden="true">{t(group.labelKey)}</span>
+          {group.tabs.map((tab) => (
           <button
             type="button"
             key={tab.id}
@@ -293,6 +295,7 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
             <span className="settings-tab__label">{t(tab.labelKey)}</span>
           </button>
         ))}
+        </div>)}
       </nav>
 
       {/* status bar */}

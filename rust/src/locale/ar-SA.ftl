@@ -337,3 +337,13 @@ DashboardHighFidelity = دقة عالية
 DashboardLowCpuHelp = تقليل الزخرفة والظلال.
 DashboardBalancedHelp = مؤشرات واضحة بعمق بصري خفيف.
 DashboardHighFidelityHelp = تفاصيل كاملة للأسطح الثابتة.
+
+NavMonitor = المتابعة
+
+NavManage = مساحة العمل
+
+NavCustomize = المظهر والحدود
+
+NavPreferences = التفضيلات
+
+NavSystem = النظام

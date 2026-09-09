@@ -40,3 +40,10 @@ Each phase records files, behavior, tests, evidence and remaining gaps before it
 commit. A green unit test does not replace native visual proof. Final PASS requires
 the delivered scope to satisfy the owner's product criteria; no blanket claim of
 production readiness while external account verification remains unperformed.
+
+### Phase 2: navigation taxonomy
+
+Stable destination IDs now grouped into Monitor, Workspace, Appearance & limits,
+Preferences and System. Side navigation exposes group labels; top/bottom layouts
+retain compact strips and the same keyboard traversal. No native route was added.
+Validation: 24 focused navigation tests passed; production build/typecheck passed.

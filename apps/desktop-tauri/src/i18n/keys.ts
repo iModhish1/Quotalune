@@ -5,6 +5,11 @@
 // response so a mismatch fails loudly in development.
 
 export const ALL_LOCALE_KEYS = [
+  "NavMonitor",
+  "NavManage",
+  "NavCustomize",
+  "NavPreferences",
+  "NavSystem",
   "TabGeneral",
   "TabProviders",
   "TabNotifications",

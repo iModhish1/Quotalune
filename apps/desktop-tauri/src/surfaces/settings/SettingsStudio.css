@@ -204,3 +204,11 @@
 [data-theme="light"] .settings-studio .surface-size-presets>button[aria-pressed="true"]{background:#263d4d!important;color:#fff!important;border-color:#263d4d!important}
 [data-theme="light"] .settings-studio :is(.surface-control__copy strong,.surface-structure-picker legend){color:#263747}
 [data-theme="light"] .settings-studio .surface-structure-choice{background:#edf2f6;border-color:#c6ced8}
+
+/* Task taxonomy stays the same across the user's navigation placement. */
+.settings-nav-group{display:flex;flex-direction:column;gap:3px;min-width:0}
+.settings-nav-group+.settings-nav-group{margin-block-start:12px}
+.settings-nav-group__label{padding:6px 12px;color:var(--text-secondary);font-size:10px;font-weight:650;letter-spacing:.07em;text-transform:uppercase}
+.settings-studio[data-navigation="top"] .settings-nav-group,.settings-studio[data-navigation="bottom"] .settings-nav-group{flex-direction:row;align-items:center;flex:none;margin:0;padding-inline-end:10px;border-inline-end:1px solid var(--border-color)}
+.settings-studio[data-navigation="top"] .settings-nav-group__label,.settings-studio[data-navigation="bottom"] .settings-nav-group__label{display:none}
+@media(max-width:560px){.settings-studio[data-navigation="side"] .settings-nav-group__label{display:none}.settings-studio[data-navigation="side"] .settings-nav-group+.settings-nav-group{border-top:1px solid var(--border-color);padding-top:8px}}

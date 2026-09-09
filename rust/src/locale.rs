@@ -187,6 +187,11 @@ macro_rules! locale_keys {
 locale_keys! {
 
     // Tab names (Preferences)
+    NavMonitor,
+    NavManage,
+    NavCustomize,
+    NavPreferences,
+    NavSystem,
     TabGeneral,
     TabProviders,
     TabNotifications,
