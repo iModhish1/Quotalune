@@ -32,8 +32,9 @@ import NavigationPreference from "./settings/NavigationPreference";
 import "./settings/SettingsStudio.css";
 import SettingsWindowActions from "./settings/SettingsWindowActions";
 import SettingsShellHeader from "./settings/SettingsShellHeader";
+import ProductNavigation from "./settings/ProductNavigation";
 import SettingsShell, {WorkspaceShell} from "./settings/SettingsShell";
-import {PRIMARY_GROUPS, PRIMARY_DESTINATIONS, primaryDestination} from "./settings/settingsCenterRegistry";
+import {PRIMARY_DESTINATIONS, primaryDestination} from "./settings/settingsCenterRegistry";
 
 function ContentShell({tab, navigate, children}: {tab: SettingsTabId; navigate: (tab: SettingsTabId) => void; children: ReactNode}) {
   const destination = primaryDestination(tab);
@@ -268,47 +269,7 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
       <SettingsShellHeader section={t(PRIMARY_DESTINATIONS.find(tab=>tab.id===primary)!.labelKey)}>
         <SettingsWindowActions />
       </SettingsShellHeader>
-      {/* tab bar */}
-      <nav className="settings-tabs" role="tablist" aria-label={t("V2PrimaryNavigation")} aria-orientation={navigation==="side"?"vertical":"horizontal"} onWheel={event=>{
-        if(navigation==="side")return;
-        const delta=horizontalNavigationScrollDelta(event.deltaX,event.deltaY);
-        if(delta===0)return;
-        event.currentTarget.scrollLeft+=delta;
-        event.preventDefault();
-      }}>
-        {PRIMARY_GROUPS.map(group => <div className="settings-nav-group" role="group" aria-label={t(group.labelKey)} key={group.labelKey}>
-          <span className="settings-nav-group__label" aria-hidden="true">{t(group.labelKey)}</span>
-          {group.tabs.map((tab) => (
-          <button
-            type="button"
-            key={tab.id}
-            role="tab"
-            id={`settings-tab-${tab.id}`}
-            aria-controls="settings-active-panel"
-            tabIndex={primary === tab.id ? 0 : -1}
-            aria-selected={primary === tab.id}
-            className={`settings-tab ${primary === tab.id ? "settings-tab--active" : ""}`}
-            onClick={() => handleTabClick(tab.target)}
-            onKeyDown={(event) => {
-              const rtl = document.documentElement.dir === "rtl";
-              const previous = navigation === "side" ? "ArrowUp" : rtl ? "ArrowRight" : "ArrowLeft";
-              const next = navigation === "side" ? "ArrowDown" : rtl ? "ArrowLeft" : "ArrowRight";
-              const index = PRIMARY_DESTINATIONS.findIndex(item => item.id === tab.id);
-              const target = event.key === "Home" ? 0 : event.key === "End" ? PRIMARY_DESTINATIONS.length - 1
-                : event.key === next ? (index + 1) % PRIMARY_DESTINATIONS.length
-                : event.key === previous ? (index - 1 + PRIMARY_DESTINATIONS.length) % PRIMARY_DESTINATIONS.length : -1;
-              if (target < 0) return;
-              event.preventDefault();
-              handleTabClick(PRIMARY_DESTINATIONS[target].target);
-              document.getElementById(`settings-tab-${PRIMARY_DESTINATIONS[target].id}`)?.focus();
-            }}
-          >
-            <span className="settings-tab__icon">{TabIcons[tab.target]}</span>
-            <span className="settings-tab__label">{t(tab.labelKey)}</span>
-          </button>
-        ))}
-        </div>)}
-      </nav>
+      <ProductNavigation activeTab={activeTab} onNavigate={handleTabClick} icons={TabIcons} />
 
       {/* status bar */}
       {(saving || error) && (

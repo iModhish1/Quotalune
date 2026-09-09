@@ -239,3 +239,7 @@ Owner accepts K and requests a second structural evolution from clean `6fbe7a6b`
 - L09: Native Dev evidence board and full gates; final 31-item report. Personal untouched; no 3D/Spatial/Hybrid.
 
 Pending. Architecture and wave acceptance: `docs/validation/QUOTALIS_PRODUCT_ARCHITECTURE_V2_AUDIT.md`.
+
+
+## L10 — Owner navigation correction — 2026-09-09
+Replace the duplicate in-content Settings category column with expandable/collapsible subnavigation directly beneath Settings in the primary sidebar. Expose existing useful destinations, retain clear grouping, and repair wasted width and settings card layout. No additional dropdown selector. Preserve ongoing V2 correctness and validation obligations.

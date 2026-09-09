@@ -1,0 +1,67 @@
+import {useState, type ReactNode} from "react";
+import {useLocale} from "../../hooks/useLocale";
+import type {SettingsTabId} from "../../types/bridge";
+import {PRIMARY_GROUPS, SETTINGS_CATEGORIES, primaryDestination} from "./settingsCenterRegistry";
+import {TAB_META} from "./settingsTabs";
+
+const labels = new Map(TAB_META.map(tab => [tab.id, tab.labelKey]));
+
+/** One navigation hierarchy; settings editors never create a second sidebar. */
+export default function ProductNavigation({activeTab, onNavigate, icons}: {
+  activeTab: SettingsTabId;
+  onNavigate: (tab: SettingsTabId) => void;
+  icons: Partial<Record<SettingsTabId, ReactNode>>;
+}) {
+  const {t} = useLocale();
+  const primary = primaryDestination(activeTab);
+  const [expanded, setExpanded] = useState({settings: true, workspace: true});
+  const leaf = (tab: SettingsTabId) => <button type="button" key={tab}
+    className="product-nav__leaf" aria-current={activeTab === tab ? "page" : undefined}
+    onClick={() => onNavigate(tab)}>
+    <span className="product-nav__leaf-icon" aria-hidden="true">{icons[tab]}</span>
+    <span>{t(labels.get(tab)!)}</span>
+  </button>;
+  return <nav className="settings-tabs product-nav" aria-label={t("V2PrimaryNavigation")}
+    onKeyDown={event => {
+      if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+      const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("button")].filter(button => !button.closest("[hidden]"));
+      const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+      if (index < 0) return;
+      event.preventDefault();
+      const next = event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1
+        : (index + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length;
+      buttons[next]?.focus();
+    }}>
+    {PRIMARY_GROUPS.map(group => <div className="settings-nav-group" key={group.labelKey}>
+      <span className="settings-nav-group__label">{t(group.labelKey)}</span>
+      {group.tabs.map(tab => {
+        const branch = tab.id === "settings" || tab.id === "workspace" ? tab.id : null;
+        return <div className="product-nav__branch" key={tab.id}>
+          <button type="button" id={`settings-tab-${tab.id}`} aria-controls={branch ? `product-nav-${branch}` : "settings-active-panel"}
+            aria-expanded={branch ? expanded[branch] : undefined}
+            aria-current={primary === tab.id ? "page" : undefined}
+            className={`settings-tab ${primary === tab.id ? "settings-tab--active" : ""}`}
+            onClick={() => {
+              if (branch) {
+                setExpanded(value => ({...value, [branch]: primary !== tab.id || !value[branch]}));
+                if (primary !== tab.id) onNavigate(tab.target);
+              } else onNavigate(tab.target);
+            }}>
+            <span className="settings-tab__icon" aria-hidden="true">{icons[tab.target]}</span>
+            <span className="settings-tab__label">{t(tab.labelKey)}</span>
+            {branch && <span className="product-nav__chevron" aria-hidden="true">{expanded[branch] ? "⌄" : "›"}</span>}
+          </button>
+          {branch === "workspace" && <div id="product-nav-workspace" className="product-nav__children" hidden={!expanded.workspace}>
+            {leaf("profiles")}{leaf("collections")}
+          </div>}
+          {branch === "settings" && <div id="product-nav-settings" className="product-nav__children" hidden={!expanded.settings}>
+            {SETTINGS_CATEGORIES.map(category => <div key={category.id} className="product-nav__category">
+              {category.tabs.length > 1 && <span className="product-nav__caption">{t(category.labelKey)}</span>}
+              {category.tabs.map(leaf)}
+            </div>)}
+          </div>}
+        </div>;
+      })}
+    </div>)}
+  </nav>;
+}

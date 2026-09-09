@@ -22,17 +22,13 @@ export default function SettingsShell({activeTab, onNavigate, children}: {
       </label>
     </header>
     <div className="settings-center__layout">
-      <nav className="settings-center__categories" aria-label={t("V2SettingsCategories")}>
-        {results.map(item => <button key={item.id} type="button" aria-current={item.id === category.id ? "page" : undefined}
-          onClick={() => {onNavigate(item.tabs[0]); setQuery("");}}>{t(item.labelKey)}<span>{t(item.descriptionKey)}</span></button>)}
+      {query.trim() && <nav className="settings-center__search-results" aria-label={t("V2SearchSettings")}>
+        {results.map(item => <button key={item.id} type="button" onClick={() => {onNavigate(item.tabs[0]); setQuery("");}}>{t(item.labelKey)}<span>{t(item.descriptionKey)}</span></button>)}
         {results.length === 0 && <p role="status">{t("V2SearchEmpty")}</p>}
-      </nav>
+      </nav>}
       <section className="settings-center__content" aria-labelledby={id}>
         <header className="settings-center__section-title"><h2 id={id}>{t(category.labelKey)}</h2><p>{t(category.descriptionKey)}</p></header>
-        {category.tabs.length > 1 && <nav className="settings-center__subsections" aria-label={t(category.labelKey)}>
-          {category.tabs.map(tab => <button type="button" key={tab} aria-current={tab === activeTab ? "page" : undefined} onClick={() => onNavigate(tab)}>{t(labels.get(tab)!)}</button>)}
-        </nav>}
-        {children}
+        <div className="settings-center__editor">{children}</div>
       </section>
     </div>
   </div>;
