@@ -1,5 +1,5 @@
 import type {AnalyticsPreferences} from "../../types/bridge";
-export const ANALYTICS_SECTIONS = ["limits", "attention", "overview", "resets", "comparison", "history", "quality"] as const;
+export const ANALYTICS_SECTIONS = ["limits", "attention", "overview", "resets", "quality", "comparison", "history"] as const;
 export type AnalyticsSection = typeof ANALYTICS_SECTIONS[number];
 export const DEFAULT_ANALYTICS_PREFERENCES: AnalyticsPreferences = {
   sectionOrder: [...ANALYTICS_SECTIONS], hiddenSections: [], chartStyle: "precision", quotaTemplate: "precision", defaultRange: "last7Days", providerFilterScope: "history",

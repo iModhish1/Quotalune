@@ -31,6 +31,7 @@ export function createTrendChartSpec(rows:readonly QuotaSeries[],title:(r:QuotaS
     points+=segment.length;
     lines.push({id:`${row.key}:${previous}:${index}`,name,type:"line",connectNulls:false,smooth:false,clip:true,
       data:segment.map(p=>[p.time,p.value,p.sourceTime]),symbol:"circle",symbolSize:compact?3:5,showSymbol:segment.length===1 || (segment.length<30 && !ctx.lowCpu),
+      label:{show:!previous&&!compact&&!ctx.lowCpu&&ctx.style!=="minimal"&&segment.length<=10,position:"top",fontSize:9,color:ctx.theme.text,formatter:params=>ctx.number((params.value as number[])[1])+"%"},
       lineStyle:{color:ctx.theme.series(row.provider),width:previous?1.5:2,type:previous?"dashed":"solid",opacity:1},itemStyle:{color:ctx.theme.series(row.provider)},
       emphasis:{disabled:ctx.lowCpu,focus:"series"},
       ...(!previous && index===0 && !compact && ctx.highFidelity && row.current.length ? {markPoint:{symbol:"circle",symbolSize:6,itemStyle:{color:ctx.theme.series(row.provider)},label:{color:ctx.theme.text,fontSize:10,position:"top",formatter:"{c}%"},data:[row.current.reduce((a,b)=>a.usedPercent>b.usedPercent?a:b)].map(p=>({name:ctx.labels.used,coord:[p.observedAt*1000,p.usedPercent],value:p.usedPercent}))}}:{}),
@@ -40,6 +41,15 @@ export function createTrendChartSpec(rows:readonly QuotaSeries[],title:(r:QuotaS
  }
  const label=rows.map(title).join(" · ")+" · "+ctx.labels.used;
  const option=base(ctx,label);option.series=lines;
+ // Fit the observed range without altering any sample or concealing the scale.
+ // Include both periods when comparing; labels retain absolute percentages.
+ const values=lines.flatMap(line=>(line.data as number[][]).map(point=>point[1]));
+ if(values.length) {
+  const low=values.reduce((a,b)=>Math.min(a,b),100),high=values.reduce((a,b)=>Math.max(a,b),0);
+  const padding=Math.max(3,(high-low)*.2);
+  const min=Math.max(0,Math.floor((low-padding)/5)*5),max=Math.min(100,Math.ceil((high+padding)/5)*5);
+  option.yAxis={...option.yAxis as object,min,max,interval:undefined,splitNumber:3};
+ }
  option.tooltip={...option.tooltip as TooltipComponentOption,formatter:(params:unknown)=>{
   const values=(Array.isArray(params)?params:[params]) as {seriesName?:string;value?:number[]}[];
   return values.filter(p=>Array.isArray(p.value)).slice(0,8).map(p=>`<div><strong>${escape(p.seriesName??"")}</strong><br/>${escape(ctx.date(p.value![2]))}<br/>${escape(ctx.labels.used)}: <b>${escape(ctx.number(p.value![1]))}%</b><br/>${escape(ctx.labels.source)}</div>`).join("<hr/>");
@@ -53,7 +63,7 @@ export function createTrendChartSpec(rows:readonly QuotaSeries[],title:(r:QuotaS
   if(comparison || rows.length>1) option.legend={...option.legend as LegendComponentOption,bottom:28};
  }
  const readings=lines.flatMap((line,index)=>(line.data as number[][]).map((point,i)=>({key:`${index}:${i}`,scope:String(line.name),time:ctx.date(point[2]),value:ctx.number(point[1])+"%"})));
- return {option,label,height:compact?136:270,points,empty:points===0,readings};
+ return {option,label,height:compact?136:170,points,empty:points===0,readings};
 }
 export function createCoverageHeatmapSpec(rows:readonly QuotaSeries[],title:(r:QuotaSeries)=>string,ctx:ChartContext):ChartSpec {
  const valid=rows.filter(row=>!row.invalid && row.current.length).slice(0,70);

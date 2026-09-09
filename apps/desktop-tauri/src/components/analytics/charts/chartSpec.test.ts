@@ -12,6 +12,14 @@ const data:QuotaHistoryPoint[]=Array.from({length:16},(_,i)=>({provider:"codex",
 const range={since:8*3600,until:16*3600,grainSeconds:3600};
 const context:ChartContext={range,theme:chartTheme(CANONICAL_THEME,()=>"#123456"),date:String,number:String,style:"precision",lowCpu:false,labels:{current:"Current",previous:"Previous",used:"Used",samples:"Samples",missing:"Missing",zoom:"Zoom",source:"Provider observation"}};
 describe("professional chart contracts",()=>{
+ it("adaptive percentage axis encloses every original sample and remains bounded",()=>{
+   const rows=buildQuotaAnalytics(data,range);
+   const spec=createTrendChartSpec(rows,r=>r.provider,context);
+   const axis=spec.option.yAxis as {min:number;max:number};
+   expect(axis.min).toBeGreaterThanOrEqual(0);expect(axis.max).toBeLessThanOrEqual(100);
+   expect(axis.max).toBeLessThan(100);
+   for(const point of rows[0].current){expect(point.usedPercent).toBeGreaterThanOrEqual(axis.min);expect(point.usedPercent).toBeLessThanOrEqual(axis.max);}
+ });
  it("light-theme series retain visible non-text contrast",()=>{const light=catalogBySlug("ceramic-pearl-material")!;const mapped=chartTheme(light,()=>"#e0ad88");expect(contrastRatio(mapped.series("claude"),light.core)).toBeGreaterThanOrEqual(3);});
  it("single missing bucket breaks the display line",()=>{expect(visualSegments([data[0],data[2]],3600).length).toBe(2);});
  it("catalog Codex alias preserves provider color",()=>{expect(chartProviderColor(CANONICAL_THEME,{} as never,"codex",document.documentElement)).toBe(CANONICAL_THEME.providerColors.openai);});

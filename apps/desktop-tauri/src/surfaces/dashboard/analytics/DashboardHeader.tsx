@@ -1,5 +1,6 @@
 import type { DashboardRangeKind } from "../../../types/bridge";
 import { useLocale } from "../../../hooks/useLocale";
+import QuotalisSelect from "../../../components/analytics/QuotalisSelect";
 import type { LocaleKey } from "../../../i18n/keys";
 
 const RANGE_KEYS: Record<DashboardRangeKind, LocaleKey> = {
@@ -61,7 +62,7 @@ export default function DashboardHeader({
         role="radiogroup"
         aria-label={t("DashboardSubtitle")}
       >
-        {SELECTABLE_RANGES.map((r) => (
+        {SELECTABLE_RANGES.slice(0,4).map((r) => (
           <button
             key={r}
             type="button"
@@ -73,22 +74,11 @@ export default function DashboardHeader({
             {t(RANGE_KEYS[r])}
           </button>
         ))}
+        <QuotalisSelect label={t("V4More")} value={SELECTABLE_RANGES.slice(4).includes(range)?range:""} options={[{value:"",label:t("V4More")},...SELECTABLE_RANGES.slice(4).map(value=>({value,label:t(RANGE_KEYS[value])}))]} onChange={value=>{if(value)onRangeChange(value as DashboardRangeKind);}}/>
       </div>
       <div className="dashboard-analytics__controls">
         {providerOptions.length > 1 && (
-          <select
-            className="dashboard-analytics__provider-filter"
-            aria-label={t("DashboardProviderFilterAll")}
-            value={providerFilter ?? ""}
-            onChange={(e) => onProviderFilterChange(e.target.value || null)}
-          >
-            <option value="">{t("DashboardProviderFilterAll")}</option>
-            {providerOptions.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+          <QuotalisSelect label={t("DashboardProviderFilterAll")} value={providerFilter??""} searchable onChange={value=>onProviderFilterChange(value||null)} options={[{value:"",label:t("DashboardProviderFilterAll")},...providerOptions.map(provider=>({value:provider.id,label:provider.name,providerId:provider.id}))]}/>
         )}
         {historyChip && <span className="dashboard-analytics__history-chip">{historyChip}</span>}
       </div>

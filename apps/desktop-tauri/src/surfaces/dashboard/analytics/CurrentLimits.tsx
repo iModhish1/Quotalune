@@ -3,6 +3,9 @@ import {physicalWindowLabel} from "../../../lib/analytics/metricLabels";
 import "./CurrentLimits.css";
 import "../../../components/analytics/analyticsPrimitives.css";
 import {QuotaGauge} from "../../../components/analytics/QuotaGauge";
+import ProviderPlanet from "./ProviderPlanet";
+import {useDashboardStructureTheme} from "./useDashboardStructureTheme";
+import {chartProviderColor} from "../../../components/analytics/charts/chartTheme";
 import {analyticsPreferences} from "../../../lib/analytics/preferences";
 import {currentProviderModel, type CurrentProviderModel, physicalQuotaWindows} from "../../../lib/analytics/currentProviders";
 import { useMemo, type CSSProperties } from "react";
@@ -10,7 +13,6 @@ import { useLocale } from "../../../hooks/useLocale";
 import { useResetStageOptions } from "../../../hooks/useResetStageOptions";
 import { toStageProviders, usageConfigFromSnapshot } from "../../../components/orbit/stageProviders";
 import UsageWindowList from "../../../components/orbit/UsageWindowList";
-import { ProviderIcon } from "../../../components/providers/ProviderIcon";
 import { providerCreditsColor } from "../../../components/charts/chartPalette";
 import { formatPercentage } from "../../../design-system/percent";
 import { providerMonetaryQuantityKind } from "../../../lib/providerMonetaryKind";
@@ -20,6 +22,7 @@ import type { ProviderUsageSnapshot, SettingsSnapshot } from "../../../types/bri
 /** Reuses the shared limit selection, identity and reset presentation pipeline. */
 export default function CurrentLimits({ providers, settings, models }: {providers: ProviderUsageSnapshot[]; settings: SettingsSnapshot; models?: CurrentProviderModel[]}) {
   const { t } = useLocale();
+  const {theme}=useDashboardStructureTheme(settings);
   const preferences = analyticsPreferences(settings.analyticsPreferences);
   const states = models ?? currentProviderModel(providers,settings,Date.now());
   const resetOptions = useResetStageOptions(settings, "dashboard");
@@ -42,22 +45,22 @@ export default function CurrentLimits({ providers, settings, models }: {provider
         const cost = provider.cost;
         const used = metric ? normalizePercentage(metric.usedPercent) : null;
         const remaining = metric ? normalizePercentage(metric.remainingPercent) : null;
+        const identityColor=chartProviderColor(theme,settings,stage.id,document.documentElement);
         return <article key={stage.id} className="dashboard-limits__instrument" style={{"--provider-color": providerCreditsColor(stage.id)} as CSSProperties}>
-          <header><ProviderIcon providerId={stage.id} size={20} /><strong><bdi dir="ltr">{stage.name}</bdi></strong><span className="dashboard-limits__status" data-ready={ready}>{ready ? t("V2ProviderReady") : t("DashboardNeedsAttention")}</span></header>
-          <div className="dashboard-limits__metadata"><span data-freshness={state?.freshness.state}>{t(state?.freshness.state === "fresh" ? "V24Fresh" : state?.freshness.state === "aging" ? "V24Aging" : state?.freshness.state === "stale" ? "V24Stale" : "V24ReadingAge")}</span>
-            {state?.freshness.ageSeconds != null && <bdi>{Math.floor(state.freshness.ageSeconds/60)} {t("V2MinutesShort")}</bdi>}
-          </div>
-          {stage.planName && <small><bdi>{stage.planName}</bdi></small>}
+          <ProviderPlanet providerId={stage.id} used={ready ? used : null} color={identityColor}/>
+          <header><strong><bdi dir="ltr">{stage.name}</bdi></strong>{!ready && <span className="dashboard-limits__status">{t("DashboardNeedsAttention")}</span>}</header>
           {ready && used !== null && remaining !== null ? <>
-            <small><bdi>{physicalWindowLabel(physical[0]?.label,t)}</bdi></small>
             <QuotaGauge used={used} remaining={remaining} template={preferences.quotaTemplate} usedLabel={t("PanelUsedSuffix")} remainingLabel={t("FloatBarRemainingSuffix")} format={formatPercentage} emphasis={stage.resolvedMode}/>
             <small><bdi>{metric?.resetsAt ? formatResetPresentation({...resetOptions,locale:resetOptions.locale??"en-US",resetAt:metric.resetsAt}).fullAriaLabel : t("DashboardValueUnavailable")}</bdi></small>
-            {physical.length > 1 ? <UsageWindowList providerId={stage.id} windows={(stage.windows ?? []).filter(window => physical.slice(1).some(item => (item.key === "modelSpecific" ? "model" : item.key) === window.id)).map(window=>({...window,label:physicalWindowLabel(window.label,t)}))} hidden={false} paginate={false} presentation={stage.limitPresentation} /> : null}
           </> : <p className="dashboard-limits__unavailable">{t("DashboardValueUnavailable")}</p>}
+          <details className="dashboard-limits__details"><summary>{physicalWindowLabel(physical[0]?.label,t)}</summary>
+            <div className="dashboard-limits__metadata"><span>{t(state?.freshness.state === "fresh" ? "V24Fresh" : state?.freshness.state === "aging" ? "V24Aging" : state?.freshness.state === "stale" ? "V24Stale" : "V24ReadingAge")}</span>{stage.planName && <bdi>{stage.planName}</bdi>}</div>
+            {ready && physical.length > 1 ? <UsageWindowList providerId={stage.id} windows={(stage.windows ?? []).filter(window => physical.slice(1).some(item => (item.key === "modelSpecific" ? "model" : item.key) === window.id)).map(window=>({...window,label:physicalWindowLabel(window.label,t)}))} hidden={false} paginate={false} presentation={stage.limitPresentation} /> : null}
           {ready && cost && Number.isFinite(cost.used) && quantity !== "unknown" && (quantity === "credits" || !!cost.currencyCode) && <p className="dashboard-limits__remaining">
             <span>{t(quantity === "spend" ? "DashboardMetricSpend" : quantity === "balance" ? "DashboardBalance" : "DashboardCredits")}</span>
             <bdi dir="ltr">{cost.used.toLocaleString(resetOptions.locale, {maximumFractionDigits: 2})}{quantity !== "credits" && cost.currencyCode ? ` ${cost.currencyCode}` : ""}</bdi>
           </p>}
+          </details>
         </article>;
       })}
     </div>

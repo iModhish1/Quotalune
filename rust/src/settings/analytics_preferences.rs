@@ -5,9 +5,9 @@ pub const ANALYTICS_SECTIONS: [&str; 7] = [
     "attention",
     "overview",
     "resets",
+    "quality",
     "comparison",
     "history",
-    "quality",
 ];
 
 /// Global presentation only. Values never alter metric contracts or history.

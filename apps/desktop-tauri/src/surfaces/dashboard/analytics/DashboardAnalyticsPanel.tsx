@@ -5,10 +5,11 @@ import { useLocale } from "../../../hooks/useLocale";
 import { useEffectiveDashboardSnapshot } from "../../../hooks/useEffectiveDashboardSnapshot";
 import type { DataProvenance } from "../../../hooks/useEffectiveProviders";
 import { useDashboardStructureTheme } from "./useDashboardStructureTheme";
-import { availableHistoryDays, computeKpis } from "./dashboardSelectors";
+import { availableHistoryDays } from "./dashboardSelectors";
 import DashboardHeader from "./DashboardHeader";
 import CurrentLimits from "./CurrentLimits";
 import CoverageHeatmap from "./CoverageHeatmap";
+import ProviderUsageMatrix from "./ProviderUsageMatrix";
 import KpiRow from "./KpiRow";
 import UsageTrendSection from "./UsageTrendSection";
 import ResetHorizon from "./ResetHorizon";
@@ -17,7 +18,6 @@ import ProviderOperationsTable from "./ProviderOperationsTable";
 import {analyticsPreferences} from "../../../lib/analytics/preferences";
 import {buildDashboardAnalyticsModel} from "../../../lib/analytics/dashboardModel";
 
-import {AnalyticsSection} from "../../../components/analytics/AnalyticsPrimitives";
 import AttentionQueue from "./AttentionQueue";
 import TrendIntelligence from "./TrendIntelligence";
 
@@ -31,6 +31,7 @@ import type {
 } from "../../../types/bridge";
 import "./DashboardAnalyticsPanel.css";
 import "./AnalyticsWorkstation.css";
+import "./CosmicDashboard.css";
 
 /**
  * Owns the one global range/provider-filter state every widget below
@@ -81,7 +82,7 @@ export default function DashboardAnalyticsPanel({
   // Phase 3.6: the Dashboard's structural surfaces now follow the same
   // resolved Structure Theme every other themed surface uses -- see
   // docs/validation/DASHBOARD_STRUCTURE_THEME_INTEGRATION.md.
-  const { style: structureThemeStyle } = useDashboardStructureTheme(settings);
+  const { style: structureThemeStyle, theme } = useDashboardStructureTheme(settings);
 
   const providerOptions = useMemo(
     () => liveProviders.map((p) => ({ id: p.providerId, name: p.displayName })),
@@ -113,16 +114,16 @@ export default function DashboardAnalyticsPanel({
 
   const sections: Record<string, ReactNode> = {
     limits: <CurrentLimits providers={currentProviders} settings={settings} models={models} />,
-    attention: <AttentionQueue items={attention} onOpenProviders={onOpenProviders} isDemo={provenance === "demo"} />,
+    attention: <AttentionQueue items={attention} models={models} onOpenProviders={onOpenProviders} isDemo={provenance === "demo"} />,
     overview: <><TrendIntelligence series={series} range={model.range} providers={liveProviders} settings={settings} preferences={preferences}/></>,
     resets: <ResetHorizon models={models} settings={settings} now={now} resets={model.resetHorizon} />,
-    comparison: <><ProviderOperationsTable models={models} settings={settings} now={now}/><QuotaComparison series={series} providers={liveProviders} settings={settings} /></>,
-    history: <><QuotaHistory series={series} snapshot={snapshot} settings={settings} preferences={preferences} />
-      <details className="analytics-coverage"><summary>{t("V2LegacyHistory")}</summary><p>{t("V2LegacyHistoryHelp")}</p><UsageTrendSection snapshot={snapshot} /></details></>,
-    quality: <AnalyticsSection title={t("V2DataQuality")} description={t(provenance === "demo" ? "V2DemoQuality" : "V2LiveQuality")}><QuotaCoverage series={series} snapshot={snapshot} settings={settings}/><CoverageHeatmap model={model} settings={settings} preferences={preferences} providers={liveProviders}/><DataStatusPanel snapshot={snapshot} /></AnalyticsSection>,
+    comparison: <details className="cosmic-disclosure"><summary>{t("V45PeriodComparison")}</summary><ProviderOperationsTable models={models} settings={settings} now={now}/><QuotaComparison series={series} providers={liveProviders} settings={settings} /></details>,
+    history: <details className="cosmic-disclosure"><summary>{t("V2HistorySeries")}</summary><QuotaHistory series={series} snapshot={snapshot} settings={settings} preferences={preferences} />
+      <details className="analytics-coverage"><summary>{t("V2LegacyHistory")}</summary><p>{t("V2LegacyHistoryHelp")}</p><UsageTrendSection snapshot={snapshot} /></details></details>,
+    quality: <div className="cosmic-matrix-quality"><ProviderUsageMatrix model={model} providers={liveProviders} settings={settings}/><aside><h3>{t("V2DataQuality")}</h3><p><bdi>{model.coverage.samples}</bdi> {t("V2Samples")} · <bdi>{series.length}</bdi> {t("V2LimitWindow")}</p><p>{historyChip}</p><details className="analytics-coverage"><summary>{t(provenance === "demo" ? "V2DemoQuality" : "V2LiveQuality")}</summary><QuotaCoverage series={series} snapshot={snapshot} settings={settings}/><CoverageHeatmap model={model} settings={settings} preferences={preferences} providers={liveProviders}/><DataStatusPanel snapshot={snapshot} /></details></aside></div>,
   };
   return (
-    <div className="dashboard-analytics" style={structureThemeStyle} data-performance={settings.dashboardPerformancePreset ?? "balanced"} data-chart-style={preferences.chartStyle}>
+    <div className="dashboard-analytics dashboard-cosmic" style={structureThemeStyle} data-light={Boolean(theme.material?.light)} data-density={settings.workspacePreferences?.density ?? "comfortable"} data-performance={settings.dashboardPerformancePreset ?? "balanced"} data-chart-style={preferences.chartStyle}>
       <div className="dashboard-command-bar">{provenance === "demo" && <div className="dashboard-analytics__demo-indicator"><DemoIndicator providerCount={liveProviders.length} onExit={() => onExitDemo?.()} /></div>}
       <DashboardHeader range={range} onRangeChange={setRange} providerOptions={providerOptions} providerFilter={providerFilter} onProviderFilterChange={setProviderFilter} historyChip={historyChip} /></div>
       <KpiRow kpis={kpis} settings={settings} resetTimeRelative={settings.resetTimeRelative}/>

@@ -216,7 +216,8 @@ describe("DashboardAnalyticsPanel", () => {
 
     // Filtering Selected Range to just Codex must genuinely re-scope the
     // snapshot fetch (the historical/range-based widgets)...
-    fireEvent.change(screen.getByLabelText("All Providers"), { target: { value: "codex" } });
+    fireEvent.click(screen.getByRole("button",{name:"All Providers"}));
+    fireEvent.click(screen.getByRole("option",{name:"Codex"}));
     await vi.waitFor(() =>
       expect(tauriMocks.getDashboardSnapshot).toHaveBeenLastCalledWith(
         expect.objectContaining({ providers: ["codex"] }),
@@ -241,7 +242,8 @@ describe("DashboardAnalyticsPanel", () => {
   it("explicit all-sections filter also scopes current status", async () => {
     renderPanel([provider({providerId:"claude",displayName:"Claude"}),provider({providerId:"codex",displayName:"Codex"})], snapshot(), vi.fn(), {...SETTINGS,analyticsPreferences:{sectionOrder:[],hiddenSections:[],chartStyle:"precision",quotaTemplate:"precision",defaultRange:"last7Days",providerFilterScope:"all"}});
     await screen.findByText("Data Status");
-    fireEvent.change(screen.getByLabelText("All Providers"),{target:{value:"codex"}});
+    fireEvent.click(screen.getByRole("button",{name:"All Providers"}));
+    fireEvent.click(screen.getByRole("option",{name:"Codex"}));
     expect(screen.getByText("Active Providers").closest(".dashboard-kpi")).toHaveTextContent("1");
   });
 

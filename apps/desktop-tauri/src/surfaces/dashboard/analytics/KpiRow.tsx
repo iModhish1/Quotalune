@@ -138,10 +138,12 @@ export default function KpiRow({
   return (
     <section className="dashboard-analytics__kpis" aria-label={t("TabDashboard")}>
       <div className="dashboard-analytics__kpis-primary">
-        {primary.map((kpi) => (
+        {primary.filter(kpi=>kpi.label!==t("DashboardKpiHighestUsage")&&kpi.label!==t("DashboardKpiEstimatedSpend")).map((kpi) => (
           <KpiCard key={kpi.label} {...kpi} />
         ))}
       </div>
+      <details className="cosmic-kpi-details"><summary>{t("V4More")}</summary>
+      {primary.filter(kpi=>kpi.label===t("DashboardKpiHighestUsage")||kpi.label===t("DashboardKpiEstimatedSpend")).map(kpi=><KpiCard key={kpi.label} {...kpi}/>)}
       {spendValue && <p className="dashboard-analytics__caption">{t("SpendReadingScope")}</p>}
       {compact.length > 0 && (
         <div className="dashboard-analytics__kpis-compact">
@@ -150,6 +152,7 @@ export default function KpiRow({
           ))}
         </div>
       )}
+      </details>
     </section>
   );
 }

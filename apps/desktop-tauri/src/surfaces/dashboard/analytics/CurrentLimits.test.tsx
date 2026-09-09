@@ -9,6 +9,12 @@ function provider(id: string): ProviderUsageSnapshot {
   return {providerId: id, displayName: id, primary: metric, selectedMetric: metric, secondary: null, tertiary: null, modelSpecific: null, extraRateWindows: [], cost: null, errorState: "ready", error: null, planName: null, accountEmail: null, accountOrganization: null, pace: null, trayStatusLabel: null, updatedAt: "2026-09-09T00:00:00Z", sourceLabel: "test"};
 }
 describe("Current Limits", () => {
+  it("keeps original provider SVGs and maps the planet arc to observed usage only",()=>{
+    const view=render(<CurrentLimits providers={[provider("codex"),{...provider("claude"),errorState:"needsAuthentication"}]} settings={settings}/>);
+    expect(view.container.querySelectorAll(".provider-planet .provider-icon--svg")).toHaveLength(2);
+    expect(view.container.querySelector('.provider-planet[data-provider="codex"] .provider-planet__arc')).toHaveAttribute("stroke-dasharray","64 100");
+    expect(view.container.querySelector('.provider-planet[data-provider="claude"] .provider-planet__arc')).toBeNull();
+  });
   it("does not show a missing-secondary-window warning for a valid primary-only provider",()=>{
     const view=render(<CurrentLimits providers={[provider("gemini")]} settings={settings}/>);
     expect(screen.getByText("64%")).toBeInTheDocument();
