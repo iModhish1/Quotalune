@@ -68,8 +68,10 @@
 }
 
 .spatial-node__gauge-track {
+  /* `--spatial-hairline` already carries its own low built-in alpha for
+     this theme (see SpatialObservatoryScene.css's own note) -- no extra
+     `opacity` multiplier here, or the track disappears entirely. */
   stroke: var(--spatial-hairline);
-  opacity: 0.5;
 }
 
 .spatial-node__gauge-arc {

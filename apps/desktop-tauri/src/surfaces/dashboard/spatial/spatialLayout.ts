@@ -125,10 +125,16 @@ function splitAcrossTiers(count: number, tierCount: number): number[] {
  *  a narrower, higher band; the front tier gets the widest, lowest band,
  *  since it carries the largest/most important nodes. */
 const TIER_Y_BASE: Record<SpatialTier, number> = {
-  far: 18,
-  back: 30,
-  mid: 46,
-  front: 64,
+  // Widened from an earlier pass that put tiers too close together --
+  // a real native capture at 12 providers showed back/mid/front node
+  // housings visibly overlapping (owner section 21: "still readable,
+  // no label collisions" -- this was a housing collision, worse than a
+  // label one). Front sits lowest/most spread since it carries the
+  // largest, most important nodes.
+  far: 10,
+  back: 26,
+  mid: 50,
+  front: 80,
   hero: 50,
 };
 const TIER_X_SPAN: Record<SpatialTier, [number, number]> = {

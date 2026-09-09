@@ -44,16 +44,22 @@
   pointer-events: none;
 }
 
+/* `--spatial-hairline` (the theme's own hairline token) already carries
+   a low built-in alpha for its usual border use -- stacking an
+   additional `opacity` on top of it here compounded to ~0.02, making
+   the traces invisible in the first native capture. `--spatial-accent`
+   at an explicit low opacity gives a real, deliberately subtle
+   "engraved calibration guide" instead (owner section 26). */
 .spatial__trace-axis {
-  stroke: var(--spatial-hairline);
+  stroke: var(--spatial-accent);
   stroke-width: 1;
-  opacity: 0.22;
+  opacity: 0.16;
 }
 
 .spatial__trace-tick {
-  stroke: var(--spatial-hairline);
+  stroke: var(--spatial-accent);
   stroke-width: 1;
-  opacity: 0.35;
+  opacity: 0.24;
 }
 
 .spatial__demo-indicator {
