@@ -107,3 +107,11 @@ export function formatMetric(id: MetricId, value: number | null, locale: string,
     signDisplay:definition.unit === "percentagePoints" ? "exceptZero" : "auto"}).format(value);
   return definition.unit === "percent" ? `${number}%` : number;
 }
+
+export type VisualizationTemplate="precisionTimeSeries"|"comparativeTimeSeries"|"smallMultiples"|"limitInstrument"|"resetHorizon"|"comparisonMatrix"|"coverageHeatmap"|"rankedTable"|"distribution"|"attentionRail";
+export const COMPATIBLE_VISUALIZATIONS:Partial<Record<MetricId,readonly VisualizationTemplate[]>>={
+ quotaUsed:["precisionTimeSeries","smallMultiples","limitInstrument","comparisonMatrix","rankedTable"],
+ quotaRemaining:["limitInstrument","comparisonMatrix"],quotaComparison:["comparativeTimeSeries","comparisonMatrix"],
+ historySamples:["coverageHeatmap","rankedTable"],nextReset:["resetHorizon","rankedTable"],attentionCount:["attentionRail"],
+ reportedSpend:["rankedTable"],balance:["rankedTable"],credits:["rankedTable"]};
+export function supportsVisualization(metric:MetricId,template:VisualizationTemplate):boolean{return COMPATIBLE_VISUALIZATIONS[metric]?.includes(template)??false;}

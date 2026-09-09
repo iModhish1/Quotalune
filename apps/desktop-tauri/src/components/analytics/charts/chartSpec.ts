@@ -1,0 +1,73 @@
+import {supportsVisualization} from "../../../lib/analytics/metricRegistry";
+import type {ComposeOption} from "echarts/core";
+import type {LineSeriesOption,HeatmapSeriesOption} from "echarts/charts";
+import type {GridComponentOption,TooltipComponentOption,LegendComponentOption,DataZoomComponentOption,VisualMapComponentOption,MarkLineComponentOption,MarkPointComponentOption,AriaComponentOption} from "echarts/components";
+import type {QuotaSeries,AnalyticsRange} from "../../../lib/analytics/quotaAnalytics";
+import type {QuotalisChartTheme} from "./chartTheme";
+import {visualSegments} from "./visualSeries";
+export type ChartOption=ComposeOption<LineSeriesOption|HeatmapSeriesOption|GridComponentOption|TooltipComponentOption|LegendComponentOption|DataZoomComponentOption|VisualMapComponentOption|MarkLineComponentOption|MarkPointComponentOption|AriaComponentOption>;
+export interface ChartSpec {option:ChartOption; label:string; height:number; points:number; empty:boolean; readings?:{key:string;scope:string;time:string;value:string}[];}
+export interface ChartLabels {current:string; previous:string; used:string; samples:string; missing:string; zoom:string; source:string;}
+export interface ChartContext {theme:QuotalisChartTheme; range:AnalyticsRange; date:(time:number)=>string; number:(n:number)=>string; labels:ChartLabels; style:"precision"|"minimal"|"detailed"; lowCpu:boolean; highFidelity?:boolean; rtl?:boolean;}
+const escape=(s:string)=>s.replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]!));
+function base(ctx:ChartContext,label:string):ChartOption {
+ const {theme}=ctx;
+ return {animation:false,backgroundColor:"transparent",textStyle:{fontFamily:theme.font,color:theme.text,fontSize:11},aria:{enabled:true,label:{description:label}},
+ grid:{left:48,right:22,top:22,bottom:42,containLabel:false},
+ tooltip:{trigger:"axis",confine:true,backgroundColor:theme.background,borderColor:theme.edge,borderWidth:1,padding:12,textStyle:{color:theme.text,fontFamily:theme.font,fontSize:12},axisPointer:{type:"cross",lineStyle:{color:theme.muted,width:1},crossStyle:{color:theme.muted}},extraCssText:`box-shadow:0 8px 24px #0003;border-radius:4px;max-width:360px;direction:${ctx.rtl?"rtl":"ltr"};text-align:start;`},
+ xAxis:{type:"time",min:ctx.range.since*1000,max:ctx.range.until*1000,splitNumber:4,axisLabel:{color:theme.muted,fontSize:10,hideOverlap:true,formatter:(value:number)=>ctx.date(value)},axisLine:{lineStyle:{color:theme.edge}},axisTick:{show:true},splitLine:{show:false}},
+ yAxis:{type:"value",min:0,max:100,interval:ctx.style==="detailed"?20:50,axisLabel:{color:theme.muted,fontSize:10,formatter:(value:number)=>ctx.number(value)+"%"},splitLine:{show:ctx.style!=="minimal",lineStyle:{color:theme.grid,type:"dashed"}},axisLine:{show:false},axisTick:{show:false}}};
+}
+export function createTrendChartSpec(rows:readonly QuotaSeries[],title:(r:QuotaSeries)=>string,ctx:ChartContext,comparison=false,compact=false):ChartSpec {
+ if(!supportsVisualization(comparison?"quotaComparison":"quotaUsed",comparison?"comparativeTimeSeries":"precisionTimeSeries")) throw new Error("Incompatible visualization");
+ const lines:LineSeriesOption[]=[];let points=0;
+ for(const row of rows) {
+  if(row.invalid)continue;
+  for(const previous of comparison && row.comparison.value!==null ? [false,true] : [false]) {
+   const offset=previous?ctx.range.until-ctx.range.since:0;
+   const segments=visualSegments(previous?row.previous:row.current,ctx.range.grainSeconds,ctx.lowCpu?240:600,offset);
+   const name=title(row)+(comparison?` · ${previous?ctx.labels.previous:ctx.labels.current}`:"");
+   segments.forEach((segment,index)=>{
+    points+=segment.length;
+    lines.push({id:`${row.key}:${previous}:${index}`,name,type:"line",connectNulls:false,smooth:false,clip:true,
+      data:segment.map(p=>[p.time,p.value,p.sourceTime]),symbol:"circle",symbolSize:compact?3:5,showSymbol:segment.length===1 || (segment.length<30 && !ctx.lowCpu),
+      lineStyle:{color:ctx.theme.series(row.provider),width:previous?1.5:2,type:previous?"dashed":"solid",opacity:1},itemStyle:{color:ctx.theme.series(row.provider)},
+      emphasis:{disabled:ctx.lowCpu,focus:"series"},
+      ...(!previous && index===0 && !compact && ctx.highFidelity && row.current.length ? {markPoint:{symbol:"circle",symbolSize:6,itemStyle:{color:ctx.theme.series(row.provider)},label:{color:ctx.theme.text,fontSize:10,position:"top",formatter:"{c}%"},data:[row.current.reduce((a,b)=>a.usedPercent>b.usedPercent?a:b)].map(p=>({name:ctx.labels.used,coord:[p.observedAt*1000,p.usedPercent],value:p.usedPercent}))}}:{}),
+      ...(!previous && index===0 && !compact && ctx.style!=="minimal" && row.mean.value!==null ? {markLine:{silent:true,symbol:["none","none"],lineStyle:{color:ctx.theme.muted,width:1,type:"dashed"},label:{show:!ctx.lowCpu,formatter:ctx.number(row.mean.value)+"%",position:"insideEndTop",color:ctx.theme.muted},data:[{yAxis:row.mean.value}]}}:{})});
+   });
+  }
+ }
+ const label=rows.map(title).join(" · ")+" · "+ctx.labels.used;
+ const option=base(ctx,label);option.series=lines;
+ option.tooltip={...option.tooltip as TooltipComponentOption,formatter:(params:unknown)=>{
+  const values=(Array.isArray(params)?params:[params]) as {seriesName?:string;value?:number[]}[];
+  return values.filter(p=>Array.isArray(p.value)).slice(0,8).map(p=>`<div><strong>${escape(p.seriesName??"")}</strong><br/>${escape(ctx.date(p.value![2]))}<br/>${escape(ctx.labels.used)}: <b>${escape(ctx.number(p.value![1]))}%</b><br/>${escape(ctx.labels.source)}</div>`).join("<hr/>");
+ }};
+ if(comparison || rows.length>1)option.legend={bottom:0,textStyle:{color:ctx.theme.muted,fontSize:10},type:"scroll",icon:"roundRect",itemWidth:16,itemHeight:3,
+  // Scope remains in the heading, tooltip and HTML readings; avoid repeating it in a two-item legend.
+  ...(comparison && rows.length===1?{formatter:(name:string)=>name.endsWith(` · ${ctx.labels.previous}`)?ctx.labels.previous:ctx.labels.current}:{})};
+ if(!compact && ctx.range.until-ctx.range.since>7*86400) {
+  option.dataZoom=[{type:"inside",filterMode:"none",zoomOnMouseWheel:"ctrl"},{type:"slider",height:16,bottom:8,brushSelect:false,showDetail:false,borderColor:ctx.theme.edge,fillerColor:ctx.theme.grid,handleStyle:{color:ctx.theme.accent},dataBackground:{lineStyle:{color:ctx.theme.muted},areaStyle:{color:"transparent"}}}];
+  option.grid={left:48,right:22,top:22,bottom:comparison || rows.length>1 ? 92 : 64};
+  if(comparison || rows.length>1) option.legend={...option.legend as LegendComponentOption,bottom:28};
+ }
+ const readings=lines.flatMap((line,index)=>(line.data as number[][]).map((point,i)=>({key:`${index}:${i}`,scope:String(line.name),time:ctx.date(point[2]),value:ctx.number(point[1])+"%"})));
+ return {option,label,height:compact?136:270,points,empty:points===0,readings};
+}
+export function createCoverageHeatmapSpec(rows:readonly QuotaSeries[],title:(r:QuotaSeries)=>string,ctx:ChartContext):ChartSpec {
+ const valid=rows.filter(row=>!row.invalid && row.current.length).slice(0,70);
+ const step=Math.max(86400,ctx.range.grainSeconds),first=Math.floor(ctx.range.since/step)*step;
+ const count=Math.min(366,Math.ceil((ctx.range.until-first)/step));
+ const data:number[][]=[];let max=1;
+ valid.forEach((row,y)=>{const cells=new Map<number,number>();for(const point of row.current){const x=Math.floor((point.observedAt-first)/step);if(x>=0&&x<count)cells.set(x,(cells.get(x)??0)+point.sampleCount);}for(const [x,n]of cells){data.push([x,y,n]);max=Math.max(max,n);}});
+ const label=ctx.labels.samples;
+ const option:ChartOption={animation:false,aria:{enabled:true,label:{description:label+" · "+ctx.labels.missing}},textStyle:{fontFamily:ctx.theme.font,color:ctx.theme.text},
+ grid:{left:10,right:10,top:10,bottom:60,containLabel:true},
+ xAxis:{type:"category",data:Array.from({length:count},(_,i)=>ctx.date((first+i*step)*1000)),axisLabel:{color:ctx.theme.muted,fontSize:10,hideOverlap:true},axisLine:{show:false},axisTick:{show:false},splitArea:{show:true,areaStyle:{color:[ctx.theme.background]}}},
+ yAxis:{type:"category",data:valid.map(title),axisLabel:{color:ctx.theme.text,fontSize:10,width:170,overflow:"truncate"},axisLine:{show:false},axisTick:{show:false}},
+ visualMap:{show:true,min:0,max,orient:"horizontal",left:"center",bottom:0,itemWidth:8,itemHeight:90,text:[ctx.number(max),ctx.number(0)],textStyle:{color:ctx.theme.muted,fontSize:10},inRange:{color:[ctx.theme.edge,ctx.theme.accent]}},
+ tooltip:{...base(ctx,label).tooltip as TooltipComponentOption,trigger:"item",formatter:(param:unknown)=>{const p=param as {value:number[]};return `${escape(title(valid[p.value[1]]))}<br/>${escape(ctx.date((first+p.value[0]*step)*1000))}<br/>${escape(ctx.labels.samples)}: ${ctx.number(p.value[2])}`;}},
+ series:[{type:"heatmap",data,itemStyle:{borderColor:ctx.theme.background,borderWidth:3,borderRadius:2},emphasis:{disabled:ctx.lowCpu,itemStyle:{borderColor:ctx.theme.accent,borderWidth:1}},label:{show:false}}]};
+ return {option,label,height:Math.max(170,Math.min(590,valid.length*28+84)),points:data.length,empty:!data.length,readings:data.map(([x,y,n])=>({key:`${x}:${y}`,scope:title(valid[y]),time:ctx.date((first+x*step)*1000),value:ctx.number(n)}))};
+}

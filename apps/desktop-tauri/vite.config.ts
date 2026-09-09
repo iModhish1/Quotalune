@@ -10,6 +10,7 @@ export default defineConfig({
     strictPort: true,
   },
   clearScreen: false,
+  build: {rollupOptions:{output:{manualChunks(id) {if(id.includes("/echarts/") || id.includes("/zrender/"))return "analytics-engine";}}}},
   test: {
     environment: "jsdom",
     globals: true,
