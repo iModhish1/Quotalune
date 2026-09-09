@@ -77,7 +77,7 @@ export default function AlertsPanel({
               {(alert.kind === "authRequired" || alert.kind === "unavailable") &&
                 (isDemo ? (
                   <button type="button" className="dashboard-analytics__alert-action" disabled>
-                    {t("Providers3DDemoStateButton")}
+                    {t("DashboardDemoState")}
                   </button>
                 ) : (
                   <button

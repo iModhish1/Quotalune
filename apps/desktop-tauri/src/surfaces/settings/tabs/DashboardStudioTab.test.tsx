@@ -105,63 +105,14 @@ describe("DashboardStudioTab", () => {
     );
   });
 
-  it("renders exactly the 3 production dashboard mode cards, plus 3 performance presets", async () => {
-    render(
-      <DashboardStudioTab state={bootstrap()} onOpenThemes={vi.fn()} onOpenProviderDisplay={vi.fn()} />,
-    );
-    // Phase S1: the visible picker is Analytics / Spatial / Experimental
-    // 3D -- Hybrid stays a real DASHBOARD_REGISTRY entry but is no
-    // longer offered in this picker (see dashboardRegistry.ts).
-    expect(await screen.findByText("Analytics")).toBeInTheDocument();
-    expect(screen.getByText("Spatial")).toBeInTheDocument();
-    expect(screen.getByText("Experimental 3D")).toBeInTheDocument();
-    expect(screen.queryByText("Hybrid Dashboard")).not.toBeInTheDocument();
-    expect(screen.getByText("Low CPU")).toBeInTheDocument();
-    expect(screen.getByText("Balanced")).toBeInTheDocument();
-    expect(screen.getByText("High Fidelity")).toBeInTheDocument();
-  });
-
-  it("marks the currently-selected mode and preset", async () => {
-    const overridden = settings({ dashboardMode: "providers3d", dashboardPerformancePreset: "highFidelity" });
-    tauriMocks.getSettingsSnapshot.mockResolvedValue(overridden);
-    render(
-      <DashboardStudioTab
-        state={{ contractVersion: "v1", providers: [], settings: overridden }}
-        onOpenThemes={vi.fn()}
-        onOpenProviderDisplay={vi.fn()}
-      />,
-    );
-    await waitFor(() =>
-      expect(screen.getByRole("radio", { name: /Experimental 3D/ })).toHaveAttribute(
-        "aria-checked",
-        "true",
-      ),
-    );
-    expect(screen.getByRole("radio", { name: /High Fidelity/ })).toHaveAttribute("aria-checked", "true");
-  });
-
-  it("selecting a mode persists it via updateSettings", async () => {
-    render(
-      <DashboardStudioTab state={bootstrap()} onOpenThemes={vi.fn()} onOpenProviderDisplay={vi.fn()} />,
-    );
-    fireEvent.click(await screen.findByRole("radio", { name: /Experimental 3D/ }));
-    await waitFor(() => {
-      expect(tauriMocks.updateSettings).toHaveBeenCalledWith(
-        expect.objectContaining({ dashboardMode: "providers3d" }),
-      );
-    });
-  });
-
-  it("selecting Spatial persists the spatial mode via updateSettings", async () => {
-    render(
-      <DashboardStudioTab state={bootstrap()} onOpenThemes={vi.fn()} onOpenProviderDisplay={vi.fn()} />,
-    );
-    fireEvent.click(await screen.findByRole("radio", { name: /Spatial/ }));
-    await waitFor(() => {
-      expect(tauriMocks.updateSettings).toHaveBeenCalledWith(
-        expect.objectContaining({ dashboardMode: "spatial" }),
-      );
-    });
+  it("retains performance controls without a mode selector, including legacy settings", async () => {
+    tauriMocks.getSettingsSnapshot.mockResolvedValue(settings({dashboardMode: "providers3d"}));
+    render(<DashboardStudioTab state={bootstrap()} onOpenThemes={vi.fn()} onOpenProviderDisplay={vi.fn()} />);
+    expect(await screen.findByText("Dashboard Preferences")).toBeInTheDocument();
+    expect(screen.queryByRole("radiogroup", {name: "Dashboard Experience"})).not.toBeInTheDocument();
+    expect(screen.getAllByRole("radio")).toHaveLength(3);
+    expect(screen.queryByText("Experimental 3D")).not.toBeInTheDocument();
+    expect(tauriMocks.updateSettings).not.toHaveBeenCalled();
   });
 
   it("selecting a performance preset persists it via updateSettings", async () => {

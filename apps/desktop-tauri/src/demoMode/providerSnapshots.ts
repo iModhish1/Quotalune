@@ -8,7 +8,7 @@
  * 43).
  */
 import type { CostSnapshotBridge, ProviderCatalogEntry, ProviderUsageSnapshot } from "../types/bridge";
-import { providerMonetaryQuantityKind } from "../surfaces/dashboard/providers3d/sceneModel";
+import { providerMonetaryQuantityKind } from "../lib/providerMonetaryKind";
 import type { DemoModeConfig } from "./types";
 import { selectCuratedProviderIds, displayNameFor } from "./curatedProviders";
 import { createRng, deriveSeed } from "./rng";

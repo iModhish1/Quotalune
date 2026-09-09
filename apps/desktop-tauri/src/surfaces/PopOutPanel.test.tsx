@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const tauriMocks = vi.hoisted(() => ({
   getCachedProviders: vi.fn(),
+  getDashboardSnapshot: vi.fn().mockResolvedValue(null),
   refreshProviders: vi.fn(),
   refreshProvidersIfStale: vi.fn(),
   getSettingsSnapshot: vi.fn(),
@@ -377,51 +378,21 @@ describe("PopOutPanel", () => {
     );
 
     await waitFor(() => {
-      expect(container.querySelectorAll(".menu-stack__item")).toHaveLength(3);
+      expect(container.querySelectorAll(".dashboard-limits__instrument")).toHaveLength(3);
     });
 
     expect(
-      Array.from(container.querySelectorAll(".menu-card__name")).map(
+      Array.from(container.querySelectorAll(".dashboard-limits__instrument header strong")).map(
         (node) => node.textContent,
       ),
     ).toEqual(["Codex", "Claude", "Cursor"]);
   });
 
-  it("keeps the popout overview focused until the provider grid expands", async () => {
-    const providers = TEST_PROVIDER_CATALOG.map(([id, displayName], index) =>
-      provider(id, displayName, (index * 7) % 100),
-    );
-
-    // This test exercises grid-expansion/pagination at scale, not enabled-
-    // provider filtering (see `useDashboardState.ts`'s `enabledProviders`
-    // filter, added to fix a real profile-switch bug) -- every provider in
-    // the shared test catalog must be explicitly enabled or most of them
-    // would be correctly excluded instead of counted into the grid.
-    const { container } = renderPopOut(providers, undefined, [], {
-      enabledProviders: TEST_PROVIDER_CATALOG.map(([id]) => id),
-    });
-
-    await waitFor(() => {
-      expect(container.querySelector(".provider-grid--compact")).not.toBeNull();
-    });
-
-    expect(container.querySelectorAll(".provider-grid__item")).toHaveLength(20);
-    expect(container.querySelectorAll(".menu-stack__item")).toHaveLength(4);
-
-    const expand = container.querySelector<HTMLButtonElement>(
-      '.provider-grid__item--more[aria-label="Show all providers"]',
-    );
-    expect(expand).not.toBeNull();
-
-    fireEvent.click(expand!);
-
-    await waitFor(() => {
-      expect(container.querySelectorAll(".provider-grid__item")).toHaveLength(
-        providers.length + 2,
-      );
-    });
-    expect(container.querySelectorAll(".menu-stack__item")).toHaveLength(
-      providers.length,
-    );
+  it("uses the same compact analytics limits at large provider counts without an orbital hero", async () => {
+    const providers = TEST_PROVIDER_CATALOG.map(([id, name]) => provider(id, name));
+    const {container} = renderPopOut(providers, undefined, [], {enabledProviders: providers.map(p => p.providerId)});
+    await waitFor(() => expect(container.querySelectorAll(".dashboard-limits__instrument")).toHaveLength(providers.length));
+    expect(container.querySelector("canvas")).toBeNull();
+    expect(container.querySelector(".provider-grid")).toBeNull();
   });
 });

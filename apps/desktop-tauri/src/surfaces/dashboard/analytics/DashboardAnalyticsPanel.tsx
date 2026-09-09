@@ -5,6 +5,7 @@ import type { DataProvenance } from "../../../hooks/useEffectiveProviders";
 import { useDashboardStructureTheme } from "./useDashboardStructureTheme";
 import { availableHistoryDays, computeKpis } from "./dashboardSelectors";
 import DashboardHeader from "./DashboardHeader";
+import CurrentLimits from "./CurrentLimits";
 import KpiRow from "./KpiRow";
 import UsageTrendSection from "./UsageTrendSection";
 import ProviderDistribution from "./ProviderDistribution";
@@ -99,7 +100,7 @@ export default function DashboardAnalyticsPanel({
   }, [snapshot, t]);
 
   return (
-    <div className="dashboard-analytics" style={structureThemeStyle}>
+    <div className="dashboard-analytics" style={structureThemeStyle} data-performance={settings.dashboardPerformancePreset ?? "balanced"}>
       {provenance === "demo" && (
         <div className="dashboard-analytics__demo-indicator">
           <DemoIndicator providerCount={liveProviders.length} onExit={() => onExitDemo?.()} />
@@ -113,12 +114,8 @@ export default function DashboardAnalyticsPanel({
         onProviderFilterChange={setProviderFilter}
         historyChip={historyChip}
       />
-      <h3 className="dashboard-analytics__eyebrow">{t("DashboardSelectedRangeEyebrow")}</h3>
-      <div className="dashboard-analytics__row dashboard-analytics__row--primary">
-        <UsageTrendSection snapshot={snapshot} />
-        <ProviderDistribution providers={snapshot?.providers ?? []} />
-      </div>
       <h3 className="dashboard-analytics__eyebrow">{t("DashboardCurrentStatusEyebrow")}</h3>
+      <CurrentLimits providers={liveProviders} settings={settings} />
       <KpiRow kpis={kpis} resetTimeRelative={settings.resetTimeRelative} />
       <div className="dashboard-analytics__row">
         <AlertsPanel
@@ -128,6 +125,11 @@ export default function DashboardAnalyticsPanel({
           isDemo={provenance === "demo"}
         />
         <ResetSchedule providers={liveProviders} relative={settings.resetTimeRelative} />
+      </div>
+      <h3 className="dashboard-analytics__eyebrow">{t("DashboardSelectedRangeEyebrow")}</h3>
+      <div className="dashboard-analytics__row dashboard-analytics__row--primary">
+        <UsageTrendSection snapshot={snapshot} />
+        <ProviderDistribution providers={snapshot?.providers ?? []} />
       </div>
       <div className="dashboard-analytics__row dashboard-analytics__row--single">
         <DataStatusPanel snapshot={snapshot} />

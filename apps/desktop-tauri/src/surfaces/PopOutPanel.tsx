@@ -7,6 +7,7 @@ import { useSettings } from "../hooks/useSettings";
 import { useUpdateState } from "../hooks/useUpdateState";
 import { useLocale } from "../hooks/useLocale";
 import { useDashboardState } from "../hooks/useDashboardState";
+import DashboardHost from "./dashboard/DashboardHost";
 import DashboardBody from "../components/DashboardBody";
 import PopOutTitleBar from "../components/PopOutTitleBar";
 import MenuSurface, { type MenuFooterRow } from "../components/MenuSurface";
@@ -164,7 +165,7 @@ export default function PopOutPanel({
         banner={banner}
         footerRows={footerRows}
       >
-        <DashboardBody
+        {providerId ? <DashboardBody
           allProviders={sorted}
           visibleProviders={visibleProviders}
           stageProviders={stageProviders}
@@ -180,7 +181,8 @@ export default function PopOutPanel({
           settings={settings}
           onSettings={openSettings}
           cardRef={setCardRef}
-        />
+          hideHero
+        /> : <DashboardHost state={state} onOpenProviders={() => { void openSettingsTab("providers"); }} />}
       </MenuSurface>
     </div>
   );

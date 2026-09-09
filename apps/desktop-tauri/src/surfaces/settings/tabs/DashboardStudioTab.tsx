@@ -1,14 +1,8 @@
-/**
- * Dashboard Studio — configures which Dashboard experience is active and
- * how it renders, without duplicating the theme/provider-presentation
- * controls that already exist on their own Settings pages (Themes,
- * Provider Display). Persists through the same `updateSettings` bridge
- * every other Settings tab uses -- no separate configuration file, no
- * account, no cloud.
- */
+import { useOptionalLocale } from "../../../hooks/useLocale";
+import type { LocaleKey } from "../../../i18n/keys";
 import { useSettings } from "../../../hooks/useSettings";
-import type { BootstrapState, DashboardModeId, DashboardPerformancePreset } from "../../../types/bridge";
-import { DASHBOARD_DEFINITIONS, DASHBOARD_PERFORMANCE_PRESETS } from "../../../lib/dashboardRegistry";
+import type { BootstrapState, DashboardPerformancePreset } from "../../../types/bridge";
+import { DASHBOARD_PERFORMANCE_PRESETS } from "../../../lib/dashboardPreferences";
 import { catalogBySlug } from "../../../design-system/themeCatalog";
 import DemoSettingsSection from "../../../demoMode/DemoSettingsSection";
 import "./DashboardStudioTab.css";
@@ -22,11 +16,10 @@ export default function DashboardStudioTab({
   onOpenThemes: () => void;
   onOpenProviderDisplay: () => void;
 }) {
+  const locale = useOptionalLocale();
+  const t = (key: LocaleKey, fallback: string) => locale?.t(key) ?? fallback;
   const { settings, update, saving } = useSettings(state.settings);
 
-  const setMode = (mode: DashboardModeId) => {
-    void update({ dashboardMode: mode });
-  };
   const setPreset = (preset: DashboardPerformancePreset) => {
     void update({ dashboardPerformancePreset: preset });
   };
@@ -40,33 +33,13 @@ export default function DashboardStudioTab({
     <div className="dashboard-studio">
       <header className="dashboard-studio__header">
         <span className="dashboard-studio__eyebrow">Dashboard Studio</span>
-        <h2>Choose how Quotalis presents your data</h2>
-        {saving && <span className="dashboard-studio__saving">Saving…</span>}
+        <h2>{t("DashboardPreferences", "Dashboard Preferences")}</h2>
+        {saving && <span className="dashboard-studio__saving">{t("DashboardStudioSaving", "Saving…")}</span>}
       </header>
 
-      <section aria-label="Dashboard Experience">
-        <h3>Dashboard Experience</h3>
-        <div className="dashboard-studio__mode-grid" role="radiogroup" aria-label="Dashboard Experience">
-          {DASHBOARD_DEFINITIONS.map((def) => (
-            <button
-              key={def.id}
-              type="button"
-              role="radio"
-              aria-checked={settings.dashboardMode === def.id}
-              className={`dashboard-studio__mode-card${settings.dashboardMode === def.id ? " dashboard-studio__mode-card--selected" : ""}`}
-              onClick={() => setMode(def.id)}
-            >
-              <div className="dashboard-studio__mode-preview" aria-hidden="true" data-mode={def.id} />
-              <strong>{def.name}</strong>
-              <p>{def.shortDescription}</p>
-              {def.isPlaceholder && <small className="dashboard-studio__badge">Dev preview</small>}
-            </button>
-          ))}
-        </div>
-      </section>
 
       <section aria-label="Performance">
-        <h3>Performance</h3>
+        <h3>{t("DashboardPerformance", "Performance")}</h3>
         <div className="dashboard-studio__preset-grid" role="radiogroup" aria-label="Performance">
           {DASHBOARD_PERFORMANCE_PRESETS.map((preset) => (
             <button
@@ -77,25 +50,25 @@ export default function DashboardStudioTab({
               className={`dashboard-studio__preset-card${settings.dashboardPerformancePreset === preset.id ? " dashboard-studio__preset-card--selected" : ""}`}
               onClick={() => setPreset(preset.id)}
             >
-              <strong>{preset.name}</strong>
-              <p>{preset.description}</p>
+              <strong>{t(preset.id === "lowCpu" ? "DashboardLowCpu" : preset.id === "balanced" ? "DashboardBalanced" : "DashboardHighFidelity", preset.name)}</strong>
+              <p>{t(preset.id === "lowCpu" ? "DashboardLowCpuHelp" : preset.id === "balanced" ? "DashboardBalancedHelp" : "DashboardHighFidelityHelp", preset.description)}</p>
             </button>
           ))}
         </div>
       </section>
 
       <section aria-label="Current Visual Identity" className="dashboard-studio__identity">
-        <h3>Current Visual Identity</h3>
+        <h3>{t("DashboardVisualIdentity", "Current Visual Identity")}</h3>
         <div className="dashboard-studio__identity-row">
-          <span>Structure Theme</span>
+          <span>{t("DashboardStructureTheme", "Structure Theme")}</span>
           <strong>{activeThemeName}</strong>
           <button type="button" onClick={onOpenThemes}>
             Change
           </button>
         </div>
         <div className="dashboard-studio__identity-row">
-          <span>Provider Presentation</span>
-          <strong>{providerPresentationFollowsStructure ? "Follow Structure" : "Independent"}</strong>
+          <span>{t("DashboardProviderPresentation", "Provider Presentation")}</span>
+          <strong>{providerPresentationFollowsStructure ? t("DashboardFollowStructure", "Follow Structure") : t("DashboardIndependent", "Independent")}</strong>
           <button type="button" onClick={onOpenProviderDisplay}>
             Change
           </button>

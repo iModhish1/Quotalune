@@ -8,9 +8,7 @@ export type CatalogSurfaceId =
   | "edge"
   | "hud"
   | "quick"
-  | "dashboard"
-  | "providers3d"
-  | "spatial";
+  | "dashboard";
 
 export type CatalogThemeSource = "surface" | "profile" | "global" | "default";
 

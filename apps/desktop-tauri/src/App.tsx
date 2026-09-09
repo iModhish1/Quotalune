@@ -35,7 +35,6 @@ const FloatBar = lazy(() => import("./floatbar/FloatBar"));
 const TopArc = lazy(() => import("./surfaces/top-arc/TopArc"));
 const CollectionsNativeView = lazy(() => import("./surfaces/collections/CollectionsNativeView"));
 const DemoStage = lazy(() => import("./demo/DemoStage"));
-const Providers3DDevLab = lazy(() => import("./surfaces/dashboard/providers3d/Providers3DDevLab"));
 
 function SurfaceFallback() {
   return null;
@@ -49,13 +48,6 @@ function isSettingsWindow(): boolean {
 /** True when running inside the detached FloatBar window. */
 function isFloatBarWindow(): boolean {
   return getCurrentWebviewWindow().label === FLOATBAR_WINDOW_LABEL;
-}
-
-/** True for the fixture-driven 3D engine lab route
- *  (`?window=providers3d-lab`) -- undiscoverable from any in-app UI, same
- *  convention as `?window=demo`. See Phase 5 owner sections 56/57. */
-function isProviders3DLabWindow(): boolean {
-  return new URLSearchParams(window.location.search).get("window") === "providers3d-lab";
 }
 
 /** True when running inside the detached Top Arc surface window. */
@@ -229,25 +221,6 @@ function AppInner() {
           <p>{t("LoadingShellContractHint")}</p>
         </section>
       </main>
-    );
-  }
-
-  // Phase 5 owner sections 56/57: fixture-driven 3D engine lab, gated by
-  // the same `?window=<id>` query-param convention already used for
-  // `?window=demo` (DemoStage, below) -- not by `import.meta.env.DEV`.
-  // That flag is Vite's *build-mode* switch (`vite dev` vs `vite build`)
-  // and is `false` in every artifact this project ships, including a
-  // `dev-channel`-feature Rust build, so gating on it made this lab
-  // permanently unreachable in the one binary it exists to help verify
-  // (found during Phase 5.1 native proof). Uses the real Tauri
-  // bootstrap/settings bridge like every other surface -- only the
-  // provider list itself is synthetic, and it is undiscoverable from any
-  // in-app UI (no button/menu item opens this URL), same as DemoStage.
-  if (isProviders3DLabWindow()) {
-    return (
-      <Suspense fallback={<SurfaceFallback />}>
-        <Providers3DDevLab state={state} />
-      </Suspense>
     );
   }
 

@@ -60,29 +60,6 @@ DashboardDataSamples = { "{}" } عينة
 DashboardResetScheduleTitle = جدول إعادة التعيين
 DashboardResetScheduleEmpty = لا توجد عمليات إعادة تعيين قادمة لعرضها بعد
 # المرحلة 5: النموذج الأولي لكون مزودي الخدمة ثلاثي الأبعاد
-Providers3DCanvasLabel = كون مزودي الخدمة ثلاثي الأبعاد
-Providers3DCanvasDescription = مشهد تفاعلي ثلاثي الأبعاد يعرض مزودي الخدمة المتصلين حول نواة Quotalis. تتوفر قائمة كاملة لمزودي الخدمة يمكن الوصول إليها ولوحة تفاصيل بجانب المشهد.
-Providers3DEmptyTitle = لا يوجد مزودو خدمة نشطون بعد
-Providers3DManageProviders = إدارة مزودي الخدمة
-Providers3DResetView = إعادة ضبط العرض
-Providers3DProviderNavigator = متصفح مزودي الخدمة
-Providers3DSelectedProviderDetail = تفاصيل مزود الخدمة المحدد
-Providers3DUsage = الاستخدام
-Providers3DAuthStatus = الحالة
-Providers3DAuthReady = متصل
-Providers3DMonetaryState = الحالة المالية
-Providers3DMonetarySpend = الإنفاق
-Providers3DMonetaryBalance = الرصيد
-Providers3DMonetaryCredits = وحدات الائتمان
-Providers3DMonetaryBalanceUnavailable = الرصيد غير متاح
-Providers3DMonetaryCreditsUnavailable = وحدات الائتمان غير متاحة
-Providers3DUnavailableTitle = العرض ثلاثي الأبعاد غير متاح على هذا الجهاز
-Providers3DUnavailableBody = تعذّر على هذا الجهاز تهيئة العرض ثلاثي الأبعاد. بدّل إلى لوحة التحليلات ثنائية الأبعاد لمواصلة مراقبة مزودي الخدمة لديك.
-Providers3DOpen2DFallback = فتح التحليلات ثنائية الأبعاد
-Providers3DAuthReadyDemo = متصل · تجريبي
-Providers3DDemoStateButton = حالة تجريبية
-SpatialStageLabel = مرصد مزودي الخدمة المكاني
-SpatialStageDescription = نظرة عامة بعدية على مزودي الخدمة المتصلين كعقد أدوات دقيقة. تتوفر قائمة كاملة يسهل الوصول إليها ولوحة تفاصيل بجانب المشهد.
 DashboardStudioDemoSectionTitle = الوضع التجريبي والمعاينة
 DashboardStudioDemoSectionDescription = عاين Quotalis ببيانات مزودي خدمة محاكاة دون ربط أي حسابات.
 DemoModeEnableLabel = تفعيل الوضع التجريبي
@@ -334,3 +311,28 @@ TrayResetsInLabel = إعادة التعيين خلال { "{}" }
 TrayResetsDueNow = جارٍ إعادة التعيين…
 PanelUsedSuffix = مستخدم
 FloatBarRemainingSuffix = متبقٍ
+
+DashboardLimitsNow = الحدود الآن
+
+DashboardConnected = متصل
+
+DashboardNeedsAttention = يتطلب الانتباه
+
+DashboardDemoState = حالة تجريبية
+DashboardBalance = الرصيد
+
+DashboardPreferences = تفضيلات لوحة التحكم
+DashboardStudioSaving = جارٍ الحفظ…
+DashboardPerformance = الأداء
+DashboardVisualIdentity = الهوية المرئية الحالية
+DashboardStructureTheme = ثيم البنية
+DashboardProviderPresentation = عرض المزوّد
+DashboardFollowStructure = اتباع البنية
+DashboardIndependent = مستقل
+DashboardChange = تغيير
+DashboardLowCpu = استهلاك منخفض
+DashboardBalanced = متوازن
+DashboardHighFidelity = دقة عالية
+DashboardLowCpuHelp = تقليل الزخرفة والظلال.
+DashboardBalancedHelp = مؤشرات واضحة بعمق بصري خفيف.
+DashboardHighFidelityHelp = تفاصيل كاملة للأسطح الثابتة.

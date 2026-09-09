@@ -23,7 +23,7 @@ import type {
   SpendTrendPoint,
   UsageTrendPoint,
 } from "../types/bridge";
-import { providerMonetaryQuantityKind } from "../surfaces/dashboard/providers3d/sceneModel";
+import { providerMonetaryQuantityKind } from "../lib/providerMonetaryKind";
 import type { DemoModeConfig } from "./types";
 import { buildDemoProviderSnapshotsWithTrend } from "./providerSnapshots";
 import { createRng, deriveSeed, randRange } from "./rng";

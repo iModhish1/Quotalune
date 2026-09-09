@@ -68,31 +68,6 @@ DashboardDataAvailableSince = Data available since { "{}" }
 DashboardDataSamples = { "{}" } samples
 DashboardResetScheduleTitle = Reset Schedule
 DashboardResetScheduleEmpty = No upcoming resets to show yet
-# Phase 5: 3D Provider Universe prototype
-Providers3DCanvasLabel = 3D provider universe
-Providers3DCanvasDescription = An interactive 3D scene showing connected providers arranged around the Quotalis core. A full accessible provider list and detail panel are available beside the scene.
-Providers3DEmptyTitle = No active providers yet
-Providers3DManageProviders = Manage Providers
-Providers3DResetView = Reset View
-Providers3DProviderNavigator = Provider navigator
-Providers3DSelectedProviderDetail = Selected provider detail
-Providers3DUsage = Usage
-Providers3DAuthStatus = Status
-Providers3DAuthReady = Connected
-Providers3DMonetaryState = Monetary state
-Providers3DMonetarySpend = Spend
-Providers3DMonetaryBalance = Balance
-Providers3DMonetaryCredits = Credits
-Providers3DMonetaryBalanceUnavailable = Balance unavailable
-Providers3DMonetaryCreditsUnavailable = Credits unavailable
-Providers3DUnavailableTitle = 3D view unavailable on this device
-Providers3DUnavailableBody = This device could not initialize 3D rendering. Switch to the 2D Analytics Dashboard to keep monitoring your providers.
-Providers3DOpen2DFallback = Open 2D Analytics
-Providers3DAuthReadyDemo = Connected · Demo
-Providers3DDemoStateButton = Demo state
-# Phase S1: Spatial Observatory prototype (DOM/SVG/CSS, no WebGL)
-SpatialStageLabel = Spatial provider observatory
-SpatialStageDescription = A dimensional overview of connected providers as instrument nodes. A full accessible provider list and detail panel are available beside the stage.
 DashboardStudioDemoSectionTitle = Demo & Preview
 DashboardStudioDemoSectionDescription = Preview Quotalis with simulated provider data without connecting accounts.
 DemoModeEnableLabel = Enable Demo Mode
@@ -1113,3 +1088,28 @@ LimitFiveHourLabel = 5-hour
 LimitWeeklyLabel = Weekly
 ResetUnavailableShort = Reset unavailable
 ResetLabelPrefix = Reset
+
+DashboardLimitsNow = Limits now
+
+DashboardConnected = Connected
+
+DashboardNeedsAttention = Needs attention
+
+DashboardDemoState = Demo state
+DashboardBalance = Balance
+
+DashboardPreferences = Dashboard Preferences
+DashboardStudioSaving = Saving…
+DashboardPerformance = Performance
+DashboardVisualIdentity = Current Visual Identity
+DashboardStructureTheme = Structure Theme
+DashboardProviderPresentation = Provider Presentation
+DashboardFollowStructure = Follow Structure
+DashboardIndependent = Independent
+DashboardChange = Change
+DashboardLowCpu = Low CPU
+DashboardBalanced = Balanced
+DashboardHighFidelity = High Fidelity
+DashboardLowCpuHelp = Reduced decoration and shadows.
+DashboardBalancedHelp = Clear instruments with restrained depth.
+DashboardHighFidelityHelp = Full static surface detail.
