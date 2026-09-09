@@ -59,6 +59,30 @@ legibility claims that don't hold up at thumbnail size:
 | Usage-ring readability | **Improved.** The thick partial arc (usage%) and the thin full selection ring are now visually distinct elements rather than one ambiguous ring, which was the baseline's core complaint. |
 | Overall identity | Passes the section 52 questions at the 6-provider/Codex-selected state: who (glyph + label), how much (arc fill), which one (selection ring + stronger glow), status (detail panel, unchanged from Phase 5.2/4), and the scene no longer reads as an unadorned "planets tutorial" thumbnail. This is one state of the required matrix, not the full Phase 6 sign-off — 1/12/24-provider framing, theme matrix, RTL, narrow/maximized, and the remaining screenshot set are still open (see `PHASE6_PRODUCTION_3D.md`). |
 
+## Reset-proximity marker (owner section 8)
+
+Added after the pass above: a small amber dot on a provider's ring,
+visible only when its real `resetsAt` falls within the same
+`RESET_SOON_MS` (1 hour) window the 2D dashboard's own `resetSoon`
+alert already uses (`dashboardSelectors.ts`'s `RESET_SOON_MS`, imported
+by the new `providers3d/resetProximity.ts` rather than a second
+hardcoded threshold). Shares one geometry/material across every
+provider (never per-provider).
+
+Native proof: `docs/images/dashboard/phase6/QUOTALIS_3D_RESET_MARKER_ZOOM.png`
+shows the marker clearly on Codex (real `resetsAt` ~45 minutes out).
+Cross-checked against all six providers' live `resetsAt`/marker-visible
+state via the debug registry: only Codex (45m) and no other provider
+(2h-\~2 days out) shows the marker -- confirms the visual matches the
+real threshold, not just "renders something." The marker's first
+implementation (`RESET_MARKER_RADIUS = 0.05`) was checked and found too
+small to read without 6x digital zoom; raised to `0.09` plus
+`depthTest: false`/a higher `renderOrder` (matching the selection
+ring's own treatment) so it isn't partially swallowed by the body mesh
+at some camera angles. Unit-tested directly in `resetProximity.test.ts`
+(6 tests: null/unparsable/past/boundary/soon/far), since `engine.ts`
+itself cannot be exercised for WebGL logic in jsdom.
+
 Process note: the first capture taken after this redesign
 (`QUOTALIS_3D_PRODUCTION_SIX_v1_raw.png`, not kept) showed one body
 (DeepSeek) filling most of the frame with an oversized label. Inspecting

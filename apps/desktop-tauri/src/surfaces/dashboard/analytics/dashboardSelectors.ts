@@ -80,7 +80,12 @@ export interface DashboardAlert {
   providerName: string;
 }
 
-const RESET_SOON_MS = 60 * 60 * 1000; // 1 hour
+/** Exported so other surfaces (e.g. `providers3d/resetProximity.ts`'s
+ *  reset-proximity marker, Phase 6 owner section 8) key off the exact
+ *  same "reset soon" definition as the 2D dashboard's own alerts,
+ *  rather than inventing a second threshold that could silently drift
+ *  from this one. */
+export const RESET_SOON_MS = 60 * 60 * 1000; // 1 hour
 
 /**
  * Deterministic, local, rule-based alerts -- no cloud/AI involved. Reuses

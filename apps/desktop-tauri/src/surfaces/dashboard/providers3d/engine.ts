@@ -34,6 +34,7 @@ import {
 import { computeDevicePixelRatio, DirtyRenderScheduler, cameraTransitionDurationMs } from "./renderPolicy";
 import { shouldShowLabel } from "./labelPolicy";
 import { getCachedGlyphImage } from "./glyphCache";
+import { isResetSoon } from "./resetProximity";
 
 export interface EngineCallbacks {
   onSelect?: (id: string | null) => void;
@@ -105,6 +106,16 @@ const PROVIDER_ROUGHNESS = 0.38;
  *  each other") -- a pure hash of the provider id, never `Math.random`,
  *  so the same provider always sits at the same height. */
 const DEPTH_JITTER_RANGE = 0.35;
+/** Owner section 8: a low-cost reset-proximity marker -- a small static
+ *  dot at a fixed point on a provider's usage ring, shown only when its
+ *  `resetsAt` falls within the same "reset soon" window the 2D
+ *  dashboard's own alerts already use (`RESET_SOON_MS`). One shared
+ *  geometry/material for every provider (never per-provider), toggled
+ *  via `.visible` exactly like the selection ring -- no continuous
+ *  animation, no per-frame cost. */
+const RESET_MARKER_RADIUS = 0.09;
+const RESET_MARKER_ANGLE = -Math.PI / 2;
+const RESET_MARKER_ORBIT_RADIUS = (RING_INNER + RING_OUTER) / 2;
 
 function hashUnitInterval(seed: string): number {
   let h = 2166136261;
@@ -126,6 +137,11 @@ interface ProviderVisual {
    *  costs one dirty render, not a geometry rebuild. */
   selectionRing: THREE.Mesh;
   selectionRingMaterial: THREE.MeshBasicMaterial;
+  /** Owner section 8: reset-proximity marker -- shares its geometry and
+   *  material with every other provider's (created once on the engine,
+   *  not per visual); only this mesh instance and its `.visible` are
+   *  per-provider. */
+  resetMarker: THREE.Mesh;
   /** Owner section 22/58 (Phase 5.2) label, now carrying an actual
    *  provider glyph (owner section 6) in addition to the short name --
    *  see `glyphCache.ts`. A `THREE.Sprite` always faces the camera. */
@@ -232,6 +248,10 @@ export class ProvidersUniverseEngine {
   private readonly primaryOrbitTrack: THREE.Mesh;
   private readonly secondaryOrbitTrack: THREE.Mesh;
   private readonly orbitTrackMaterial: THREE.MeshBasicMaterial;
+  /** Owner section 8: one shared geometry/material for every provider's
+   *  reset-proximity marker -- never recreated per provider. */
+  private readonly resetMarkerGeometry: THREE.SphereGeometry;
+  private readonly resetMarkerMaterial: THREE.MeshBasicMaterial;
   private readonly scheduler: DirtyRenderScheduler;
   private readonly providerVisuals = new Map<string, ProviderVisual>();
   private readonly canvas: HTMLCanvasElement;
@@ -330,6 +350,18 @@ export class ProvidersUniverseEngine {
     this.secondaryOrbitTrack.rotation.x = Math.PI / 2;
     this.secondaryOrbitTrack.visible = false;
     this.scene.add(this.primaryOrbitTrack, this.secondaryOrbitTrack);
+
+    // Owner section 8: shared reset-proximity marker geometry/material --
+    // a small, fixed amber dot instanced (via separate Mesh objects, not
+    // InstancedMesh -- provider counts here are far too small to need
+    // it) once per provider, never a unique geometry/material per body.
+    this.resetMarkerGeometry = new THREE.SphereGeometry(RESET_MARKER_RADIUS, 12, 8);
+    // `depthTest: false` + a high `renderOrder` (set per-mesh below,
+    // matching the selection ring's own treatment) so this small marker
+    // never gets partially swallowed by the provider body it sits next
+    // to at some camera angles -- it's a UI-ish indicator, not a real
+    // occluding object.
+    this.resetMarkerMaterial = new THREE.MeshBasicMaterial({ color: 0xe0a83f, depthTest: false });
 
     // Owner section 20: a small, fully static starfield -- positions are
     // generated once (deterministic hash-based spread, never
@@ -579,6 +611,15 @@ export class ProvidersUniverseEngine {
     selectionRing.visible = false;
     selectionRing.renderOrder = 5;
 
+    const resetMarker = new THREE.Mesh(this.resetMarkerGeometry, this.resetMarkerMaterial);
+    resetMarker.position.set(
+      Math.cos(RESET_MARKER_ANGLE) * RESET_MARKER_ORBIT_RADIUS,
+      0,
+      Math.sin(RESET_MARKER_ANGLE) * RESET_MARKER_ORBIT_RADIUS,
+    );
+    resetMarker.visible = false;
+    resetMarker.renderOrder = 6;
+
     const labelCanvas = document.createElement("canvas");
     labelCanvas.width = LABEL_CANVAS_WIDTH;
     labelCanvas.height = LABEL_CANVAS_HEIGHT;
@@ -596,7 +637,7 @@ export class ProvidersUniverseEngine {
     // geometry -- it's a UI-ish overlay, not a real occluding 3D object.
     label.renderOrder = 10;
 
-    group.add(body, usageRing, selectionRing, label);
+    group.add(body, usageRing, selectionRing, resetMarker, label);
     body.userData.pickable = true;
     return {
       group,
@@ -606,6 +647,7 @@ export class ProvidersUniverseEngine {
       usageRingMaterial,
       selectionRing,
       selectionRingMaterial,
+      resetMarker,
       label,
       labelMaterial,
       labelTexture,
@@ -661,6 +703,11 @@ export class ProvidersUniverseEngine {
       node.alertLevel === "critical" ? "#e0435a" : node.alertLevel === "warning" ? "#e0a83f" : node.identityColorHex,
     );
     visual.selectionRingMaterial.color = new THREE.Color(node.identityColorHex);
+
+    // Owner section 8: reset-proximity marker -- same "reset soon"
+    // definition as the 2D dashboard's own alerts (`RESET_SOON_MS`),
+    // computed once here (not per frame) from the real `resetsAt`.
+    visual.resetMarker.visible = isResetSoon(node.resetsAt);
 
     this.updateLabelAndHighlight(visual, ring, allIds.length);
   }
@@ -801,6 +848,8 @@ export class ProvidersUniverseEngine {
     this.orbitTrackMaterial.dispose();
     this.starfield.geometry.dispose();
     this.starfieldMaterial.dispose();
+    this.resetMarkerGeometry.dispose();
+    this.resetMarkerMaterial.dispose();
     this.renderer.dispose();
     this.renderer.forceContextLoss();
   }
