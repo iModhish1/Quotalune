@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DASHBOARD_DEFINITIONS,
   DASHBOARD_PERFORMANCE_PRESETS,
+  DASHBOARD_REGISTRY,
   DEFAULT_DASHBOARD_MODE,
   DEFAULT_DASHBOARD_PERFORMANCE_PRESET,
   isDashboardModeId,
@@ -28,12 +29,28 @@ describe("DASHBOARD_DEFINITIONS", () => {
   });
 
   it("marks only analytics2d as a real (non-placeholder) implementation", () => {
-    const analytics = DASHBOARD_DEFINITIONS.find((d) => d.id === "analytics2d")!;
-    const providers3d = DASHBOARD_DEFINITIONS.find((d) => d.id === "providers3d")!;
-    const hybrid = DASHBOARD_DEFINITIONS.find((d) => d.id === "hybrid")!;
-    expect(analytics.isPlaceholder).toBe(false);
-    expect(providers3d.isPlaceholder).toBe(true);
-    expect(hybrid.isPlaceholder).toBe(true);
+    for (const def of DASHBOARD_DEFINITIONS) {
+      expect(def.isPlaceholder).toBe(def.id !== "analytics2d");
+    }
+  });
+
+  it("Phase S1: the visible picker is exactly Analytics / Spatial / Experimental 3D, in that order", () => {
+    expect(DASHBOARD_DEFINITIONS.map((d) => d.id)).toEqual(["analytics2d", "spatial", "providers3d"]);
+  });
+
+  it("relabels providers3d as Experimental 3D without changing its wire value (owner section 36)", () => {
+    expect(DASHBOARD_REGISTRY.providers3d.id).toBe("providers3d");
+    expect(DASHBOARD_REGISTRY.providers3d.name).toMatch(/experimental/i);
+  });
+
+  it("preserves the hybrid registry entry even though it's excluded from the visible picker (owner section 0/55)", () => {
+    expect(DASHBOARD_REGISTRY.hybrid.id).toBe("hybrid");
+    expect(DASHBOARD_DEFINITIONS.some((d) => d.id === "hybrid")).toBe(false);
+  });
+
+  it("spatial creates zero WebGL dependency at the registry level (own loader, own performance class)", () => {
+    expect(DASHBOARD_REGISTRY.spatial.id).toBe("spatial");
+    expect(DASHBOARD_REGISTRY.spatial.supports3d).toBe(false);
   });
 
   it("gives every definition a name, short description, and performance class", () => {
@@ -54,6 +71,7 @@ describe("resolveDashboardMode", () => {
     expect(resolveDashboardMode("analytics2d")).toBe("analytics2d");
     expect(resolveDashboardMode("providers3d")).toBe("providers3d");
     expect(resolveDashboardMode("hybrid")).toBe("hybrid");
+    expect(resolveDashboardMode("spatial")).toBe("spatial");
   });
 
   it("falls back to analytics2d for an unknown or missing value", () => {

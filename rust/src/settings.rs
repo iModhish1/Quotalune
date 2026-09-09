@@ -655,6 +655,16 @@ pub enum DashboardModeId {
     Analytics2d,
     Providers3d,
     Hybrid,
+    /// Spatial Observatory prototype (Phase S1): a lightweight 2.5D
+    /// dimensional provider overview built from DOM/SVG/CSS transforms --
+    /// no WebGL context, no Three.js. Distinct from `Providers3d` (full
+    /// WebGL scene, publicly relabeled "Experimental 3D") and `Hybrid`
+    /// (still an unimplemented placeholder). Additive: existing settings
+    /// files with `analytics2d`/`providers3d`/`hybrid` persisted are
+    /// unaffected, and an older build reading a `spatial` value falls
+    /// back to the default via the existing lenient parse (see
+    /// `settings/raw.rs::deserialize_dashboard_mode_lenient`).
+    Spatial,
 }
 
 impl DashboardModeId {
@@ -663,6 +673,7 @@ impl DashboardModeId {
             Self::Analytics2d => "analytics2d",
             Self::Providers3d => "providers3d",
             Self::Hybrid => "hybrid",
+            Self::Spatial => "spatial",
         }
     }
 
@@ -671,6 +682,7 @@ impl DashboardModeId {
             "analytics2d" => Some(Self::Analytics2d),
             "providers3d" => Some(Self::Providers3d),
             "hybrid" => Some(Self::Hybrid),
+            "spatial" => Some(Self::Spatial),
             _ => None,
         }
     }
@@ -722,9 +734,21 @@ mod dashboard_mode_tests {
             DashboardModeId::Analytics2d,
             DashboardModeId::Providers3d,
             DashboardModeId::Hybrid,
+            DashboardModeId::Spatial,
         ] {
             assert_eq!(DashboardModeId::parse(mode.as_str()), Some(mode));
         }
+    }
+
+    #[test]
+    fn dashboard_mode_spatial_wire_value_is_stable() {
+        // Phase S1: locks the exact wire string so a future rename can't
+        // silently break already-persisted `spatial` settings values.
+        assert_eq!(DashboardModeId::Spatial.as_str(), "spatial");
+        assert_eq!(
+            DashboardModeId::parse("spatial"),
+            Some(DashboardModeId::Spatial)
+        );
     }
 
     #[test]

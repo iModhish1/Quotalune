@@ -305,6 +305,8 @@ export const ALL_LOCALE_KEYS = [
   "Providers3DOpen2DFallback",
   "Providers3DAuthReadyDemo",
   "Providers3DDemoStateButton",
+  "SpatialStageLabel",
+  "SpatialStageDescription",
   "DashboardStudioDemoSectionTitle",
   "DashboardStudioDemoSectionDescription",
   "DemoModeEnableLabel",

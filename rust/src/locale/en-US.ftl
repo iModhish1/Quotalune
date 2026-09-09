@@ -90,6 +90,9 @@ Providers3DUnavailableBody = This device could not initialize 3D rendering. Swit
 Providers3DOpen2DFallback = Open 2D Analytics
 Providers3DAuthReadyDemo = Connected · Demo
 Providers3DDemoStateButton = Demo state
+# Phase S1: Spatial Observatory prototype (DOM/SVG/CSS, no WebGL)
+SpatialStageLabel = Spatial provider observatory
+SpatialStageDescription = A dimensional overview of connected providers as instrument nodes. A full accessible provider list and detail panel are available beside the stage.
 DashboardStudioDemoSectionTitle = Demo & Preview
 DashboardStudioDemoSectionDescription = Preview Quotalis with simulated provider data without connecting accounts.
 DemoModeEnableLabel = Enable Demo Mode

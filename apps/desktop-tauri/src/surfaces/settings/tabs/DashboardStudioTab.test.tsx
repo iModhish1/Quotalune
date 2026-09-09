@@ -109,9 +109,13 @@ describe("DashboardStudioTab", () => {
     render(
       <DashboardStudioTab state={bootstrap()} onOpenThemes={vi.fn()} onOpenProviderDisplay={vi.fn()} />,
     );
-    expect(await screen.findByText("2D Analytics Dashboard")).toBeInTheDocument();
-    expect(screen.getByText("3D Providers Dashboard")).toBeInTheDocument();
-    expect(screen.getByText("Hybrid Dashboard")).toBeInTheDocument();
+    // Phase S1: the visible picker is Analytics / Spatial / Experimental
+    // 3D -- Hybrid stays a real DASHBOARD_REGISTRY entry but is no
+    // longer offered in this picker (see dashboardRegistry.ts).
+    expect(await screen.findByText("Analytics")).toBeInTheDocument();
+    expect(screen.getByText("Spatial")).toBeInTheDocument();
+    expect(screen.getByText("Experimental 3D")).toBeInTheDocument();
+    expect(screen.queryByText("Hybrid Dashboard")).not.toBeInTheDocument();
     expect(screen.getByText("Low CPU")).toBeInTheDocument();
     expect(screen.getByText("Balanced")).toBeInTheDocument();
     expect(screen.getByText("High Fidelity")).toBeInTheDocument();
@@ -128,7 +132,7 @@ describe("DashboardStudioTab", () => {
       />,
     );
     await waitFor(() =>
-      expect(screen.getByRole("radio", { name: /3D Providers Dashboard/ })).toHaveAttribute(
+      expect(screen.getByRole("radio", { name: /Experimental 3D/ })).toHaveAttribute(
         "aria-checked",
         "true",
       ),
@@ -140,10 +144,22 @@ describe("DashboardStudioTab", () => {
     render(
       <DashboardStudioTab state={bootstrap()} onOpenThemes={vi.fn()} onOpenProviderDisplay={vi.fn()} />,
     );
-    fireEvent.click(await screen.findByRole("radio", { name: /3D Providers Dashboard/ }));
+    fireEvent.click(await screen.findByRole("radio", { name: /Experimental 3D/ }));
     await waitFor(() => {
       expect(tauriMocks.updateSettings).toHaveBeenCalledWith(
         expect.objectContaining({ dashboardMode: "providers3d" }),
+      );
+    });
+  });
+
+  it("selecting Spatial persists the spatial mode via updateSettings", async () => {
+    render(
+      <DashboardStudioTab state={bootstrap()} onOpenThemes={vi.fn()} onOpenProviderDisplay={vi.fn()} />,
+    );
+    fireEvent.click(await screen.findByRole("radio", { name: /Spatial/ }));
+    await waitFor(() => {
+      expect(tauriMocks.updateSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ dashboardMode: "spatial" }),
       );
     });
   });

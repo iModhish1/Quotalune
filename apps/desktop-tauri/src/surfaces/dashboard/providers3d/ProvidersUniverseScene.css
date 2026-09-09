@@ -157,40 +157,12 @@
   background: #e0435a;
 }
 
-.providers3d__detail {
+/* The panel's own visual styling lives in
+   shared/ProviderDetailPanel.css (Phase S1 owner section 31 -- reused,
+   not duplicated, by the Spatial Observatory); this file only places it
+   within this scene's own two-column grid. */
+.providers3d__detail-slot {
   grid-column: 2;
-  border: 1px solid var(--qa-hairline-strong);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--qa-material-raised) 54%, transparent);
-  padding: 14px;
-  overflow-y: auto;
-}
-
-.providers3d__detail h3 {
-  margin: 0 0 10px;
-  font-size: 14px;
-  color: var(--qa-ink-1);
-}
-
-.providers3d__detail dl {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0;
-}
-
-.providers3d__detail dt {
-  margin: 0;
-  color: var(--qa-ink-3);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.providers3d__detail dd {
-  margin: 0;
-  color: var(--qa-ink-1);
-  font-size: 13px;
 }
 
 .providers3d__fallback {

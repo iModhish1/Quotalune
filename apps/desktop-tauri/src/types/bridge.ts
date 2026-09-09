@@ -19,8 +19,11 @@ export type SettingsTabId =
   | "about";
 
 /** Which Dashboard experience is selected -- exactly one is ever mounted.
- *  Mirrors `quotalis_core::settings::DashboardModeId`. */
-export type DashboardModeId = "analytics2d" | "providers3d" | "hybrid";
+ *  Mirrors `quotalis_core::settings::DashboardModeId`. `spatial` is the
+ *  Phase S1 lightweight DOM/SVG/CSS "Spatial Observatory" prototype --
+ *  distinct from `providers3d` (the full WebGL scene, publicly relabeled
+ *  "Experimental 3D") and `hybrid` (still an unimplemented placeholder). */
+export type DashboardModeId = "analytics2d" | "providers3d" | "hybrid" | "spatial";
 
 /** Dashboard rendering performance budget, independent of provider-refresh
  *  power settings. Mirrors `quotalis_core::settings::DashboardPerformancePreset`. */

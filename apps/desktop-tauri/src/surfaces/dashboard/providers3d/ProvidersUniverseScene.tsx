@@ -16,9 +16,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "../../../hooks/useLocale";
 import { useReducedMotion } from "../../../design-system/motion";
-import { useFormattedResetTime } from "../../../hooks/useFormattedResetTime";
 import { formatPercentage } from "../../../design-system/percent";
 import type { ProviderUsageSnapshot, SettingsSnapshot } from "../../../types/bridge";
+import ProviderDetailPanel from "../shared/ProviderDetailPanel";
 import type { CatalogTheme } from "../../../design-system/themeCatalog";
 import { resolveVisualComposition } from "../../../design-system/visualComposition";
 import {
@@ -53,68 +53,6 @@ export interface ProvidersUniverseSceneProps {
   /** Turns Demo Mode off (the indicator's "Exit Demo" action, owner
    *  section 28) -- never clears the user's saved demo customization. */
   onExitDemo: () => void;
-}
-
-function monetaryText(node: ProviderSceneNode, t: (key: import("../../../i18n/keys").LocaleKey) => string): string {
-  if (node.monetary.amount == null) {
-    return node.monetary.kind === "balance"
-      ? t("Providers3DMonetaryBalanceUnavailable")
-      : node.monetary.kind === "credits"
-        ? t("Providers3DMonetaryCreditsUnavailable")
-        : t("DashboardValueUnavailable");
-  }
-  const amount = node.monetary.amount.toFixed(2);
-  const currency = node.monetary.currencyCode ?? "";
-  if (node.monetary.kind === "spend") return `${t("Providers3DMonetarySpend")}: ${currency} ${amount}`;
-  if (node.monetary.kind === "balance") return `${t("Providers3DMonetaryBalance")}: ${currency} ${amount}`;
-  return `${t("Providers3DMonetaryCredits")}: ${amount}`;
-}
-
-function SelectedProviderPanel({ node, isDemo }: { node: ProviderSceneNode; isDemo: boolean }) {
-  const { t } = useLocale();
-  const resetText = useFormattedResetTime(node.resetsAt, null, true, "reset");
-  return (
-    <section
-      className="providers3d__detail"
-      aria-label={t("Providers3DSelectedProviderDetail")}
-      data-testid="providers3d-detail"
-    >
-      <h3>
-        <bdi>{node.displayName}</bdi>
-        {isDemo && <span className="providers3d__demo-chip">{t("DemoIndicatorBadge")}</span>}
-      </h3>
-      <dl>
-        <div>
-          <dt>{t("Providers3DUsage")}</dt>
-          <dd>
-            {node.usedPercent == null ? t("DashboardValueUnavailable") : formatPercentage(node.usedPercent)}
-          </dd>
-        </div>
-        <div>
-          <dt>{t("DashboardKpiNextReset")}</dt>
-          <dd>{resetText ?? t("DashboardValueUnavailable")}</dd>
-        </div>
-        <div>
-          <dt>{t("Providers3DAuthStatus")}</dt>
-          <dd>
-            {node.authState === "ready"
-              ? isDemo
-                ? t("Providers3DAuthReadyDemo")
-                : t("Providers3DAuthReady")
-              : isDemo
-                ? t("Providers3DDemoStateButton")
-                : node.authState === "needsAuth"
-                  ? t("DashboardAlertAuthRequired").replace("{}", node.displayName)
-                  : t("DashboardAlertUnavailable").replace("{}", node.displayName)}
-          </dd>
-        </div>
-        <div>
-          <dt>{t("Providers3DMonetaryState")}</dt>
-          <dd>{monetaryText(node, t)}</dd>
-        </div>
-      </dl>
-    </section>
-  );
 }
 
 export default function ProvidersUniverseScene({
@@ -321,7 +259,13 @@ export default function ProvidersUniverseScene({
         </ul>
       </nav>
 
-      {selectedNode && <SelectedProviderPanel node={selectedNode} isDemo={provenance === "demo"} />}
+      {selectedNode && (
+        <ProviderDetailPanel
+          node={selectedNode}
+          isDemo={provenance === "demo"}
+          className="providers3d__detail-slot"
+        />
+      )}
     </div>
   );
 }

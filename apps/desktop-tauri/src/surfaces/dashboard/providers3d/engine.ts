@@ -35,6 +35,7 @@ import { computeDevicePixelRatio, DirtyRenderScheduler, cameraTransitionDuration
 import { shouldShowLabel } from "./labelPolicy";
 import { getCachedGlyphImage } from "./glyphCache";
 import { isResetSoon } from "./resetProximity";
+import { hashUnitInterval } from "../../../lib/deterministicHash";
 
 export interface EngineCallbacks {
   onSelect?: (id: string | null) => void;
@@ -116,14 +117,6 @@ const DEPTH_JITTER_RANGE = 0.35;
 const RESET_MARKER_RADIUS = 0.09;
 const RESET_MARKER_ANGLE = -Math.PI / 2;
 const RESET_MARKER_ORBIT_RADIUS = (RING_INNER + RING_OUTER) / 2;
-
-function hashUnitInterval(seed: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i += 1) {
-    h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
-  }
-  return ((h >>> 0) % 10000) / 10000;
-}
 
 interface ProviderVisual {
   group: THREE.Group;

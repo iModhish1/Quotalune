@@ -544,6 +544,13 @@ locale_keys! {
     Providers3DOpen2DFallback,
     Providers3DAuthReadyDemo,
     Providers3DDemoStateButton,
+    // Phase S1: Spatial Observatory prototype (DOM/SVG/CSS, no WebGL).
+    // Everything else the stage's UI needs (usage/status/monetary/detail
+    // panel text) reuses the Phase 5 `Providers3D*` keys above verbatim --
+    // the business meaning is identical, only the rendering technology
+    // differs (owner section 15).
+    SpatialStageLabel,
+    SpatialStageDescription,
     DashboardStudioDemoSectionTitle,
     DashboardStudioDemoSectionDescription,
     DemoModeEnableLabel,

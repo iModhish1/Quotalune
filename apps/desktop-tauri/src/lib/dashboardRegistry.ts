@@ -47,11 +47,12 @@ export interface DashboardModeProps {
 const AnalyticsDashboard = lazy(() => import("../surfaces/dashboard/AnalyticsDashboard"));
 const Providers3DDashboard = lazy(() => import("../surfaces/dashboard/Providers3DDashboard"));
 const HybridDashboard = lazy(() => import("../surfaces/dashboard/HybridDashboard"));
+const SpatialDashboard = lazy(() => import("../surfaces/dashboard/SpatialDashboard"));
 
 export const DASHBOARD_REGISTRY: Record<DashboardModeId, DashboardDefinition> = {
   analytics2d: {
     id: "analytics2d",
-    name: "2D Analytics Dashboard",
+    name: "Analytics",
     shortDescription: "Clear analytics and historical insight.",
     longDescription:
       "Precision analytics: usage trends, spend, resets, and provider comparisons. Lowest rendering overhead.",
@@ -60,12 +61,31 @@ export const DASHBOARD_REGISTRY: Record<DashboardModeId, DashboardDefinition> = 
     isPlaceholder: false,
     loader: AnalyticsDashboard,
   },
+  // Phase S1: the lightweight DOM/SVG/CSS prototype -- zero WebGL
+  // contexts, no Three.js import (owner section 47). Kept as its own
+  // wire value (`spatial`) distinct from `providers3d` so a user who
+  // picks either keeps their choice across a future rename of either
+  // mode's *label* (owner section 35).
+  spatial: {
+    id: "spatial",
+    name: "Spatial",
+    shortDescription: "Lightweight dimensional provider overview.",
+    longDescription:
+      "A dimensional provider overview built from DOM, SVG, and CSS -- no WebGL, no 3D engine. Prototype for owner comparison against Experimental 3D.",
+    performanceClass: "medium",
+    supports3d: false,
+    isPlaceholder: true,
+    loader: SpatialDashboard,
+  },
+  // Publicly labeled "Experimental 3D" (owner section 36) -- the wire
+  // value (`providers3d`) is unchanged so existing persisted settings
+  // keep working; only the user-facing name/description changed.
   providers3d: {
     id: "providers3d",
-    name: "3D Providers Dashboard",
-    shortDescription: "Immersive provider visualization.",
+    name: "Experimental 3D",
+    shortDescription: "Full WebGL provider visualization.",
     longDescription:
-      "Spatial provider exploration -- usage, state, and focus in an interactive 3D scene. Higher visual workload.",
+      "Full WebGL provider visualization -- usage, state, and focus in an interactive 3D scene. Higher GPU/resource use. Experimental.",
     performanceClass: "high",
     supports3d: true,
     isPlaceholder: true,
@@ -83,15 +103,22 @@ export const DASHBOARD_REGISTRY: Record<DashboardModeId, DashboardDefinition> = 
   },
 };
 
-/** Ordered for consistent rendering in the Dashboard Studio mode-select UI. */
+/** Ordered for consistent rendering in the Dashboard Studio mode-select
+ *  UI. Phase S1 owner section 35: the public picker shows exactly
+ *  Analytics / Spatial / Experimental 3D -- `hybrid` stays a real,
+ *  preserved `DASHBOARD_REGISTRY` entry (its wire value keeps working
+ *  for anyone who somehow has it persisted) but is deliberately left out
+ *  of this visible list, since it has never been more than an
+ *  unimplemented placeholder and isn't part of the current product
+ *  architecture (owner section 1). */
 export const DASHBOARD_DEFINITIONS: DashboardDefinition[] = [
   DASHBOARD_REGISTRY.analytics2d,
+  DASHBOARD_REGISTRY.spatial,
   DASHBOARD_REGISTRY.providers3d,
-  DASHBOARD_REGISTRY.hybrid,
 ];
 
 export function isDashboardModeId(value: string): value is DashboardModeId {
-  return value === "analytics2d" || value === "providers3d" || value === "hybrid";
+  return value === "analytics2d" || value === "providers3d" || value === "hybrid" || value === "spatial";
 }
 
 /** The one safe fallback when a persisted mode is missing/corrupt --
