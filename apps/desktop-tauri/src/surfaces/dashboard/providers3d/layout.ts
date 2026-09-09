@@ -102,6 +102,8 @@ export function computeProviderLayout(
   return positions;
 }
 
+export type ProviderRing = "single" | "primary" | "secondary";
+
 /** Which ring a provider id was assigned to, for material/scale decisions
  *  (e.g. the secondary ring may render at a slightly smaller uniform
  *  scale -- never a per-provider "importance" scale, which owner section
@@ -109,7 +111,7 @@ export function computeProviderLayout(
 export function ringForProvider(
   providerId: string,
   providerIds: readonly string[],
-): "single" | "primary" | "secondary" {
+): ProviderRing {
   const sorted = [...providerIds].sort();
   if (sorted.length <= 1) return "single";
   const index = sorted.indexOf(providerId);
