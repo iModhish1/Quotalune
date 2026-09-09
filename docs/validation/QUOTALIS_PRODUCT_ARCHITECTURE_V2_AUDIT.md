@@ -74,3 +74,76 @@ heatmaps are conditional on valid evidence, not required decorative widgets.
 Routing coordination currently cannot register an unknown root effort with the
 local planner. Work stays conservative with one bounded child; no account-wide
 coordination or root-effort change is claimed.
+
+## Wave 2 integration and independent review
+
+The recorder previously assigned refreshes to the first enabled profile account
+and persisted a mutable `selected` display metric. That was not account or window
+evidence. Schema v5 adds nullable account scope, physical window key and duration;
+legacy rows are never backfilled. New observations hash provider-reported email
+with organization context; organization-only and absent identity stay unresolved.
+Physical primary, secondary, model-specific, tertiary and extra limits are recorded
+independently. Invalid timestamps, invalid quota totals and unhealthy snapshots
+are rejected. No Personal database was opened or migrated during development.
+
+The additive `quotaHistory` carries closing capture time, duration, reset endpoint,
+account scope and sample count over the requested and preceding equal-duration
+periods. A fresh Astra read-only review found two P2 defects, repaired by the mother:
+
+- Current provider summaries still read only retired `selected` rows. They now
+  use physical primary observations and suppress old aliases once a provider has
+  physical history. Legacy-only providers retain explicitly dated old summaries.
+- Bucket closing values erased conflicting timestamps and hidden counter decreases.
+  Raw observations are sorted; exact duplicates do not increase coverage. Conflict
+  and counter-decrease flags survive aggregation and serialization. TS rejects
+  conflicting metrics and suppresses velocity after a hidden decrease.
+
+The legacy `usageTrend` remains historical only, explicitly labeled in the UI. It
+is not appended to or silently spliced into physical history. Monetary observations
+keep their independent existing contract and history series.
+
+Comparison means difference in bucket-close quota-state means, in percentage
+points, across equal elapsed spans; it is NOT consumption. It requires observed
+identity, known physical duration, four distinct buckets per period, endpoint
+sampling support and bounded gaps. Velocity is percentage points per elapsed hour
+within one explicit reset cycle, at least four observations and one hour, with no
+counter decrease. No forecast, token-rate conversion or interpolated heatmap exists.
+
+Evidence: 55 core dashboard-data tests after recovery; 115 affected frontend tests.
+The earlier full Rust run passed before the review repairs; final integrated gates
+are still required. Current targeted results are not final product acceptance.
+
+## Waves 3–6 implementation in progress
+
+Shared analytical section/table/coverage/ribbon/gauge/time-series primitives reuse
+existing theme tokens. Reset Horizon positions future provider resets on a linear
+24-hour/7-day scale with the full schedule available as a sortable DOM table.
+Physical history charts use actual observation times and break at gaps/resets.
+Legacy line charts now preserve time spacing when timestamps are supplied, break
+large gaps, retain a single point, and expose keyboard tooltips. Bar/line styles
+share the persisted chart-style context; no dependency was added.
+
+Analytics preferences are normalized in Rust and TS: section order/visibility,
+default range, chart style, quota template and filter scope. Workspace density adds
+dense. The Settings Center keeps legacy tab IDs and provider/profile models intact.
+Demo controls live only in Settings/Dashboard; Demo filtering no longer replaces
+current observations with historical averages or hides missing requested history.
+Generated physical history is deterministic and never persisted.
+
+Initial synthetic CPU benchmark (Node24 Windows, five measured samples after one
+warmup, 70 fixture series): 1k/25k/100k rows ~3/52/189ms median for range+chart prep.
+This is NOT native frame timing or production history throughput. Raw output:
+`.local/v2-analytics-benchmark.json`. Final native performance/evidence remain open.
+
+
+### Owner correction L10 — hierarchical navigation
+The owner rejected the sparse five-destination presentation and duplicate Settings category rail during native review. Existing destinations now appear as inline children under expandable Workspace and Settings branches in the primary navigation. No extra select/dropdown navigation was added. Search remains in the editor and only displays result links while a query is entered. Existing tab IDs, settings storage and editor scopes are preserved.
+
+Root cause of the half-empty Settings screenshot: legacy `.settings-body[data-tab=general]` two-column CSS placed the new SettingsShell wrapper into one outer grid cell. The shell now occupies the full content width; a grid inside its editor owns General/Notifications/Advanced cards. Language and Appearance occupy the first row; logo identity spans the next row.
+
+Validation after navigation change: 992 frontend tests across 165 files passed; TypeScript clean; native Dev rebuild successful before the final General grid placement adjustment, which is being rebuilt. The previous full Rust gates remain valid for this frontend-only correction: desktop 469 passed/1 existing ignored, core 1637 passed, CLI 1 passed; Clippy warnings denied and formatting passed. Native visual review remains ongoing; no overall Product V2 PASS is asserted here.
+
+
+L10 native verification completed on the rebuilt Dev binary (SHA-256 `F4DA2DFE1C18A3BB3203ACF2411D4A24C1C9934FE4A4E7D827AEF27780EB4C5D`). The final General first-row placement was visually inspected at 1280×730 CSS pixels. Expansion and collapse were exercised in the real native window. Actual native frame resizing produced 520×669 RTL and 720×669 LTR content viewports, each without document horizontal overflow. CUA frame readback at 520 reported `unverifiable`, but the native page independently reported the actual 520px viewport; no CDP emulation was used. Evidence is under `docs/images/product-v2/QUOTALIS_V2_SETTINGS*.png`. Dev presentation settings were restored after proof; Personal was not launched or changed by this work.
+
+The L10 navigation correction is implemented and available for owner visual review. This is not an overall PRODUCT V2 PASS: the remaining broad performance/customization matrix and full native evidence report are still open. The Arabic screenshot also exposes an existing untranslated Appearance fallback, which remains a localization follow-up rather than a claimed complete Arabic audit.

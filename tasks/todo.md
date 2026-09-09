@@ -1041,8 +1041,8 @@ External consent completion and credential-store/profile resolver migration are
 not claimed complete; see that report's remaining scope.
 
 ## Product V2 — L01–L09
-- [ ] Wave 0: source audit, architecture and acceptance contract.
-- [ ] Wave 1: Settings/Workspace consolidation, search, legacy links and navigation tests.
+- [x] Wave 0: source audit, architecture and acceptance contract.
+- [x] Wave 1: Settings/Workspace consolidation, search, legacy links and navigation tests.
 - [ ] Wave 2: metric registry, aggregation/comparison and deterministic corpus.
 - [ ] Wave 3: shared analytical primitives and chart correctness.
 - [ ] Wave 4: Dashboard V2 and persisted meaningful presentation.
@@ -1050,3 +1050,12 @@ not claimed complete; see that report's remaining scope.
 - [ ] Wave 6: unified customization/reset/default propagation.
 - [ ] Wave 7: RTL/accessibility/responsive and performance benchmarks.
 - [ ] Wave 8: native evidence, all gates, final acceptance report.
+
+
+### L10 owner navigation correction
+- [x] Replace duplicate Settings rail with inline expandable sidebar children.
+- [x] Restore full editor width and General Language/Appearance row.
+- [x] Preserve destination IDs, search draft state, keyboard and collapsed semantics.
+- [x] 992 frontend tests, TypeScript, production/native Dev build, 520 RTL/720 LTR/maximized screenshots.
+- [x] Restore Dev presentation baseline after proof.
+- [ ] Owner visual acceptance; overall L01–L09 runtime matrix remains open.
