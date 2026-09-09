@@ -85,7 +85,11 @@ function buildOneSnapshot(
     primary: rateWindow,
     selectedMetric: rateWindow,
     primaryLabel: "Monthly",
-    secondary: null,
+    secondary: providerId === "codex" || providerId === "claude" ? {
+      ...rateWindow, windowMinutes: 10080, usedPercent: Math.round(profile.usedPercent * .55),
+      remainingPercent: 100 - Math.round(profile.usedPercent * .55), resetsAt: new Date(now + 3 * 86400_000).toISOString(),
+    } : null,
+    secondaryLabel: providerId === "codex" || providerId === "claude" ? "Weekly" : undefined,
     modelSpecific: null,
     tertiary: null,
     extraRateWindows: [],

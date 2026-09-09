@@ -21,7 +21,7 @@ import type {
 function rateWindow(overrides: Partial<ProviderUsageSnapshot["primary"]> = {}) {
   return {
     usedPercent: 20,
-    remainingPercent: 80,
+    remainingPercent: 100 - (overrides.usedPercent ?? 20),
     windowMinutes: null,
     resetsAt: null,
     resetDescription: null,
@@ -397,6 +397,17 @@ describe("availableHistoryDays", () => {
 
 describe("computeKpis", () => {
   const settings = { highUsageThreshold: 70, criticalUsageThreshold: 90 };
+
+  it("uses the highest and earliest physical windows regardless of display selection", () => {
+    const soon = new Date(Date.now() + 1800_000).toISOString();
+    const live = provider({primary: rateWindow({usedPercent: 10}),
+      selectedMetric: rateWindow({usedPercent: 1}),
+      secondary: rateWindow({usedPercent: 96, resetsAt: soon})});
+    const kpis = computeKpis({liveProviders: [live], snapshot: null, settings});
+    expect(kpis.highestUsageProvider?.usedPercent).toBe(96);
+    expect(kpis.nextReset?.resetsAt).toBe(soon);
+    expect(buildAlerts([live], settings).map(alert => alert.kind)).toEqual(["quotaCritical", "resetSoon"]);
+  });
 
   it("reports null highest-usage/next-reset when nothing is connected", () => {
     const kpis = computeKpis({

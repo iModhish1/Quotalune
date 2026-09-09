@@ -19,6 +19,8 @@ import { catalogBySlug } from "../../../design-system/themeCatalog";
 import type { DashboardSnapshot, ProviderUsageSnapshot, SettingsSnapshot } from "../../../types/bridge";
 
 const LOCALE_ENTRIES = {
+  V2HistoryScope: "Provider filter: history only",
+  V2AnalyticsOverview: "Analytics overview",
   TabDashboard: "Dashboard",
   DashboardSubtitle: "What you're using, what's left, and what changed",
   DashboardRangeToday: "Today",
@@ -179,11 +181,11 @@ describe("DashboardAnalyticsPanel", () => {
     // returns null while snapshot is still null) -- wait on it before asserting
     // on the rest so this isn't racing the header's synchronous render.
     expect(await screen.findByText("Data Status")).toBeInTheDocument();
-    expect(screen.getByText("Current Status")).toBeInTheDocument();
-    expect(screen.getByText("Selected Range")).toBeInTheDocument();
+    expect(screen.getByText("Provider filter: history only")).toBeInTheDocument();
+    expect(screen.getByText("Analytics overview")).toBeInTheDocument();
     expect(screen.getByText("Active Providers")).toBeInTheDocument();
     expect(screen.getByText("Usage Trend")).toBeInTheDocument();
-    expect(screen.getByText("Historical Usage Share")).toBeInTheDocument();
+    expect(screen.getByText("V2LegacyHistory")).toBeInTheDocument();
     // Exactly one fetch for the default range -- no widget re-fetches independently.
     expect(tauriMocks.getDashboardSnapshot).toHaveBeenCalledTimes(1);
   });
@@ -221,6 +223,23 @@ describe("DashboardAnalyticsPanel", () => {
     // it stays 2, because that section is explicitly live/global, not
     // scoped by the Selected Range control sitting above it.
     expect(screen.getByText("Active Providers").closest(".dashboard-kpi")).toHaveTextContent("2");
+  });
+
+  it("persists presentation order and hides sections without changing metrics", async () => {
+    const preferences = {sectionOrder:["quality","limits"],hiddenSections:["attention"],chartStyle:"detailed",quotaTemplate:"rail",defaultRange:"last30Days",providerFilterScope:"history"} as const;
+    renderPanel([provider()], snapshot(), vi.fn(), {...SETTINGS, analyticsPreferences: {...preferences,sectionOrder:[...preferences.sectionOrder],hiddenSections:[...preferences.hiddenSections]}});
+    await screen.findByText("Data Status");
+    expect(document.querySelector("[data-analytics-section]")).toHaveAttribute("data-analytics-section","quality");
+    expect(document.querySelector('[data-analytics-section="attention"]')).toBeNull();
+    expect(screen.getByRole("radio",{name:"30 Days"})).toHaveAttribute("aria-checked","true");
+    expect(document.querySelector(".dashboard-analytics")).toHaveAttribute("data-chart-style","detailed");
+  });
+
+  it("explicit all-sections filter also scopes current status", async () => {
+    renderPanel([provider({providerId:"claude",displayName:"Claude"}),provider({providerId:"codex",displayName:"Codex"})], snapshot(), vi.fn(), {...SETTINGS,analyticsPreferences:{sectionOrder:[],hiddenSections:[],chartStyle:"precision",quotaTemplate:"precision",defaultRange:"last7Days",providerFilterScope:"all"}});
+    await screen.findByText("Data Status");
+    fireEvent.change(screen.getByLabelText("All Providers"),{target:{value:"codex"}});
+    expect(screen.getByText("Active Providers").closest(".dashboard-kpi")).toHaveTextContent("1");
   });
 
   it("an auth-required provider surfaces a friendly alert with a working Reconnect action", async () => {

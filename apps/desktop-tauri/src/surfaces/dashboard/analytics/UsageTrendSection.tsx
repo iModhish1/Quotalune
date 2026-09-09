@@ -131,6 +131,7 @@ export default function UsageTrendSection({ snapshot }: { snapshot: DashboardSna
               activeMetric === "usage" ? providerCreditsColor(providerId) : providerCostColor(providerId);
             const chartPoints: LineChartPoint[] = points.map((p) => ({
               label: fmt.format(new Date(p.bucketStart * 1000)),
+              timestamp: p.bucketStart,
               value: activeMetric === "usage" ? (p as { usedPercent: number }).usedPercent : (p as { costUsed: number }).costUsed,
             }));
             return (
@@ -138,6 +139,7 @@ export default function UsageTrendSection({ snapshot }: { snapshot: DashboardSna
                 <span className="dashboard-analytics__trend-provider">{providerId}</span>
                 <LineChart
                   data={chartPoints}
+                  expectedStep={snapshot?.grain === "hourly" ? 3600 : 86400}
                   color={color}
                   ariaLabel={`${providerId} ${t(activeMetric === "usage" ? "DashboardMetricUsage" : "DashboardMetricSpend")}`}
                   valueFormatter={

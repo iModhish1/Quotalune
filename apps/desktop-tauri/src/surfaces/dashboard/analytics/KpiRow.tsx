@@ -1,3 +1,6 @@
+import {useResetStageOptions} from "../../../hooks/useResetStageOptions";
+import {formatResetPresentation} from "../../../lib/resetPresentation";
+import type {SettingsSnapshot} from "../../../types/bridge";
 import type { ReactNode } from "react";
 import { useLocale } from "../../../hooks/useLocale";
 import { formatPercentage } from "../../../design-system/percent";
@@ -38,9 +41,10 @@ function CompactKpi({ label, reason }: { label: string; reason: string }) {
   );
 }
 
-function NextResetValue({ resetsAt, relative }: { resetsAt: string; relative: boolean }) {
+function NextResetValue({ resetsAt, relative, settings }: { resetsAt: string; relative: boolean; settings?: SettingsSnapshot }) {
+  const options = useResetStageOptions(settings, "dashboard");
   const formatted = useFormattedResetTime(resetsAt, null, relative, "reset");
-  return <bdi>{formatted}</bdi>;
+  return <bdi>{settings ? formatResetPresentation({...options, locale:options.locale ?? "en-US",resetAt:resetsAt}).fullAriaLabel : formatted}</bdi>;
 }
 
 // Mirrors MenuCardDetails.tsx's formatCurrency (module-private there) --
@@ -49,12 +53,13 @@ function NextResetValue({ resetsAt, relative }: { resetsAt: string; relative: bo
 // real bug the old `$${amount.toFixed(2)}` had: it would mislabel a
 // EUR/GBP/etc. provider-reported total as dollars).
 const kpiCurrencyFormatters = new Map<string, Intl.NumberFormat>();
-function formatKpiCurrency(amount: number, code: string): string {
+function formatKpiCurrency(amount: number, code: string, locale: string): string {
+  const key = `${locale}:${code}`;
   try {
-    let formatter = kpiCurrencyFormatters.get(code);
+    let formatter = kpiCurrencyFormatters.get(key);
     if (!formatter) {
-      formatter = new Intl.NumberFormat("en-US", { style: "currency", currency: code });
-      kpiCurrencyFormatters.set(code, formatter);
+      formatter = new Intl.NumberFormat(locale, { style: "currency", currency: code, numberingSystem: "latn" });
+      kpiCurrencyFormatters.set(key, formatter);
     }
     return formatter.format(amount);
   } catch {
@@ -73,11 +78,14 @@ function formatKpiCurrency(amount: number, code: string): string {
 export default function KpiRow({
   kpis,
   resetTimeRelative,
+  settings,
 }: {
   kpis: KpiValues;
   resetTimeRelative: boolean;
+  settings?: SettingsSnapshot;
 }) {
   const { t } = useLocale();
+  const options = useResetStageOptions(settings,"dashboard");
 
   const highestUsageValue = kpis.highestUsageProvider ? (
     // Provider name + percentage are an LTR-safe technical pairing (owner
@@ -86,11 +94,11 @@ export default function KpiRow({
     <bdi>{`${kpis.highestUsageProvider.providerName} · ${formatPercentage(kpis.highestUsageProvider.usedPercent)}`}</bdi>
   ) : null;
   const nextResetValue = kpis.nextReset ? (
-    <NextResetValue resetsAt={kpis.nextReset.resetsAt} relative={resetTimeRelative} />
+    <NextResetValue resetsAt={kpis.nextReset.resetsAt} relative={resetTimeRelative} settings={settings}/>
   ) : null;
   const spendValue =
     kpis.reportedSpendTotal !== null && kpis.reportedSpendCurrency !== null
-      ? formatKpiCurrency(kpis.reportedSpendTotal, kpis.reportedSpendCurrency)
+      ? formatKpiCurrency(kpis.reportedSpendTotal, kpis.reportedSpendCurrency, options.locale ?? "en-US")
       : null;
 
   const primary: KpiCardProps[] = [

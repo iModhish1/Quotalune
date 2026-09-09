@@ -17,4 +17,16 @@ describe("Demo analytics controls", () => {
     expect(result.spendTrend).toEqual([]);
     expect(result.costContract.availability).toBe("unavailable");
   });
+  it("preserves current readings across range changes and exposes missing history", () => {
+    expect(scopeDemoSnapshot(snapshot, "today").providers).toEqual(snapshot.providers);
+    const year = scopeDemoSnapshot(snapshot, "thisYear");
+    expect(year.rangeSince).toBeLessThan(snapshot.rangeSince);
+    expect(year.availability.firstSampleAt).toBe(snapshot.availability.firstSampleAt);
+    expect(year.providers).toEqual(snapshot.providers);
+  });
+  it("keeps previous-period physical observations without regeneration", () => {
+    const result = scopeDemoSnapshot(snapshot, "last7Days");
+    expect(result.quotaHistory?.some(point => point.observedAt < result.rangeSince)).toBe(true);
+    expect(result.quotaHistory?.every(point => snapshot.quotaHistory?.includes(point))).toBe(true);
+  });
 });

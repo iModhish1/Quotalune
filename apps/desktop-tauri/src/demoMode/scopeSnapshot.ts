@@ -13,16 +13,13 @@ export function scopeDemoSnapshot(snapshot: DashboardSnapshot, range: DashboardR
     case "last3Months": date.setMonth(date.getMonth() - 3); since = date.getTime() / 1000; break;
     case "thisYear": date.setMonth(0, 1); date.setHours(0, 0, 0, 0); since = date.getTime() / 1000; break;
   }
-  since = Math.max(snapshot.rangeSince, since);
   const matches = (id: string) => !providerIds?.length || providerIds.includes(id);
   const usageTrend = snapshot.usageTrend.filter(p => matches(p.provider) && p.bucketStart >= since);
   const spendTrend = snapshot.spendTrend.filter(p => matches(p.provider) && p.bucketStart >= since);
-  const providers = snapshot.providers.filter(p => matches(p.provider)).flatMap(p => {
-    const points = usageTrend.filter(point => point.provider === p.provider);
-    if (!points.length) return [];
-    return [{...p, usedPercent: points.reduce((sum, point) => sum + point.usedPercent, 0) / points.length, remainingPercent: points.reduce((sum, point) => sum + point.remainingPercent, 0) / points.length}];
-  });
-  return {...snapshot, rangeSince: since, usageTrend, spendTrend, providers,
+  // Current provider readings are invariant under historical range selection.
+  const providers = snapshot.providers.filter(p => matches(p.provider));
+  const quotaHistory = snapshot.quotaHistory?.filter(p => matches(p.provider) && p.observedAt >= since - (until - since) && p.observedAt < until);
+  return {...snapshot, rangeSince: since, usageTrend, spendTrend, providers, quotaHistory,
     availability: {...snapshot.availability, sampleCount: usageTrend.reduce((sum, p) => sum + p.sampleCount, 0), hasCostData: spendTrend.length > 0},
     costContract: spendTrend.length ? snapshot.costContract : {...snapshot.costContract, origin: "unavailable", availability: "unavailable", currencyCode: null},
   };

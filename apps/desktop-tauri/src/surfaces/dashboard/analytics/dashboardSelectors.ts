@@ -16,7 +16,7 @@ import type {
   UsageTrendPoint,
 } from "../../../types/bridge";
 import { normalizePercentage } from "../../../design-system/percent";
-import { selectSingleMetricUsageWindow } from "../../../lib/usageWindows";
+import {physicalQuotaWindows} from "../../../lib/analytics/currentProviders";
 
 /** Quota percentages have provider-specific denominators: never sum into shares. */
 export function rankProviderQuotas(providers: DashboardProviderSummary[]): DashboardProviderSummary[] {
@@ -67,11 +67,7 @@ export interface DashboardAlert {
   providerName: string;
 }
 
-/** Exported so other surfaces (e.g. `providers3d/resetProximity.ts`'s
- *  reset-proximity marker, Phase 6 owner section 8) key off the exact
- *  same "reset soon" definition as the 2D dashboard's own alerts,
- *  rather than inventing a second threshold that could silently drift
- *  from this one. */
+/** Shared definition for reset proximity and Dashboard alerts. */
 export const RESET_SOON_MS = 60 * 60 * 1000; // 1 hour
 
 /**
@@ -79,6 +75,14 @@ export const RESET_SOON_MS = 60 * 60 * 1000; // 1 hour
  * the user's own configured thresholds (`highUsageThreshold`/
  * `criticalUsageThreshold`), never a hardcoded number.
  */
+function highestPhysicalWindow(provider: ProviderUsageSnapshot) {
+  return physicalQuotaWindows(provider).reduce<ReturnType<typeof physicalQuotaWindows>[number] | null>((highest,item) => !highest || item.window.usedPercent > highest.window.usedPercent ? item : highest,null)?.window;
+}
+function earliestPhysicalReset(provider: ProviderUsageSnapshot, now: number) {
+  return physicalQuotaWindows(provider).map(item=>item.window).filter(window=>window.resetsAt && Date.parse(window.resetsAt)>now)
+    .sort((a,b)=>Date.parse(a.resetsAt!)-Date.parse(b.resetsAt!))[0];
+}
+
 export function buildAlerts(
   providers: ProviderUsageSnapshot[],
   settings: Pick<SettingsSnapshot, "highUsageThreshold" | "criticalUsageThreshold">,
@@ -106,8 +110,8 @@ export function buildAlerts(
       });
       continue;
     }
-    const metric = selectSingleMetricUsageWindow(p);
-    const used = normalizePercentage(metric.usedPercent);
+    const metric = highestPhysicalWindow(p);
+    const used = metric ? normalizePercentage(metric.usedPercent) : null;
     if (used !== null) {
       if (used >= settings.criticalUsageThreshold) {
         alerts.push({
@@ -127,8 +131,9 @@ export function buildAlerts(
         });
       }
     }
-    if (metric.resetsAt) {
-      const resetMs = Date.parse(metric.resetsAt);
+    const resetWindow = earliestPhysicalReset(p, now);
+    if (resetWindow?.resetsAt) {
+      const resetMs = Date.parse(resetWindow.resetsAt);
       if (!Number.isNaN(resetMs) && resetMs > now && resetMs - now <= RESET_SOON_MS) {
         alerts.push({
           id: `reset-soon-${p.providerId}`,
@@ -167,8 +172,8 @@ export function rankProvidersByResetTime(
   const connected = providers.filter((p) => p.errorState === "ready" && !p.error);
   const withResets: ProviderResetSchedule[] = [];
   for (const p of connected) {
-    const metric = selectSingleMetricUsageWindow(p);
-    if (!metric.resetsAt) continue;
+    const metric = earliestPhysicalReset(p, now);
+    if (!metric?.resetsAt) continue;
     const resetMs = Date.parse(metric.resetsAt);
     if (Number.isNaN(resetMs) || resetMs <= now) continue;
     withResets.push({ providerId: p.providerId, providerName: p.displayName, resetsAt: metric.resetsAt });
@@ -283,8 +288,8 @@ export function computeKpis({ liveProviders, snapshot, settings }: KpiInputs): K
 
   let highest: KpiValues["highestUsageProvider"] = null;
   for (const p of connected) {
-    const metric = selectSingleMetricUsageWindow(p);
-    const used = normalizePercentage(metric.usedPercent);
+    const metric = highestPhysicalWindow(p);
+    const used = metric ? normalizePercentage(metric.usedPercent) : null;
     if (used !== null && (highest === null || used > highest.usedPercent)) {
       highest = { providerId: p.providerId, providerName: p.displayName, usedPercent: used };
     }
@@ -293,8 +298,8 @@ export function computeKpis({ liveProviders, snapshot, settings }: KpiInputs): K
   let nextReset: KpiValues["nextReset"] = null;
   const now = Date.now();
   for (const p of connected) {
-    const metric = selectSingleMetricUsageWindow(p);
-    if (!metric.resetsAt) continue;
+    const metric = earliestPhysicalReset(p, now);
+    if (!metric?.resetsAt) continue;
     const resetMs = Date.parse(metric.resetsAt);
     if (Number.isNaN(resetMs) || resetMs <= now) continue;
     if (nextReset === null || resetMs < Date.parse(nextReset.resetsAt)) {

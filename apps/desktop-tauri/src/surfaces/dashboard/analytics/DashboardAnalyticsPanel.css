@@ -171,3 +171,22 @@
 .quota-observations small{display:block;font-size:10px;font-weight:400;max-width:120px;overflow-wrap:anywhere}
 .quota-observations__track{display:block;margin-top:5px;height:3px;background:#80808024;min-width:50px}
 .quota-observations__track>span{display:block;height:100%}
+.dashboard-analytics {
+  --qa-ink-primary: var(--qa-analytics-text-primary);
+  --qa-ink-secondary: var(--qa-analytics-text-secondary);
+  --qa-material-raised: var(--qa-analytics-surface-primary);
+  --qa-hairline: var(--qa-analytics-hairline);
+  --qa-hairline-strong: var(--qa-analytics-hairline-strong);
+  --qa-accent: var(--qa-analytics-accent);
+}
+.dashboard-analytics [data-analytics-section] { min-width: 0; }
+.dashboard-analytics__scope { margin: 0; color: var(--qa-analytics-text-secondary); font-size: 12px; }
+.analytics-account-scope { display: block; max-width: 18ch; overflow: hidden; text-overflow: ellipsis; color: var(--qa-ink-secondary); font-size: 10px; }
+.analytics-unavailable { color: var(--qa-ink-secondary); font-size: 11px; }
+.reset-horizon__timeline { padding: 16px 10px 0; }
+.reset-horizon__ticks { position: relative; height: 26px; margin-inline: 20px; font-size: 10px; color: var(--qa-ink-secondary); }
+.reset-horizon__ticks span { position: absolute; white-space: nowrap; transform: translateX(-50%); }
+[dir="rtl"] .reset-horizon__ticks span { transform: translateX(50%); }
+.reset-horizon__lanes { position: relative; height: 68px; margin-inline: 20px; border-block-start: 1px solid var(--qa-hairline); }
+.reset-horizon__marker { position: absolute; width: 10px; height: 10px; margin-inline-start: -5px; border-radius: 50%; background: var(--qa-accent); border: 2px solid var(--qa-material-raised); }
+.reset-horizon__marker:focus-visible { outline: 2px solid var(--qa-ink-primary); outline-offset: 3px; }

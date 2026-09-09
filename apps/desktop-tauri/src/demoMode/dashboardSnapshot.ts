@@ -22,7 +22,9 @@ import type {
   ProviderCatalogEntry,
   SpendTrendPoint,
   UsageTrendPoint,
+  QuotaHistoryPoint,
 } from "../types/bridge";
+import {physicalQuotaWindows} from "../lib/analytics/currentProviders";
 import { providerMonetaryQuantityKind } from "../lib/providerMonetaryKind";
 import type { DemoModeConfig } from "./types";
 import { buildDemoProviderSnapshotsWithTrend } from "./providerSnapshots";
@@ -97,10 +99,29 @@ export function buildDemoDashboardSnapshot(
 
   const usageTrend: UsageTrendPoint[] = [];
   const spendTrend: SpendTrendPoint[] = [];
+  const quotaHistory: QuotaHistoryPoint[] = [];
   let hasSpendProvider = false;
 
   for (const { snapshot, trendShape } of resolved) {
     const historyRng = createRng(deriveSeed(config.seed, `history:${snapshot.providerId}`));
+    // Explicit Demo fixture identity only. This generator is never persisted.
+    if (snapshot.errorState === "ready" && !snapshot.error) {
+      for (const item of physicalQuotaWindows(snapshot)) {
+        const duration = item.window.windowMinutes;
+        if (!duration || duration <= 0) continue;
+        const cycleSeconds = duration * 60;
+        const currentReset = item.window.resetsAt ? Date.parse(item.window.resetsAt) / 1000 : NaN;
+        for (let day = 0; day < totalDays; day++) {
+          const bucketStart = rangeSince + day * DAY_SECONDS;
+          const observedAt = bucketStart + DAY_SECONDS - 1;
+          const resetsAt = Number.isFinite(currentReset) ? currentReset - Math.floor((currentReset - observedAt - 1) / cycleSeconds) * cycleSeconds : null;
+          const progress = resetsAt === null ? item.window.usedPercent : Math.max(0, Math.min(100, (1 - (resetsAt - observedAt) / cycleSeconds) * item.window.usedPercent));
+          quotaHistory.push({provider: snapshot.providerId, accountId: `demo-${snapshot.providerId}`, accountScope: "observed",
+            windowKey: `${item.key}:${duration}`, windowLabel: item.label, windowMinutes: duration,
+            bucketStart, observedAt, usedPercent: progress, remainingPercent: 100 - progress, resetsAt, sampleCount: 1});
+        }
+      }
+    }
     const kind = providerMonetaryQuantityKind(snapshot.providerId);
     let cumulativeSpend = 0;
     for (let day = 0; day < totalDays; day += 1) {
@@ -154,6 +175,7 @@ export function buildDemoDashboardSnapshot(
     },
     providers,
     usageTrend,
+    quotaHistory,
     spendTrend,
     costContract: {
       origin: hasSpendProvider ? "providerReported" : "unavailable",
