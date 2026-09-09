@@ -1,3 +1,4 @@
+import {formatResetPresentation} from "../../../lib/resetPresentation";
 import {physicalWindowLabel} from "../../../lib/analytics/metricLabels";
 import "./CurrentLimits.css";
 import "../../../components/analytics/analyticsPrimitives.css";
@@ -28,7 +29,7 @@ export default function CurrentLimits({ providers, settings, models }: {provider
   return <section className="dashboard-limits" aria-label={t("DashboardLimitsNow")}>
     <h2>{t("DashboardLimitsNow")}</h2>
     {providers.length === 0 && <p>{t("DashboardValueUnavailable")}</p>}
-    <div className="dashboard-limits__grid">
+    <div className="dashboard-limits__grid" data-provider-count={stages.length}>
       {stages.map((stage, index) => {
         const provider = providers[index];
         // Current instruments use a physical quota window. A selected display
@@ -50,7 +51,8 @@ export default function CurrentLimits({ providers, settings, models }: {provider
           {ready && used !== null && remaining !== null ? <>
             <small><bdi>{physicalWindowLabel(physical[0]?.label,t)}</bdi></small>
             <QuotaGauge used={used} remaining={remaining} template={preferences.quotaTemplate} usedLabel={t("PanelUsedSuffix")} remainingLabel={t("FloatBarRemainingSuffix")} format={formatPercentage} emphasis={stage.resolvedMode}/>
-            {(stage.windows?.length ?? 0) > 0 ? <UsageWindowList providerId={stage.id} windows={(stage.windows ?? []).filter(window => physical.some(item => (item.key === "modelSpecific" ? "model" : item.key) === window.id)).map(window=>({...window,label:physicalWindowLabel(window.label,t)}))} hidden={false} paginate={false} presentation={stage.limitPresentation} /> : <small><bdi>{stage.reset}</bdi></small>}
+            <small><bdi>{metric?.resetsAt ? formatResetPresentation({...resetOptions,locale:resetOptions.locale??"en-US",resetAt:metric.resetsAt}).fullAriaLabel : t("DashboardValueUnavailable")}</bdi></small>
+            {physical.length > 1 ? <UsageWindowList providerId={stage.id} windows={(stage.windows ?? []).filter(window => physical.slice(1).some(item => (item.key === "modelSpecific" ? "model" : item.key) === window.id)).map(window=>({...window,label:physicalWindowLabel(window.label,t)}))} hidden={false} paginate={false} presentation={stage.limitPresentation} /> : null}
           </> : <p className="dashboard-limits__unavailable">{t("DashboardValueUnavailable")}</p>}
           {ready && cost && Number.isFinite(cost.used) && quantity !== "unknown" && (quantity === "credits" || !!cost.currencyCode) && <p className="dashboard-limits__remaining">
             <span>{t(quantity === "spend" ? "DashboardMetricSpend" : quantity === "balance" ? "DashboardBalance" : "DashboardCredits")}</span>

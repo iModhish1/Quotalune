@@ -5,7 +5,7 @@ import {useMemo, useState} from "react";
 import {useLocale} from "../../../hooks/useLocale";
 import {useResetStageOptions} from "../../../hooks/useResetStageOptions";
 import {AnalyticsSection, AnalyticsTable, CoveragePanel, MetricRibbon, ComparisonStat} from "../../../components/analytics/AnalyticsPrimitives";
-import {TimeSeriesChart} from "../../../components/charts/TimeSeriesChart";
+
 import type {QuotaSeries} from "../../../lib/analytics/quotaAnalytics";
 import type {MetricResult} from "../../../lib/analytics/metricRegistry";
 import type {LocaleKey} from "../../../i18n/keys";
@@ -39,7 +39,7 @@ export function QuotaComparison({series, providers, settings}: {series: QuotaSer
     ? <span className="analytics-unavailable" data-state={result.state}>{t(result.reason ? REASONS[result.reason] : "DashboardValueUnavailable")}</span>
     : <bdi>{(sign ? signed : number).format(result.value)} {unit}</bdi>;
   return <AnalyticsSection title={t("V2ProviderComparison")} description={t("V2ComparisonHelp")}>
-    <AnalyticsTable rows={series} rowKey={row => row.key} caption={t("V2ComparisonCaveat")} emptyLabel={t("V2NoPhysicalHistory")} columns={[
+    <AnalyticsTable copy={{columns:t("V45TableColumns"),previousPage:t("V45TablePreviousPage"),nextPage:t("V45TableNextPage"),page:t("V45TablePage")}} rows={series} rowKey={row => row.key} caption={t("V2ComparisonCaveat")} emptyLabel={t("V2NoPhysicalHistory")} columns={[
       {id:"provider",title:t("TabProviders"),cell:row=><bdi>{names.get(row.provider) ?? row.provider}</bdi>,sortValue:row=>names.get(row.provider) ?? row.provider},
       {id:"window",title:t("V2LimitWindow"),cell:row=><><bdi>{physicalWindowLabel(row.windowLabel,t)}</bdi><small className="analytics-account-scope">{observedAccountLabel(row,series,t)}</small></>},
       {id:"mean",title:t("V2QuotaMean"),cell:row=>metric(row.mean,"%"),sortValue:row=>row.mean.value},
@@ -61,9 +61,7 @@ export function QuotaHistory({series, snapshot, settings, preferences}: {series:
   const points = useMemo(() => active?.current.map(p => ({time:p.observedAt,value:p.usedPercent,cycle:p.resetsAt})) ?? [],[active]);
   return <AnalyticsSection title={t("V2DetailedHistory")} description={t("V2HistoryHelp")} action={candidates.length > 0 && <select aria-label={t("V2HistorySeries")} value={active?.key} onChange={event=>setSelected(event.target.value)}>{candidates.map(row=><option key={row.key} value={row.key}>{row.provider} · {physicalWindowLabel(row.windowLabel,t)} · {observedAccountLabel(row,series,t)}</option>)}</select>}>
     {active && snapshot ? <>
-      <TimeSeriesChart points={points} since={snapshot.rangeSince} until={snapshot.rangeUntil} step={snapshot.grain === "hourly" ? 3600 : 86400}
-        label={`${active.provider} · ${physicalWindowLabel(active.windowLabel,t)}`} unit="%" formatTime={value=>time.format(value*1000)} formatValue={value=>number.format(value)} style={preferences.chartStyle}/>
-      <CoveragePanel title={t("V2HistoryValues")}><AnalyticsTable rows={active.current} rowKey={row=>String(row.observedAt)} caption={t("V2HistoryValues")} emptyLabel={t("V2InsufficientHistory")} columns={[
+      <CoveragePanel title={t("V2HistoryValues")}><AnalyticsTable copy={{columns:t("V45TableColumns"),previousPage:t("V45TablePreviousPage"),nextPage:t("V45TableNextPage"),page:t("V45TablePage")}} rows={active.current} rowKey={row=>String(row.observedAt)} caption={t("V2HistoryValues")} emptyLabel={t("V2InsufficientHistory")} columns={[
         {id:"time",title:t("V2ObservedAt"),cell:row=><bdi>{time.format(row.observedAt*1000)}</bdi>,sortValue:row=>row.observedAt},
         {id:"quota",title:t("V2UsedQuota"),cell:row=><bdi>{number.format(row.usedPercent)}%</bdi>,sortValue:row=>row.usedPercent},
         {id:"samples",title:t("V2Samples"),cell:row=>number.format(row.sampleCount),sortValue:row=>row.sampleCount},

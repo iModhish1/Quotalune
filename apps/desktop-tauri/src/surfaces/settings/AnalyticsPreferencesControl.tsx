@@ -22,7 +22,7 @@ export default function AnalyticsPreferencesControl({settings, update, disabled}
       </svg></SettingsPreview>
     </SettingsSection>
     <SettingsSection title={t("V2DashboardSections")} description={t("V2DashboardSectionsHelp")}>
-      <ol className="analytics-layout-editor">{prefs.sectionOrder.map((id, index) => <li key={id}>
+      <ol className="analytics-layout-editor">{prefs.sectionOrder.map((id, index) => <li key={id} draggable={!disabled} onDragStart={event=>event.dataTransfer.setData("text/plain",id)} onDragOver={event=>{if(!disabled)event.preventDefault();}} onDrop={event=>{event.preventDefault();if(disabled)return;const source=event.dataTransfer.getData("text/plain");if(source===id || !prefs.sectionOrder.includes(source as typeof id))return;const order=prefs.sectionOrder.filter(value=>value!==source);order.splice(order.indexOf(id),0,source as typeof id);void set({sectionOrder:order});}}>
         <SettingsToggle label={t(SECTION_LABELS[id])} disabled={disabled} checked={!prefs.hiddenSections.includes(id)} onChange={visible => {void set({hiddenSections: visible ? prefs.hiddenSections.filter(value => value !== id) : [...prefs.hiddenSections, id]});}} />
         <span>{[-1,1].map(direction => <button type="button" key={direction} disabled={disabled || index + direction < 0 || index + direction >= prefs.sectionOrder.length} aria-label={`${t(direction < 0 ? "ProviderSidebarMoveUp" : "ProviderSidebarMoveDown")} ${t(SECTION_LABELS[id])}`} onClick={() => {const order = [...prefs.sectionOrder]; [order[index], order[index + direction]] = [order[index + direction], order[index]]; void set({sectionOrder: order});}}>{direction < 0 ? "↑" : "↓"}</button>)}</span>
       </li>)}</ol>

@@ -8,18 +8,19 @@ import { useDashboardStructureTheme } from "./useDashboardStructureTheme";
 import { availableHistoryDays, computeKpis } from "./dashboardSelectors";
 import DashboardHeader from "./DashboardHeader";
 import CurrentLimits from "./CurrentLimits";
+import CoverageHeatmap from "./CoverageHeatmap";
 import KpiRow from "./KpiRow";
 import UsageTrendSection from "./UsageTrendSection";
 import ResetHorizon from "./ResetHorizon";
 import {QuotaComparison, QuotaHistory, QuotaCoverage} from "./QuotaInsights";
 import ProviderOperationsTable from "./ProviderOperationsTable";
 import {analyticsPreferences} from "../../../lib/analytics/preferences";
-import {currentProviderModel} from "../../../lib/analytics/currentProviders";
-import {buildQuotaAnalytics} from "../../../lib/analytics/quotaAnalytics";
+import {buildDashboardAnalyticsModel} from "../../../lib/analytics/dashboardModel";
+
 import {AnalyticsSection} from "../../../components/analytics/AnalyticsPrimitives";
 import AttentionQueue from "./AttentionQueue";
 import TrendIntelligence from "./TrendIntelligence";
-import {buildAttention} from "../../../lib/analytics/dashboardIntelligence";
+
 import DataStatusPanel from "./DataStatusPanel";
 import DemoIndicator from "../../../demoMode/DemoIndicator";
 import type {
@@ -29,6 +30,7 @@ import type {
   SettingsSnapshot,
 } from "../../../types/bridge";
 import "./DashboardAnalyticsPanel.css";
+import "./AnalyticsWorkstation.css";
 
 /**
  * Owns the one global range/provider-filter state every widget below
@@ -96,20 +98,8 @@ export default function DashboardAnalyticsPanel({
     ? liveProviders.filter(provider => provider.providerId === providerFilter) : liveProviders,
     [liveProviders, preferences.providerFilterScope, providerFilter]);
   const now = useMemo(() => Date.now(), [liveProviders, snapshot]);
-  const models = useMemo(() => currentProviderModel(currentProviders, settings, now), [currentProviders, settings, now]);
-  const series = useMemo(() => snapshot ? buildQuotaAnalytics(snapshot.quotaHistory ?? [], {
-    since: snapshot.rangeSince, until: snapshot.rangeUntil, grainSeconds: snapshot.grain === "hourly" ? 3600 : 86400,
-  }, providerFilter) : [], [snapshot, providerFilter]);
-  const attention = useMemo(() => buildAttention(models,series,settings,now),[models,series,settings,now]);
-  const kpis = useMemo(
-    () =>
-      computeKpis({
-        liveProviders: currentProviders,
-        snapshot,
-        settings,
-      }),
-    [currentProviders, snapshot, settings],
-  );
+  const model=useMemo(()=>buildDashboardAnalyticsModel(currentProviders,snapshot,settings,providerFilter,now),[currentProviders,snapshot,settings,providerFilter,now]);
+  const {currentLimits:models,trends:series,attention,kpis}=model;
 
   const historyChip = useMemo(() => {
     if (!snapshot) return null;
@@ -124,23 +114,24 @@ export default function DashboardAnalyticsPanel({
   const sections: Record<string, ReactNode> = {
     limits: <CurrentLimits providers={currentProviders} settings={settings} models={models} />,
     attention: <AttentionQueue items={attention} onOpenProviders={onOpenProviders} isDemo={provenance === "demo"} />,
-    overview: <><KpiRow kpis={{...kpis, alertCount: attention.length}} settings={settings} resetTimeRelative={settings.resetTimeRelative}/><TrendIntelligence series={series} snapshot={snapshot} providers={liveProviders} settings={settings} preferences={preferences}/></>,
-    resets: <ResetHorizon models={models} settings={settings} now={now} />,
+    overview: <><TrendIntelligence series={series} range={model.range} providers={liveProviders} settings={settings} preferences={preferences}/></>,
+    resets: <ResetHorizon models={models} settings={settings} now={now} resets={model.resetHorizon} />,
     comparison: <><ProviderOperationsTable models={models} settings={settings} now={now}/><QuotaComparison series={series} providers={liveProviders} settings={settings} /></>,
     history: <><QuotaHistory series={series} snapshot={snapshot} settings={settings} preferences={preferences} />
       <details className="analytics-coverage"><summary>{t("V2LegacyHistory")}</summary><p>{t("V2LegacyHistoryHelp")}</p><UsageTrendSection snapshot={snapshot} /></details></>,
-    quality: <AnalyticsSection title={t("V2DataQuality")} description={t(provenance === "demo" ? "V2DemoQuality" : "V2LiveQuality")}><QuotaCoverage series={series} snapshot={snapshot} settings={settings}/><DataStatusPanel snapshot={snapshot} /></AnalyticsSection>,
+    quality: <AnalyticsSection title={t("V2DataQuality")} description={t(provenance === "demo" ? "V2DemoQuality" : "V2LiveQuality")}><QuotaCoverage series={series} snapshot={snapshot} settings={settings}/><CoverageHeatmap model={model} settings={settings} preferences={preferences} providers={liveProviders}/><DataStatusPanel snapshot={snapshot} /></AnalyticsSection>,
   };
   return (
     <div className="dashboard-analytics" style={structureThemeStyle} data-performance={settings.dashboardPerformancePreset ?? "balanced"} data-chart-style={preferences.chartStyle}>
-      {provenance === "demo" && <div className="dashboard-analytics__demo-indicator"><DemoIndicator providerCount={liveProviders.length} onExit={() => onExitDemo?.()} /></div>}
-      <DashboardHeader range={range} onRangeChange={setRange} providerOptions={providerOptions} providerFilter={providerFilter} onProviderFilterChange={setProviderFilter} historyChip={historyChip} />
+      <div className="dashboard-command-bar">{provenance === "demo" && <div className="dashboard-analytics__demo-indicator"><DemoIndicator providerCount={liveProviders.length} onExit={() => onExitDemo?.()} /></div>}
+      <DashboardHeader range={range} onRangeChange={setRange} providerOptions={providerOptions} providerFilter={providerFilter} onProviderFilterChange={setProviderFilter} historyChip={historyChip} /></div>
+      <KpiRow kpis={kpis} settings={settings} resetTimeRelative={settings.resetTimeRelative}/>
       <div className="dashboard-command-status">
         {snapshot?.availability.firstSampleAt != null && <span>{t("V24AvailableSince")}: <bdi>{metadataDate.format(snapshot.availability.firstSampleAt*1000)}</bdi></span>}
         {["fresh","aging","stale"].map(state=><span key={state}>{t(state==="fresh"?"V24Fresh":state==="aging"?"V24Aging":"V24Stale")}: <bdi>{models.filter(model=>model.freshness.state===state).length}</bdi></span>)}
       </div>
       <p className="dashboard-analytics__scope">{t(preferences.providerFilterScope === "all" ? "V2LiveScope" : "V2HistoryScope")}</p>
-      {preferences.sectionOrder.filter(id => !preferences.hiddenSections.includes(id)).map(id => <div key={id} data-analytics-section={id}>{sections[id]}</div>)}
+      <div className="dashboard-workstation-grid">{preferences.sectionOrder.filter(id => !preferences.hiddenSections.includes(id)).map(id => <div key={id} data-analytics-section={id}>{sections[id]}</div>)}</div>
     </div>
   );
 }

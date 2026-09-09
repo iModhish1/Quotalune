@@ -31,8 +31,9 @@ export function useDashboardStructureTheme(settings: CatalogThemeSettings): {
     const muted = theme.material?.muted ?? "#aeb9c5";
 
     const style: CSSProperties = {
-      ["--qa-analytics-surface-primary" as string]: `color-mix(in srgb, ${theme.core} 62%, transparent)`,
-      ["--qa-analytics-surface-secondary" as string]: `color-mix(in srgb, ${theme.core} 52%, transparent)`,
+      // Light analytical surfaces must be opaque over the app's dark chrome.
+      ["--qa-analytics-surface-primary" as string]: theme.material?.light ? theme.core : `color-mix(in srgb, ${theme.core} 62%, transparent)`,
+      ["--qa-analytics-surface-secondary" as string]: theme.material?.light ? theme.core : `color-mix(in srgb, ${theme.core} 52%, transparent)`,
       // A real 4-theme pass (section 9/14) caught a genuine contrast risk
       // at the original 36%: for a light theme (Ceramic Pearl, the
       // catalog's one `material.light: true` entry) layered as a

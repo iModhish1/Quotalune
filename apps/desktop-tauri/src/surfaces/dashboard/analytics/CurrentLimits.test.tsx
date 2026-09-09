@@ -9,6 +9,11 @@ function provider(id: string): ProviderUsageSnapshot {
   return {providerId: id, displayName: id, primary: metric, selectedMetric: metric, secondary: null, tertiary: null, modelSpecific: null, extraRateWindows: [], cost: null, errorState: "ready", error: null, planName: null, accountEmail: null, accountOrganization: null, pace: null, trayStatusLabel: null, updatedAt: "2026-09-09T00:00:00Z", sourceLabel: "test"};
 }
 describe("Current Limits", () => {
+  it("does not show a missing-secondary-window warning for a valid primary-only provider",()=>{
+    const view=render(<CurrentLimits providers={[provider("gemini")]} settings={settings}/>);
+    expect(screen.getByText("64%")).toBeInTheDocument();
+    expect(view.container.querySelector(".quota-window-list")).toBeNull();
+  });
   it("keeps readings invariant across theme, density, chart style and limit template changes", () => {
     const source=Object.freeze(provider("codex"));
     const before=JSON.stringify(source);
