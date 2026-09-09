@@ -220,4 +220,7 @@ Owner master upgrade extends J; one Analytics Dashboard remains mandatory.
 - K08: Configurable Demo in Dashboard and Providers, isolated from live credentials/data.
 - K09: Coherent commits, tests/builds, native Dev proof, final validation; Personal untouched.
 
-Pending acceptance. Evidence: docs/validation/PRODUCT_UPGRADE_AUDIT.md.
+K01–K09: scoped implementation and engineering validation completed on 2026-09-09
+at implementation revision `17c99c02`. Evidence and explicit external-auth/profile
+limitations: `docs/validation/PRODUCT_UPGRADE_VALIDATION.md`. No claim of 70 live
+authenticated providers, owner visual approval, or Personal promotion.

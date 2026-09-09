@@ -1028,10 +1028,14 @@ mtime 2026-09-06 18:14:00, SHA-256
 Evidence: `docs/validation/DASHBOARD_CONSOLIDATION.md`.
 
 ## Professional product upgrade — K01–K09
-- [ ] Architecture/auth/settings/analytics audit and contract inventory.
-- [ ] Grouped navigation with stable destinations and keyboard behavior.
-- [ ] Provider workspace, explicit connection states and supported auth fixes.
-- [ ] Correct quota/account/time/currency semantics with counterexample tests.
-- [ ] Shared customization propagation and varied readable templates.
-- [ ] Read-only Providers Demo using existing configurable seeded model.
-- [ ] Full quality gates, fresh Dev screenshots and honest final report.
+- [x] Architecture/auth/settings/analytics audit and contract inventory.
+- [x] Grouped navigation with stable destinations and keyboard behavior.
+- [x] Provider workspace, explicit connection states and supported auth fixes.
+- [x] Correct quota/account/time/currency semantics with counterexample tests.
+- [x] Shared customization propagation and varied readable templates.
+- [x] Read-only Providers Demo using existing configurable seeded model.
+- [x] Full quality gates, fresh Dev screenshots and honest final report.
+
+Scoped engineering acceptance: `docs/validation/PRODUCT_UPGRADE_VALIDATION.md`.
+External consent completion and credential-store/profile resolver migration are
+not claimed complete; see that report's remaining scope.

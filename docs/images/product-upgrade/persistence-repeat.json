@@ -1,0 +1,74 @@
+[
+  {
+    "i": 0,
+    "expected": "compact",
+    "response": "compact",
+    "read": "compact"
+  },
+  {
+    "i": 1,
+    "expected": "comfortable",
+    "response": "comfortable",
+    "read": "comfortable"
+  },
+  {
+    "i": 2,
+    "expected": "compact",
+    "response": "compact",
+    "read": "compact"
+  },
+  {
+    "i": 3,
+    "expected": "comfortable",
+    "response": "comfortable",
+    "read": "comfortable"
+  },
+  {
+    "i": 4,
+    "expected": "compact",
+    "response": "compact",
+    "read": "compact"
+  },
+  {
+    "i": 5,
+    "expected": "comfortable",
+    "response": "comfortable",
+    "read": "comfortable"
+  },
+  {
+    "i": 6,
+    "expected": "compact",
+    "response": "compact",
+    "read": "compact"
+  },
+  {
+    "i": 7,
+    "expected": "comfortable",
+    "response": "comfortable",
+    "read": "comfortable"
+  },
+  {
+    "i": 8,
+    "expected": "compact",
+    "response": "compact",
+    "read": "compact"
+  },
+  {
+    "i": 9,
+    "expected": "comfortable",
+    "response": "comfortable",
+    "read": "comfortable"
+  },
+  {
+    "i": 10,
+    "expected": "compact",
+    "response": "compact",
+    "read": "compact"
+  },
+  {
+    "i": 11,
+    "expected": "comfortable",
+    "response": "comfortable",
+    "read": "comfortable"
+  }
+]

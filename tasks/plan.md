@@ -311,3 +311,7 @@ Engineering acceptance passed; stop here and return screenshots for owner review
 Audit source contracts first, then grouped navigation, provider state/template/auth,
 analytics correctness, shared settings/templates, isolated Demo and final native QA.
 Architecture, evidence and acceptance: docs/validation/PRODUCT_UPGRADE_AUDIT.md.
+
+Completed scoped implementation at `17c99c02`; final evidence and limitations in
+`docs/validation/PRODUCT_UPGRADE_VALIDATION.md`. Native testing additionally closed
+a cross-window settings feedback race. No release/Personal promotion performed.

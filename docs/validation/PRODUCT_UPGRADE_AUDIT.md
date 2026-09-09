@@ -8,11 +8,11 @@ This extends the single-Dashboard decision; no 3D/Spatial replacement.
 | Area | Existing architecture | Proven weakness / action |
 | --- | --- | --- |
 | Providers | `ProvidersTab` → sidebar + shared `ProviderDetailPane` → credential/usage sections | Sidebar derives success from absence of `error`, ignoring explicit `errorState`. Correct state model first; build list/detail workspace around existing capability-specific controls. |
-| Auth | Detail commands and provider credential dispatchers | Independent read-only source coverage audit pending; live provider login cannot be claimed from a mock or opening a website. |
+| Auth | Detail commands and provider credential dispatchers | All 70 IDs audited in PRODUCT_UPGRADE_AUTH_AUDIT.md; interactive capability now shares one registry between DTO and dispatch. External remote completion remains unverified. |
 | Navigation | `settingsTabs.ts` flat list of 16 destinations | Provider Display precedes Providers; analytics/preferences/system mixed. Group existing stable tab IDs without breaking deep links or native whitelist. |
 | Settings | Rust settings + typed patch/events + `useSettings` | Central persistence already exists; do not build a competing store. Chart detail reads animation once per provider; navigation is webview-local storage. Audit event consistency and migrate purposeful preferences into shared settings. |
 | Analytics | Rust history snapshot + pure dashboard selectors + SVG charts | `rankProvidersByShare` divides unrelated provider quota percentages by their sum and labels it usage share. Denominators are not comparable; replace with explicit per-provider quota observations, never a synthetic cross-provider share. |
-| Provider money | `CostSection` displays generic cost labels; `CostHistoryChart` prefixes `$` | Carry proven quantity/currency semantics into detail; suppress ambiguous historical monetary chart data until its contract proves units. |
+| Provider money | `CostSection` displays generic cost labels; `CostHistoryChart` prefixes `$` | Detail now carries quantity and currency semantics. Tracing established cost-history is the separate USD CLI-scanner path, already empty under Phase 4C eligibility; no new currency inference or fabricated zero was added. |
 | Demo | Existing seeded generator and effective hooks | Dashboard supports Demo, Providers uses live hooks/detail commands only. Add clearly separated read-only simulated provider presentation with no credential actions. |
 | Visual system | Existing Structure Theme, Provider Identity, chart components | Reuse tokens and compositions; improve task hierarchy, information tables and state rails, not isolated color edits. |
 
@@ -58,3 +58,59 @@ trend buckets explicitly. Trend comparison rejects mixed accounts/duplicate buck
 Spend totals reject non-finite values and any inconsistent point instead of silently
 presenting a partial total. Account rows use neutral labels to avoid exposing IDs.
 Validation: 68 analytics tests passed; production build/typecheck passed.
+
+### Phase 3 / 6: reusable provider workspace and Demo boundary
+
+Providers uses one searchable list/detail shell, operational-state text, status
+filter, enabled/attention counts and selected provider heading. One shared detail
+composition groups Overview, Connections and Presentation. Hidden panels remain
+mounted to preserve unsaved input; provider changes remount that composition.
+Keyboard tabs support arrows/Home/End and RTL. All existing credential-specific
+controls remain in the Connections slot; no provider-specific page fork.
+
+Demo uses the existing effective-provider generator and shared controls. Its
+Providers view never mounts the real credential pane and disables monitoring
+mutations/reorder. It is explicitly labeled simulated/read-only. Real history and
+credential commands remain separate. Native appearance evidence is now recorded in
+`PRODUCT_UPGRADE_VALIDATION.md`.
+
+### Phase 5: shared settings propagation
+
+`Settings.workspace_preferences` is optional, preserving legacy navigation for
+older files. Lenient field parsing isolates malformed density/navigation from the
+rest of Settings; writes normalize supported values. The existing Tauri patch and
+events remain the only persistence path. A read-only React projection supplies
+animation/density to charts and surrounding UI; no second store was introduced.
+Profile/global Structure Theme now colors Settings/Providers using the existing
+resolver. Dashboard surface overrides remain local; provider identity palettes are
+not rewritten by the workspace theme. Existing reduced-motion policy still wins.
+
+### Analytics contract review
+
+| Output | Contract / action |
+| --- | --- |
+| Active providers | Ready with no error; configuration availability is not authentication success. |
+| Highest quota / alerts | Selected real quota window, provider threshold settings; errored snapshots excluded. Quotas are independently normalized for display, never a share of unrelated plans. |
+| Reset schedule | Real parseable future instant from selected window; no timestamp means unavailable, never fabricated now. |
+| Quota comparison | Last selected-range bucket per provider/account; neutral account labels; no cross-provider denominator. |
+| Trend change | Percentage-point difference between bucket halves; one provider/account, >=4 unique buckets; no token/spend inference. |
+| Spend KPI | Latest cumulative reported Spend per series, known period and uniform currency/kind, no invalid points. Caption explicitly says readings, not accrued spend in selected date range. |
+| Balance / credits | Separate quantity names; credits do not acquire a currency symbol. Unknown provider semantics unavailable. |
+| Provider detail | Window labels from adapter metadata/snapshot; unhealthy snapshots do not expose stale quota/pace/cost as current. |
+| Detail token history | Exact local log totals; device-wide/all log accounts, explicitly captioned. Selected email does not claim to scope tokens. |
+| Detail cost history | USD local-scanner contract, currently empty because billing eligibility is unproven. Phase 4C safety unchanged. |
+| Legacy monetary rows | Existing contract gates remain; no promotion to provider-reported Spend. |
+| Freshness / provenance | Observed timestamp and actual source label; sidebar distinguishes disabled/auth/offline/error/stale/unavailable. |
+
+No new pricing, billing-channel inference, token-to-cost conversion or historical
+reset reconstruction was introduced. Profile membership is not credential account
+switching: unresolved new credential references are rejected before storage.
+
+Validation checkpoint: 938 frontend tests passed across 152 files, TypeScript,
+production build and desktop cargo check passed before the final token-selection
+and login-supervision regression tests. Final results will be recorded separately.
+
+Final implementation revision `17c99c02` and full native/gate evidence are recorded
+in [PRODUCT_UPGRADE_VALIDATION.md](PRODUCT_UPGRADE_VALIDATION.md). Native proof also
+exposed and closed a cross-window last-tab/settings feedback race; its before/after
+readbacks and the remaining legacy-writer scope are documented there.

@@ -1,0 +1,10 @@
+{
+  "demoModeEnabled": false,
+  "demoProviderCount": 6,
+  "uiLanguage": "english",
+  "catalogTheme": "01-obsidian-orbit",
+  "workspacePreferences": {
+    "density": "comfortable",
+    "navigation": "side"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "baseline": "7c228009",
+  "candidate": "17c99c02",
+  "credentialPatternFindings": {
+    "privateKey": 0,
+    "providerToken": 0
+  },
+  "newSkippedOrFocusedTests": 0,
+  "scope": "All added source lines in committed and working changes under apps and rust; targeted patterns, not a comprehensive security audit."
+}
