@@ -1026,3 +1026,12 @@ mtime 2026-09-06 18:14:00, SHA-256
 - [x] Keep Personal untouched; stop at FINAL DASHBOARD PASS.
 
 Evidence: `docs/validation/DASHBOARD_CONSOLIDATION.md`.
+
+## Professional product upgrade — K01–K09
+- [ ] Architecture/auth/settings/analytics audit and contract inventory.
+- [ ] Grouped navigation with stable destinations and keyboard behavior.
+- [ ] Provider workspace, explicit connection states and supported auth fixes.
+- [ ] Correct quota/account/time/currency semantics with counterexample tests.
+- [ ] Shared customization propagation and varied readable templates.
+- [ ] Read-only Providers Demo using existing configurable seeded model.
+- [ ] Full quality gates, fresh Dev screenshots and honest final report.

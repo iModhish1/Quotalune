@@ -206,3 +206,18 @@ owner visual approval is not implied. No next visual mode or Personal promotion.
 `REFERENCE_SELECTION_2026-09-06.md`، `DETAIL_VISIBILITY_2026-09-06.md`، `APP_APPEARANCE_2026-09-06.md`، `COLLECTIONS_PRODUCT_PLAN.md`، `THEME_RUNTIME_RECOVERY.md` مستندات أدلة تاريخية؛ لا تحول كلمة completed قديمة إلى قبول جديد.
 
 آخر صور المستخدم: `codex-clipboard-e5541ed3-d775-4ddc-b0fd-35337db2c61f.png` شعار About؛ `28d8968f-b1d5-4ab1-8fe3-32f73385fb8b` يرفض قائمة presets؛ `932bcc03-a95a-48ac-be9a-a68f67f0528d` يرفض palette-only/gallery؛ `bf6b60bf-41bf-4410-94ed-ee5133ce7e16` يثبت ضعف reveal icon. المسارات الكاملة ضمن رسالة المستخدم الأخيرة في Temp.
+
+## K — Professional product upgrade (2026-09-09)
+
+Owner master upgrade extends J; one Analytics Dashboard remains mandatory.
+- K01: Evidence-first architecture audit, implementation phases and honest remaining scope.
+- K02: Grouped product navigation and centralized, live settings propagation.
+- K03: Reusable premium Providers list/detail template with explicit operational states.
+- K04: Audit every provider auth entrypoint; fix supported connect/reconnect/account flows, never invent support.
+- K05: Audit analytics units, scope, currency, aggregation, freshness and unavailable semantics; fail closed.
+- K06: Upgrade readable chart/table/card templates and useful observability.
+- K07: Unify purposeful customization across relevant surfaces.
+- K08: Configurable Demo in Dashboard and Providers, isolated from live credentials/data.
+- K09: Coherent commits, tests/builds, native Dev proof, final validation; Personal untouched.
+
+Pending acceptance. Evidence: docs/validation/PRODUCT_UPGRADE_AUDIT.md.

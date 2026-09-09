@@ -305,3 +305,9 @@ reset presentation and theme/identity systems remain authoritative. Native Dev
 captures, fresh quality gates and bounded performance/bundle comparison are in
 `docs/validation/DASHBOARD_CONSOLIDATION.md`. Code frozen at `c90b12a7`.
 Engineering acceptance passed; stop here and return screenshots for owner review.
+
+## Professional product upgrade — K01–K09
+
+Audit source contracts first, then grouped navigation, provider state/template/auth,
+analytics correctness, shared settings/templates, isolated Demo and final native QA.
+Architecture, evidence and acceptance: docs/validation/PRODUCT_UPGRADE_AUDIT.md.
