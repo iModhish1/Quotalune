@@ -1,0 +1,52 @@
+{
+  "RootPid": 39928,
+  "LogicalProcessors": 80,
+  "Method": "5 x 4s samples, complete Dev process tree, CPU normalized across logical processors; no CDP",
+  "Samples": [
+    {
+      "At": "2026-09-09T14:09:31.6594791Z",
+      "CpuOneCorePercent": 3.1020079857431826,
+      "CpuMachinePercent": 0.03877509982178978,
+      "WorkingSetMiB": 592.83984375,
+      "PrivateMiB": 217.90625,
+      "RootWorkingSetMiB": 69.3359375,
+      "ProcessCount": 9
+    },
+    {
+      "At": "2026-09-09T14:09:36.1511859Z",
+      "CpuOneCorePercent": 1.739316555568587,
+      "CpuMachinePercent": 0.021741456944607336,
+      "WorkingSetMiB": 592.4609375,
+      "PrivateMiB": 217.91015625,
+      "RootWorkingSetMiB": 69.3359375,
+      "ProcessCount": 9
+    },
+    {
+      "At": "2026-09-09T14:09:40.6462288Z",
+      "CpuOneCorePercent": 0.0,
+      "CpuMachinePercent": 0.0,
+      "WorkingSetMiB": 592.4609375,
+      "PrivateMiB": 217.91015625,
+      "RootWorkingSetMiB": 69.3359375,
+      "ProcessCount": 9
+    },
+    {
+      "At": "2026-09-09T14:09:45.0682354Z",
+      "CpuOneCorePercent": 0.0,
+      "CpuMachinePercent": 0.0,
+      "WorkingSetMiB": 592.46484375,
+      "PrivateMiB": 217.91015625,
+      "RootWorkingSetMiB": 69.3359375,
+      "ProcessCount": 9
+    },
+    {
+      "At": "2026-09-09T14:09:49.498661Z",
+      "CpuOneCorePercent": 0.0,
+      "CpuMachinePercent": 0.0,
+      "WorkingSetMiB": 592.46484375,
+      "PrivateMiB": 217.91015625,
+      "RootWorkingSetMiB": 69.3359375,
+      "ProcessCount": 9
+    }
+  ]
+}

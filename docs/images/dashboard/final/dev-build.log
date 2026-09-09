@@ -1,0 +1,64 @@
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `pnpm run build`
+$ pnpm run check-locale
+$ node scripts/check-locale-drift.mjs
+[check-locale] OK — 1085 locale keys match between Rust and TS
+$ tsc --noEmit && vite build
+vite v6.4.2 building for production...
+transforming...
+✓ 775 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                  0.41 kB │ gzip:   0.27 kB
+dist/assets/ProfileSwitcher-BGbHcSzc.css         1.19 kB │ gzip:   0.48 kB
+dist/assets/PopOutPanel-DfwZZxun.css             2.55 kB │ gzip:   0.70 kB
+dist/assets/CollectionsStudio-BY06XmW0.css       4.99 kB │ gzip:   1.54 kB
+dist/assets/FloatingHudStage-Cnpy9Zhk.css        6.08 kB │ gzip:   1.64 kB
+dist/assets/FloatBar-DXsDyTZq.css                8.35 kB │ gzip:   1.61 kB
+dist/assets/UsageWindowList-2-j3kt7E.css        10.58 kB │ gzip:   2.56 kB
+dist/assets/AnalyticsDashboard-BmDlaVEv.css     14.86 kB │ gzip:   2.74 kB
+dist/assets/Settings-Dfa03DaQ.css               33.29 kB │ gzip:   5.55 kB
+dist/assets/DemoStage-CqiW8dBy.css              34.45 kB │ gzip:   6.06 kB
+dist/assets/FlowSurface-DzaJWPSX.css            42.11 kB │ gzip:   7.49 kB
+dist/assets/SettingsShellHeader-D5bA6umu.css    59.78 kB │ gzip:  10.66 kB
+dist/assets/index-Bm32Jh7l.css                 124.41 kB │ gzip:  22.23 kB
+dist/assets/collectionBridge-D7UeSPeN.js         0.15 kB │ gzip:   0.13 kB
+dist/assets/useSurfaceDemo-B-2_2GIP.js           0.46 kB │ gzip:   0.31 kB
+dist/assets/providerState-Dwxsh5HG.js            0.49 kB │ gzip:   0.24 kB
+dist/assets/surfaceBridge-BQ1m0t3g.js            0.53 kB │ gzip:   0.24 kB
+dist/assets/useStageRuntime-DlWYrgJJ.js          0.87 kB │ gzip:   0.51 kB
+dist/assets/CollectionsStudio-Bm8MYiHy.js        1.16 kB │ gzip:   0.59 kB
+dist/assets/useDashboardState-Sf2S1WfV.js        1.63 kB │ gzip:   0.80 kB
+dist/assets/EdgeArc-BZ5VbdAB.js                  2.45 kB │ gzip:   0.98 kB
+dist/assets/TaskbarArc-CVRtNb2A.js               2.45 kB │ gzip:   1.28 kB
+dist/assets/NotchGauge-BchPM1ir.js               3.09 kB │ gzip:   1.43 kB
+dist/assets/CollectionsNativeView-J8P688wk.js    3.56 kB │ gzip:   1.48 kB
+dist/assets/FloatingHudStage-CMCh-p-C.js         3.73 kB │ gzip:   1.51 kB
+dist/assets/TopArc-CfHXZ_HU.js                   4.15 kB │ gzip:   1.75 kB
+dist/assets/ProfileSwitcher-DK7hdmiw.js          4.49 kB │ gzip:   1.86 kB
+dist/assets/PopOutPanel-fBI2HGI1.js              5.61 kB │ gzip:   2.25 kB
+dist/assets/constants-A-REQuds.js                5.92 kB │ gzip:   2.45 kB
+dist/assets/UsageWindowList-KwrNnZCU.js          6.02 kB │ gzip:   2.63 kB
+dist/assets/FloatBar-CzQ0_FzO.js                 7.87 kB │ gzip:   2.99 kB
+dist/assets/AnalyticsDashboard-csm0A-Pz.js      31.38 kB │ gzip:   9.39 kB
+dist/assets/FlowSurface-a1Ue_5hu.js             35.04 kB │ gzip:  10.90 kB
+dist/assets/SettingsShellHeader-C3pSGCMs.js     40.48 kB │ gzip:  11.30 kB
+dist/assets/DemoStage-Ci33QQPt.js               89.48 kB │ gzip:  22.94 kB
+dist/assets/Settings-BRIT_DDm.js               166.29 kB │ gzip:  41.80 kB
+dist/assets/index-MgwCuuVD.js                  507.59 kB │ gzip: 166.03 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 4.41s
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   N:\QuotaArc\quotaarc\rust\Cargo.toml
+workspace: N:\QuotaArc\quotaarc\Cargo.toml
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling quotalis_core v0.11.0 (N:\QuotaArc\quotaarc\rust)
+   Compiling codexbar-desktop-tauri v0.11.0 (N:\QuotaArc\quotaarc\apps\desktop-tauri\src-tauri)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 29.33s
+       Built application at: N:\QuotaArc\quotaarc\target\debug\QuotalisDev.exe

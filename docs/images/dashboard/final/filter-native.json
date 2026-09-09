@@ -1,0 +1,7 @@
+{
+  "historyProviders": [
+    "claude"
+  ],
+  "currentLimitCount": 6,
+  "demo": true
+}

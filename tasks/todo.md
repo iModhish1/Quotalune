@@ -1012,3 +1012,17 @@ mtime 2026-09-06 18:14:00, SHA-256
       `.local/proof/provider-identities-final-light/evidence.json`.
 - [x] Fresh native Debug binary: PID 6804, mtime 2026-09-06 18:05:50,
       SHA-256 `EE9F1DEF46F69DD105DB141F20E7265758A85053EB97AB49004D5B93CCC9D4CF`.
+
+## Single Dashboard consolidation — 2026-09-09
+
+- [x] Retire public 3D/Spatial/Hybrid modes, renderer/lab routes and Three.js.
+- [x] Safely resolve legacy persisted modes to Analytics without file migration.
+- [x] Preserve deterministic Demo and distinct Spend/Balance/Credits semantics.
+- [x] Put limits/reset tracking first; retain history, theme and provider identity.
+- [x] Verify RTL, narrow/maximized, three themes and real/Demo native captures.
+- [x] Run 920 frontend tests; Rust 455 + 1611 + 1 passed, one existing ignored.
+- [x] Complete tsc/build, clippy/fmt, 1085-key parity and changed-code scans.
+- [x] Record no-CDP idle CPU/memory and before/after production bundle evidence.
+- [x] Keep Personal untouched; stop at FINAL DASHBOARD PASS.
+
+Evidence: `docs/validation/DASHBOARD_CONSOLIDATION.md`.

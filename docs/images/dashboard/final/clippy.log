@@ -1,0 +1,6 @@
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   N:\QuotaArc\quotaarc\rust\Cargo.toml
+workspace: N:\QuotaArc\quotaarc\Cargo.toml
+   Compiling quotalis_core v0.11.0 (N:\QuotaArc\quotaarc\rust)
+    Checking codexbar-desktop-tauri v0.11.0 (N:\QuotaArc\quotaarc\apps\desktop-tauri\src-tauri)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 15.69s

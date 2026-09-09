@@ -1,0 +1,27 @@
+{
+  "ready": true,
+  "width": 520,
+  "height": 636,
+  "domContentLoaded": 180,
+  "firstContentfulPaint": 272,
+  "resources": [
+    "http://tauri.localhost/assets/index-MgwCuuVD.js",
+    "http://tauri.localhost/assets/Settings-BRIT_DDm.js",
+    "http://tauri.localhost/assets/SettingsShellHeader-C3pSGCMs.js",
+    "http://tauri.localhost/assets/FlowSurface-a1Ue_5hu.js",
+    "http://tauri.localhost/assets/UsageWindowList-KwrNnZCU.js",
+    "http://tauri.localhost/assets/NotchGauge-BchPM1ir.js",
+    "http://tauri.localhost/assets/CollectionsStudio-Bm8MYiHy.js",
+    "http://tauri.localhost/assets/constants-A-REQuds.js",
+    "http://tauri.localhost/assets/providerState-Dwxsh5HG.js",
+    "http://tauri.localhost/assets/useSurfaceDemo-B-2_2GIP.js",
+    "http://tauri.localhost/assets/surfaceBridge-BQ1m0t3g.js",
+    "http://tauri.localhost/assets/ProfileSwitcher-DK7hdmiw.js",
+    "http://tauri.localhost/assets/useStageRuntime-DlWYrgJJ.js",
+    "http://tauri.localhost/assets/collectionBridge-D7UeSPeN.js",
+    "http://tauri.localhost/assets/AnalyticsDashboard-csm0A-Pz.js",
+    "http://tauri.localhost/assets/useDashboardState-Sf2S1WfV.js"
+  ],
+  "openCommandToReadyMs": 808.8363,
+  "method": "fresh Dev process, one cold Settings Dashboard open, includes CDP polling overhead"
+}

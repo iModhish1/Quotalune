@@ -1,0 +1,8 @@
+Completion extract; full original log retained under .local. See raw-log-hashes.json.
+✓ src/surfaces/settings/ThemeStructureMatrix.test.tsx (1 test) 40618ms
+   ✓ theme and structure compatibility matrix > renders every live identity on every structure, anchor and principal view  40616ms
+
+ Test Files  147 passed (147)
+      Tests  920 passed (920)
+   Start at  17:01:18
+   Duration  47.66s (transform 19.74s, setup 82.55s, collect 122.91s, tests 86.41s, environment 290.29s, prepare 43.08s)

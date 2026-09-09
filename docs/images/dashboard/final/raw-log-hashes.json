@@ -1,0 +1,10 @@
+{
+  "frontend-tests.log": {
+    "fullLocalLogSHA256": "396c1678476c5b8c5ed85d07cbb08a9d0a32536242aafd1a2259f7257410792e",
+    "fullLocalLogBytes": 2175965
+  },
+  "rust-tests.log": {
+    "fullLocalLogSHA256": "17db0e5804333182b0bfb637d5886a11be5dd585e734d4776a06e3a12c1e0fa8",
+    "fullLocalLogBytes": 172190
+  }
+}

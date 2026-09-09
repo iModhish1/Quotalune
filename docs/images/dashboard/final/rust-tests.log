@@ -1,0 +1,9 @@
+Completion extract; full original log retained under .local. See raw-log-hashes.json.
+Running unittests src\main.rs (target\debug\deps\Quotalis-f0c7fa2e3c628848.exe)
+test result: ok. 455 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.32s
+     Running unittests src\lib.rs (target\debug\deps\quotalis_core-d25071cdf9565e0d.exe)
+test result: ok. 1611 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.85s
+     Running unittests src\main.rs (target\debug\deps\quotalis-740ced30e53a018a.exe)
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+   Doc-tests quotalis_core
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

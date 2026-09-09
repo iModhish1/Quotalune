@@ -1,0 +1,136 @@
+{
+  "assets": [
+    {
+      "file": "AnalyticsDashboard-csm0A-Pz.js",
+      "bytes": 31377,
+      "gzip": 9384
+    },
+    {
+      "file": "collectionBridge-D7UeSPeN.js",
+      "bytes": 146,
+      "gzip": 132
+    },
+    {
+      "file": "CollectionsNativeView-J8P688wk.js",
+      "bytes": 3561,
+      "gzip": 1478
+    },
+    {
+      "file": "CollectionsStudio-Bm8MYiHy.js",
+      "bytes": 1162,
+      "gzip": 592
+    },
+    {
+      "file": "constants-A-REQuds.js",
+      "bytes": 5918,
+      "gzip": 2453
+    },
+    {
+      "file": "DemoStage-Ci33QQPt.js",
+      "bytes": 89478,
+      "gzip": 22763
+    },
+    {
+      "file": "EdgeArc-BZ5VbdAB.js",
+      "bytes": 2453,
+      "gzip": 982
+    },
+    {
+      "file": "FloatBar-CzQ0_FzO.js",
+      "bytes": 7873,
+      "gzip": 2993
+    },
+    {
+      "file": "FloatingHudStage-CMCh-p-C.js",
+      "bytes": 3728,
+      "gzip": 1501
+    },
+    {
+      "file": "FlowSurface-a1Ue_5hu.js",
+      "bytes": 35044,
+      "gzip": 10799
+    },
+    {
+      "file": "index-MgwCuuVD.js",
+      "bytes": 507594,
+      "gzip": 165099
+    },
+    {
+      "file": "NotchGauge-BchPM1ir.js",
+      "bytes": 3091,
+      "gzip": 1429
+    },
+    {
+      "file": "PopOutPanel-fBI2HGI1.js",
+      "bytes": 5610,
+      "gzip": 2247
+    },
+    {
+      "file": "ProfileSwitcher-DK7hdmiw.js",
+      "bytes": 4488,
+      "gzip": 1867
+    },
+    {
+      "file": "providerState-Dwxsh5HG.js",
+      "bytes": 492,
+      "gzip": 235
+    },
+    {
+      "file": "Settings-BRIT_DDm.js",
+      "bytes": 166286,
+      "gzip": 41570
+    },
+    {
+      "file": "SettingsShellHeader-C3pSGCMs.js",
+      "bytes": 40477,
+      "gzip": 11247
+    },
+    {
+      "file": "surfaceBridge-BQ1m0t3g.js",
+      "bytes": 528,
+      "gzip": 243
+    },
+    {
+      "file": "TaskbarArc-CVRtNb2A.js",
+      "bytes": 2454,
+      "gzip": 1278
+    },
+    {
+      "file": "TopArc-CfHXZ_HU.js",
+      "bytes": 4150,
+      "gzip": 1745
+    },
+    {
+      "file": "UsageWindowList-KwrNnZCU.js",
+      "bytes": 6015,
+      "gzip": 2612
+    },
+    {
+      "file": "useDashboardState-Sf2S1WfV.js",
+      "bytes": 1633,
+      "gzip": 805
+    },
+    {
+      "file": "useStageRuntime-DlWYrgJJ.js",
+      "bytes": 869,
+      "gzip": 507
+    },
+    {
+      "file": "useSurfaceDemo-B-2_2GIP.js",
+      "bytes": 461,
+      "gzip": 312
+    }
+  ],
+  "totalJavaScriptBytes": 924888,
+  "cachedRetiredPackages": [
+    {
+      "name": "three@0.185.1",
+      "cachedBytes": 23172772
+    },
+    {
+      "name": "@types+three@0.185.4",
+      "cachedBytes": 10626182
+    }
+  ],
+  "threeLinked": false
+}
