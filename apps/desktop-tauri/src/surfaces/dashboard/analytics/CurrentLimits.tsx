@@ -41,7 +41,7 @@ export default function CurrentLimits({ providers, settings }: {providers: Provi
             {(stage.windows?.length ?? 0) > 0 ? <UsageWindowList providerId={stage.id} windows={stage.windows ?? []} hidden={stage.detailsHidden} presentation={stage.limitPresentation} /> : <small><bdi>{stage.reset}</bdi></small>}
           </> : <p className="dashboard-limits__unavailable">{t("DashboardValueUnavailable")}</p>}
           {ready && cost && Number.isFinite(cost.used) && quantity !== "unknown" && <p className="dashboard-limits__remaining">
-            <span>{t(quantity === "spend" ? "DashboardMetricSpend" : quantity === "balance" ? "DashboardBalance" : "CreditsLabel")}</span>
+            <span>{t(quantity === "spend" ? "DashboardMetricSpend" : quantity === "balance" ? "DashboardBalance" : "DashboardCredits")}</span>
             <bdi dir="ltr">{cost.used.toLocaleString(undefined, {maximumFractionDigits: 2})}{quantity !== "credits" && cost.currencyCode ? ` ${cost.currencyCode}` : ""}</bdi>
           </p>}
         </article>;

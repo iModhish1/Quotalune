@@ -511,6 +511,7 @@ locale_keys! {
     DashboardBalancedHelp,
     DashboardHighFidelityHelp,
     DashboardBalance,
+    DashboardCredits,
     DashboardDataStatusCostUnavailable,
     DashboardUsageTrendTitle,
     DashboardMetricUsage,

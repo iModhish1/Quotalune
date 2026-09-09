@@ -273,6 +273,7 @@ export const ALL_LOCALE_KEYS = [
   "DashboardBalancedHelp",
   "DashboardHighFidelityHelp",
   "DashboardBalance",
+  "DashboardCredits",
   "DashboardDataStatusCostUnavailable",
   "DashboardUsageTrendTitle",
   "DashboardMetricUsage",

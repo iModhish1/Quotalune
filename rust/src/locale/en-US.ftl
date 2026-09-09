@@ -1097,6 +1097,7 @@ DashboardNeedsAttention = Needs attention
 
 DashboardDemoState = Demo state
 DashboardBalance = Balance
+DashboardCredits = Credits
 
 DashboardPreferences = Dashboard Preferences
 DashboardStudioSaving = Saving…

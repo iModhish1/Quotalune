@@ -320,6 +320,7 @@ DashboardNeedsAttention = يتطلب الانتباه
 
 DashboardDemoState = حالة تجريبية
 DashboardBalance = الرصيد
+DashboardCredits = وحدات الائتمان
 
 DashboardPreferences = تفضيلات لوحة التحكم
 DashboardStudioSaving = جارٍ الحفظ…
