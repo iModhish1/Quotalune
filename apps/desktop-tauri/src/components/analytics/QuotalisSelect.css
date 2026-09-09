@@ -1,0 +1,12 @@
+.quotalis-select{display:flex;align-items:center;justify-content:space-between;gap:16px;min-width:80px;max-width:100%;min-height:30px;padding:6px 10px;border:1px solid var(--cosmic-line,var(--qa-analytics-hairline));border-radius:6px;background:var(--qa-analytics-surface-primary,#061426);color:var(--qa-analytics-text-primary,#edf5ff);font:inherit;font-size:11px;cursor:pointer}
+.quotalis-select>span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.quotalis-select:focus-visible{outline:2px solid var(--qa-analytics-accent,#59baff);outline-offset:2px}
+.quotalis-select-panel{position:fixed;z-index:10000;box-sizing:border-box;overflow:auto;padding:6px;background:var(--select-bg);color:var(--select-text);border:1px solid var(--select-accent);border-radius:9px;box-shadow:0 14px 40px #0009;font-family:inherit;outline:none;animation:quotalis-menu-in 120ms ease-out}
+.quotalis-select-panel input{box-sizing:border-box;width:100%;border:1px solid var(--select-accent);border-radius:5px;background:transparent;color:inherit;padding:8px;margin-bottom:5px;font:inherit;font-size:12px}
+.quotalis-select-panel [role=option]{display:flex;align-items:center;gap:9px;width:100%;padding:8px;border:1px solid transparent;border-radius:5px;text-align:start;color:inherit;background:transparent;font:inherit;font-size:12px;cursor:pointer}
+.quotalis-select-panel [role=option]>span:nth-last-child(2){flex:1}
+.quotalis-select-panel [aria-selected=true]{background:color-mix(in srgb,var(--select-accent) 18%,transparent)}
+.quotalis-select-panel [data-active=true]{border-color:var(--select-accent);background:color-mix(in srgb,var(--select-accent) 12%,transparent)}
+.quotalis-select-panel .provider-icon[data-provider-id=grok]{--provider-brand:var(--select-text)!important}
+@keyframes quotalis-menu-in{from{opacity:0;translate:0 -3px}to{opacity:1;translate:0 0}}
+@media(prefers-reduced-motion:reduce){.quotalis-select-panel{animation:none}}

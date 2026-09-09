@@ -25,6 +25,7 @@ export function ProviderIcon({
     return (
       <span
         className={`provider-icon provider-icon--svg${className ? " " + className : ""}`}
+        data-provider-id={providerId}
         style={{
           ...dims,
           ["--provider-brand" as string]: entry.brandColor,
@@ -40,6 +41,7 @@ export function ProviderIcon({
   return (
     <span
       className={`provider-icon provider-icon--letter${className ? " " + className : ""}`}
+      data-provider-id={providerId}
       style={{
         ...dims,
         ["--provider-brand" as string]: entry.brandColor,

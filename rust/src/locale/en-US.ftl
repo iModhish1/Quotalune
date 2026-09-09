@@ -1387,3 +1387,12 @@ V45Later = Later
 V45Mean = Observed mean
 
 V45TableFreshness = Freshness
+
+V4More = More
+
+V4UsageMatrix = Provider usage matrix
+V4ObservedQuota = Latest observed quota per daily window
+
+V4CurrentMean = Current mean
+V4PreviousMean = Previous mean
+V4MeanChange = Mean change

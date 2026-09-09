@@ -31,6 +31,7 @@ export function useDashboardStructureTheme(settings: CatalogThemeSettings): {
     const muted = theme.material?.muted ?? "#aeb9c5";
 
     const style: CSSProperties = {
+      ["--qa-analytics-surface-opaque" as string]: theme.core,
       // Light analytical surfaces must be opaque over the app's dark chrome.
       ["--qa-analytics-surface-primary" as string]: theme.material?.light ? theme.core : `color-mix(in srgb, ${theme.core} 62%, transparent)`,
       ["--qa-analytics-surface-secondary" as string]: theme.material?.light ? theme.core : `color-mix(in srgb, ${theme.core} 52%, transparent)`,

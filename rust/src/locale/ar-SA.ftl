@@ -633,3 +633,12 @@ V45Later = لاحقًا
 V45Mean = متوسط القراءات
 
 V45TableFreshness = حداثة البيانات
+
+V4More = المزيد
+
+V4UsageMatrix = مصفوفة استخدام المزوّدين
+V4ObservedQuota = آخر حصة مرصودة لكل نافذة يومية
+
+V4CurrentMean = المتوسط الحالي
+V4PreviousMean = المتوسط السابق
+V4MeanChange = تغير المتوسط
