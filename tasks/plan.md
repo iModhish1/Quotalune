@@ -324,3 +324,6 @@ legacy tab IDs. Run affected gates per wave and native proof on the final binary
 
 ## L12 — Wave 4.5 checkpoint
 The professional analytics platform, measured rendering/lifecycle, native golden states and full quality gates are complete. Evidence: `docs/validation/ANALYTICS_V3_VALIDATION.md`. Stop for owner visual review; Providers V2.1 is not started. Preserve the remaining Product V2 backlog above.
+
+## Analytics V4 owner-selected cosmic implementation
+Selected image implemented directly after owner rejected further concept sheets. Preserve original Quotalis/provider artwork, source-backed metrics, Dev-only validation and existing customization. Stop before Providers redesign. Evidence and remaining visual acceptance: docs/validation/ANALYTICS_V4_VALIDATION.md.
