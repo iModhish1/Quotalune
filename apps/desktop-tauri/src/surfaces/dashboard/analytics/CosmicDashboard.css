@@ -110,6 +110,8 @@
 .cosmic-matrix-quality h3 {font-size:13px!important;margin:0!important;color:var(--qa-analytics-text-primary)}
 .cosmic-matrix-quality>aside {font-size:10px;padding:6px;border-inline-start:1px solid var(--cosmic-line)}
 .cosmic-matrix-quality>aside p {font-size:10px!important;line-height:1.5!important;margin:10px 0!important}
+.cosmic-matrix-quality:has(aside>details[open]) {grid-template-columns:minmax(0,1fr)}
+.cosmic-matrix-quality:has(aside>details[open])>aside {border-inline-start:0;border-top:1px solid var(--cosmic-line);padding-top:12px}
 .cosmic-matrix {min-width:0}
 .cosmic-matrix header {display:flex;align-items:center;gap:12px;margin-bottom:8px}
 .cosmic-matrix header>span {font-size:9px;color:var(--qa-analytics-text-secondary)}
