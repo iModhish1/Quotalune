@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import {useWorkspacePresentation} from "../../design-system/WorkspacePresentation";
 import { useChartAnimation } from "./useChartAnimation";
 
 /**
@@ -44,6 +45,7 @@ export function BarChart({
   animations = true,
   emptyMessage,
 }: BarChartProps) {
+  const {chartStyle} = useWorkspacePresentation();
   const fmt = valueFormatter ?? ((v: number) => v.toFixed(2));
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
@@ -55,11 +57,11 @@ export function BarChart({
   ]);
 
   const { max, peakIndex } = useMemo(() => {
-    let m = 0.0001;
+    let m = 0;
     let p = -1;
     for (let i = 0; i < data.length; i++) {
       const v = data[i].value;
-      if (v > m) {
+      if (Number.isFinite(v) && v > m) {
         m = v;
         p = i;
       }
@@ -67,7 +69,7 @@ export function BarChart({
     return { max: m, peakIndex: p };
   }, [data]);
 
-  if (data.length === 0) {
+  if (!data.some(point => Number.isFinite(point.value) && point.value >= 0)) {
     return (
       <div className="chart chart--bar">
         <div className="chart__empty">{emptyMessage ?? ""}</div>
@@ -101,12 +103,13 @@ export function BarChart({
         aria-label={ariaLabel}
       >
         {data.map((p, i) => {
-          const base = p.value === 0 ? 1 : Math.max(3, (p.value / max) * plotHeight);
+          if (!Number.isFinite(p.value) || p.value < 0) return null;
+          const base = p.value === 0 ? 0 : (p.value / max) * plotHeight;
           const eased = anim.barProgress(i);
           const barH = base * eased;
           const x = i * (barWidth + BAR_GAP);
           const y = height - barH;
-          const isPeak = i === peakIndex && barH > CAP_HEIGHT;
+          const isPeak = chartStyle !== "minimal" && i === peakIndex && barH > CAP_HEIGHT;
           const bodyH = isPeak ? Math.max(0, barH - CAP_HEIGHT) : barH;
           const bodyY = isPeak ? y + CAP_HEIGHT : y;
           const isHovered = hover?.i === i;
@@ -122,6 +125,12 @@ export function BarChart({
                 opacity={p.value === 0 ? 0.25 : isHovered ? 1 : 0.9}
                 rx={1}
                 className="chart__bar"
+                tabIndex={0}
+                role="img"
+                aria-label={`${p.label}: ${fmt(p.value)}`}
+                onFocus={() => setHover({i,x:x / actualWidth * (containerRef.current?.clientWidth ?? actualWidth),y})}
+                onBlur={onLeave}
+                onKeyDown={event=>{if(event.key === "Escape") onLeave();}}
                 onMouseMove={(e) => onMove(e, i)}
                 onMouseLeave={onLeave}
               >
@@ -173,7 +182,7 @@ export function BarChart({
           <bdi>{data[data.length - 1].label}</bdi>
         </span>
       </div>
-      {hover && !anim.running && (
+      {hover && data[hover.i] && !anim.running && (
         <div
           className="chart__tooltip"
           style={{ left: hover.x, top: hover.y }}

@@ -7,6 +7,18 @@ function points(values: number[]): BarChartPoint[] {
 }
 
 describe("BarChart", () => {
+  it("shows unavailable for invalid values without inventing a zero axis", () => {
+    render(<BarChart data={points([NaN, Infinity, -1])} ariaLabel="Cost" emptyMessage="Unavailable" />);
+    expect(screen.getByText("Unavailable")).toBeInTheDocument();
+    expect(document.querySelector(".chart__axis")).toBeNull();
+  });
+
+  it("retains a real zero without drawing a positive-height bar", () => {
+    render(<BarChart data={points([0])} ariaLabel="Cost" animations={false} />);
+    expect(document.querySelector(".chart__bar")).toHaveAttribute("height", "0");
+    expect(document.querySelector(".chart__axis-max")).toHaveTextContent("0.00");
+  });
+
   it("shows the empty message when there is no data", () => {
     render(<BarChart data={[]} ariaLabel="Cost" emptyMessage="No data yet" />);
     expect(screen.getByText("No data yet")).toBeInTheDocument();

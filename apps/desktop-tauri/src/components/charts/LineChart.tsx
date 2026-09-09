@@ -1,5 +1,6 @@
 import { useId, useRef, useState } from "react";
 import { useChartAnimation } from "./useChartAnimation";
+import {useWorkspacePresentation} from "../../design-system/WorkspacePresentation";
 
 /**
  * LineChart — dependency-free SVG line chart with optional area fill,
@@ -13,6 +14,7 @@ import { useChartAnimation } from "./useChartAnimation";
 export interface LineChartPoint {
   label: string;
   value: number;
+  timestamp?: number;
 }
 
 export interface LineChartProps {
@@ -33,6 +35,7 @@ export interface LineChartProps {
    * hasn't been updated yet).
    */
   maxLabel?: string;
+  expectedStep?: number;
 }
 
 const DEFAULT_COLOR = "var(--chart-credits)";
@@ -48,11 +51,13 @@ export function LineChart({
   animations = true,
   emptyMessage,
   maxLabel,
+  expectedStep,
 }: LineChartProps) {
   const fmt = valueFormatter ?? ((v: number) => v.toFixed(2));
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
   const gradientId = useId();
+  const {chartStyle} = useWorkspacePresentation();
 
   const anim = useChartAnimation(data.length, animations, [
     data.length,
@@ -60,7 +65,7 @@ export function LineChart({
     data[data.length - 1]?.label,
   ]);
 
-  if (data.length === 0) {
+  if (data.length === 0 || !data.some(point => Number.isFinite(point.value))) {
     return (
       <div className="chart chart--line">
         <div className="chart__empty">{emptyMessage ?? ""}</div>
@@ -69,8 +74,8 @@ export function LineChart({
   }
 
   const values = data.map((p) => p.value);
-  const max = Math.max(...values, 0.0001);
-  const min = Math.min(...values, 0);
+  const max = values.reduce((result,value) => Number.isFinite(value) ? Math.max(result,value) : result, 0);
+  const min = values.reduce((result,value) => Number.isFinite(value) ? Math.min(result,value) : result, 0);
   const range = Math.max(max - min, 0.0001);
 
   const plotHeight = Math.max(1, height - 4);
@@ -82,17 +87,16 @@ export function LineChart({
   const baselineY = pad + plotHeight;
 
   const step = data.length > 1 ? usableWidth / (data.length - 1) : 0;
+  const temporal = data.every(point => Number.isFinite(point.timestamp)) && data[data.length-1].timestamp! > data[0].timestamp!;
   const coords = data.map((p, i) => {
-    const x = pad + i * step;
+    const x = temporal ? pad + (p.timestamp! - data[0].timestamp!) / (data[data.length-1].timestamp! - data[0].timestamp!) * usableWidth : pad + i * step;
     const finalY = pad + plotHeight - ((p.value - min) / range) * plotHeight;
     const t = anim.barProgress(i);
     const y = baselineY + (finalY - baselineY) * t;
     return { x, y, finalY };
   });
 
-  if (coords.length === 1) {
-    coords.push({ x: pad + usableWidth, y: coords[0].y, finalY: coords[0].finalY });
-  }
+
 
   // Anchor the peak-value annotation to the actual highest point's x
   // position (first occurrence), not a fixed center -- it previously sat at
@@ -119,16 +123,18 @@ export function LineChart({
   );
   const toPercent = (x: number) => `${((x / SVG_WIDTH) * 100).toFixed(2)}%`;
 
-  const polyline = coords.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(" ");
-
-  const areaPath = area
-    ? [
-        `M ${coords[0].x.toFixed(1)} ${baselineY.toFixed(1)}`,
-        ...coords.map((c) => `L ${c.x.toFixed(1)} ${c.y.toFixed(1)}`),
-        `L ${coords[coords.length - 1].x.toFixed(1)} ${baselineY.toFixed(1)}`,
-        "Z",
-      ].join(" ")
-    : null;
+  const segments: typeof coords[] = [];
+  let segment: typeof coords = [];
+  data.forEach((point,index) => {
+    const previous = data[index-1];
+    if (!Number.isFinite(point.value)) { if(segment.length) segments.push(segment); segment=[]; return; }
+    if (previous && temporal && (point.timestamp! <= previous.timestamp! || (expectedStep && point.timestamp! - previous.timestamp! > expectedStep * 1.5))) {
+      if(segment.length) segments.push(segment); segment=[];
+    }
+    segment.push(coords[index]);
+  });
+  if(segment.length) segments.push(segment);
+  const areaPath = area && chartStyle !== "minimal" ? segments.filter(group=>group.length>1).map(group=>`M ${group[0].x} ${baselineY} ${group.map(c=>`L ${c.x} ${c.y}`).join(" ")} L ${group[group.length-1].x} ${baselineY} Z`).join(" ") : null;
 
   const onPointMove = (e: React.MouseEvent<SVGCircleElement>, i: number) => {
     const host = containerRef.current;
@@ -172,8 +178,8 @@ export function LineChart({
           y2={baselineY}
           className="chart__baseline"
         />
-        <polyline
-          points={polyline}
+        {segments.map((group,index)=><polyline key={index}
+          points={group.map(c=>`${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(" ")}
           fill="none"
           stroke={color}
           strokeWidth={1.5}
@@ -181,15 +187,21 @@ export function LineChart({
           strokeLinecap="round"
           opacity={0.95}
           className="chart__line"
-        />
-        {data.map((p, i) => (
+        />)}
+        {data.map((p, i) => Number.isFinite(p.value) && (
           <circle
             key={`${p.label}-${i}`}
             cx={coords[i].x}
             cy={coords[i].y}
-            r={hover?.i === i ? 3 : 1.8}
+            r={hover?.i === i || chartStyle === "detailed" ? 3 : chartStyle === "minimal" ? 1 : 1.8}
             fill={color}
             className="chart__point"
+            tabIndex={0}
+            role="img"
+            aria-label={`${p.label}: ${fmt(p.value)}`}
+            onFocus={() => setHover({i,x:coords[i].x / SVG_WIDTH * (containerRef.current?.clientWidth ?? SVG_WIDTH),y:coords[i].y})}
+            onBlur={onLeave}
+            onKeyDown={event=>{if(event.key === "Escape") onLeave();}}
             onMouseMove={(e) => onPointMove(e, i)}
             onMouseLeave={onLeave}
           >
@@ -234,7 +246,7 @@ export function LineChart({
           <bdi>{data[data.length - 1].label}</bdi>
         </span>
       </div>
-      {hover && !anim.running && (
+      {hover && data[hover.i] && !anim.running && (
         <div
           className="chart__tooltip"
           style={{ left: hover.x, top: hover.y }}

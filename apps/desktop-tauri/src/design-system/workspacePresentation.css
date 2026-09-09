@@ -6,3 +6,10 @@
 :root[data-density="compact"] .dashboard-limits__instrument{padding:12px}
 :root[data-density="compact"] .quota-observations :is(th,td){padding-block:8px}
 :root[data-animations="false"] :is(.settings-studio,.dashboard-analytics) *{animation:none!important;transition:none!important}
+:root[data-density="dense"] .settings-studio .settings-section{padding:9px}
+:root[data-density="dense"] .settings-studio .settings-field{padding-block:6px}
+:root[data-density="dense"] .provider-workspace .providers-sidebar__row{min-height:44px;padding-block:6px}
+:root[data-density="dense"] .provider-workspace .provider-detail-section{padding:8px}
+:root[data-density="dense"] .dashboard-limits__instrument{padding:9px}
+:root[data-density="dense"] :is(.quota-observations,.analytics-table) :is(th,td){padding-block:6px}
+:root[data-density="compact"] .analytics-table :is(th,td){padding-block:8px}

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { LineChart, type LineChartPoint } from "./LineChart";
 
@@ -7,6 +7,21 @@ function points(values: number[]): LineChartPoint[] {
 }
 
 describe("LineChart", () => {
+  it("does not fabricate a line from a single observation or a nonzero peak from zero", () => {
+    const {container} = render(<LineChart data={[{label:"one",value:0}]} ariaLabel="Quota" animations={false}/>);
+    expect(container.querySelector("polyline")?.getAttribute("points")?.split(" ")).toHaveLength(1);
+    expect(container.querySelector(".chart__axis-max")).toHaveTextContent("0.00");
+  });
+  it("spaces timestamps by elapsed time, splits missing intervals and supports keyboard tooltips", () => {
+    const {container} = render(<LineChart data={[{label:"a",value:10,timestamp:0},{label:"b",value:20,timestamp:1},{label:"c",value:30,timestamp:10}]} expectedStep={1} ariaLabel="Quota" animations={false}/>);
+    const points=container.querySelectorAll(".chart__point");
+    expect(Number(points[1].getAttribute("cx"))).toBeCloseTo(29.6);
+    expect(container.querySelectorAll("polyline")).toHaveLength(2);
+    fireEvent.focus(points[1]);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("20.00");
+    fireEvent.keyDown(points[1],{key:"Escape"});
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
   it("never truncates a caller-supplied axis label, regardless of length or script (regression: a real Arabic screenshot caught a hardcoded .slice(-5) cutting 'سبتمبر' into 'بتمبر')", () => {
     const arabicLabelPoints: LineChartPoint[] = [
       { label: "٤ سبتمبر", value: 10 },
