@@ -173,6 +173,11 @@
 .dashboard-limits__instrument p.dashboard-limits__remaining{margin:6px 0 0;padding:5px 0 0}
 .dashboard-analytics__range{flex-wrap:wrap;border-radius:10px;max-width:100%}
 .dashboard-analytics__row>*{min-width:0}
+.dashboard-analytics .chart__axis{display:flex;position:static;justify-content:space-between;gap:5px;min-height:20px;font-size:9px;flex-wrap:wrap}
+.dashboard-analytics .chart__axis>span{position:static!important;transform:none!important;white-space:normal}
+.dashboard-analytics__trend-item{min-width:0;padding-block-end:6px}
+.dashboard-analytics__trend-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
+.dashboard-analytics{--chart-grok:#8b929d}
 .dashboard-analytics__reset-schedule-list{border-inline-start:1px solid var(--qa-analytics-hairline-strong);padding-inline-start:12px}
 .dashboard-analytics[data-performance=lowCpu]{background-image:none;--qa-analytics-shadow:none}
 .dashboard-analytics[data-performance=lowCpu] *{box-shadow:none!important;backdrop-filter:none!important;animation:none!important;transition:none!important}

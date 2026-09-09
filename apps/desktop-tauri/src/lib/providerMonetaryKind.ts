@@ -41,4 +41,3 @@ const PROVIDER_QUANTITY_KIND: Readonly<Record<string, MonetaryQuantityKind>> = {
 export function providerMonetaryQuantityKind(providerId: string): MonetaryQuantityKind {
   return PROVIDER_QUANTITY_KIND[providerId] ?? "unknown";
 }
-

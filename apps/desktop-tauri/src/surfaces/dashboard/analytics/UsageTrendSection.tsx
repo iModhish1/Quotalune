@@ -61,7 +61,7 @@ function groupByProvider<T extends { provider: string; accountId: string; bucket
  */
 export default function UsageTrendSection({ snapshot }: { snapshot: DashboardSnapshot | null }) {
   const { t, language } = useLocale();
-  const hasCost = snapshot?.availability.hasCostData ?? false;
+  const hasCost = snapshot?.costContract?.origin === "providerReported" && snapshot.spendTrend.some(p => p.quantityKind === "spend" && p.measurementKind !== "unknown" && p.currencyCode && Number.isFinite(p.costUsed));
   const [metric, setMetric] = useState<Metric>("usage");
   const activeMetric = metric === "spend" && !hasCost ? "usage" : metric;
 
@@ -76,7 +76,14 @@ export default function UsageTrendSection({ snapshot }: { snapshot: DashboardSna
     [snapshot?.usageTrend],
   );
   const spendGroups = useMemo(
-    () => groupByProvider(snapshot?.spendTrend ?? []),
+    () => {
+      const grouped = groupByProvider((snapshot?.spendTrend ?? []).filter(p => p.quantityKind === "spend" && p.measurementKind !== "unknown" && p.currencyCode && Number.isFinite(p.costUsed)));
+      // A single chart must never silently combine different currencies or measurement kinds.
+      for (const [key, points] of grouped) {
+        if (new Set(points.map(p => `${p.currencyCode}:${p.measurementKind}`)).size !== 1) grouped.delete(key);
+      }
+      return grouped;
+    },
     [snapshot?.spendTrend],
   );
 
@@ -136,7 +143,7 @@ export default function UsageTrendSection({ snapshot }: { snapshot: DashboardSna
                   valueFormatter={
                     activeMetric === "usage"
                       ? (n) => formatPercentage(n)
-                      : (n) => `$${n.toFixed(2)}`
+                      : (n) => `${n.toFixed(2)} ${spendGroups.get(key)?.[0]?.currencyCode ?? ""}`
                   }
                   maxLabel={t("ChartMaxValueLabel")}
                 />

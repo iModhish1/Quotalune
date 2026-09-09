@@ -18,11 +18,7 @@ export type SettingsTabId =
   | "advanced"
   | "about";
 
-/** Which Dashboard experience is selected -- exactly one is ever mounted.
- *  Mirrors `quotalis_core::settings::DashboardModeId`. `spatial` is the
- *  Phase S1 lightweight DOM/SVG/CSS "Spatial Observatory" prototype --
- *  distinct from `providers3d` (the full WebGL scene, publicly relabeled
- *  "Experimental 3D") and `hybrid` (still an unimplemented placeholder). */
+/** Legacy wire values accepted for compatibility. The sole runtime is Analytics; Rust resolves all values to analytics2d. */
 export type DashboardModeId = "analytics2d" | "providers3d" | "hybrid" | "spatial";
 
 /** Dashboard rendering performance budget, independent of provider-refresh
