@@ -258,4 +258,43 @@ describe("App window-label routing", () => {
     expect(queryByTestId("surface-tray-panel")).toBeNull();
     expect(container.firstChild).toBeNull();
   });
+
+  it("re-applies theme from a real cross-window settings-changed broadcast, not only the same-window CustomEvent", async () => {
+    // Reproduces a real defect found via native CDP testing: a settings
+    // change made in ANOTHER window (or via any command that doesn't route
+    // through useSettings().update(), e.g. set_catalog_theme) previously
+    // never live-updated this window's theme, because the only listener was
+    // a same-webview `window.addEventListener("quotalis:settings-updated")`
+    // DOM CustomEvent -- never Tauri's actual cross-window `listen()`
+    // broadcast. This test drives the real `listen("settings-changed", cb)`
+    // callback the way Tauri itself would call it from another window, with
+    // no CustomEvent involved at all.
+    // Multiple hooks independently register their own "settings-changed"
+    // listener (App.tsx's own theme sync, useProviders.ts, useSettings.ts)
+    // -- a real listen() supports many listeners per event, so the mock
+    // must collect all of them per event name, not just the last one.
+    const listenCallbacks = new Map<string, Array<() => void>>();
+    eventMocks.listen.mockImplementation((eventName: string, cb: () => void) => {
+      const list = listenCallbacks.get(eventName) ?? [];
+      list.push(cb);
+      listenCallbacks.set(eventName, list);
+      return Promise.resolve(() => {});
+    });
+
+    render(<App />);
+    await waitFor(() => {
+      expect(listenCallbacks.has("settings-changed")).toBe(true);
+    });
+    expect(document.documentElement.dataset.theme).toBe("dark");
+
+    // Another window persisted theme:"light" -- update_settings' own
+    // real broadcast is "settings-changed" (rust/apps/desktop-tauri/
+    // src-tauri/src/events.rs emit_settings_changed), not a DOM CustomEvent.
+    tauriMocks.getSettingsSnapshot.mockResolvedValue(settings({ theme: "light" }));
+    listenCallbacks.get("settings-changed")!.forEach((cb) => cb());
+
+    await waitFor(() => {
+      expect(document.documentElement.dataset.theme).toBe("light");
+    });
+  });
 });

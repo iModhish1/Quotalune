@@ -167,30 +167,43 @@ function AppInner() {
         })
       : Promise.resolve(null);
 
+    const refreshThemeAndLogo = (settings: BootstrapState["settings"]) => {
+      setThemePreference(settings.theme);
+      syncLogoAppearance({
+        variant: settings.logoVariant ?? "silver",
+        size: logoSizeFromPercent(settings.logoScalePercent),
+      });
+    };
+
     // Keep the theme in sync when mutations happen inside other surfaces
     // (e.g., Settings → Appearance). `useSettings` dispatches this event
-    // after every successful `updateSettings` call.
+    // after every successful `updateSettings` call made by ITS OWN webview.
     const onSettingsUpdated = (evt: Event) => {
       const detail = (evt as CustomEvent<BootstrapState["settings"]>).detail;
       if (detail) {
-        setThemePreference(detail.theme);
-        syncLogoAppearance({
-          variant: detail.logoVariant ?? "silver",
-          size: logoSizeFromPercent(detail.logoScalePercent),
-        });
+        refreshThemeAndLogo(detail);
       } else {
-        getSettingsSnapshot()
-          .then((fresh) => {
-            setThemePreference(fresh.theme);
-            syncLogoAppearance({
-              variant: fresh.logoVariant ?? "silver",
-              size: logoSizeFromPercent(fresh.logoScalePercent),
-            });
-          })
-          .catch(() => {});
+        getSettingsSnapshot().then(refreshThemeAndLogo).catch(() => {});
       }
     };
     window.addEventListener("quotalis:settings-updated", onSettingsUpdated);
+
+    // The listener above is a same-webview DOM CustomEvent -- it never fires
+    // for a change made in ANOTHER window (the detached Settings window and
+    // the main window are separate webviews with separate React state), nor
+    // for a change made through any path other than `useSettings().update()`
+    // itself (e.g. set_catalog_theme/set_global_limit_presentation/
+    // set_reset_presentation, which persist real settings but don't dispatch
+    // this window's local CustomEvent). Also listen to Rust's own real
+    // cross-window broadcasts so theme/logo genuinely live-sync regardless
+    // of which window or command changed them -- the same events
+    // hooks/useSettings.ts already listens to for its own state.
+    const unlistenCrossWindowPromises = ["settings-changed", "quotalis:settings-updated"].map(
+      (eventName) =>
+        listen(eventName, () => {
+          getSettingsSnapshot().then(refreshThemeAndLogo).catch(() => {});
+        }),
+    );
 
     return () => {
       cancelled = true;
@@ -198,6 +211,9 @@ function AppInner() {
       void unlistenSettingsChangePromise
         .then((unlisten) => unlisten?.())
         .catch(() => {});
+      unlistenCrossWindowPromises.forEach((p) =>
+        void p.then((unlisten) => unlisten()).catch(() => {}),
+      );
       window.clearTimeout(updateTimer);
       window.removeEventListener("quotalis:settings-updated", onSettingsUpdated);
     };
