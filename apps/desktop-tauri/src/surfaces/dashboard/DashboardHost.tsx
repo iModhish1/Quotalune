@@ -3,7 +3,7 @@ import type { BootstrapState } from "../../types/bridge";
 import "./DashboardHost.css";
 
 const AnalyticsDashboard = lazy(() => import("./AnalyticsDashboard"));
-export interface DashboardProps { state: BootstrapState; onOpenProviders: () => void; }
+export interface DashboardProps { state: BootstrapState; onOpenProviders: (id?:string) => void; view?: "overview"|"analytics"; initialProvider?:string|null; onAnalytics?: (id?:string)=>void; }
 class DashboardErrorBoundary extends Component<{children: ReactNode}, {failed: boolean}> {
   state = {failed: false};
   static getDerivedStateFromError() { return {failed: true}; }

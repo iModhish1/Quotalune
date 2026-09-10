@@ -48,6 +48,7 @@ import { WayfinderGatewaySection } from "./sections/WayfinderGatewaySection";
 
 interface Props {
   providerId: string | null;
+  onAnalytics?: (id:string)=>void;
   cookieDomain?: string | null;
   resetTimeRelative: boolean;
   providerMetrics: SettingsSnapshot["providerMetrics"];
@@ -66,7 +67,7 @@ interface Props {
  * (lines 4301–6698).
  */
 export function ProviderDetailPane({
-  providerId,
+  providerId, onAnalytics,
   cookieDomain = null,
   resetTimeRelative,
   providerMetrics,
@@ -364,7 +365,7 @@ export function ProviderDetailPane({
         />
       </div>
 
-      <ProviderDetailWorkspace key={detail.id}
+      <ProviderDetailWorkspace key={detail.id} initialConnections={detail.errorState === "needsAuthentication" || detail.errorState === "expiredSession"} analytics={onAnalytics ? <section className="provider-section"><h3>{t("V3Analytics")}</h3><p>{t("V3AnalyticsHelp")}</p><button className="btn btn--primary" type="button" onClick={()=>onAnalytics(detail.id)}>{t("V3ViewAnalytics")} →</button></section> : undefined}
         overview={<>
         <UsageSection
           provider={detail}

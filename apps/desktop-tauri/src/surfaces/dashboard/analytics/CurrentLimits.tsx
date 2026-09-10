@@ -3,6 +3,7 @@ import {physicalWindowLabel} from "../../../lib/analytics/metricLabels";
 import "./CurrentLimits.css";
 import "../../../components/analytics/analyticsPrimitives.css";
 import {QuotaGauge} from "../../../components/analytics/QuotaGauge";
+import {ProviderPlanBadge} from "../../../components/providers/ProviderPlanBadge";
 import ProviderPlanet from "./ProviderPlanet";
 import {useDashboardStructureTheme} from "./useDashboardStructureTheme";
 import {chartProviderColor} from "../../../components/analytics/charts/chartTheme";
@@ -20,7 +21,7 @@ import { normalizePercentage } from "../../../design-system/percent";
 import type { ProviderUsageSnapshot, SettingsSnapshot } from "../../../types/bridge";
 
 /** Reuses the shared limit selection, identity and reset presentation pipeline. */
-export default function CurrentLimits({ providers, settings, models }: {providers: ProviderUsageSnapshot[]; settings: SettingsSnapshot; models?: CurrentProviderModel[]}) {
+export default function CurrentLimits({ providers, settings, models, expanded = false }: {providers: ProviderUsageSnapshot[]; settings: SettingsSnapshot; models?: CurrentProviderModel[]; expanded?: boolean}) {
   const { t } = useLocale();
   const {theme}=useDashboardStructureTheme(settings);
   const preferences = analyticsPreferences(settings.analyticsPreferences);
@@ -48,12 +49,12 @@ export default function CurrentLimits({ providers, settings, models }: {provider
         const identityColor=chartProviderColor(theme,settings,stage.id,document.documentElement);
         return <article key={stage.id} className="dashboard-limits__instrument" style={{"--provider-color": providerCreditsColor(stage.id)} as CSSProperties}>
           <ProviderPlanet providerId={stage.id} used={ready ? used : null} color={identityColor}/>
-          <header><strong><bdi dir="ltr">{stage.name}</bdi></strong>{!ready && <span className="dashboard-limits__status">{t("DashboardNeedsAttention")}</span>}</header>
+          <header><strong><bdi dir="ltr">{stage.name}</bdi></strong><ProviderPlanBadge plan={provider.planName}/>{!ready && <span className="dashboard-limits__status">{t("DashboardNeedsAttention")}</span>}</header>
           {ready && used !== null && remaining !== null ? <>
             <QuotaGauge used={used} remaining={remaining} template={preferences.quotaTemplate} usedLabel={t("PanelUsedSuffix")} remainingLabel={t("FloatBarRemainingSuffix")} format={formatPercentage} emphasis={stage.resolvedMode}/>
             <small><bdi>{metric?.resetsAt ? formatResetPresentation({...resetOptions,locale:resetOptions.locale??"en-US",resetAt:metric.resetsAt}).fullAriaLabel : t("DashboardValueUnavailable")}</bdi></small>
           </> : <p className="dashboard-limits__unavailable">{t("DashboardValueUnavailable")}</p>}
-          <details className="dashboard-limits__details"><summary>{physicalWindowLabel(physical[0]?.label,t)}</summary>
+          <details className="dashboard-limits__details" open={expanded || undefined}><summary>{physicalWindowLabel(physical[0]?.label,t)}</summary>
             <div className="dashboard-limits__metadata"><span>{t(state?.freshness.state === "fresh" ? "V24Fresh" : state?.freshness.state === "aging" ? "V24Aging" : state?.freshness.state === "stale" ? "V24Stale" : "V24ReadingAge")}</span>{stage.planName && <bdi>{stage.planName}</bdi>}</div>
             {ready && physical.length > 1 ? <UsageWindowList providerId={stage.id} windows={(stage.windows ?? []).filter(window => physical.slice(1).some(item => (item.key === "modelSpecific" ? "model" : item.key) === window.id)).map(window=>({...window,label:physicalWindowLabel(window.label,t)}))} hidden={false} paginate={false} presentation={stage.limitPresentation} /> : null}
           {ready && cost && Number.isFinite(cost.used) && quantity !== "unknown" && (quantity === "credits" || !!cost.currencyCode) && <p className="dashboard-limits__remaining">

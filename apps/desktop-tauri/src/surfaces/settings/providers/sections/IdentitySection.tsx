@@ -2,6 +2,7 @@ import { useLocale } from "../../../../hooks/useLocale";
 import { resolveIntlLocale } from "../../../../i18n/resolveIntlLocale";
 import type { ProviderDetail } from "../../../../types/bridge";
 import type { LocaleKey } from "../../../../i18n/keys";
+import {ProviderPlanBadge} from "../../../../components/providers/ProviderPlanBadge";
 import { ProviderIcon } from "../../../../components/providers/ProviderIcon";
 
 interface Props {
@@ -40,7 +41,7 @@ export function IdentitySection({ provider, subtitle, t, onConnect, busy }: Prop
       <div className="provider-detail-header">
         <ProviderIcon providerId={provider.id} size={28} />
         <div className="provider-detail-title-group">
-          <div className="provider-detail-title">{provider.displayName}</div>
+          <div className="provider-detail-title"><bdi>{provider.displayName}</bdi> <ProviderPlanBadge plan={displayIdentityValue(provider.plan,t)}/></div>
           <div className="provider-detail-subtitle">{subtitle}</div>
         </div>
         {provider.canConnect && onConnect && <button type="button" className="btn btn--primary provider-connect-primary" onClick={onConnect} disabled={busy}>

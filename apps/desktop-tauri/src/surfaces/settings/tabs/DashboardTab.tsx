@@ -1,5 +1,2 @@
-import type { BootstrapState } from "../../../types/bridge";
-import DashboardHost from "../../dashboard/DashboardHost";
-export default function DashboardTab({ state, onOpenProviders }: {state: BootstrapState; onOpenProviders: () => void}) {
-  return <DashboardHost state={state} onOpenProviders={onOpenProviders} />;
-}
+import DashboardHost, {type DashboardProps} from "../../dashboard/DashboardHost";
+export default function DashboardTab(props: DashboardProps) { return <DashboardHost {...props}/>; }

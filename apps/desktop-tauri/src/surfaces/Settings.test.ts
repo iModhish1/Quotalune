@@ -3,11 +3,10 @@ import { resetSettingsPanelScroll } from "./Settings";
 import { TAB_META } from "./settings/settingsTabs";
 
 describe("Settings navigation", () => {
-  it("puts Dashboard and the primary product surfaces first (in-shell navigation order)", () => {
-    // Dashboard is now a real, first-class settings tab -- not a button
-    // that opens a separate window -- so it leads this list.
-    expect(TAB_META.slice(0, 5)).toEqual([
+  it("keeps Analytics immediately beside its Dashboard parent before other primary surfaces", () => {
+    expect(TAB_META.slice(0, 6)).toEqual([
       { id: "dashboard", labelKey: "TabDashboard" },
+      { id: "analytics", labelKey: "V3Analytics" },
       { id: "usageSpend", labelKey: "TabUsageSpend" },
       { id: "providers", labelKey: "TabProviders" },
       { id: "collections", labelKey: "TabCollections" },

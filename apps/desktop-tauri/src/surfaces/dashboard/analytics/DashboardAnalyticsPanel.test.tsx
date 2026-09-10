@@ -156,6 +156,8 @@ function renderPanel(
   snap: DashboardSnapshot,
   onOpenProviders = vi.fn(),
   settings: SettingsSnapshot = SETTINGS,
+  view: "overview" | "analytics" = "analytics",
+  initialProvider: string | null = null,
 ) {
   tauriMocks.getLocaleStrings.mockResolvedValue({ language: "english", entries: LOCALE_ENTRIES });
   tauriMocks.getDashboardSnapshot.mockResolvedValue(snap);
@@ -163,6 +165,8 @@ function renderPanel(
     <LocaleProvider>
       <DashboardAnalyticsPanel
         liveProviders={liveProviders}
+        view={view}
+        initialProvider={initialProvider}
         settings={settings}
         onOpenProviders={onOpenProviders}
       />
@@ -173,23 +177,23 @@ function renderPanel(
 describe("DashboardAnalyticsPanel", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("wires the header, KPIs, trend, distribution, alerts, and data status together from one snapshot call", async () => {
+  it("returning to operational Overview clears a prior provider drilldown", async () => {
+    renderPanel([provider(),provider({providerId:"codex",displayName:"Codex"})], snapshot(), vi.fn(), SETTINGS, "overview", "codex");
+    await vi.waitFor(()=>expect(tauriMocks.getDashboardSnapshot).toHaveBeenCalled());
+    const calls=tauriMocks.getDashboardSnapshot.mock.calls;
+    expect(calls[calls.length-1]?.[0].providers).toBeUndefined();
+    expect(screen.getByText("Active Providers").closest(".dashboard-kpi")).toHaveTextContent("2");
+  });
+
+  it("keeps deep diagnostics in dedicated Analytics destinations and shares one snapshot", async () => {
     renderPanel([provider()], snapshot());
-    // The native app chrome already shows "QUOTALIS / Dashboard" -- the
-    // control strip no longer repeats a giant title (owner Phase 3.5
-    // section 2), so "Today" (a range button, always synchronous) is the
-    // render-complete anchor instead.
     expect(await screen.findByText("Today")).toBeInTheDocument();
-    // "Data Status" only renders once the async snapshot resolves (DataStatusPanel
-    // returns null while snapshot is still null) -- wait on it before asserting
-    // on the rest so this isn't racing the header's synchronous render.
-    expect(await screen.findByText("Data Status")).toBeInTheDocument();
-    expect(screen.getByText("Provider filter: history only")).toBeInTheDocument();
     expect(screen.getByText("Trend intelligence")).toBeInTheDocument();
-    expect(screen.getByText("Active Providers")).toBeInTheDocument();
+    expect(screen.queryByText("Data Status")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", {name:"V2DataQuality"}));
+    expect(await screen.findByText("Data Status")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", {name:"V3History"}));
     expect(screen.getByText("Usage Trend")).toBeInTheDocument();
-    expect(screen.getByText("V2LegacyHistory")).toBeInTheDocument();
-    // Exactly one fetch for the default range -- no widget re-fetches independently.
     expect(tauriMocks.getDashboardSnapshot).toHaveBeenCalledTimes(1);
   });
 
@@ -204,36 +208,21 @@ describe("DashboardAnalyticsPanel", () => {
     );
   });
 
-  it("the provider filter genuinely scopes the Selected Range fetch, while Current Status (KPIs/Alerts/Reset Schedule) stays live and unfiltered -- the explicit Phase 3.5 section 8 semantics", async () => {
-    renderPanel(
-      [provider({ providerId: "claude", displayName: "Claude" }), provider({ providerId: "codex", displayName: "Codex" })],
-      snapshot(),
-    );
+  it("scopes both current analytics and history to the selected provider", async () => {
+    renderPanel([provider({providerId:"claude",displayName:"Claude"}),provider({providerId:"codex",displayName:"Codex"})],snapshot());
     await screen.findByText("Today");
-    // Two real providers -- "Active Providers" (a Current Status KPI) must
-    // read 2 regardless of any Selected Range provider filter.
     expect(screen.getByText("Active Providers").closest(".dashboard-kpi")).toHaveTextContent("2");
-
-    // Filtering Selected Range to just Codex must genuinely re-scope the
-    // snapshot fetch (the historical/range-based widgets)...
     fireEvent.click(screen.getByRole("button",{name:"All Providers"}));
     fireEvent.click(screen.getByRole("option",{name:"Codex"}));
-    await vi.waitFor(() =>
-      expect(tauriMocks.getDashboardSnapshot).toHaveBeenLastCalledWith(
-        expect.objectContaining({ providers: ["codex"] }),
-      ),
-    );
-    // ...but must NOT silently narrow the unfiltered Current Status count --
-    // it stays 2, because that section is explicitly live/global, not
-    // scoped by the Selected Range control sitting above it.
-    expect(screen.getByText("Active Providers").closest(".dashboard-kpi")).toHaveTextContent("2");
+    await vi.waitFor(()=>expect(tauriMocks.getDashboardSnapshot).toHaveBeenLastCalledWith(expect.objectContaining({providers:["codex"]})));
+    expect(screen.getByText("Active Providers").closest(".dashboard-kpi")).toHaveTextContent("1");
   });
 
-  it("persists presentation order and hides sections without changing metrics", async () => {
+  it("preserves default range and chart style in dedicated Analytics", async () => {
     const preferences = {sectionOrder:["quality","limits"],hiddenSections:["attention"],chartStyle:"detailed",quotaTemplate:"rail",defaultRange:"last30Days",providerFilterScope:"history"} as const;
     renderPanel([provider()], snapshot(), vi.fn(), {...SETTINGS, analyticsPreferences: {...preferences,sectionOrder:[...preferences.sectionOrder],hiddenSections:[...preferences.hiddenSections]}});
-    await screen.findByText("Data Status");
-    expect(document.querySelector("[data-analytics-section]")).toHaveAttribute("data-analytics-section","quality");
+    await screen.findByText("Today");
+    expect(screen.queryByRole("region",{name:"Needs action"})).not.toBeInTheDocument();
     expect(document.querySelector('[data-analytics-section="attention"]')).toBeNull();
     expect(screen.getByRole("radio",{name:"30 Days"})).toHaveAttribute("aria-checked","true");
     expect(document.querySelector(".dashboard-analytics")).toHaveAttribute("data-chart-style","detailed");
@@ -241,7 +230,7 @@ describe("DashboardAnalyticsPanel", () => {
 
   it("explicit all-sections filter also scopes current status", async () => {
     renderPanel([provider({providerId:"claude",displayName:"Claude"}),provider({providerId:"codex",displayName:"Codex"})], snapshot(), vi.fn(), {...SETTINGS,analyticsPreferences:{sectionOrder:[],hiddenSections:[],chartStyle:"precision",quotaTemplate:"precision",defaultRange:"last7Days",providerFilterScope:"all"}});
-    await screen.findByText("Data Status");
+    await screen.findByText("Today");
     fireEvent.click(screen.getByRole("button",{name:"All Providers"}));
     fireEvent.click(screen.getByRole("option",{name:"Codex"}));
     expect(screen.getByText("Active Providers").closest(".dashboard-kpi")).toHaveTextContent("1");
@@ -252,7 +241,7 @@ describe("DashboardAnalyticsPanel", () => {
     renderPanel(
       [provider({ errorState: "needsAuthentication" })],
       snapshot(),
-      onOpenProviders,
+      onOpenProviders, SETTINGS, "overview",
     );
     fireEvent.click(within(await screen.findByRole("region",{name:"Needs action"})).getByRole("button", { name: "Providers" }));
     expect(onOpenProviders).toHaveBeenCalledTimes(1);
@@ -260,10 +249,11 @@ describe("DashboardAnalyticsPanel", () => {
 
   it("shows honest unavailable/collecting states with zero real history, never fabricated numbers", async () => {
     renderPanel([], snapshot());
+    fireEvent.click(await screen.findByRole("button",{name:"V2DataQuality"}));
     // Data Status merges what used to be separate rows into one compact
     // line (owner Phase 3.5 section 11) -- match on substring.
     expect(await screen.findByText(/Local history: collecting/)).toBeInTheDocument();
-    expect(screen.getByText("Collecting local usage history…")).toBeInTheDocument();
+    expect(document.querySelector("canvas")).toBeNull();
   });
 
   it("Phase 3.6: the rendered root actually carries the resolved Structure Theme's real colors as --qa-analytics-* inline custom properties, and a different theme setting produces genuinely different values", async () => {

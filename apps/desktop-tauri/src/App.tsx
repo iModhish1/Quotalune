@@ -317,12 +317,14 @@ function SettingsLayout({ state }: { state: BootstrapState }) {
 
 function DetachedSettingsApp({ state }: { state: BootstrapState }) {
   const [tab, setTab] = useState(initialSettingsTab);
+  const [tabRevision,setTabRevision]=useState(0);
 
   useEffect(() => {
     // Listen for tab-change events from Rust (when the window is re-focused
     // with a different tab request).
     const unlisten = listen<string>("settings-change-tab", (event) => {
       setTab(event.payload);
+      setTabRevision(value=>value+1);
     });
     return () => {
       unlisten.then((fn) => fn());
@@ -332,7 +334,7 @@ function DetachedSettingsApp({ state }: { state: BootstrapState }) {
   return (
     <Suspense fallback={<SurfaceFallback />}>
       <main className="settings-surface settings-surface--full">
-        <Settings state={state} initialTab={tab} />
+        <Settings state={state} initialTab={tab} navigationRevision={tabRevision} />
       </main>
     </Suspense>
   );

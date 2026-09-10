@@ -25,20 +25,22 @@ interface ProvidersTabProps {
   providers: ProviderCatalogEntry[];
   set: (patch: SettingsUpdate) => void;
   saving: boolean;
+  initialProvider?: string|null;
+  onAnalytics?: (id:string)=>void;
 }
 
 export default function ProvidersTab({
   settings,
   providers,
   set,
-  saving,
+  saving, initialProvider, onAnalytics,
 }: ProvidersTabProps) {
   const { t } = useLocale();
   const { providers: snapshots, provenance } = useEffectiveProviders(settings, providers);
   const isDemo = provenance === "demo";
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(
-    providers.find(p => settings.enabledProviders.includes(p.id))?.id ?? providers[0]?.id ?? null,
+    initialProvider ?? providers.find(p => settings.enabledProviders.includes(p.id))?.id ?? providers[0]?.id ?? null,
   );
   // Locally-owned catalog order so drag-reorder feels instant before the
   // backend `reorder_providers` round-trip settles.
@@ -131,6 +133,7 @@ export default function ProvidersTab({
           {id:"disabled",label:"ProviderDisabled",count:rows.filter(p=>!p.enabled).length}] as const).map(filter =>
           <button key={filter.id} type="button" aria-pressed={statusFilter === filter.id} onClick={()=>setStatusFilter(filter.id)}>{t(filter.label)} <strong>{filter.count}</strong></button>)}
       </div>
+      {resolvedSelectedId && onAnalytics && <button type="button" className="provider-analytics-link" onClick={()=>onAnalytics(resolvedSelectedId)}>{t("V3ViewAnalytics")} → <bdi>{selectedEntry?.displayName}</bdi></button>}
       <div className="provider-split">
       <ProvidersSidebar
         providers={visibleRows}
@@ -143,7 +146,7 @@ export default function ProvidersTab({
         disabled={saving || isDemo}
       />
       {isDemo ? <div className="provider-detail"><p role="note">{t("ProviderDemoReadOnly")}</p><CurrentLimits providers={snapshots.filter(p => p.providerId === resolvedSelectedId)} settings={settings} /></div> : <ProviderDetailPane
-        providerId={resolvedSelectedId}
+        onAnalytics={onAnalytics} providerId={resolvedSelectedId}
         cookieDomain={selectedEntry?.cookieDomain ?? null}
         resetTimeRelative={settings.resetTimeRelative}
         providerMetrics={settings.providerMetrics}

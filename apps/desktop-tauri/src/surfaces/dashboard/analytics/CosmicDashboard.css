@@ -23,7 +23,6 @@
 .dashboard-cosmic .dashboard-analytics__scope {font-size:9px!important;opacity:.9}
 .dashboard-cosmic .dashboard-limits h2 {font-size:21px!important;font-weight:650;letter-spacing:0;margin-bottom:10px}
 .dashboard-cosmic .dashboard-limits__grid {position:relative;isolation:isolate;border:0!important;background:none!important;gap:10px!important}
-.dashboard-cosmic .dashboard-limits__grid::before {content:"";position:absolute;z-index:-1;inset:35px -4px auto;height:64px;border:1px solid #b0cbea88;border-radius:50%;transform:rotate(-2deg);box-shadow:0 0 6px #85c9ff50;pointer-events:none}
 .dashboard-cosmic .dashboard-limits__instrument {display:flex;flex-direction:column;align-items:center;text-align:center;padding:8px 3px!important;border:0!important;min-width:0}
 .provider-planet {--planet-color:#5abaff;position:relative;display:grid;place-items:center;flex:none;width:112px;height:112px;max-width:100%;aspect-ratio:1;border-radius:50%;background:#010716;box-shadow:0 0 18px color-mix(in srgb,var(--planet-color) 28%,transparent),inset 0 0 12px var(--planet-color)}
 .provider-planet__surface {position:absolute;inset:8px;border-radius:50%;background:radial-gradient(circle at 30% 20%,color-mix(in srgb,var(--planet-color) 40%,transparent),#0000 45%,#000b 85%),url('../../../assets/analytics/cosmic-observatory.png') 88% 12%/500%;box-shadow:inset 3px 3px 6px color-mix(in srgb,var(--planet-color) 80%,white),inset -9px -6px 13px #000c;border:1px solid color-mix(in srgb,var(--planet-color) 75%,white)}
@@ -92,7 +91,6 @@
 .dashboard-cosmic .dashboard-command-status {margin-bottom:-19px;min-height:13px;max-width:48%;margin-inline-start:auto}
 .dashboard-cosmic .dashboard-analytics__scope {max-width:50%;line-height:13px!important;margin-bottom:4px!important}
 .dashboard-cosmic .provider-planet:not(.provider-planet--small) {width:92px;height:92px}
-.dashboard-cosmic .dashboard-limits__grid::before {inset-block-start:29px;height:51px}
 .dashboard-cosmic .dashboard-limits h2 {font-size:18px!important;margin-bottom:4px}
 .dashboard-cosmic .dashboard-limits__instrument {padding-block:5px!important}
 .dashboard-cosmic .dashboard-limits__instrument header {margin-top:5px}

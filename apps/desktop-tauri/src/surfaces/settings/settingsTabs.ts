@@ -5,6 +5,7 @@ import type { LocaleKey } from "../../i18n/keys";
 export const SETTINGS_GROUPS: {labelKey: LocaleKey; tabs: {id: SettingsTabId; labelKey: LocaleKey}[]}[] = [
   {labelKey: "NavMonitor", tabs: [
     {id: "dashboard", labelKey: "TabDashboard"},
+    {id: "analytics", labelKey: "V3Analytics"},
     {id: "usageSpend", labelKey: "TabUsageSpend"},
   ]},
   {labelKey: "NavManage", tabs: [

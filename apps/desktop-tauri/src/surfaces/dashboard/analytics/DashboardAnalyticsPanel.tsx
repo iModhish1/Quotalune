@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import {useResetStageOptions} from "../../../hooks/useResetStageOptions";
-import {defaultResetPresentationConfig,resolveResetTimeZone} from "../../../lib/resetPresentation";
+import { useEffect, useMemo, useState } from "react";
 import { useLocale } from "../../../hooks/useLocale";
 import { useEffectiveDashboardSnapshot } from "../../../hooks/useEffectiveDashboardSnapshot";
 import type { DataProvenance } from "../../../hooks/useEffectiveProviders";
 import { useDashboardStructureTheme } from "./useDashboardStructureTheme";
 import { availableHistoryDays } from "./dashboardSelectors";
 import DashboardHeader from "./DashboardHeader";
-import CurrentLimits from "./CurrentLimits";
+import ProviderRail from "./ProviderRail";
+import {ProviderIcon} from "../../../components/providers/ProviderIcon";
+import {ProviderPlanBadge} from "../../../components/providers/ProviderPlanBadge";
+import LocalActivity from "./LocalActivity";
 import CoverageHeatmap from "./CoverageHeatmap";
 import ProviderUsageMatrix from "./ProviderUsageMatrix";
 import KpiRow from "./KpiRow";
@@ -16,7 +17,7 @@ import ResetHorizon from "./ResetHorizon";
 import {QuotaComparison, QuotaHistory, QuotaCoverage} from "./QuotaInsights";
 import ProviderOperationsTable from "./ProviderOperationsTable";
 import {analyticsPreferences} from "../../../lib/analytics/preferences";
-import {buildDashboardAnalyticsModel} from "../../../lib/analytics/dashboardModel";
+import {useDashboardAnalyticsModel} from "../../../hooks/useDashboardAnalyticsModel";
 
 import AttentionQueue from "./AttentionQueue";
 import TrendIntelligence from "./TrendIntelligence";
@@ -32,24 +33,14 @@ import type {
 import "./DashboardAnalyticsPanel.css";
 import "./AnalyticsWorkstation.css";
 import "./CosmicDashboard.css";
+import "./ProductV3.css";
 
-/**
- * Owns the one global range/provider-filter state every widget below
- * shares (owner section 7) and the single `useDashboardSnapshot()` call
- * (Phase 2's bridge hook) -- no widget re-fetches independently.
- *
- * Phase 3.5 section 8 (provider-filter semantics): the range/provider
- * filter genuinely scopes the "Selected Range" section (Usage Trend,
- * Historical Usage Share) below, since those are real range/provider-
- * scoped historical views. KPIs, Alerts, and Reset Schedule intentionally
- * stay unfiltered, live, "what's happening right now across everything"
- * indicators -- rather than silently ignoring the filter while sitting
- * next to it (the previous, misleading layout), they're now explicitly
- * grouped under their own "Current Status" heading so the one control
- * strip's scope is never visually ambiguous.
- */
+/** One shared snapshot and truth model. Operational Overview is global;
+ * Analytics scopes both live state and history to its selected provider.
+ * Saved section order/visibility applies within each destination, never across
+ * the boundary between operational monitoring and deep analysis. */
 export default function DashboardAnalyticsPanel({
-  liveProviders,
+  liveProviders, view="analytics", initialProvider=null, onAnalytics,
   settings,
   catalog = [],
   provenance = "live",
@@ -57,6 +48,7 @@ export default function DashboardAnalyticsPanel({
   onExitDemo,
 }: {
   liveProviders: ProviderUsageSnapshot[];
+  view?:"overview"|"analytics";initialProvider?:string|null;onAnalytics?:(id?:string)=>void;
   settings: SettingsSnapshot;
   /** Real provider registry catalog (`state.providers`) -- only needed
    *  when Demo Mode is on, to build the synthetic `DashboardSnapshot`.
@@ -66,19 +58,18 @@ export default function DashboardAnalyticsPanel({
   /** Phase 5.2: whether `liveProviders` is real or Demo Mode's synthetic
    *  dataset -- drives the persistent DEMO indicator. */
   provenance?: DataProvenance;
-  onOpenProviders: () => void;
+  onOpenProviders: (id?:string) => void;
   /** Turns Demo Mode off -- only ever called from the indicator, so a
    *  no-op default is safe for callers that never render it (provenance
    *  stays "live"). */
   onExitDemo?: () => void;
 }) {
   const { t } = useLocale();
-  const resetOptions=useResetStageOptions(settings,"dashboard");
-  const metadataDate=new Intl.DateTimeFormat(resetOptions.locale,{dateStyle:"medium",numberingSystem:"latn",timeZone:resolveResetTimeZone({...defaultResetPresentationConfig(),...resetOptions.config})});
   const preferences = useMemo(() => analyticsPreferences(settings.analyticsPreferences), [settings.analyticsPreferences]);
   const [range, setRange] = useState<DashboardRangeKind>(preferences.defaultRange);
   useEffect(() => setRange(preferences.defaultRange), [preferences.defaultRange]);
-  const [providerFilter, setProviderFilter] = useState<string | null>(null);
+  const [providerFilter, setProviderFilter] = useState<string | null>(view === "analytics" ? initialProvider : null);
+  const [section,setSection]=useState("overview");
   // Phase 3.6: the Dashboard's structural surfaces now follow the same
   // resolved Structure Theme every other themed surface uses -- see
   // docs/validation/DASHBOARD_STRUCTURE_THEME_INTEGRATION.md.
@@ -95,11 +86,11 @@ export default function DashboardAnalyticsPanel({
 
   const { snapshot } = useEffectiveDashboardSnapshot(range, undefined, providersArg, settings, catalog);
 
-  const currentProviders = useMemo(() => preferences.providerFilterScope === "all" && providerFilter
+  const currentProviders = useMemo(() => (view === "analytics" || preferences.providerFilterScope === "all") && providerFilter
     ? liveProviders.filter(provider => provider.providerId === providerFilter) : liveProviders,
-    [liveProviders, preferences.providerFilterScope, providerFilter]);
+    [liveProviders, preferences.providerFilterScope, providerFilter,view]);
   const now = useMemo(() => Date.now(), [liveProviders, snapshot]);
-  const model=useMemo(()=>buildDashboardAnalyticsModel(currentProviders,snapshot,settings,providerFilter,now),[currentProviders,snapshot,settings,providerFilter,now]);
+  const {model,processing:historyProcessing,error:historyError}=useDashboardAnalyticsModel(currentProviders,snapshot,settings,providerFilter,now);
   const {currentLimits:models,trends:series,attention,kpis}=model;
 
   const historyChip = useMemo(() => {
@@ -112,27 +103,27 @@ export default function DashboardAnalyticsPanel({
       : t("DashboardHistoryChipDays").replace("{}", String(days));
   }, [snapshot, t]);
 
-  const sections: Record<string, ReactNode> = {
-    limits: <CurrentLimits providers={currentProviders} settings={settings} models={models} />,
-    attention: <AttentionQueue items={attention} models={models} onOpenProviders={onOpenProviders} isDemo={provenance === "demo"} />,
-    overview: <><TrendIntelligence series={series} range={model.range} providers={liveProviders} settings={settings} preferences={preferences}/></>,
-    resets: <ResetHorizon models={models} settings={settings} now={now} resets={model.resetHorizon} />,
-    comparison: <details className="cosmic-disclosure"><summary>{t("V45PeriodComparison")}</summary><ProviderOperationsTable models={models} settings={settings} now={now}/><QuotaComparison series={series} providers={liveProviders} settings={settings} /></details>,
-    history: <details className="cosmic-disclosure"><summary>{t("V2HistorySeries")}</summary><QuotaHistory series={series} snapshot={snapshot} settings={settings} preferences={preferences} />
-      <details className="analytics-coverage"><summary>{t("V2LegacyHistory")}</summary><p>{t("V2LegacyHistoryHelp")}</p><UsageTrendSection snapshot={snapshot} /></details></details>,
-    quality: <div className="cosmic-matrix-quality"><ProviderUsageMatrix model={model} providers={liveProviders} settings={settings}/><aside><h3>{t("V2DataQuality")}</h3><p><bdi>{model.coverage.samples}</bdi> {t("V2Samples")} · <bdi>{series.length}</bdi> {t("V2LimitWindow")}</p><p>{historyChip}</p><details className="analytics-coverage"><summary>{t(provenance === "demo" ? "V2DemoQuality" : "V2LiveQuality")}</summary><QuotaCoverage series={series} snapshot={snapshot} settings={settings}/><CoverageHeatmap model={model} settings={settings} preferences={preferences} providers={liveProviders}/><DataStatusPanel snapshot={snapshot} /></details></aside></div>,
-  };
-  return (
-    <div className="dashboard-analytics dashboard-cosmic" style={structureThemeStyle} data-light={Boolean(theme.material?.light)} data-density={settings.workspacePreferences?.density ?? "comfortable"} data-performance={settings.dashboardPerformancePreset ?? "balanced"} data-chart-style={preferences.chartStyle}>
-      <div className="dashboard-command-bar">{provenance === "demo" && <div className="dashboard-analytics__demo-indicator"><DemoIndicator providerCount={liveProviders.length} onExit={() => onExitDemo?.()} /></div>}
-      <DashboardHeader range={range} onRangeChange={setRange} providerOptions={providerOptions} providerFilter={providerFilter} onProviderFilterChange={setProviderFilter} historyChip={historyChip} /></div>
-      <KpiRow kpis={kpis} settings={settings} resetTimeRelative={settings.resetTimeRelative}/>
-      <div className="dashboard-command-status">
-        {snapshot?.availability.firstSampleAt != null && <span>{t("V24AvailableSince")}: <bdi>{metadataDate.format(snapshot.availability.firstSampleAt*1000)}</bdi></span>}
-        {["fresh","aging","stale"].map(state=><span key={state}>{t(state==="fresh"?"V24Fresh":state==="aging"?"V24Aging":"V24Stale")}: <bdi>{models.filter(model=>model.freshness.state===state).length}</bdi></span>)}
-      </div>
-      <p className="dashboard-analytics__scope">{t(preferences.providerFilterScope === "all" ? "V2LiveScope" : "V2HistoryScope")}</p>
-      <div className="dashboard-workstation-grid">{preferences.sectionOrder.filter(id => !preferences.hiddenSections.includes(id)).map(id => <div key={id} data-analytics-section={id}>{sections[id]}</div>)}</div>
-    </div>
-  );
+  const tabs=[['overview','V3Overview'],['usage','V3Usage'],['activity','V3Activity'],['resets','V3Resets'],['providers','TabProviders'],['history','V3History'],['quality','V2DataQuality']] as const;
+  const selectedProvider=liveProviders.find(p=>p.providerId===providerFilter);
+  return <div className={`dashboard-analytics dashboard-cosmic product-v3 ${view==='analytics'?'analytics-center':'operational-overview'}`} style={structureThemeStyle} data-light={Boolean(theme.material?.light)} data-density={settings.workspacePreferences?.density??'comfortable'} data-chart-style={preferences.chartStyle}>
+    <header className="v3-page-header"><div><h2>{t(view==='analytics'?'V3Analytics':'V3Overview')}</h2><p>{t(view==='analytics'?'V3AnalyticsHelp':'V3OperationalHelp')}</p></div>{view==='overview'&&<button type="button" onClick={()=>onAnalytics?.()}>{t('V3ViewAnalytics')} ↗</button>}{provenance==='demo'&&<DemoIndicator providerCount={liveProviders.length} onExit={()=>onExitDemo?.()}/>}</header>
+    {view==='overview'?<>
+      <div className="v3-overview-modules">{preferences.sectionOrder.filter(id=>!preferences.hiddenSections.includes(id)).map(id=>{
+        const content=id==='limits'?<ProviderRail providers={liveProviders} settings={settings} isDemo={provenance==='demo'} onOpenProviders={onOpenProviders} onAnalytics={id=>onAnalytics?.(id)}/>:id==='overview'?<KpiRow kpis={kpis} settings={settings} resetTimeRelative={settings.resetTimeRelative}/>:id==='attention'?<AttentionQueue items={attention} models={models} onOpenProviders={onOpenProviders} isDemo={provenance==='demo'}/>:id==='resets'?<ResetHorizon models={models} settings={settings} now={now} resets={model.resetHorizon}/>:null;
+        return content?<div key={id} data-analytics-section={id}>{content}</div>:null;
+      })}</div>
+    </>:<>
+      <DashboardHeader range={range} onRangeChange={setRange} providerOptions={providerOptions} providerFilter={providerFilter} onProviderFilterChange={setProviderFilter} historyChip={historyChip}/>
+      {(historyProcessing||historyError)&&<p role="status" aria-live="polite">{t(historyProcessing?'UsageSpendLoading':'DashboardValueUnavailable')}</p>}
+      {selectedProvider&&<div className="v3-provider-heading"><ProviderIcon providerId={selectedProvider.providerId} size={32}/><strong><bdi>{selectedProvider.displayName}</bdi></strong><ProviderPlanBadge plan={selectedProvider.planName}/><button type="button" onClick={()=>onOpenProviders(selectedProvider.providerId)}>{t('V3Details')}</button></div>}
+      <nav className="v3-section-nav" aria-label={t('V3Analytics')}>{tabs.map(([id,key])=><button type="button" key={id} aria-current={section===id?'page':undefined} onClick={()=>setSection(id)}>{t(key)}</button>)}</nav>
+      {section==='overview'&&<><KpiRow kpis={kpis} settings={settings} resetTimeRelative={settings.resetTimeRelative}/><TrendIntelligence series={series} range={model.range} providers={liveProviders} settings={settings} preferences={preferences}/><ProviderUsageMatrix model={model} providers={liveProviders} settings={settings} onProvider={setProviderFilter}/></>}
+      {section==='usage'&&<><TrendIntelligence series={series} range={model.range} providers={liveProviders} settings={settings} preferences={preferences}/><QuotaComparison series={series} providers={liveProviders} settings={settings}/></>}
+      {section==='activity'&&<LocalActivity settings={settings} isDemo={provenance==='demo'} providerId={providerFilter}/>}
+      {section==='resets'&&<ResetHorizon models={models} settings={settings} now={now} resets={model.resetHorizon}/>}
+      {section==='providers'&&<><div className="v3-provider-links">{liveProviders.map(p=><button type="button" key={p.providerId} onClick={()=>setProviderFilter(p.providerId)}><ProviderIcon providerId={p.providerId} size={18}/><bdi>{p.displayName}</bdi><ProviderPlanBadge plan={p.planName}/></button>)}</div><ProviderOperationsTable models={models} settings={settings} now={now}/><QuotaComparison series={series} providers={liveProviders} settings={settings}/></>}
+      {section==='history'&&<><QuotaHistory series={series} snapshot={snapshot} settings={settings} preferences={preferences}/><details className="cosmic-disclosure"><summary>{t('V2LegacyHistory')}</summary><p>{t('V2LegacyHistoryHelp')}</p><UsageTrendSection snapshot={snapshot}/></details></>}
+      {section==='quality'&&<><ProviderUsageMatrix model={model} providers={liveProviders} settings={settings} onProvider={setProviderFilter}/><QuotaCoverage series={series} snapshot={snapshot} settings={settings}/><CoverageHeatmap model={model} settings={settings} preferences={preferences} providers={liveProviders}/><details className="cosmic-disclosure"><summary>{t('V2DataQuality')}</summary><DataStatusPanel snapshot={snapshot}/></details></>}
+    </>}
+  </div>;
 }

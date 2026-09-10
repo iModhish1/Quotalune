@@ -9,6 +9,7 @@ use crate::surface::SurfaceMode;
 // apps/desktop-tauri/src/surfaces/Settings.tsx.
 const SETTINGS_TAB_IDS: &[&str] = &[
     "dashboard",
+    "analytics",
     "general",
     "providers",
     "providerDisplay",

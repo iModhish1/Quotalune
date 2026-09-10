@@ -1,3 +1,4 @@
+import {listen} from "@tauri-apps/api/event";
 import { workspaceThemeStyle } from "../design-system/workspaceTheme";
 import { useRememberSettingsTab } from "./settings/useRememberSettingsTab";
 import { WorkspacePreferencesControl } from "./settings/WorkspacePreferencesControl";
@@ -67,6 +68,7 @@ function Svg({ children }: { children: ReactNode }) {
 }
 
 const TabIcons: Record<SettingsTabId, ReactElement> = {
+  analytics: <Svg><path d="M2 13V8m6 5V3m6 10V6"/></Svg>,
   dashboard: (
     <Svg>
       <rect x="2" y="2" width="5" height="5" rx="1" />
@@ -184,7 +186,7 @@ export function resetSettingsPanelScroll(panel: HTMLElement | null): void {
   panel.scrollLeft = 0;
 }
 
-export default function Settings({ state, initialTab: propTab }: { state: BootstrapState; initialTab?: string }) {
+export default function Settings({ state, initialTab: propTab, navigationRevision = 0 }: { state: BootstrapState; initialTab?: string; navigationRevision?:number }) {
   const [legacyNavigation]=useState(()=>{try{return normalizeSettingsNavigation(localStorage.getItem(SETTINGS_NAVIGATION_KEY));}catch{return normalizeSettingsNavigation(null);}});
 
   const { settings, saving, error, update } = useSettings(state.settings);
@@ -203,11 +205,23 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
       ? shellTarget.tab
       : null;
   const [prevPropTab, setPrevPropTab] = useState(propTab);
+  const [previousNavigation,setPreviousNavigation]=useState(navigationRevision);
   const [prevShellTab, setPrevShellTab] = useState(shellTab);
+  const [focusedProvider, setFocusedProvider] = useState<string|null>(()=>{const id=new URLSearchParams(location.search).get("provider");return state.providers.some(p=>p.id===id)?id:null;});
+  const [providerFocusRevision,setProviderFocusRevision]=useState(0);
+  useEffect(()=>{
+    let disposed=false;let stop:(()=>void)|undefined;
+    void listen<string>("settings-focus-provider",event=>{
+      if(!state.providers.some(p=>p.id===event.payload))return;
+      setFocusedProvider(event.payload);setProviderFocusRevision(value=>value+1);setActiveTab("providers");
+    }).then(fn=>{if(disposed)fn();else stop=fn;}).catch(()=>{});
+    return()=>{disposed=true;stop?.();};
+  },[state.providers]);
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Adjust local tab during render when external drivers change (no effect sync).
-  if (propTab !== prevPropTab) {
+  if (propTab !== prevPropTab || navigationRevision !== previousNavigation) {
+    setPreviousNavigation(navigationRevision);
     setPrevPropTab(propTab);
     if (propTab && isSettingsTab(propTab)) {
       setActiveTab(propTab);
@@ -283,14 +297,14 @@ export default function Settings({ state, initialTab: propTab }: { state: Bootst
       {/* tab panels */}
       <div ref={panelRef} id="settings-active-panel" role="tabpanel" aria-labelledby={`settings-tab-${primary}`} tabIndex={0} data-tab={activeTab} className={`settings-body${activeTab === "providers" ? " settings-body--providers" : ""}`}>
         <ContentShell tab={activeTab} navigate={handleTabClick}>
-        {activeTab === "dashboard" && (
-          <DashboardTab state={state} onOpenProviders={() => handleTabClick("providers")} />
+        {(activeTab === "dashboard" || activeTab === "analytics") && (
+          <DashboardTab key={activeTab} state={state} view={activeTab === "analytics" ? "analytics" : "overview"} initialProvider={focusedProvider} onAnalytics={id=>{setFocusedProvider(id??null);handleTabClick("analytics");}} onOpenProviders={id=>{setFocusedProvider(id??null);handleTabClick("providers");}} />
         )}
         {activeTab === "general" && (
           <GeneralTab mode="general" settings={settings} set={set} saving={saving} />
         )}
         {activeTab === "providers" && (
-          <ProvidersTab
+          <ProvidersTab key={`${focusedProvider??"all"}:${providerFocusRevision}`} initialProvider={focusedProvider} onAnalytics={id=>{setFocusedProvider(id);handleTabClick("analytics");}}
             settings={settings}
             providers={state.providers}
             set={set}

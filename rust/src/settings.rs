@@ -896,13 +896,13 @@ mod demo_mode_settings_tests {
     }
 
     #[test]
-    fn clamp_demo_provider_count_enforces_1_to_24() {
+    fn clamp_demo_provider_count_enforces_1_to_70() {
         assert_eq!(super::clamp_demo_provider_count(0), 1);
         assert_eq!(super::clamp_demo_provider_count(1), 1);
         assert_eq!(super::clamp_demo_provider_count(6), 6);
         assert_eq!(super::clamp_demo_provider_count(24), 24);
-        assert_eq!(super::clamp_demo_provider_count(25), 24);
-        assert_eq!(super::clamp_demo_provider_count(u32::MAX), 24);
+        assert_eq!(super::clamp_demo_provider_count(25), 25);
+        assert_eq!(super::clamp_demo_provider_count(u32::MAX), 70);
     }
 
     #[test]
@@ -923,7 +923,7 @@ pub const DEFAULT_DEMO_PROVIDER_COUNT: u32 = 6;
 /// section 6: "1 through 24", "Do not allow 0 while Demo Mode is
 /// enabled").
 pub const MIN_DEMO_PROVIDER_COUNT: u32 = 1;
-pub const MAX_DEMO_PROVIDER_COUNT: u32 = 24;
+pub const MAX_DEMO_PROVIDER_COUNT: u32 = 70;
 /// Clamps a requested demo provider count into the supported range.
 pub fn clamp_demo_provider_count(count: u32) -> u32 {
     count.clamp(MIN_DEMO_PROVIDER_COUNT, MAX_DEMO_PROVIDER_COUNT)

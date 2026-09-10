@@ -10,7 +10,7 @@ import type {QuotaSeries} from "../../../lib/analytics/quotaAnalytics";
 
 /** Latest observed quota per displayed time bucket. No interpolation, zero-fill,
  * averaging across accounts, or invented sub-day dots. Every dot has a reading. */
-export default function ProviderUsageMatrix({model,providers,settings}:{model:DashboardAnalyticsModel;providers:ProviderUsageSnapshot[];settings:SettingsSnapshot}) {
+export default function ProviderUsageMatrix({model,providers,settings,onProvider}:{onProvider?:(id:string)=>void;model:DashboardAnalyticsModel;providers:ProviderUsageSnapshot[];settings:SettingsSnapshot}) {
  const {t}=useLocale(),options=useResetStageOptions(settings,"dashboard");
  const [expanded,setExpanded]=useState<Set<string>>(()=>new Set());
  const step=Math.max(86400,model.range.grainSeconds),first=model.range.since;
@@ -32,12 +32,12 @@ export default function ProviderUsageMatrix({model,providers,settings}:{model:Da
    {groups.length?<div className="cosmic-matrix-scroll" tabIndex={0}><table><thead><tr><th scope="col">{t("TabProviders")}</th>{Array.from({length:count},(_,i)=><th scope="col" key={i}><bdi>{date.format((first+i*step)*1000)}</bdi></th>)}</tr></thead>
    <tbody>{groups.map(({provider,rows})=>{
      const show=expanded.has(provider.providerId);
-     return <MatrixRows key={provider.providerId} provider={provider} rows={rows} expanded={show} toggle={()=>setExpanded(current=>{const next=new Set(current);if(show)next.delete(provider.providerId);else next.add(provider.providerId);return next;})} cells={cells} windowLabel={row=>physicalWindowLabel(row.windowLabel,t)}/>;
+     return <MatrixRows key={provider.providerId} provider={provider} rows={rows} expanded={show} toggle={()=>setExpanded(current=>{const next=new Set(current);if(show)next.delete(provider.providerId);else next.add(provider.providerId);return next;})} cells={cells} onProvider={onProvider} windowLabel={row=>physicalWindowLabel(row.windowLabel,t)}/>;
    })}</tbody></table></div>:<p className="analytics-empty">{t("V2NoPhysicalHistory")}</p>}
    <div className="cosmic-matrix-legend"><span><i data-level="normal"/> &lt;{settings.highUsageThreshold}%</span><span><i data-level="high"/> {settings.highUsageThreshold}–&lt;{settings.criticalUsageThreshold}%</span><span><i data-level="critical"/> ≥{settings.criticalUsageThreshold}%</span><span>— {t("DashboardValueUnavailable")}</span></div>
  </section>;
 }
-function MatrixRows({provider,rows,expanded,toggle,cells,windowLabel}:{provider:ProviderUsageSnapshot;rows:QuotaSeries[];expanded:boolean;toggle:()=>void;cells:(row:QuotaSeries)=>React.ReactNode;windowLabel:(row:QuotaSeries)=>string}) {
- return <><tr><th scope="row"><div className="cosmic-matrix-provider"><ProviderIcon providerId={provider.providerId} size={16}/><bdi>{provider.displayName}</bdi><small>{windowLabel(rows[0])}</small>{rows.length>1&&<button type="button" onClick={toggle} aria-expanded={expanded} aria-label={provider.displayName}>{expanded?"−":"+"}</button>}</div></th>{cells(rows[0])}</tr>
+function MatrixRows({provider,rows,expanded,toggle,cells,windowLabel,onProvider}:{onProvider?:(id:string)=>void;provider:ProviderUsageSnapshot;rows:QuotaSeries[];expanded:boolean;toggle:()=>void;cells:(row:QuotaSeries)=>React.ReactNode;windowLabel:(row:QuotaSeries)=>string}) {
+ return <><tr><th scope="row"><div className="cosmic-matrix-provider"><ProviderIcon providerId={provider.providerId} size={16}/>{onProvider?<button type="button" onClick={()=>onProvider(provider.providerId)}><bdi>{provider.displayName}</bdi></button>:<bdi>{provider.displayName}</bdi>}<small>{windowLabel(rows[0])}</small>{rows.length>1&&<button type="button" onClick={toggle} aria-expanded={expanded} aria-label={provider.displayName}>{expanded?"−":"+"}</button>}</div></th>{cells(rows[0])}</tr>
  {expanded&&rows.slice(1).map(row=><tr key={row.key} className="cosmic-matrix-window"><th scope="row"><bdi>{provider.displayName} · {windowLabel(row)}</bdi></th>{cells(row)}</tr>)}</>;
 }

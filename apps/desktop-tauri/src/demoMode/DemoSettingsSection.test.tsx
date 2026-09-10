@@ -52,14 +52,14 @@ describe("DemoSettingsSection", () => {
     expect(update).toHaveBeenCalledWith({ demoProviderCount: 5 });
   });
 
-  it("provider count stepper clamps at the 1-24 bounds (owner section 6: never 0)", () => {
+  it("provider count stepper clamps at the 1-70 bounds (never 0)", () => {
     const update = vi.fn();
     const { rerender } = render(
       <DemoSettingsSection settings={settings({ demoModeEnabled: true, demoProviderCount: 1 })} catalog={CATALOG} update={update} />,
     );
     expect(screen.getByRole("button", { name: "Decrease simulated provider count" })).toBeDisabled();
 
-    rerender(<DemoSettingsSection settings={settings({ demoModeEnabled: true, demoProviderCount: 24 })} catalog={CATALOG} update={update} />);
+    rerender(<DemoSettingsSection settings={settings({ demoModeEnabled: true, demoProviderCount: 70 })} catalog={CATALOG} update={update} />);
     expect(screen.getByRole("button", { name: "Increase simulated provider count" })).toBeDisabled();
   });
 

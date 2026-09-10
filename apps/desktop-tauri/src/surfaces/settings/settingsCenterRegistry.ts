@@ -10,6 +10,7 @@ export const PRIMARY_GROUPS: {labelKey: LocaleKey; tabs: {id: PrimaryDestination
 ];
 export const PRIMARY_DESTINATIONS = PRIMARY_GROUPS.flatMap(group => group.tabs);
 export function primaryDestination(tab: SettingsTabId): PrimaryDestination {
+  if (tab === "analytics") return "dashboard";
   if (tab === "dashboard" || tab === "usageSpend" || tab === "providers") return tab;
   return tab === "profiles" || tab === "collections" ? "workspace" : "settings";
 }
