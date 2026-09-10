@@ -1,4 +1,4 @@
-//! System notifications for CodexBar
+//! System notifications for Quotalis
 //!
 //! Provides Windows toast notifications for usage alerts
 
@@ -25,7 +25,7 @@ use std::sync::OnceLock;
 /// toast without knowing Tauri's platform-specific resource directory.
 static TOAST_ICON_PATH: OnceLock<PathBuf> = OnceLock::new();
 
-/// Supply the packaged QuotaArc icon used by Windows notifications.
+/// Supply the packaged Quotalis icon used by Windows notifications.
 ///
 /// Calling this more than once is harmless: the first valid packaged path is
 /// retained for the life of the process.
@@ -33,7 +33,7 @@ pub fn configure_toast_icon(path: PathBuf) {
     if path.is_file() {
         drop(TOAST_ICON_PATH.set(path));
     } else {
-        tracing::warn!(?path, "QuotaArc toast icon resource was not found");
+        tracing::warn!(?path, "Quotalis toast icon resource was not found");
     }
 }
 
@@ -64,18 +64,89 @@ fn xml_escape(value: &str) -> String {
         .replace('\'', "&apos;")
 }
 
+const PUBLIC_APP_NAME: &str = "Quotalis";
+
+/// URI scheme used only for notification activation. Development and Personal
+/// builds must never share a protocol handler because each registration points
+/// at its own executable and single-instance lane.
+pub const fn notification_protocol_scheme() -> &'static str {
+    if crate::paths::is_dev_channel() {
+        "quotalis-dev"
+    } else {
+        "quotalis"
+    }
+}
+
+/// A bounded destination carried by a native notification click. Provider IDs
+/// remain typed, so an untrusted protocol argument cannot become an arbitrary
+/// Settings tab, command-line switch, or URL.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NotificationDestination {
+    Dashboard,
+    Provider(ProviderId),
+    Providers(ProviderId),
+}
+
+pub fn notification_uri(destination: NotificationDestination) -> String {
+    let scheme = notification_protocol_scheme();
+    match destination {
+        NotificationDestination::Dashboard => format!("{scheme}://dashboard"),
+        NotificationDestination::Provider(provider) => {
+            format!("{scheme}://provider/{}", provider.cli_name())
+        }
+        NotificationDestination::Providers(provider) => {
+            format!("{scheme}://providers/{}", provider.cli_name())
+        }
+    }
+}
+
+/// Parse only the current build channel's notification protocol. This is used
+/// by the Tauri shell for both cold launches and single-instance relaunches.
+/// Cross-channel URIs fail closed, preventing a Dev toast from raising Personal.
+pub fn parse_notification_uri(value: &str) -> Option<NotificationDestination> {
+    let value = value.trim();
+    let (scheme, target) = value.split_once("://")?;
+    if scheme != notification_protocol_scheme() {
+        return None;
+    }
+
+    let mut segments = target.split('/');
+    let route = segments.next()?;
+    let provider = segments.next();
+    if segments.next().is_some() {
+        return None;
+    }
+
+    match (route, provider) {
+        ("dashboard", None) => Some(NotificationDestination::Dashboard),
+        ("provider", Some(provider)) => {
+            ProviderId::from_cli_name(provider).map(NotificationDestination::Provider)
+        }
+        ("providers", Some(provider)) => {
+            ProviderId::from_cli_name(provider).map(NotificationDestination::Providers)
+        }
+        _ => None,
+    }
+}
+
 /// Build the complete ToastGeneric payload. An explicit local app-logo image
 /// makes the notification recognizable even while Windows refreshes its AUMID
 /// cache after an upgrade.
-fn toast_template(title: &str, body: &str, icon: Option<&Path>) -> String {
+fn toast_template(
+    title: &str,
+    body: &str,
+    icon: Option<&Path>,
+    destination: NotificationDestination,
+) -> String {
     let logo = icon.map_or_else(String::new, |path| {
         format!(
-            "<image placement=\"appLogoOverride\" src=\"{}\" alt=\"QuotaArc\"/>",
+            "<image placement=\"appLogoOverride\" src=\"{}\" alt=\"{PUBLIC_APP_NAME}\"/>",
             file_uri(path)
         )
     });
     format!(
-        "<toast><visual><binding template=\"ToastGeneric\"><text>{}</text><text>{}</text>{logo}</binding></visual><audio silent=\"true\"/></toast>",
+        "<toast activationType=\"protocol\" launch=\"{}\"><visual><binding template=\"ToastGeneric\"><text>{}</text><text>{}</text>{logo}</binding></visual><audio silent=\"true\"/></toast>",
+        xml_escape(&notification_uri(destination)),
         xml_escape(title),
         xml_escape(body),
     )
@@ -517,6 +588,7 @@ impl NotificationManager {
         self.show_toast(
             "DeepSeek pricing schedule",
             &format!("DeepSeek is currently in {label} hours."),
+            NotificationDestination::Provider(ProviderId::DeepSeek),
         );
     }
 
@@ -635,7 +707,7 @@ impl NotificationManager {
             LocaleKey::PredictivePaceWarningBody,
             &[&eta],
         );
-        self.show_toast(&title, &body);
+        self.show_toast(&title, &body, NotificationDestination::Provider(provider));
         Self::play_notification_sound(NotificationSoundEvent::PredictiveWarning, settings);
     }
 
@@ -944,7 +1016,7 @@ impl NotificationManager {
                 NotificationType::SessionDepleted,
             );
             if self.mark_sent(depleted_key) && !Self::quiet_hours_active(settings) {
-                self.show_toast(&title, &body);
+                self.show_toast(&title, &body, NotificationDestination::Provider(provider));
                 Self::play_notification_sound(NotificationSoundEvent::SessionDepleted, settings);
             }
         }
@@ -972,7 +1044,7 @@ impl NotificationManager {
                         NotificationType::SessionRestored,
                         settings.ui_language,
                     );
-                    self.show_toast(&title, &body);
+                    self.show_toast(&title, &body, NotificationDestination::Provider(provider));
                     Self::play_notification_sound(
                         NotificationSoundEvent::SessionRestored,
                         settings,
@@ -1007,7 +1079,11 @@ impl NotificationManager {
             notif_type,
             settings.ui_language,
         );
-        self.show_toast(&title, &body);
+        self.show_toast(
+            &title,
+            &body,
+            Self::notification_destination(provider, notif_type),
+        );
         Self::play_notification_sound(Self::sound_event_for(notif_type), settings);
     }
 
@@ -1104,6 +1180,24 @@ impl NotificationManager {
         locale::get_text(language, key)
     }
 
+    fn notification_destination(
+        provider: ProviderId,
+        notification_type: NotificationType,
+    ) -> NotificationDestination {
+        match notification_type {
+            NotificationType::ExpectedReset(_)
+            | NotificationType::UnexpectedReset(_)
+            | NotificationType::BankedResetCredit(_) => NotificationDestination::Dashboard,
+            NotificationType::StatusIssue => NotificationDestination::Providers(provider),
+            NotificationType::HighUsage
+            | NotificationType::CriticalUsage
+            | NotificationType::Exhausted
+            | NotificationType::UsageStep(_)
+            | NotificationType::SessionDepleted
+            | NotificationType::SessionRestored => NotificationDestination::Provider(provider),
+        }
+    }
+
     fn quota_pair(used_percent: f64, language: crate::settings::Language) -> String {
         let used = used_percent.clamp(0.0, 100.0);
         format!(
@@ -1150,12 +1244,12 @@ impl NotificationManager {
             LocaleKey::NotificationToastStatusBody,
             &[provider.display_name(), description],
         );
-        self.show_toast(&title, &body);
+        self.show_toast(&title, &body, NotificationDestination::Providers(provider));
         Self::play_notification_sound(NotificationSoundEvent::StatusIssue, settings);
     }
 
-    #[cfg(target_os = "windows")]
-    fn show_toast(&self, title: &str, body: &str) {
+    #[cfg(all(target_os = "windows", not(test)))]
+    fn show_toast(&self, title: &str, body: &str, destination: NotificationDestination) {
         use std::os::windows::process::CommandExt;
         use std::process::Command;
         use std::sync::Once;
@@ -1166,7 +1260,7 @@ impl NotificationManager {
         static AUMID_INIT: Once = Once::new();
         AUMID_INIT.call_once(ensure_aumid_registered);
 
-        let template = toast_template(title, body, toast_icon_path().as_deref());
+        let template = toast_template(title, body, toast_icon_path().as_deref(), destination);
 
         // Uses ToastGeneric (Win 10+) and wraps in try/catch so PowerShell exits
         // with code 1 on failure rather than swallowing the error silently.
@@ -1186,7 +1280,7 @@ impl NotificationManager {
     if ($null -eq $notifier) {{ throw "CreateToastNotifier returned null" }}
     $notifier.Show($toast)
 }} catch {{
-    [System.Console]::Error.WriteLine("QuotaArc toast failed: $_")
+    [System.Console]::Error.WriteLine("Quotalis toast failed: $_")
     exit 1
 }}"#,
             template,
@@ -1209,14 +1303,20 @@ impl NotificationManager {
         }
     }
 
+    #[cfg(all(target_os = "windows", test))]
+    fn show_toast(&self, _title: &str, _body: &str, _destination: NotificationDestination) {
+        // Core unit tests exercise notification state transitions. They must
+        // never write AUMID/protocol registry keys or show native toasts.
+    }
+
     #[cfg(not(target_os = "windows"))]
-    fn show_toast(&self, title: &str, body: &str) {
+    fn show_toast(&self, title: &str, body: &str, _destination: NotificationDestination) {
         use std::process::Command;
 
         // Try notify-send first (works on most Linux distros including WSL with WSLg)
         if let Ok(output) = Command::new("notify-send")
             .args([
-                "--app-name=QuotaArc",
+                "--app-name=Quotalis",
                 "--icon=dialog-information",
                 title,
                 body,
@@ -1258,53 +1358,86 @@ impl Default for NotificationManager {
     }
 }
 
-/// Register the QuotaArc App User Model ID (AUMID) in the Windows registry so that
+fn protocol_launch_command(executable: &Path) -> String {
+    format!("\"{}\" \"%1\"", executable.to_string_lossy())
+}
+
+/// Register the stable Windows AUMID and a channel-specific notification URI
+/// protocol. The internal AUMID deliberately remains unchanged for upgrade
+/// continuity; only the public DisplayName is Quotalis.
 /// `CreateToastNotifier(AUMID)` resolves to a valid notifier instead of returning
-/// null.  Must be called at least once before the first toast.  Safe to call multiple
-/// times (idempotent registry write).
+/// null. Safe to call multiple times (idempotent registry writes).
+///
+/// This function never enumerates or deletes historical keys. In particular, a
+/// Dev build writes only its `.dev` AUMID and `quotalis-dev` protocol handler,
+/// so it cannot mutate the co-installed Personal registration.
 #[cfg(target_os = "windows")]
 fn ensure_aumid_registered() {
     use winreg::RegKey;
     use winreg::enums::*;
 
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    // Retire only identities this product previously owned. Windows will
-    // classify future notifications under the same identifier as the Tauri
-    // package, so the Start menu, taskbar and Action Center agree on one app.
-    for legacy_aumid in ["CodexBar", "QuotaArc", "QuotaArc.Dev"] {
-        drop(hkcu.delete_subkey_all(format!(r"SOFTWARE\Classes\AppUserModelId\{legacy_aumid}")));
-    }
     // HKCU\SOFTWARE\Classes\AppUserModelId\<AUMID> is the documented path for
     // registering Win32 desktop app AUMIDs without a COM server or Start Menu shortcut.
     let aumid_key = format!(
         r"SOFTWARE\Classes\AppUserModelId\{}",
         crate::paths::TOAST_AUMID
     );
-    let display_name = format!("QuotaArc{}", crate::paths::channel_suffix());
     let icon_path = toast_icon_path();
-    let result = hkcu.create_subkey(aumid_key).and_then(|(key, _)| {
-        key.set_value("DisplayName", &display_name)?;
+    let aumid_result = hkcu.create_subkey(aumid_key).and_then(|(key, _)| {
+        key.set_value("DisplayName", &PUBLIC_APP_NAME)?;
         key.set_value("IconBackgroundColor", &"FF10141C")?;
-        if let Some(icon_path) = icon_path {
+        if let Some(icon_path) = icon_path.as_ref() {
             let icon_path = icon_path.to_string_lossy().into_owned();
             key.set_value("IconUri", &icon_path)?;
         }
         Ok(())
     });
 
-    match result {
+    match aumid_result {
         Ok(()) => tracing::debug!(
             aumid = crate::paths::TOAST_AUMID,
-            "QuotaArc AUMID registered for Windows notifications"
+            "Quotalis AUMID registered for Windows notifications"
         ),
-        Err(e) => tracing::warn!("Failed to register QuotaArc AUMID: {}", e),
+        Err(e) => tracing::warn!("Failed to register Quotalis AUMID: {}", e),
+    }
+
+    let protocol_key = format!(r"SOFTWARE\Classes\{}", notification_protocol_scheme());
+    let protocol_result = std::env::current_exe().and_then(|executable| {
+        let (key, _) = hkcu.create_subkey(&protocol_key)?;
+        key.set_value("", &format!("URL:{PUBLIC_APP_NAME} notification link"))?;
+        key.set_value("URL Protocol", &"")?;
+        if let Some(icon_path) = icon_path.as_ref() {
+            let icon_path = icon_path.to_string_lossy().into_owned();
+            let (icon_key, _) = hkcu.create_subkey(format!(r"{protocol_key}\DefaultIcon"))?;
+            icon_key.set_value("", &icon_path)?;
+        }
+        let (command_key, _) = hkcu.create_subkey(format!(r"{protocol_key}\shell\open\command"))?;
+        command_key.set_value("", &protocol_launch_command(&executable))
+    });
+
+    match protocol_result {
+        Ok(()) => tracing::debug!(
+            scheme = notification_protocol_scheme(),
+            "Quotalis notification protocol registered"
+        ),
+        Err(error) => tracing::warn!(
+            scheme = notification_protocol_scheme(),
+            %error,
+            "failed to register Quotalis notification protocol"
+        ),
     }
 }
 
 /// Simple notification function for one-off notifications
 pub fn show_notification(title: &str, body: &str) {
+    show_notification_to(title, body, NotificationDestination::Dashboard);
+}
+
+/// Show a one-off notification with an explicit, typed activation target.
+pub fn show_notification_to(title: &str, body: &str, destination: NotificationDestination) {
     let manager = NotificationManager::new();
-    manager.show_toast(title, body);
+    manager.show_toast(title, body, destination);
 }
 
 #[cfg(test)]
@@ -1312,20 +1445,114 @@ mod tests {
     use super::*;
 
     #[test]
-    fn toast_payload_keeps_quota_arc_identity_and_escapes_text() {
+    fn toast_payload_uses_quotalis_identity_icon_and_typed_activation() {
         let xml = toast_template(
             "Usage < alert",
             "Claude & OpenAI",
             Some(Path::new(
                 r"C:\Program Files\QuotaArc\quotaarc-icon-128.png",
             )),
+            NotificationDestination::Provider(ProviderId::Claude),
         );
 
         assert!(xml.contains("Usage &lt; alert"));
         assert!(xml.contains("Claude &amp; OpenAI"));
         assert!(xml.contains("placement=\"appLogoOverride\""));
+        assert!(xml.contains("alt=\"Quotalis\""));
+        assert!(xml.contains("activationType=\"protocol\""));
+        assert!(xml.contains(&format!(
+            "launch=\"{}://provider/claude\"",
+            notification_protocol_scheme()
+        )));
         assert!(xml.contains("file:///C:/Program%20Files/QuotaArc/quotaarc-icon-128.png"));
+        assert!(!xml.contains("alt=\"QuotaArc\""));
+        assert!(!xml.contains("alt=\"CodexBar\""));
         assert!(!xml.contains("hint-crop"));
+    }
+
+    #[test]
+    fn notification_uris_round_trip_every_registered_provider() {
+        for provider in ProviderId::all() {
+            for destination in [
+                NotificationDestination::Provider(*provider),
+                NotificationDestination::Providers(*provider),
+            ] {
+                let uri = notification_uri(destination);
+                assert_eq!(parse_notification_uri(&uri), Some(destination));
+            }
+        }
+        let dashboard = NotificationDestination::Dashboard;
+        assert_eq!(
+            parse_notification_uri(&notification_uri(dashboard)),
+            Some(dashboard)
+        );
+    }
+
+    #[test]
+    fn notification_uri_parser_rejects_cross_channel_and_untrusted_targets() {
+        let other_scheme = if crate::paths::is_dev_channel() {
+            "quotalis"
+        } else {
+            "quotalis-dev"
+        };
+        assert_eq!(
+            parse_notification_uri(&format!("{other_scheme}://dashboard")),
+            None
+        );
+        assert_eq!(
+            parse_notification_uri(&format!(
+                "{}://provider/not-a-provider",
+                notification_protocol_scheme()
+            )),
+            None
+        );
+        assert_eq!(
+            parse_notification_uri(&format!(
+                "{}://settings/advanced",
+                notification_protocol_scheme()
+            )),
+            None
+        );
+        assert_eq!(
+            parse_notification_uri(&format!(
+                "{}://provider/codex/extra",
+                notification_protocol_scheme()
+            )),
+            None
+        );
+    }
+
+    #[test]
+    fn notification_kinds_route_to_the_expected_product_surface() {
+        assert_eq!(
+            NotificationManager::notification_destination(
+                ProviderId::Codex,
+                NotificationType::HighUsage,
+            ),
+            NotificationDestination::Provider(ProviderId::Codex)
+        );
+        assert_eq!(
+            NotificationManager::notification_destination(
+                ProviderId::Claude,
+                NotificationType::StatusIssue,
+            ),
+            NotificationDestination::Providers(ProviderId::Claude)
+        );
+        assert_eq!(
+            NotificationManager::notification_destination(
+                ProviderId::Codex,
+                NotificationType::ExpectedReset(1),
+            ),
+            NotificationDestination::Dashboard
+        );
+    }
+
+    #[test]
+    fn protocol_command_quotes_executable_and_activation_uri() {
+        assert_eq!(
+            protocol_launch_command(Path::new(r"C:\Program Files\Quotalis\Quotalis.exe")),
+            r#"\"C:\Program Files\Quotalis\Quotalis.exe\" \"%1\""#
+        );
     }
     use crate::core::{PaceStage, RateWindow, UsagePace};
     use chrono::{DateTime, Duration, Utc};

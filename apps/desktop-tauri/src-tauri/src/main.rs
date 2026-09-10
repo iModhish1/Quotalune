@@ -151,6 +151,7 @@ enum InstanceActivation {
     None,
     CompactSurface,
     MainWorkspace,
+    Notification(quotalis_core::notifications::NotificationDestination),
 }
 
 fn instance_activation<I, S>(args: I) -> InstanceActivation
@@ -159,12 +160,46 @@ where
     S: AsRef<str>,
 {
     let args = nonblank_launch_args(args);
-    if args.is_empty() {
+    if let Some(destination) = args
+        .iter()
+        .find_map(|arg| quotalis_core::notifications::parse_notification_uri(arg))
+    {
+        InstanceActivation::Notification(destination)
+    } else if args.is_empty() {
         InstanceActivation::MainWorkspace
     } else if should_open_primary_window_from_args(&args) {
         InstanceActivation::CompactSurface
     } else {
         InstanceActivation::None
+    }
+}
+
+fn activate_notification_destination(
+    app: &tauri::AppHandle,
+    destination: quotalis_core::notifications::NotificationDestination,
+) {
+    use quotalis_core::notifications::NotificationDestination;
+
+    let result = match destination {
+        NotificationDestination::Dashboard => {
+            shell::open_or_focus_main_window(app, shell::MainRoute::Dashboard)
+        }
+        NotificationDestination::Provider(provider) => shell::reopen_to_target(
+            app,
+            SurfaceMode::PopOut,
+            SurfaceTarget::Provider {
+                provider_id: provider.cli_name().to_string(),
+            },
+            None,
+        )
+        .map(|_| ()),
+        NotificationDestination::Providers(_) => {
+            shell::open_or_focus_main_window(app, shell::MainRoute::Providers)
+        }
+    };
+
+    if let Err(error) = result {
+        tracing::warn!(?destination, %error, "failed to activate notification destination");
     }
 }
 
@@ -222,11 +257,15 @@ fn main() {
     let is_proof_mode = proof_config.is_some();
     let force_start_visible = std::env::var_os("CODEXBAR_START_VISIBLE").is_some();
     let settings = quotalis_core::settings::Settings::load();
+    let launch_args = std::env::args().skip(1).collect::<Vec<_>>();
+    let notification_activation = launch_args
+        .iter()
+        .find_map(|arg| quotalis_core::notifications::parse_notification_uri(arg));
     let launch = launch_behavior(
         force_start_visible,
         settings.start_minimized,
         settings.top_arc_enabled,
-        std::env::args().skip(1),
+        &launch_args,
     );
 
     let mut initial_state = AppState::new();
@@ -278,6 +317,9 @@ fn main() {
                         request.target,
                         request.position,
                     );
+                }
+                InstanceActivation::Notification(destination) => {
+                    activate_notification_destination(app, destination);
                 }
                 InstanceActivation::None => {}
             },
@@ -425,11 +467,12 @@ fn main() {
             command_profiles::set_global_limit_presentation,
             command_profiles::set_reset_presentation,
             command_profiles::set_reset_presentation_surface_override,
+            proof_harness::show_notification_proof,
         ])
         .setup(move |app| {
             if let Ok(icon_path) = app
                 .path()
-                .resolve("quotaarc-icon-128.png", BaseDirectory::Resource)
+                .resolve("quotalis-icon-128.png", BaseDirectory::Resource)
             {
                 quotalis_core::notifications::configure_toast_icon(icon_path);
             }
@@ -455,6 +498,12 @@ fn main() {
                 tauri::async_runtime::spawn(async move {
                     tokio::time::sleep(PROOF_ACTIVATION_DELAY).await;
                     proof_harness::activate(&app_handle);
+                });
+            } else if let Some(destination) = notification_activation {
+                let app = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(VISIBLE_START_ACTIVATION_DELAY).await;
+                    activate_notification_destination(&app, destination);
                 });
             } else if launch.open_main_workspace_at_start {
                 let app = app.handle().clone();
@@ -716,6 +765,39 @@ mod tests {
         assert_eq!(
             instance_activation(["menubar"]),
             InstanceActivation::CompactSurface
+        );
+    }
+
+    #[test]
+    fn notification_links_take_priority_over_normal_launch_arguments() {
+        use quotalis_core::core::ProviderId;
+        use quotalis_core::notifications::{NotificationDestination, notification_uri};
+
+        let destination = NotificationDestination::Provider(ProviderId::Codex);
+        let uri = notification_uri(destination);
+        assert_eq!(
+            instance_activation(["menubar", uri.as_str()]),
+            InstanceActivation::Notification(destination)
+        );
+    }
+
+    #[test]
+    fn invalid_or_cross_channel_notification_links_never_activate_a_surface() {
+        let other_scheme = if quotalis_core::paths::is_dev_channel() {
+            "quotalis"
+        } else {
+            "quotalis-dev"
+        };
+        assert_eq!(
+            instance_activation([format!("{other_scheme}://dashboard")]),
+            InstanceActivation::None
+        );
+        assert_eq!(
+            instance_activation([format!(
+                "{}://provider/not-a-provider",
+                quotalis_core::notifications::notification_protocol_scheme()
+            )]),
+            InstanceActivation::None
         );
     }
 

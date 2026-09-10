@@ -33,6 +33,74 @@ use crate::state::AppState;
 use crate::surface::SurfaceMode;
 use crate::surface_target::{SurfaceTarget, is_supported_provider_id, is_supported_settings_tab};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct NotificationProofPayload {
+    title: String,
+    body: String,
+    destination: quotalis_core::notifications::NotificationDestination,
+}
+
+fn notification_proof_payload(
+    kind: &str,
+    provider: quotalis_core::core::ProviderId,
+) -> Option<NotificationProofPayload> {
+    use quotalis_core::notifications::NotificationDestination;
+
+    let provider_name = provider.display_name();
+    let (title, body, destination) = match kind {
+        "normal" => (
+            "Quotalis",
+            "Notifications are ready.",
+            NotificationDestination::Dashboard,
+        ),
+        "highUsage" => (
+            "High usage",
+            format!("{provider_name} usage is high. Open its current limits."),
+            NotificationDestination::Provider(provider),
+        ),
+        "reset" => (
+            "Quota reset completed",
+            format!("{provider_name} reported a quota reset."),
+            NotificationDestination::Dashboard,
+        ),
+        "authRequired" => (
+            "Connection required",
+            format!("Connect {provider_name} to resume quota updates."),
+            NotificationDestination::Providers(provider),
+        ),
+        _ => return None,
+    };
+
+    Some(NotificationProofPayload {
+        title: title.to_string(),
+        body,
+        destination,
+    })
+}
+
+/// Native notification proof hook. It is callable only from an explicit Dev
+/// proof-mode process, so production UI cannot generate synthetic toasts.
+#[tauri::command]
+pub fn show_notification_proof(
+    app: AppHandle,
+    kind: String,
+    provider_id: String,
+) -> Result<(), String> {
+    if !quotalis_core::paths::is_dev_channel() || !is_proof_mode(&app) {
+        return Err("notification proof is available only in Dev proof mode".to_string());
+    }
+    let provider = quotalis_core::core::ProviderId::from_cli_name(&provider_id)
+        .ok_or_else(|| "unknown provider for notification proof".to_string())?;
+    let payload = notification_proof_payload(&kind, provider)
+        .ok_or_else(|| "unsupported notification proof kind".to_string())?;
+    quotalis_core::notifications::show_notification_to(
+        &payload.title,
+        &payload.body,
+        payload.destination,
+    );
+    Ok(())
+}
+
 /// Proof configuration parsed from `CODEXBAR_PROOF_MODE`.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -526,6 +594,30 @@ mod tests {
     use std::sync::LazyLock;
 
     static ENV_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+
+    #[test]
+    fn notification_proof_kinds_have_bounded_routes_and_current_brand() {
+        use quotalis_core::core::ProviderId;
+        use quotalis_core::notifications::NotificationDestination;
+
+        let normal = notification_proof_payload("normal", ProviderId::Codex).unwrap();
+        assert_eq!(normal.title, "Quotalis");
+        assert_eq!(normal.destination, NotificationDestination::Dashboard);
+
+        let high = notification_proof_payload("highUsage", ProviderId::Codex).unwrap();
+        assert_eq!(
+            high.destination,
+            NotificationDestination::Provider(ProviderId::Codex)
+        );
+
+        let auth = notification_proof_payload("authRequired", ProviderId::Claude).unwrap();
+        assert_eq!(
+            auth.destination,
+            NotificationDestination::Providers(ProviderId::Claude)
+        );
+
+        assert!(notification_proof_payload("arbitrary", ProviderId::Codex).is_none());
+    }
 
     #[test]
     fn tall_panel_bottom_edge_never_passes_work_bottom_minus_inset() {

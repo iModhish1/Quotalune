@@ -37,7 +37,7 @@
     "active": true,
     "publisher": "Quotalis",
     "resources": {
-      "../../../assets/brand/icons/quotaarc-icon-128.png": "quotaarc-icon-128.png"
+      "../../../assets/brand/icons/quotaarc-icon-128.png": "quotalis-icon-128.png"
     },
     "targets": [
       "nsis",
