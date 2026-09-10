@@ -27,11 +27,18 @@ const mean = (points: QuotaHistoryPoint[]) => {
   return [...closing.values()].reduce((sum,point)=>sum+point.usedPercent,0)/closing.size;
 };
 const available = (value: number): MetricResult => ({state: "available", value});
-function identityGuard(points: QuotaHistoryPoint[]): MetricResult | null {
+/**
+ * `buildQuotaAnalytics` has already partitioned its input by this exact key.
+ * Passing it through avoids serialising every point again for each derived
+ * metric, while direct callers still receive the full identity check.
+ */
+function identityGuard(points: QuotaHistoryPoint[], groupedSeriesKey?: string): MetricResult | null {
   if (!points.length) return missingMetric("insufficientHistory", "insufficientSamples");
   if (points.some(p => p.accountScope !== "observed" || !p.accountId)) return missingMetric("unsupported", "identityUnknown");
-  const key = quotaSeriesKey(points[0]);
-  if (points.some(p => quotaSeriesKey(p) !== key)) return missingMetric("unsupported", "identityUnknown");
+  if (groupedSeriesKey === undefined) {
+    const key = quotaSeriesKey(points[0]);
+    if (points.some(p => quotaSeriesKey(p) !== key)) return missingMetric("unsupported", "identityUnknown");
+  }
   if (!points[0].windowKey || !Number.isFinite(points[0].windowMinutes) || (points[0].windowMinutes ?? 0) <= 0) return missingMetric("unsupported", "windowUnknown");
   if (points.some(p => !valid(p))) return missingMetric("error", "invalidSamples");
   return null;
@@ -46,7 +53,10 @@ function maximumGap(points: QuotaHistoryPoint[]): number | null {
 /** Same physical series and equal elapsed ranges. Compares sampled quota state,
  * not consumption, token rate or forecast. Policy is explicit in Metric Registry. */
 export function compareQuotaPeriods(current: QuotaHistoryPoint[], previous: QuotaHistoryPoint[], range: AnalyticsRange): MetricResult {
-  const guard = identityGuard([...previous, ...current]);
+  return compareQuotaPeriodsForSeries(current, previous, range);
+}
+function compareQuotaPeriodsForSeries(current: QuotaHistoryPoint[], previous: QuotaHistoryPoint[], range: AnalyticsRange, groupedSeriesKey?: string): MetricResult {
+  const guard = identityGuard([...previous, ...current], groupedSeriesKey);
   if (guard) return guard;
   const span = range.until - range.since;
   if (!(span > 0) || !(range.grainSeconds > 0)) return missingMetric("error", "invalidSamples");
@@ -63,7 +73,10 @@ export function compareQuotaPeriods(current: QuotaHistoryPoint[], previous: Quot
 }
 
 export function quotaVelocity(points: QuotaHistoryPoint[], grainSeconds: number): MetricResult {
-  const guard = identityGuard(points);
+  return quotaVelocityForSeries(points, grainSeconds);
+}
+function quotaVelocityForSeries(points: QuotaHistoryPoint[], grainSeconds: number, groupedSeriesKey?: string): MetricResult {
+  const guard = identityGuard(points, groupedSeriesKey);
   if (guard) return guard;
   if (points.some(point => point.counterDecreased)) return missingMetric("unavailable", "counterDecrease");
   const sorted = [...points].sort((a, b) => a.observedAt - b.observedAt);
@@ -104,13 +117,13 @@ export function buildQuotaAnalytics(points: readonly QuotaHistoryPoint[], range:
     const current = sorted.filter(p => p.observedAt >= range.since);
     const previous = sorted.filter(p => p.observedAt < range.since);
     const error = invalid ? missingMetric("error", "invalidSamples") : null;
-    const statsGuard = error ?? identityGuard(current);
+    const statsGuard = error ?? identityGuard(current, key);
     return {
       key, provider: first.provider, accountId: first.accountId, accountScope: first.accountScope,
       windowKey: first.windowKey, windowLabel: first.windowLabel, windowMinutes: first.windowMinutes,
       current, previous, invalid,
-      comparison: error ?? compareQuotaPeriods(current, previous, range),
-      velocity: error ?? quotaVelocity(current, range.grainSeconds),
+      comparison: error ?? compareQuotaPeriodsForSeries(current, previous, range, key),
+      velocity: error ?? quotaVelocityForSeries(current, range.grainSeconds, key),
       start: statsGuard ?? available(current[0]?.usedPercent ?? NaN),
       end: statsGuard ?? available(current[current.length - 1]?.usedPercent ?? NaN),
       change: statsGuard ?? available((current[current.length - 1]?.usedPercent ?? NaN) - (current[0]?.usedPercent ?? NaN)),
