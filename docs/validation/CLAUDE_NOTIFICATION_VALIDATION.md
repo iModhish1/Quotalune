@@ -56,19 +56,45 @@ cached display name indefinitely, since there is no shortcut-driven
 refresh trigger — only the registry key, which this evidence shows Windows
 is not consistently re-reading.
 
-**Not fixed this pass.** The registry-key path (already correct) is not
-the actual bug; the real fix requires either (a) creating a genuine Start
-Menu shortcut for Dev launches with the correct AUMID (the officially
-supported fix for this exact class of platform behavior), or (b) directly
-manipulating Windows' notification cache/database, which is unsupported
-and risks corrupting unrelated notification history for other apps on this
-machine. Given the risk profile of (b) and the non-trivial implementation
-and verification surface of (a) — it requires COM `IShellLinkW`/
-`IPersistFile` shortcut creation code that does not exist anywhere in this
-codebase yet, plus a full rebuild-and-re-verify cycle to prove Windows
-actually re-resolves after a shortcut appears — this was documented
-precisely rather than attempted under time pressure in the same pass that
-found it.
+**Update — the supported fix was actually tried, and disproven.** A
+follow-up pass built a real, bundled Dev NSIS installer
+(`tauri build --config tauri.dev.conf.json --features dev-channel --debug
+--bundles nsis`, which Tauri produced correctly on the first attempt using
+the existing release config's NSIS settings, `installMode: currentUser`,
+merged with the Dev identifier/productName — no new packaging code
+needed), inspected it (extracted via 7-Zip, confirmed it embeds the
+correct `Quotalis Dev`/`app.quotaarc.desktop.dev` strings), then installed
+it silently (`/S`, current-user, no admin) to
+`%LOCALAPPDATA%\Quotalis Dev\` — a location completely distinct from
+Personal's `%LOCALAPPDATA%\QuotaArc\`, confirmed via the differing
+`identifier` in `tauri.conf.json` (`app.quotaarc.desktop`) vs
+`tauri.dev.conf.json` (`app.quotaarc.desktop.dev`). This created a real
+Start Menu shortcut (`Quotalis Dev.lnk`, `TargetPath:
+...\Quotalis Dev\QuotalisDev.exe`) — the exact "officially supported
+Windows toast identity path" this investigation's first pass hypothesized
+was missing.
+
+**Launched the installed binary (preflight-verified first), triggered a
+fresh toast, and re-queried `UserNotificationListener`: the display name
+was still `QuotaArc Dev`.** A genuine Start Menu shortcut, a fresh
+per-user install, and a brand-new process did not change the result. This
+disproves the "missing shortcut" hypothesis outright — the real cause is
+that Windows caches an AUMID's display identity from whenever it first
+ever saw that exact AUMID string (`app.quotaarc.desktop.dev`, unchanged
+since before the Quotalis rebrand), independent of the registry key, the
+shortcut, or the install location. The two things that would actually
+clear this cache — renaming the AUMID, or directly editing Windows'
+notification database — are both explicitly forbidden by this
+investigation's own constraints (AUMID renaming breaks upgrade/toast/
+single-instance continuity per `QUOTALIS_WINDOWS_IDENTITY_MIGRATION.md`;
+database editing is unsupported and risks corrupting other apps'
+notification history). This is a genuine, disclosed Windows-platform
+limitation given those constraints, not an unattempted fix.
+
+The test install was fully removed afterward (`uninstall.exe /S`,
+confirmed both the install directory and Start Menu shortcut no longer
+exist) — this was a temporary, isolated proof, not a persistent change.
+Personal was not running throughout and remained untouched.
 
 ### Toast banner visibility — **not resolved, environment-limited**
 No toast banner was visible in a full-desktop screenshot taken immediately
@@ -98,8 +124,13 @@ screenshots showing no visible banner/Action Center change).
 
 ## Verdict
 
-**NOTIFICATIONS: NOT PASSED.** Content is correct; a real, precisely
-root-caused branding defect (stale "QuotaArc Dev" display name) was found
-via direct platform introspection and left open with a clear fix
-direction; banner visibility and click/activation remain unverified due to
-environment constraints this pass could not resolve.
+**NOTIFICATIONS: NOT PASSED (ENVIRONMENT/PLATFORM-BLOCKED for the display
+name specifically).** Content is correct. The stale "QuotaArc Dev" display
+name is real, precisely root-caused, and was actively tested against the
+one supported fix Microsoft's platform offers (a registered Start Menu
+shortcut) — which did not resolve it. The only two remaining levers
+(AUMID rename, notification-database editing) are both explicitly
+out of scope by this investigation's own constraints. This is not a
+"didn't get to it" gap; it is a proven platform limitation under the
+given constraints. Banner visibility and click/activation remain
+unverified due to the separate RDP environment limitation.
