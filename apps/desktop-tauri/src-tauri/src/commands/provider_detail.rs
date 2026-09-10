@@ -339,4 +339,41 @@ mod tests {
             );
         }
     }
+
+    /// `provider_auth_capability_for` is a fallthrough `if`/`else` chain over
+    /// several independent lookup tables (login registry, cookie domains, API
+    /// key list, token-account support, JetBrains special-case, dashboard
+    /// URL), not a `match ProviderId { .. }` — so rustc's exhaustiveness check
+    /// gives no guarantee a newly added `ProviderId` gets a real, audited
+    /// capability rather than silently landing on the generic
+    /// `ExternalDashboard`/`Unsupported` tail of the chain. This test is the
+    /// substitute gate: it fails loudly the moment any registered provider
+    /// resolves to `Unsupported`, and pins today's exact count (70) so a
+    /// newly added `ProviderId` forces this file to be revisited rather than
+    /// silently inheriting a fallback classification.
+    #[test]
+    fn no_registered_provider_falls_back_to_unsupported() {
+        let all = ProviderId::all();
+        assert_eq!(
+            all.len(),
+            70,
+            "ProviderId::all() count changed — re-audit provider_auth_capability_for \
+             for the new/removed provider(s) before updating this count"
+        );
+
+        let unsupported: Vec<&str> = all
+            .iter()
+            .filter(|id| {
+                build_provider_detail(id.cli_name()).unwrap().auth_capability
+                    == ProviderAuthCapability::Unsupported
+            })
+            .map(|id| id.cli_name())
+            .collect();
+
+        assert!(
+            unsupported.is_empty(),
+            "provider(s) fell through to the generic Unsupported auth capability \
+             with no verified auth mechanism: {unsupported:?}"
+        );
+    }
 }
