@@ -395,10 +395,19 @@ impl<'a, F: Fn(LoginPhase)> CliLoginState<'a, F> {
         if self.auth_link.is_none()
             && let Some(found) = self.url_regex.find(line)
         {
-            self.auth_link = Some(found.as_str().to_string());
+            let link = found.as_str().to_string();
+            self.auth_link = Some(link.clone());
             (self.on_phase)(LoginPhase::WaitingBrowser);
-            // Opening a browser must not wait for the browser to exit.
-            let _result = open::that_detached(found.as_str());
+            // Opening a browser must not wait for the browser to exit. The
+            // regex above already anchors on `https?://`, but the scheme
+            // check is repeated here (rather than trusted implicitly) so the
+            // safety property lives in one auditable place, not in a regex
+            // character class that a future edit could silently loosen.
+            if is_openable_url(&link) {
+                let _result = open::that_detached(&link);
+            } else {
+                tracing::warn!("Discovered login link had a disallowed scheme; not opening it");
+            }
         }
     }
     fn into_result(self, outcome: LoginOutcome) -> LoginResult {
@@ -427,8 +436,68 @@ fn exit_status_result<F: Fn(LoginPhase)>(
 #[cfg(test)]
 mod tests;
 
-/// Open a URL in the default browser
+/// Schemes safe to hand to the OS URL opener (`open::that`/`open::that_detached`).
+/// Only `https://` browser links and this build's own registered deep-link
+/// protocol (`quotalis://` or `quotalis-dev://`) may reach the OS shell here —
+/// anything else (`javascript:`, `file:`, `cmd:`, `powershell:`, `shell:`,
+/// etc.) is rejected before it can be launched, since the `open` crate on
+/// Windows shells out via `cmd /c start` and a caller-controlled string is
+/// otherwise untrusted input to that boundary.
+pub(crate) fn is_openable_url(url: &str) -> bool {
+    let trimmed = url.trim();
+    if trimmed.is_empty() || trimmed.chars().any(char::is_control) {
+        return false;
+    }
+    if trimmed.starts_with("https://") {
+        return true;
+    }
+    let app_scheme_prefix = format!(
+        "{}://",
+        crate::notifications::notification_protocol_scheme()
+    );
+    trimmed.starts_with(&app_scheme_prefix)
+}
+
+/// Open a URL in the default browser. Rejects any URL that is not `https://`
+/// or this build's own app-protocol scheme -- see [`is_openable_url`].
 pub fn open_auth_url(url: &str) -> anyhow::Result<()> {
+    if !is_openable_url(url) {
+        anyhow::bail!("Refusing to open URL with a disallowed scheme");
+    }
     open::that(url)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod openable_url_tests {
+    use super::is_openable_url;
+
+    #[test]
+    fn accepts_https_urls() {
+        assert!(is_openable_url("https://example.com/login"));
+    }
+
+    #[test]
+    fn accepts_this_builds_app_protocol_uri() {
+        let scheme = crate::notifications::notification_protocol_scheme();
+        assert!(is_openable_url(&format!("{scheme}://dashboard")));
+        assert!(is_openable_url(&format!("{scheme}://provider/codex")));
+    }
+
+    #[test]
+    fn rejects_dangerous_schemes() {
+        assert!(!is_openable_url("javascript:alert(1)"));
+        assert!(!is_openable_url("file:///etc/passwd"));
+        assert!(!is_openable_url("cmd:calc.exe"));
+        assert!(!is_openable_url("powershell:-Command calc"));
+        assert!(!is_openable_url("shell:startup"));
+    }
+
+    #[test]
+    fn rejects_plain_http_empty_and_control_characters() {
+        assert!(!is_openable_url("http://example.com"));
+        assert!(!is_openable_url(""));
+        assert!(!is_openable_url("   "));
+        assert!(!is_openable_url("https://example.com/\u{7}evil"));
+    }
 }
