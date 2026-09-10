@@ -22,6 +22,37 @@
 > multi-hour work in its own right, and is left explicitly open rather
 > than given a rushed, shallow pass. A follow-up session should pick up
 > directly at Wave B.
+>
+> **Second update (same day):** the owner explicitly required continuing
+> past Wave A without stopping to ask. This pass: (1) **closed Wave A**
+> properly — built and installed a real, isolated Quotalis Dev NSIS
+> installer (current-user mode, a location fully distinct from Personal)
+> specifically to test the officially-supported Start-Menu-shortcut fix
+> for the stale "QuotaArc Dev" notification display name; the shortcut
+> did **not** fix it, disproving the previous pass's "missing shortcut"
+> hypothesis and proving this is a genuine Windows AUMID-identity-cache
+> limitation, not an unattempted fix (test install fully removed
+> afterward). (2) **Wave B**: re-measured the 250k-history backend
+> pipeline with a real per-layer breakdown (SQLite read vs. Rust
+> aggregate, no regression vs. the historical figure), found and
+> documented that the actual IPC contract already only ever sends
+> aggregated data (70-280 rows, never raw 250k) — the architecture concern
+> in the request's own text does not apply to the real pipeline; added 7
+> new adversarial regression tests for `aggregate_quota_history`'s
+> defensive input-rejection paths (NaN/Infinite/>100%/negative/
+> inconsistent-sum/out-of-order/missing-window-identity), all passing
+> against the existing, unmodified production code; and ran a real
+> 20-round concurrent alternating-write settings race test across two
+> genuinely separate live windows (main + detached Settings), confirming
+> no lost writes and correct persistence across a full Dev restart.
+> Commits: `84c23e07`, `84f4c247`, `e13a1fc3` (from the first
+> continuation), then `3d717a7a` (Wave A closure), `47530702` (250k
+> breakdown), `2a4364b3` (adversarial tests). **New ending HEAD:
+> `2a4364b3`.** Waves C-G (controls system audit, systematic visual
+> quality audit with screenshots, providers/auth re-audit, security
+> review, full RTL/accessibility/responsive re-verification, final native
+> evidence matrix) were **not reached** this pass — each remains
+> real, substantial, multi-hour work in its own right.
 
 Final checkpoint for this session. Read this first if continuing the
 project without the pasted Codex conversation — combined with
@@ -127,3 +158,42 @@ action was taken or is recommended.
 | I | RTL / responsive / accessibility | **NOT VERIFIED THIS PASS** — no native re-check performed |
 | J | Personal safety | **INCIDENT (disclosed, not compounded)** — see above; not "PASS" (the incident is real and stands), not "NOT PROVABLE" (this session proved exactly what did and didn't happen) |
 | K | Overall continuation readiness | **READY** — the repository state is fully reconciled and explained, Dev-isolation is now provably enforced, and every open item is explicitly enumerated rather than hidden; a follow-up session can proceed directly into the still-open items listed in `CLAUDE_PRODUCT_HEALTH_AUDIT.md` without needing this session's own transcript |
+
+## Settings multi-window race + persistence (updated this pass)
+
+Real 20-round test: two genuinely separate live windows (the main window
+and a detached Settings window, confirmed as distinct CDP targets/URLs)
+fired concurrent (`Promise.all`, not sequentially-awaited)
+`update_settings` calls each round, alternating which window wrote
+`workspacePreferences.density` vs. `dashboardPerformancePreset` and
+cycling through all valid values of each. After 20 rounds, both windows'
+`get_settings_snapshot` agreed exactly with the last round's intended
+values (`density: "comfortable"`, `dashboardPerformancePreset:
+"balanced"`), and the unrelated `enabledProviders` array was untouched
+(stayed at its original length throughout). Dev was then fully restarted
+(process killed, preflight re-verified, relaunched) and the same values
+were confirmed to have persisted to disk correctly. **No lost writes, no
+stale overwrite, no unrelated-field corruption** — the existing
+`SETTINGS_PATCH_LOCK` mutex-serialized patch-transaction design works as
+intended under real concurrent multi-window load.
+
+Note: an earlier attempt in this same pass used a `catalogTheme` field in
+the patch and found it silently had no effect — traced this to a real API
+fact, not a bug: `SettingsUpdate` (the actual Tauri command's patch
+struct) has no `catalog_theme`/`catalogTheme` field at all; the global
+Structure Theme is set through a different, dedicated command this pass
+did not identify. Recorded here so a future pass doesn't repeat the same
+false lead.
+
+## Updated hard pass matrix (this continuation pass)
+
+| Area | Verdict |
+|---|---|
+| DEV SAFETY | **PASS** — preflight gate proven both directions again this pass |
+| NOTIFICATIONS | **NOT PASSED (ENVIRONMENT/PLATFORM-BLOCKED for display name)** — the supported fix (Start Menu shortcut via a real installed build) was tried and proven insufficient; not an unattempted gap |
+| ANALYTICS | **PARTIAL** — 250k backend performance re-measured with a real layer breakdown and no regression; a real architectural finding closes the "raw 250k to UI" concern; 7 new adversarial input-rejection tests added and passing; the full adversarial corpus (DST/timezone-change/mixed-currency edge cases beyond what already existed, cross-surface consistency) was not completed |
+| CONTROLS & SETTINGS | **PARTIAL** — settings multi-window race + restart-persistence proven clean this pass; the controls-system inventory/consolidation audit was not started |
+| PERFORMANCE | **PARTIAL** — real backend breakdown done; frontend-side layers, interaction timings, idle CPU/memory not measured this pass |
+| VISUAL QUALITY / PROVIDERS-AUTH / RTL-RESPONSIVE-A11Y / SECURITY | **NOT REACHED THIS PASS** — Waves D-F of the request; each is its own substantial undertaking |
+| PERSONAL | **INCIDENT — NOT COMPOUNDED** — re-confirmed; no Personal process was run at any point this pass |
+| OVERALL CONTINUATION READINESS | **NOT READY for release; READY to continue** — real, verified progress on Waves A and B; C-G remain open and are the correct next steps for a follow-up pass |
