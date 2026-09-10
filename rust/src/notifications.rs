@@ -47,12 +47,23 @@ fn toast_icon_path() -> Option<PathBuf> {
 
 fn file_uri(path: &Path) -> String {
     let path = path.to_string_lossy().replace('\\', "/");
+    // Tauri resources are canonicalized on Windows and commonly carry \\?\.
+    // That filesystem prefix is not a URI authority or query string.
+    let path = if let Some(unc) = path.strip_prefix("//?/UNC/") {
+        format!("//{unc}")
+    } else {
+        path.strip_prefix("//?/").unwrap_or(&path).to_string()
+    };
     let escaped = path
         .replace('%', "%25")
         .replace(' ', "%20")
         .replace('#', "%23")
         .replace('?', "%3F");
-    format!("file:///{escaped}")
+    if escaped.starts_with("//") {
+        format!("file:{escaped}")
+    } else {
+        format!("file:///{escaped}")
+    }
 }
 
 fn xml_escape(value: &str) -> String {
@@ -141,7 +152,7 @@ fn toast_template(
     let logo = icon.map_or_else(String::new, |path| {
         format!(
             "<image placement=\"appLogoOverride\" src=\"{}\" alt=\"{PUBLIC_APP_NAME}\"/>",
-            file_uri(path)
+            xml_escape(&file_uri(path))
         )
     });
     format!(
@@ -1449,9 +1460,7 @@ mod tests {
         let xml = toast_template(
             "Usage < alert",
             "Claude & OpenAI",
-            Some(Path::new(
-                r"C:\Program Files\QuotaArc\quotaarc-icon-128.png",
-            )),
+            Some(Path::new(r"C:\Program Files\A&B\quotaarc-icon-128.png")),
             NotificationDestination::Provider(ProviderId::Claude),
         );
 
@@ -1464,10 +1473,22 @@ mod tests {
             "launch=\"{}://provider/claude\"",
             notification_protocol_scheme()
         )));
-        assert!(xml.contains("file:///C:/Program%20Files/QuotaArc/quotaarc-icon-128.png"));
+        assert!(xml.contains("file:///C:/Program%20Files/A&amp;B/quotaarc-icon-128.png"));
         assert!(!xml.contains("alt=\"QuotaArc\""));
         assert!(!xml.contains("alt=\"CodexBar\""));
         assert!(!xml.contains("hint-crop"));
+    }
+
+    #[test]
+    fn toast_icon_handles_canonical_windows_and_unc_paths() {
+        assert_eq!(
+            file_uri(Path::new(r"\\?\C:\Program Files\Quotalis\icon.png")),
+            "file:///C:/Program%20Files/Quotalis/icon.png"
+        );
+        assert_eq!(
+            file_uri(Path::new(r"\\?\UNC\server\share\icon.png")),
+            "file://server/share/icon.png"
+        );
     }
 
     #[test]
@@ -1551,7 +1572,7 @@ mod tests {
     fn protocol_command_quotes_executable_and_activation_uri() {
         assert_eq!(
             protocol_launch_command(Path::new(r"C:\Program Files\Quotalis\Quotalis.exe")),
-            r#"\"C:\Program Files\Quotalis\Quotalis.exe\" \"%1\""#
+            r#""C:\Program Files\Quotalis\Quotalis.exe" "%1""#
         );
     }
     use crate::core::{PaceStage, RateWindow, UsagePace};

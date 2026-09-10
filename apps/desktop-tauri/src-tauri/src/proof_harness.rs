@@ -50,7 +50,7 @@ fn notification_proof_payload(
     let (title, body, destination) = match kind {
         "normal" => (
             "Quotalis",
-            "Notifications are ready.",
+            "Notifications are ready.".to_string(),
             NotificationDestination::Dashboard,
         ),
         "highUsage" => (

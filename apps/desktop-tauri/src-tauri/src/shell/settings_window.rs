@@ -127,6 +127,15 @@ pub(crate) fn enforce_minimum_content_size(window: &tauri::WebviewWindow) {
 /// When the window already exists, emits `settings-change-tab` so the
 /// frontend can switch to the requested tab without a full reload.
 pub fn open_or_focus(app: &tauri::AppHandle, tab: &str) -> Result<(), String> {
+    open_or_focus_provider(app, tab, None)
+}
+
+/// Typed provider targeting survives both cold URLs and warm-window events.
+pub fn open_or_focus_provider(
+    app: &tauri::AppHandle,
+    tab: &str,
+    provider: Option<quotalis_core::core::ProviderId>,
+) -> Result<(), String> {
     if let Some(window) = app.get_webview_window(SETTINGS_LABEL) {
         window.unminimize().map_err(|e| e.to_string())?;
         enforce_minimum_content_size(&window);
@@ -134,10 +143,22 @@ pub fn open_or_focus(app: &tauri::AppHandle, tab: &str) -> Result<(), String> {
         window.set_focus().map_err(|e| e.to_string())?;
         app.emit_to(SETTINGS_LABEL, "settings-change-tab", tab)
             .map_err(|e| e.to_string())?;
+        if let Some(provider) = provider {
+            app.emit_to(
+                SETTINGS_LABEL,
+                "settings-focus-provider",
+                provider.cli_name(),
+            )
+            .map_err(|e| e.to_string())?;
+        }
         return Ok(());
     }
 
-    let url = WebviewUrl::App(format!("index.html?window=settings&tab={tab}").into());
+    let provider_query = provider
+        .map(|p| format!("&provider={}", p.cli_name()))
+        .unwrap_or_default();
+    let url =
+        WebviewUrl::App(format!("index.html?window=settings&tab={tab}{provider_query}").into());
 
     let win = tauri::WebviewWindowBuilder::new(app, SETTINGS_LABEL, url)
         .title("Quotalis Settings")

@@ -193,8 +193,8 @@ fn activate_notification_destination(
             None,
         )
         .map(|_| ()),
-        NotificationDestination::Providers(_) => {
-            shell::open_or_focus_main_window(app, shell::MainRoute::Providers)
+        NotificationDestination::Providers(provider) => {
+            shell::settings_window::open_or_focus_provider(app, "providers", Some(provider))
         }
     };
 
@@ -245,7 +245,31 @@ pub mod build_info {
     };
 }
 
+fn channel_launch_is_safe(dev_channel: bool, proof_requested: bool, exe_name: &str) -> bool {
+    dev_channel || (!proof_requested && !exe_name.eq_ignore_ascii_case("QuotalisDev.exe"))
+}
+
 fn main() {
+    // Fail before logs, settings, registry registration or migrations can touch
+    // Personal. A Dev filename/config alone is not a Rust channel boundary.
+    let exe_name = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.file_name().map(|n| n.to_string_lossy().into_owned()))
+        .unwrap_or_default();
+    if !channel_launch_is_safe(
+        quotalis_core::paths::is_dev_channel(),
+        [
+            "CODEXBAR_PROOF_MODE",
+            "CODEXBAR_SEED_USAGE_JSON",
+            "CODEXBAR_SEED_PROVIDERS_JSON",
+        ]
+        .iter()
+        .any(|name| std::env::var_os(name).is_some()),
+        &exe_name,
+    ) {
+        eprintln!("Refusing non-isolated Dev/proof launch. Rebuild with --features dev-channel.");
+        std::process::exit(2);
+    }
     // Per-process log file names: the shell writes codexbar-desktop.log so
     // its cached handle never blocks the CLI's rotation on Windows.
     // SAFETY: runs before any thread spawns; no concurrent env access exists.
@@ -646,6 +670,18 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn development_launch_cannot_access_personal_channel() {
+        assert!(!super::channel_launch_is_safe(
+            false,
+            false,
+            "QuotalisDev.exe"
+        ));
+        assert!(!super::channel_launch_is_safe(false, true, "Quotalis.exe"));
+        assert!(super::channel_launch_is_safe(true, true, "QuotalisDev.exe"));
+        assert!(super::channel_launch_is_safe(false, false, "Quotalis.exe"));
+    }
+
     use super::*;
 
     #[test]

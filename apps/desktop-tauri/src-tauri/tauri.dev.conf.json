@@ -10,5 +10,10 @@
         "title": "Quotalis Dev"
       }
     ]
+  },
+  "build": {
+    "features": [
+      "dev-channel"
+    ]
   }
 }
