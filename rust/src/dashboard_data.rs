@@ -1655,6 +1655,305 @@ mod tests {
         );
     }
 
+    // ---- Claude continuation wave 2: DST bucketing, exact window
+    // boundaries, gaps, account/window switches mid-series, staleness, and
+    // the usedPercent extremes (0%, 100%, and the exact >100% bound). ----
+
+    #[test]
+    fn quota_history_hourly_bucket_survives_dst_spring_forward_without_panicking() {
+        // Europe/London springs forward 01:00 -> 02:00 on 2026-03-29. A
+        // reading just before the transition and one just after must both
+        // resolve to real, non-panicking hourly buckets, in the correct
+        // relative order.
+        let tz = resolve_timezone("Europe/London");
+        let before = dt(2026, 3, 29, 0, 30, 0).timestamp(); // 00:30 GMT local (UTC+0)
+        let after = dt(2026, 3, 29, 1, 30, 0).timestamp(); // 02:30 BST local (UTC+1)
+        let samples = vec![
+            quota_sample(
+                Some("observed"),
+                "primary",
+                Some("primary"),
+                Some(60),
+                10.0,
+                Some(before + 3_600),
+                before,
+            ),
+            quota_sample(
+                Some("observed"),
+                "primary",
+                Some("primary"),
+                Some(60),
+                20.0,
+                Some(after + 3_600),
+                after,
+            ),
+        ];
+        let points = aggregate_quota_history(&samples, tz, Grain::Hourly);
+        assert_eq!(
+            points.len(),
+            2,
+            "distinct resets_at keep the two readings as separate buckets"
+        );
+        assert!(points[0].bucket_start < points[1].bucket_start);
+    }
+
+    #[test]
+    fn quota_history_hourly_bucket_fall_back_ambiguous_hour_merges_to_earliest() {
+        // Europe/London falls back 02:00 BST -> 01:00 GMT on 2026-10-25.
+        // Local wall-clock 01:30 occurs twice (first at BST, then at
+        // GMT). Documented policy (`local_hour_start_epoch`'s Ambiguous
+        // branch) resolves both occurrences to the SAME earliest-instant
+        // bucket -- proven here by keeping resets_at distinct so the two
+        // points survive as separate records while their bucket_start
+        // collapses to one value, isolating exactly the DST behavior
+        // under test.
+        let tz = resolve_timezone("Europe/London");
+        let first_occurrence = dt(2026, 10, 25, 0, 30, 0).timestamp(); // 01:30 BST (UTC+1)
+        let second_occurrence = dt(2026, 10, 25, 1, 30, 0).timestamp(); // 01:30 GMT (UTC+0)
+        let samples = vec![
+            quota_sample(
+                Some("observed"),
+                "primary",
+                Some("primary"),
+                Some(60),
+                10.0,
+                Some(first_occurrence + 3_600),
+                first_occurrence,
+            ),
+            quota_sample(
+                Some("observed"),
+                "primary",
+                Some("primary"),
+                Some(60),
+                20.0,
+                Some(second_occurrence + 3_600),
+                second_occurrence,
+            ),
+        ];
+        let points = aggregate_quota_history(&samples, tz, Grain::Hourly);
+        assert_eq!(points.len(), 2);
+        assert_eq!(
+            points[0].bucket_start, points[1].bucket_start,
+            "both occurrences of the ambiguous local hour must collapse to the earliest instant"
+        );
+    }
+
+    #[test]
+    fn quota_history_sample_exactly_at_local_midnight_buckets_into_that_day_not_the_previous() {
+        let tz = resolve_timezone("UTC");
+        let midnight = dt(2026, 9, 2, 0, 0, 0).timestamp();
+        let sample = quota_sample(
+            Some("observed"),
+            "primary",
+            Some("primary"),
+            Some(1_440),
+            15.0,
+            Some(midnight + 86_400),
+            midnight,
+        );
+        let points = aggregate_quota_history(&[sample], tz, Grain::Daily);
+        assert_eq!(points.len(), 1);
+        assert_eq!(
+            points[0].bucket_start, midnight,
+            "a reading exactly at local midnight belongs to that day's bucket, not the prior day"
+        );
+    }
+
+    #[test]
+    fn quota_history_missing_days_leave_a_real_gap_not_a_fabricated_bucket() {
+        let day0 = dt(2026, 9, 1, 6, 0, 0).timestamp();
+        let day3 = dt(2026, 9, 4, 6, 0, 0).timestamp(); // days 2 and 3 have no samples
+        let samples = vec![
+            quota_sample(
+                Some("observed"),
+                "primary",
+                Some("primary"),
+                Some(1_440),
+                10.0,
+                Some(day0 + 86_400),
+                day0,
+            ),
+            quota_sample(
+                Some("observed"),
+                "primary",
+                Some("primary"),
+                Some(1_440),
+                40.0,
+                Some(day3 + 86_400),
+                day3,
+            ),
+        ];
+        let points = aggregate_quota_history(&samples, resolve_timezone("UTC"), Grain::Daily);
+        assert_eq!(
+            points.len(),
+            2,
+            "no bucket is fabricated for the missing middle days"
+        );
+    }
+
+    #[test]
+    fn quota_history_account_scope_switch_mid_series_stays_split_and_never_flags_a_false_decrease()
+    {
+        let day0 = dt(2026, 9, 1, 6, 0, 0).timestamp();
+        let samples = vec![
+            quota_sample(
+                Some("observed"),
+                "primary",
+                Some("primary"),
+                Some(1_440),
+                80.0,
+                Some(day0 + 604_800),
+                day0,
+            ),
+            // Same provider/account/window/resets_at but a DIFFERENT
+            // account_scope -- a legitimate identity-resolution change,
+            // not a counter decrease on a continuing series.
+            quota_sample(
+                Some("unresolved"),
+                "primary",
+                Some("primary"),
+                Some(1_440),
+                10.0,
+                Some(day0 + 604_800),
+                day0 + 60,
+            ),
+        ];
+        let points = aggregate_quota_history(&samples, resolve_timezone("UTC"), Grain::Daily);
+        assert_eq!(
+            points.len(),
+            2,
+            "different account_scope must produce a distinct series, never merge into one bucket"
+        );
+        assert!(
+            points.iter().all(|p| !p.counter_decreased),
+            "an account_scope switch must never be misread as a counter decrease"
+        );
+    }
+
+    #[test]
+    fn quota_history_window_switch_mid_series_stays_split_and_never_flags_a_false_decrease() {
+        let day0 = dt(2026, 9, 1, 6, 0, 0).timestamp();
+        let samples = vec![
+            quota_sample(
+                Some("observed"),
+                "primary",
+                Some("primary"),
+                Some(1_440),
+                90.0,
+                Some(day0 + 604_800),
+                day0,
+            ),
+            // Same account, different physical window_key -- a genuinely
+            // different quota, not a continuation of the "primary" series.
+            quota_sample(
+                Some("observed"),
+                "secondary",
+                Some("secondary"),
+                Some(1_440),
+                5.0,
+                Some(day0 + 604_800),
+                day0 + 60,
+            ),
+        ];
+        let points = aggregate_quota_history(&samples, resolve_timezone("UTC"), Grain::Daily);
+        assert_eq!(points.len(), 2);
+        assert!(
+            points.iter().all(|p| !p.counter_decreased),
+            "a physical-window switch must never be misread as a counter decrease"
+        );
+        let window_keys: std::collections::HashSet<_> =
+            points.iter().map(|p| p.window_key.as_str()).collect();
+        assert_eq!(
+            window_keys,
+            std::collections::HashSet::from(["primary", "secondary"])
+        );
+    }
+
+    #[test]
+    fn quota_history_includes_a_stale_reading_whose_reset_already_passed_rather_than_excluding_it()
+    {
+        // A "stale" observation: resets_at is in the past relative to
+        // captured_at (the window had already rolled over by the time
+        // this was captured) -- this must still be reported as real
+        // history, never silently dropped by an implicit staleness
+        // filter. Only the explicit finite/range/consistency checks may
+        // exclude a sample.
+        let day = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let sample = quota_sample(
+            Some("observed"),
+            "primary",
+            Some("primary"),
+            Some(1_440),
+            42.0,
+            Some(day - 3_600),
+            day,
+        );
+        let points = aggregate_quota_history(&[sample], resolve_timezone("UTC"), Grain::Daily);
+        assert_eq!(
+            points.len(),
+            1,
+            "a stale (already-passed reset) reading must still be reported, not excluded"
+        );
+        assert_eq!(points[0].used_percent, 42.0);
+    }
+
+    #[test]
+    fn used_percent_exactly_zero_is_accepted() {
+        let day = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let sample = quota_sample(
+            Some("observed"),
+            "primary",
+            Some("primary"),
+            Some(10_080),
+            0.0,
+            Some(day + 604_800),
+            day + 10,
+        );
+        let points = aggregate_quota_history(&[sample], resolve_timezone("UTC"), Grain::Daily);
+        assert_eq!(points.len(), 1);
+        assert_eq!(points[0].used_percent, 0.0);
+    }
+
+    #[test]
+    fn used_percent_exactly_one_hundred_is_accepted() {
+        let day = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let sample = quota_sample(
+            Some("observed"),
+            "primary",
+            Some("primary"),
+            Some(10_080),
+            100.0,
+            Some(day + 604_800),
+            day + 10,
+        );
+        let points = aggregate_quota_history(&[sample], resolve_timezone("UTC"), Grain::Daily);
+        assert_eq!(points.len(), 1);
+        assert_eq!(points[0].used_percent, 100.0);
+    }
+
+    #[test]
+    fn used_percent_just_over_one_hundred_is_rejected_by_the_range_check_alone() {
+        let day = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        // 100.1 / -0.1 sums to exactly 100 -- isolates the >100 range
+        // check from the separate sum-consistency check, proving the
+        // rejection fires the instant used% exceeds 100 even by a
+        // fraction, not just at the round 150.0 the existing test used.
+        let sample = quota_sample(
+            Some("observed"),
+            "primary",
+            Some("primary"),
+            Some(10_080),
+            100.1,
+            Some(day + 604_800),
+            day + 10,
+        );
+        let points = aggregate_quota_history(&[sample], resolve_timezone("UTC"), Grain::Daily);
+        assert!(
+            points.is_empty(),
+            "used% must be rejected the instant it exceeds 100, even by a fraction"
+        );
+    }
+
     #[test]
     fn summaries_follow_physical_primary_without_retaining_old_account_aliases() {
         let legacy = sample("codex", "old-profile", "selected", 80.0, None, 100);
