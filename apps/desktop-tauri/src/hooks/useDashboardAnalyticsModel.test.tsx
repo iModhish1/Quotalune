@@ -102,6 +102,40 @@ describe("useDashboardAnalyticsModel", () => {
     expect(result.current).toMatchObject({processing: false, error: false, model: {marker: "fresh"}});
   });
 
+  it("keeps the fresher request's result even when the stale request's Worker response arrives afterward (out-of-order resolution)", () => {
+    // Reproduces the exact race: request A (e.g. a wide-range/provider-X
+    // selection) is slow; before it resolves the user picks provider Y,
+    // firing request B. B's Worker finishes -- and is applied -- first.
+    // A's Worker then finishes late. Without the revision-ref guard in
+    // useDashboardAnalyticsModel's effect (`revision.current !== requestId`),
+    // A's onmessage handler would call setWorkerState unconditionally and
+    // clobber B's already-applied fresh state with A's stale one, because
+    // nothing here orders completion by request recency -- only by whichever
+    // Worker happens to post its message last. The guard makes onmessage a
+    // no-op for any requestId that isn't the current revision, so late
+    // arrivals from a superseded request are dropped regardless of when they
+    // resolve.
+    const source = snapshot(DASHBOARD_ANALYTICS_WORKER_THRESHOLD + 1);
+    const {result, rerender} = renderHook(
+      ({filter}) => useDashboardAnalyticsModel(providers, source, settings, filter, 1),
+      {initialProps: {filter: "provider-x" as string | null}},
+    );
+    const requestA = WorkerStub.instances[0];
+    const requestAId = requestA.postMessage.mock.calls[0][0].requestId as number;
+
+    rerender({filter: "provider-y"});
+    const requestB = WorkerStub.instances[1];
+    const requestBId = requestB.postMessage.mock.calls[0][0].requestId as number;
+
+    // B (the newer, fresh request) resolves FIRST.
+    act(() => requestB.emit({requestId: requestBId, model: model("fresh-B")}));
+    expect(result.current).toMatchObject({processing: false, error: false, model: {marker: "fresh-B"}});
+
+    // A (the older, now-stale request) resolves AFTER B -- out of order.
+    act(() => requestA.emit({requestId: requestAId, model: model("stale-A")}));
+    expect(result.current).toMatchObject({processing: false, error: false, model: {marker: "fresh-B"}});
+  });
+
   it("fails closed to current state when Worker processing fails", () => {
     const source = snapshot(DASHBOARD_ANALYTICS_WORKER_THRESHOLD + 1);
     const {result} = renderHook(() => useDashboardAnalyticsModel(
