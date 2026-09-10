@@ -5,6 +5,7 @@ import MenuCard from "./MenuCard";
 import { MenuEmpty } from "./MenuSurface";
 import ProviderGrid from "./ProviderGrid";
 import CatalogUsageHero from "./CatalogUsageHero";
+import DashboardSummaryRibbon from "./DashboardSummaryRibbon";
 import type { ProviderUsageSnapshot } from "../types/bridge";
 
 /**
@@ -67,6 +68,7 @@ export default function DashboardBody({
 
   return (
     <>
+      <DashboardSummaryRibbon providers={allProviders} settings={settings} />
       <ProviderGrid
         providers={allProviders}
         selectedProviderId={selectedProviderId}

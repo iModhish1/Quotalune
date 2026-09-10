@@ -1,0 +1,49 @@
+/* Compact typographic operational summary for the Dashboard Overview --
+   separators and small labels instead of a repeated card grid, per the
+   owner's explicit "typography + separators + small glyphs" direction. */
+.dashboard-summary-ribbon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 0;
+  padding: 10px 2px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--qa-hairline, rgba(255, 255, 255, 0.08));
+  font-size: 12px;
+  line-height: 1.4;
+}
+.dashboard-summary-ribbon__item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+}
+.dashboard-summary-ribbon__sep {
+  width: 1px;
+  height: 11px;
+  margin: 0 12px;
+  align-self: center;
+  background: var(--qa-hairline, rgba(255, 255, 255, 0.14));
+  display: inline-block;
+}
+.dashboard-summary-ribbon__label {
+  color: var(--text-secondary, #a5aab3);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.dashboard-summary-ribbon__value {
+  color: var(--text-primary, #e5e7eb);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.dashboard-summary-ribbon__item--warning .dashboard-summary-ribbon__value {
+  color: var(--qa-status-high, #e0a030);
+}
+
+[data-theme="light"] .dashboard-summary-ribbon {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .dashboard-summary-ribbon__sep {
+  background: rgba(0, 0, 0, 0.14);
+}
