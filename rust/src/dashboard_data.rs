@@ -1500,6 +1500,161 @@ mod tests {
         assert_eq!(duplicate[0].sample_count, 1);
     }
 
+    // ---- Claude continuation wave: adversarial corpus for defensive paths
+    // that were already implemented (the `.is_finite()`/range/sum checks a
+    // few lines above `aggregate_quota_history`'s loop body) but had no
+    // dedicated regression test proving they actually reject what they
+    // claim to. Real gap, not re-covering already-tested ground. ----
+
+    #[test]
+    fn nan_used_percent_is_rejected_not_silently_aggregated() {
+        let day = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let samples = vec![quota_sample(
+            Some("observed"),
+            "primary",
+            Some("primary"),
+            Some(10080),
+            f64::NAN,
+            Some(day + 604_800),
+            day + 10,
+        )];
+        let points = aggregate_quota_history(&samples, resolve_timezone("UTC"), Grain::Daily);
+        assert!(
+            points.is_empty(),
+            "a NaN reading must never produce a bucket"
+        );
+    }
+
+    #[test]
+    fn infinite_used_percent_is_rejected_not_silently_aggregated() {
+        let day = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let samples = vec![quota_sample(
+            Some("observed"),
+            "primary",
+            Some("primary"),
+            Some(10080),
+            f64::INFINITY,
+            Some(day + 604_800),
+            day + 10,
+        )];
+        let points = aggregate_quota_history(&samples, resolve_timezone("UTC"), Grain::Daily);
+        assert!(
+            points.is_empty(),
+            "an infinite reading must never produce a bucket"
+        );
+    }
+
+    #[test]
+    fn used_percent_over_100_is_rejected() {
+        let day = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        // 150% used, remaining left at a value that would sum close to 100
+        // with it -- the >100 range check must reject this on its own,
+        // independent of the used+remaining consistency check.
+        let mut sample = quota_sample(
+            Some("observed"),
+            "primary",
+            Some("primary"),
+            Some(10080),
+            150.0,
+            Some(day + 604_800),
+            day + 10,
+        );
+        sample.remaining_percent = -50.0;
+        let points = aggregate_quota_history(&[sample], resolve_timezone("UTC"), Grain::Daily);
+        assert!(points.is_empty(), ">100% used must never produce a bucket");
+    }
+
+    #[test]
+    fn negative_used_percent_is_rejected() {
+        let day = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let sample = quota_sample(
+            Some("observed"),
+            "primary",
+            Some("primary"),
+            Some(10080),
+            -5.0,
+            Some(day + 604_800),
+            day + 10,
+        );
+        let points = aggregate_quota_history(&[sample], resolve_timezone("UTC"), Grain::Daily);
+        assert!(
+            points.is_empty(),
+            "negative used% must never produce a bucket"
+        );
+    }
+
+    #[test]
+    fn used_and_remaining_percent_inconsistency_is_rejected() {
+        let day = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        // used=40, remaining=40 -- both individually in [0,100], but they
+        // don't sum to ~100, which the sum-consistency guard must catch
+        // even though neither value alone looks invalid.
+        let mut sample = quota_sample(
+            Some("observed"),
+            "primary",
+            Some("primary"),
+            Some(10080),
+            40.0,
+            Some(day + 604_800),
+            day + 10,
+        );
+        sample.remaining_percent = 40.0;
+        let points = aggregate_quota_history(&[sample], resolve_timezone("UTC"), Grain::Daily);
+        assert!(
+            points.is_empty(),
+            "used+remaining far from 100 must never produce a bucket"
+        );
+    }
+
+    #[test]
+    fn out_of_order_captured_at_still_resolves_to_the_true_latest_reading() {
+        // Samples arrive in reverse-chronological order (as real
+        // multi-source observation could plausibly do) -- the aggregator
+        // sorts by captured_at internally, so the bucket's final reading
+        // must be the truly-latest one by time, not the last one in the
+        // input slice.
+        let day = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let make = |offset, used| {
+            quota_sample(
+                Some("observed"),
+                "primary",
+                Some("primary"),
+                Some(10080),
+                used,
+                Some(day + 604_800),
+                day + offset,
+            )
+        };
+        let reverse_order = vec![make(30, 90.0), make(20, 50.0), make(10, 10.0)];
+        let points = aggregate_quota_history(&reverse_order, resolve_timezone("UTC"), Grain::Daily);
+        assert_eq!(points.len(), 1);
+        assert_eq!(
+            points[0].used_percent, 90.0,
+            "the reading at offset 30 (latest by time) must win, regardless of input order"
+        );
+        assert_eq!(points[0].observed_at, day + 30);
+    }
+
+    #[test]
+    fn missing_window_identity_never_fabricates_a_bucket() {
+        let day = dt(2026, 9, 1, 0, 0, 0).timestamp();
+        let mut sample = quota_sample(
+            Some("observed"),
+            "primary",
+            None,
+            Some(10080),
+            50.0,
+            Some(day + 604_800),
+            day + 10,
+        );
+        sample.window_id = None;
+        let points = aggregate_quota_history(&[sample], resolve_timezone("UTC"), Grain::Daily);
+        assert!(
+            points.is_empty(),
+            "a sample with no window_key AND no window_id must never produce a bucket"
+        );
+    }
+
     #[test]
     fn summaries_follow_physical_primary_without_retaining_old_account_aliases() {
         let legacy = sample("codex", "old-profile", "selected", 80.0, None, 100);
