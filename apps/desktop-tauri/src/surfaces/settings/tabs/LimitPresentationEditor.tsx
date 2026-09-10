@@ -1,6 +1,7 @@
 import {DEFAULT_LIMIT_PRESENTATION,PROVIDER_PRESENTATION_IDENTITIES,type LimitPresentation,type ProviderPresentationIdentity} from '../../../design-system/limitPresentation';
 import {useId} from 'react';
 import {useLocale} from '../../../hooks/useLocale';
+import {Select} from '../../../components/FormControls';
 import './LimitPresentationEditor.css';
 export default function LimitPresentationEditor({provider,value=DEFAULT_LIMIT_PRESENTATION,disabled,customized=false,onChange,onReset}:{provider:string;value?:LimitPresentation;disabled:boolean;customized?:boolean;onChange:(value:LimitPresentation)=>void;onReset?:()=>void}){
   const group=useId();
@@ -28,13 +29,13 @@ export default function LimitPresentationEditor({provider,value=DEFAULT_LIMIT_PR
         </svg><span>{label}</span>
       </label>)}
     </div><small>{t('IndicatorPreviewHelper')}</small></fieldset>
-    <label>{t('IndicatorContent')}<select aria-label={`${t('LimitContentAria')} ${provider}`} value={value.content} onChange={e=>onChange({...value,content:e.target.value as LimitPresentation['content']})}>
-      <option value="both">{t('BarAndPercentage')}</option><option value="bar">{t('BarOnly')}</option><option value="value">{t('PercentageOnly')}</option>
-    </select></label>
-    <label>{t('FillDirection')}<select disabled={value.content==='value'} aria-label={`${t('LimitDirectionAria')} ${provider}`} value={value.direction} onChange={e=>onChange({...value,direction:e.target.value as LimitPresentation['direction']})}>
-      <option value="forward">{value.shape==='ring'?t('Clockwise'):value.shape==='vertical'?t('BottomToTop'):t('LeftToRight')}</option>
-      <option value="reverse">{value.shape==='ring'?t('Counterclockwise'):value.shape==='vertical'?t('TopToBottom'):t('RightToLeft')}</option>
-    </select></label>
+    <label>{t('IndicatorContent')}<Select ariaLabel={`${t('LimitContentAria')} ${provider}`} disabled={disabled} value={value.content} onChange={v=>onChange({...value,content:v as LimitPresentation['content']})} options={[
+      {value:'both',label:t('BarAndPercentage')},{value:'bar',label:t('BarOnly')},{value:'value',label:t('PercentageOnly')},
+    ]}/></label>
+    <label>{t('FillDirection')}<Select disabled={disabled||value.content==='value'} ariaLabel={`${t('LimitDirectionAria')} ${provider}`} value={value.direction} onChange={v=>onChange({...value,direction:v as LimitPresentation['direction']})} options={[
+      {value:'forward',label:value.shape==='ring'?t('Clockwise'):value.shape==='vertical'?t('BottomToTop'):t('LeftToRight')},
+      {value:'reverse',label:value.shape==='ring'?t('Counterclockwise'):value.shape==='vertical'?t('TopToBottom'):t('RightToLeft')},
+    ]}/></label>
     {value.content==='value'&&<small>{t('PercentageOnlyHelper')}</small>}
     <small>{t('LimitPagingHelper')}</small>
     {customized&&onReset&&<button className="limit-choice-editor__reset" type="button" onClick={onReset}>{t('UseGlobalPresentation')}</button>}

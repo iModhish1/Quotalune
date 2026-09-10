@@ -63,10 +63,13 @@ describe("DemoSettingsSection", () => {
     expect(screen.getByRole("button", { name: "Increase simulated provider count" })).toBeDisabled();
   });
 
-  it("scenario selection persists the chosen scenario", () => {
+  it("scenario selection persists the chosen scenario", async () => {
     const update = vi.fn();
     render(<DemoSettingsSection settings={settings({ demoModeEnabled: true })} catalog={CATALOG} update={update} />);
-    fireEvent.change(screen.getByLabelText("Scenario"), { target: { value: "highUsage" } });
+    // Scenario is a QuotalisSelect (trigger button + document-portaled
+    // option list), not a native <select> -- open it, then pick the option.
+    fireEvent.click(screen.getByLabelText("Scenario"));
+    fireEvent.click(await screen.findByRole("option", { name: "High Usage" }));
     expect(update).toHaveBeenCalledWith({ demoScenario: "highUsage" });
   });
 

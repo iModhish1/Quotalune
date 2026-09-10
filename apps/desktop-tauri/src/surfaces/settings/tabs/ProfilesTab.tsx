@@ -26,7 +26,7 @@ import {
 import { getProviderCatalog } from "../../../lib/tauri";
 import type { ProviderCatalogEntry } from "../../../types/bridge";
 import { THEME_CATALOG } from "../../../design-system/themeCatalog";
-import { Toggle } from "../../../components/FormControls";
+import { Select, Toggle } from "../../../components/FormControls";
 import "./ProfilesTab.css";
 
 const THEME_OPTIONS: { value: "" | "auto" | "light" | "dark"; label: string }[] = [
@@ -249,48 +249,40 @@ export default function ProfilesTab() {
             )}
 
             <section className="profiles-page__field">
-              <label htmlFor="profile-theme">Theme</label>
-              <select
-                id="profile-theme"
+              <label>Theme</label>
+              <Select
+                ariaLabel="Theme"
                 value={selected.theme ?? ""}
-                onChange={(e) =>
+                options={THEME_OPTIONS}
+                onChange={(value) =>
                   run(() =>
                     updateProfile({
                       profileId: selected.id,
-                      theme: e.target.value === "" ? null : (e.target.value as "auto" | "light" | "dark"),
+                      theme: value === "" ? null : (value as "auto" | "light" | "dark"),
                     }),
                   )
                 }
-              >
-                {THEME_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+              />
             </section>
 
             <section className="profiles-page__field">
-              <label htmlFor="profile-catalog-theme">Structure Theme</label>
-              <select
-                id="profile-catalog-theme"
+              <label>Structure Theme</label>
+              <Select
+                ariaLabel="Structure Theme"
                 value={selected.catalogTheme ?? ""}
-                onChange={(e) =>
+                options={[
+                  { value: "", label: "Inherit global theme" },
+                  ...THEME_CATALOG.map((theme) => ({ value: theme.slug, label: theme.name })),
+                ]}
+                onChange={(value) =>
                   run(() =>
                     updateProfile({
                       profileId: selected.id,
-                      catalogTheme: e.target.value === "" ? null : e.target.value,
+                      catalogTheme: value === "" ? null : value,
                     }),
                   )
                 }
-              >
-                <option value="">Inherit global theme</option>
-                {THEME_CATALOG.map((theme) => (
-                  <option key={theme.slug} value={theme.slug}>
-                    {theme.name}
-                  </option>
-                ))}
-              </select>
+              />
             </section>
 
             <section className="profiles-page__field profiles-page__field--surfaces">

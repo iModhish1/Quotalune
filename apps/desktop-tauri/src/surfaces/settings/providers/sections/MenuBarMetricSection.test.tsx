@@ -60,9 +60,12 @@ describe("MenuBarMetricSection", () => {
       />,
     );
 
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "extraUsage" } });
-
+    // MenuBarMetric is a QuotalisSelect (trigger button + portal-rendered
+    // option list), not a native <select> -- open it, then pick the option.
+    fireEvent.click(screen.getByLabelText("MenuBarMetric"));
     expect(screen.getByRole("option", { name: "ExtraUsage" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("option", { name: "ExtraUsage" }));
+
     expect(onChange).toHaveBeenCalledWith({
       providerMetrics: { copilot: "extraUsage" },
     });

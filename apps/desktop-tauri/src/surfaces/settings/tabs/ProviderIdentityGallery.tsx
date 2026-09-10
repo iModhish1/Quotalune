@@ -9,6 +9,7 @@ import {useLocale} from "../../../hooks/useLocale";
 import {resolveCatalogTheme} from "../../../design-system/themeResolution";
 import {catalogBySlug} from "../../../design-system/themeCatalog";
 import {resolveVisualComposition} from "../../../design-system/visualComposition";
+import {Select} from "../../../components/FormControls";
 import "./ProviderIdentityGallery.css";
 
 const NAMES:Record<ProviderPresentationIdentity,string>={
@@ -74,10 +75,18 @@ export default function ProviderIdentityGallery(){
     <div className="provider-identity-gallery__heading"><div><span>{t("ProviderIdentityGalleryEyebrow")}</span><h3 className="settings-section__title">{t("ProviderIdentityGalleryTitle")}</h3><p className="settings-section__description">{t("ProviderIdentityGalleryHelper")}</p></div><output>{PROVIDER_PRESENTATION_IDENTITIES.length} {t("ProviderIdentityCountLabel")}</output></div>
     <p className="provider-identity-gallery__provenance"><strong>{t("ProviderPresentationSourceLabel")}:</strong> {provenanceText}</p>
     <div className="provider-identity-gallery__controls">
-      <label>{t("ProviderIdentityPreviewShape")}<select disabled={saving||!ready} aria-label={t("ProviderIdentityPreviewShape")} value={presentation.shape} onChange={event=>void save({...presentation,shape:event.target.value as LimitPresentation["shape"]})}><option value="ring">{t("CircularRing")}</option><option value="horizontal">{t("HorizontalBar")}</option><option value="vertical">{t("VerticalBar")}</option></select></label>
-      <label>{t("IndicatorContent")}<select disabled={saving||!ready} aria-label={t("IndicatorContent")} value={presentation.content} onChange={event=>void save({...presentation,content:event.target.value as LimitPresentation["content"]})}><option value="both">{t("BarAndPercentage")}</option><option value="bar">{t("BarOnly")}</option><option value="value">{t("PercentageOnly")}</option></select></label>
-      <label>{t("FillDirection")}<select disabled={saving||!ready||presentation.content==="value"} aria-label={t("FillDirection")} value={presentation.direction} onChange={event=>void save({...presentation,direction:event.target.value as LimitPresentation["direction"]})}><option value="forward">{directionLabels[0]}</option><option value="reverse">{directionLabels[1]}</option></select></label>
-      <label>{t("ProviderIdentityPreviewState")}<select aria-label={t("ProviderIdentityPreviewState")} value={previewState} onChange={event=>setPreviewState(event.target.value as PreviewState)}><option value="normal">{t("ProviderIdentityStateNormal")}</option><option value="warning">{t("HighUsageAlert")}</option><option value="critical">{t("CriticalUsageAlert")}</option><option value="exhausted">{t("NotificationSoundEventExhausted")}</option></select></label>
+      <label>{t("ProviderIdentityPreviewShape")}<Select disabled={saving||!ready} ariaLabel={t("ProviderIdentityPreviewShape")} value={presentation.shape} onChange={value=>void save({...presentation,shape:value as LimitPresentation["shape"]})} options={[
+        {value:"ring",label:t("CircularRing")},{value:"horizontal",label:t("HorizontalBar")},{value:"vertical",label:t("VerticalBar")},
+      ]}/></label>
+      <label>{t("IndicatorContent")}<Select disabled={saving||!ready} ariaLabel={t("IndicatorContent")} value={presentation.content} onChange={value=>void save({...presentation,content:value as LimitPresentation["content"]})} options={[
+        {value:"both",label:t("BarAndPercentage")},{value:"bar",label:t("BarOnly")},{value:"value",label:t("PercentageOnly")},
+      ]}/></label>
+      <label>{t("FillDirection")}<Select disabled={saving||!ready||presentation.content==="value"} ariaLabel={t("FillDirection")} value={presentation.direction} onChange={value=>void save({...presentation,direction:value as LimitPresentation["direction"]})} options={[
+        {value:"forward",label:directionLabels[0]},{value:"reverse",label:directionLabels[1]},
+      ]}/></label>
+      <label>{t("ProviderIdentityPreviewState")}<Select ariaLabel={t("ProviderIdentityPreviewState")} value={previewState} onChange={value=>setPreviewState(value as PreviewState)} options={[
+        {value:"normal",label:t("ProviderIdentityStateNormal")},{value:"warning",label:t("HighUsageAlert")},{value:"critical",label:t("CriticalUsageAlert")},{value:"exhausted",label:t("NotificationSoundEventExhausted")},
+      ]}/></label>
       <label>{t("ProviderIdentitySearch")}<input aria-label={t("ProviderIdentitySearch")} value={query} onChange={event=>setQuery(event.target.value)} placeholder={t("ProviderIdentitySearchPlaceholder")}/></label>
     </div>
     {error&&<p className="provider-identity-gallery__error" role="alert">{error}</p>}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Select } from "../../../../components/FormControls";
 import type {
   MetricPreference,
   ProviderDetail,
@@ -52,18 +53,13 @@ export function MenuBarMetricSection({
         <span className="provider-detail-field__label">
           {t("MenuBarMetric")}
         </span>
-        <select
-          className="provider-detail-select"
+        <Select
+          ariaLabel={t("MenuBarMetric")}
           value={selected}
           disabled={disabled}
-          onChange={(e) => handleChange(e.target.value as MetricPreference)}
-        >
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+          options={options}
+          onChange={(value) => handleChange(value as MetricPreference)}
+        />
       </label>
       <p className="provider-detail-helper">{t("MenuBarMetricHelper")}</p>
       {error && <p className="provider-detail-error">{error}</p>}

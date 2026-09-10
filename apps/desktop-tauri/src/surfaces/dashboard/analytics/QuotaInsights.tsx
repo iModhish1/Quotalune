@@ -5,6 +5,7 @@ import {useMemo, useState} from "react";
 import {useLocale} from "../../../hooks/useLocale";
 import {useResetStageOptions} from "../../../hooks/useResetStageOptions";
 import {AnalyticsSection, AnalyticsTable, CoveragePanel, MetricRibbon, ComparisonStat} from "../../../components/analytics/AnalyticsPrimitives";
+import {Select} from "../../../components/FormControls";
 
 import type {QuotaSeries} from "../../../lib/analytics/quotaAnalytics";
 import type {MetricResult} from "../../../lib/analytics/metricRegistry";
@@ -59,7 +60,7 @@ export function QuotaHistory({series, snapshot, settings, preferences}: {series:
   const time = new Intl.DateTimeFormat(options.locale, {numberingSystem:"latn",month:"short",day:"numeric",hour:"numeric",minute:"2-digit", timeZone: resolveResetTimeZone({...defaultResetPresentationConfig(), ...options.config})});
   const number = new Intl.NumberFormat(options.locale,{maximumFractionDigits:1,numberingSystem:"latn"});
   const points = useMemo(() => active?.current.map(p => ({time:p.observedAt,value:p.usedPercent,cycle:p.resetsAt})) ?? [],[active]);
-  return <AnalyticsSection title={t("V2DetailedHistory")} description={t("V2HistoryHelp")} action={candidates.length > 0 && <select aria-label={t("V2HistorySeries")} value={active?.key} onChange={event=>setSelected(event.target.value)}>{candidates.map(row=><option key={row.key} value={row.key}>{row.provider} · {physicalWindowLabel(row.windowLabel,t)} · {observedAccountLabel(row,series,t)}</option>)}</select>}>
+  return <AnalyticsSection title={t("V2DetailedHistory")} description={t("V2HistoryHelp")} action={candidates.length > 0 && <Select ariaLabel={t("V2HistorySeries")} value={active?.key ?? ""} onChange={setSelected} options={candidates.map(row=>({value:row.key, label:`${row.provider} · ${physicalWindowLabel(row.windowLabel,t)} · ${observedAccountLabel(row,series,t)}`}))}/>}>
     {active && snapshot ? <>
       <CoveragePanel title={t("V2HistoryValues")}><AnalyticsTable copy={{columns:t("V45TableColumns"),previousPage:t("V45TablePreviousPage"),nextPage:t("V45TableNextPage"),page:t("V45TablePage")}} rows={active.current} rowKey={row=>String(row.observedAt)} caption={t("V2HistoryValues")} emptyLabel={t("V2InsufficientHistory")} columns={[
         {id:"time",title:t("V2ObservedAt"),cell:row=><bdi>{time.format(row.observedAt*1000)}</bdi>,sortValue:row=>row.observedAt},

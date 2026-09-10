@@ -1,12 +1,24 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-vi.mock("../../../hooks/useLocale", () => ({
-  useLocale: () => ({
+const { locale } = vi.hoisted(() => ({
+  locale: {
     t: (key: string) =>
-      ({ TabProfiles: "Profiles", ProfilesPageHelper: "Manage named contexts." })[key] ?? key,
-  }),
+      ({ TabProfiles: "Profiles", ProfilesPageHelper: "Manage named contexts." } as Record<string, string>)[key] ?? key,
+  },
 }));
+vi.mock("../../../hooks/useLocale", () => ({
+  useLocale: () => locale,
+  useOptionalLocale: () => locale,
+}));
+
+/** Theme / Structure Theme are QuotalisSelects (trigger button + portal
+ *  option list), not native <select>s -- open the trigger, then click the
+ *  matching option. */
+async function chooseQuotalisOption(triggerLabel: string, optionName: string) {
+  fireEvent.click(await screen.findByLabelText(triggerLabel));
+  fireEvent.click(await screen.findByRole("option", { name: optionName }));
+}
 
 const bridge = vi.hoisted(() => ({
   createProfile: vi.fn(),
@@ -137,12 +149,10 @@ describe("ProfilesTab", () => {
     profileStoreState.current = storeWith([profile({ id: "p1", name: "Default" })], "p1");
     render(<ProfilesTab />);
     await screen.findByText("Default");
-    fireEvent.change(screen.getByLabelText("Theme"), { target: { value: "dark" } });
+    await chooseQuotalisOption("Theme", "Dark");
     expect(bridge.updateProfile).toHaveBeenCalledWith({ profileId: "p1", theme: "dark" });
 
-    fireEvent.change(screen.getByLabelText("Structure Theme"), {
-      target: { value: "01-obsidian-orbit" },
-    });
+    await chooseQuotalisOption("Structure Theme", "Obsidian Orbit");
     expect(bridge.updateProfile).toHaveBeenCalledWith({
       profileId: "p1",
       catalogTheme: "01-obsidian-orbit",
@@ -174,7 +184,7 @@ describe("ProfilesTab", () => {
     profileStoreState.current = storeWith([profile({ id: "p1", name: "Default" })], "p1");
     bridge.updateProfile.mockRejectedValueOnce(new Error("boom"));
     render(<ProfilesTab />);
-    fireEvent.change(await screen.findByLabelText("Theme"), { target: { value: "dark" } });
+    await chooseQuotalisOption("Theme", "Dark");
     expect(await screen.findByRole("alert")).toHaveTextContent("boom");
   });
 });

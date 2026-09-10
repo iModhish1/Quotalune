@@ -13,6 +13,7 @@
  * always has one.
  */
 import { useMemo, useState } from "react";
+import { Select } from "../components/FormControls";
 import { useOptionalLocale } from "../i18n/LocaleProvider";
 import type { LocaleKey } from "../i18n/keys";
 import type {
@@ -183,17 +184,12 @@ export default function DemoSettingsSection({ settings, catalog, update }: DemoS
             <label htmlFor="demo-scenario" className="demo-settings__field-label">
               {t("DemoScenarioLabel", "Scenario")}
             </label>
-            <select
-              id="demo-scenario"
+            <Select
+              ariaLabel={t("DemoScenarioLabel", "Scenario")}
               value={scenario}
-              onChange={(e) => void update({ demoScenario: e.target.value as DemoScenario })}
-            >
-              {SCENARIOS.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {t(opt.labelKey, opt.fallback)}
-                </option>
-              ))}
-            </select>
+              options={SCENARIOS.map((opt) => ({ value: opt.id, label: t(opt.labelKey, opt.fallback) }))}
+              onChange={(value) => void update({ demoScenario: value as DemoScenario })}
+            />
           </div>
 
           <div className="demo-settings__field">

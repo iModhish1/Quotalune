@@ -11,6 +11,14 @@ vi.mock("../../../hooks/useLocale",()=>{
   return {useLocale:()=>locale,useOptionalLocale:()=>locale};
 });
 
+/** These controls are QuotalisSelects (trigger button + portal-rendered
+ *  option list), not native <select>s -- open the trigger, then click the
+ *  matching option. */
+async function chooseQuotalisOption(triggerLabel:string,optionName:string){
+  fireEvent.click(await screen.findByLabelText(triggerLabel));
+  fireEvent.click(await screen.findByRole("option",{name:optionName}));
+}
+
 describe("ProviderIdentityGallery",()=>{
   it("shows every independent identity and preserves the indicator configuration when applying one",async()=>{
     api.getSettingsSnapshot.mockResolvedValue({globalLimitPresentation:{shape:"vertical",content:"bar",direction:"reverse",identity:"graphite"}});
@@ -37,13 +45,12 @@ describe("ProviderIdentityGallery",()=>{
     api.setGlobalLimitPresentation.mockClear();
     api.setGlobalLimitPresentation.mockResolvedValue(undefined);
     render(<ProviderIdentityGallery/>);
-    const content=screen.getByLabelText("IndicatorContent");
-    await waitFor(()=>expect(content).not.toBeDisabled());
-    fireEvent.change(content,{target:{value:"bar"}});
+    await waitFor(()=>expect(screen.getByLabelText("IndicatorContent")).not.toBeDisabled());
+    await chooseQuotalisOption("IndicatorContent","BarOnly");
     await waitFor(()=>expect(api.setGlobalLimitPresentation).toHaveBeenCalledWith({shape:"ring",content:"bar",direction:"forward",identity:"pearl"}));
     expect(screen.queryByText("73% remaining")).not.toBeInTheDocument();
     expect(screen.getAllByRole("meter")).toHaveLength(PROVIDER_PRESENTATION_IDENTITIES.length * 2);
-    fireEvent.change(content,{target:{value:"value"}});
+    await chooseQuotalisOption("IndicatorContent","PercentageOnly");
     await waitFor(()=>expect(api.setGlobalLimitPresentation).toHaveBeenLastCalledWith({shape:"ring",content:"value",direction:"forward",identity:"pearl"}));
     expect(screen.getAllByText(/^73%/)).toHaveLength(PROVIDER_PRESENTATION_IDENTITIES.length);
     expect(screen.queryByRole("meter")).not.toBeInTheDocument();
@@ -52,8 +59,8 @@ describe("ProviderIdentityGallery",()=>{
     api.getSettingsSnapshot.mockResolvedValue({});
     api.setGlobalLimitPresentation.mockClear();
     const {container}=render(<ProviderIdentityGallery/>);
-    await waitFor(()=>expect(screen.getByLabelText("Preview state")).toHaveValue("normal"));
-    fireEvent.change(screen.getByLabelText("Preview state"),{target:{value:"critical"}});
+    await waitFor(()=>expect(screen.getByLabelText("Preview state")).toHaveTextContent("Normal"));
+    await chooseQuotalisOption("Preview state","Critical");
     expect(container.querySelectorAll('[data-usage-tone="critical"]')).toHaveLength(PROVIDER_PRESENTATION_IDENTITIES.length);
     expect(api.setGlobalLimitPresentation).not.toHaveBeenCalled();
   });
