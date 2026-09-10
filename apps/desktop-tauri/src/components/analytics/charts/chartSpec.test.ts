@@ -44,6 +44,23 @@ describe("professional chart contracts",()=>{
   expect(formatted).toBe("15.9%");
   expect(formatted).not.toContain("15.883310356483");
  });
+ it("suppresses the regular per-point label exactly on the peak point, so the markPoint annotation is the only label rendered there (regression: owner-reported duplicate stacked labels)",()=>{
+  const rows=buildQuotaAnalytics(data,range); // data.usedPercent is monotonically increasing -> peak is the last point
+  const spec=createTrendChartSpec(rows,r=>r.provider,{...context,highFidelity:true});
+  const series=spec.option.series as {markPoint?:{data:{coord:[number,number]}[]};data:number[][];label:{formatter:(p:{value:number[]})=>string}}[];
+  const withMarkPoint=series.find(s=>s.markPoint)!;
+  expect(withMarkPoint).toBeDefined();
+  // Data stays plain tuples everywhere -- axis-bounds and the accessible
+  // table both index into `line.data` assuming this exact shape.
+  expect(withMarkPoint.data.every(d=>Array.isArray(d))).toBe(true);
+  const peakTime=withMarkPoint.markPoint!.data[0].coord[0];
+  const peakTuple=withMarkPoint.data.find(d=>d[0]===peakTime)!;
+  const otherTuple=withMarkPoint.data.find(d=>d[0]!==peakTime)!;
+  expect(peakTuple).toBeDefined();
+  expect(otherTuple).toBeDefined();
+  expect(withMarkPoint.label.formatter({value:peakTuple})).toBe("");
+  expect(withMarkPoint.label.formatter({value:otherTuple})).not.toBe("");
+ });
  it("theme/preset changes affect styling without changing values",()=>{const rows=buildQuotaAnalytics(data,range);const one=createTrendChartSpec(rows,r=>r.provider,context);const two=createTrendChartSpec(rows,r=>r.provider,{...context,lowCpu:true,theme:{...context.theme,text:"#000000",grid:"#cccccc"}});expect((one.option.series as {data:unknown}[])[0].data).toEqual((two.option.series as {data:unknown}[])[0].data);expect(two.option.animation).toBe(false);});
  it("structure tokens are sourced from the catalog",()=>{for(const theme of [CANONICAL_THEME]){const mapped=chartTheme(theme,()=>"#123456");expect(mapped.background).toBe(theme.core);expect(mapped.accent).toBe(theme.accent);expect(mapped.series("codex")).toBe("#123456");}});
  it("coalesces resize and disposes observer/frame/engine exactly once",()=>{

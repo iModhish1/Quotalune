@@ -27,14 +27,39 @@ export function createTrendChartSpec(rows:readonly QuotaSeries[],title:(r:QuotaS
    const offset=previous?ctx.range.until-ctx.range.since:0;
    const segments=visualSegments(previous?row.previous:row.current,ctx.range.grainSeconds,ctx.lowCpu?240:600,offset);
    const name=title(row)+(comparison?` · ${previous?ctx.labels.previous:ctx.labels.current}`:"");
+   // Owner-reported regression: the high-fidelity peak `markPoint` and this
+   // series' own regular per-point label could both render the same
+   // formatted value stacked at the same coordinate (a real, if cosmetic,
+   // duplicate -- not two different numbers). Establish one explicit
+   // hierarchy instead of offsetting two identical labels: the peak point
+   // carries the `markPoint` annotation ALONE, other points keep their
+   // regular label. Computed once with the exact same reduce the markPoint
+   // itself uses below, so "is this the peak point" can never disagree
+   // between the two.
+   const peak=!previous && !compact && ctx.highFidelity && row.current.length
+     ? row.current.reduce((a,b)=>a.usedPercent>b.usedPercent?a:b)
+     : null;
    segments.forEach((segment,index)=>{
     points+=segment.length;
     lines.push({id:`${row.key}:${previous}:${index}`,name,type:"line",connectNulls:false,smooth:false,clip:true,
-      data:segment.map(p=>[p.time,p.value,p.sourceTime]),symbol:"circle",symbolSize:compact?3:5,showSymbol:segment.length===1 || (segment.length<30 && !ctx.lowCpu),
-      label:{show:!previous&&!compact&&!ctx.lowCpu&&ctx.style!=="minimal"&&segment.length<=10,position:"top",fontSize:9,color:ctx.theme.text,formatter:params=>ctx.number((params.value as number[])[1])+"%"},
+      data:segment.map(p=>[p.time,p.value,p.sourceTime]),
+      symbol:"circle",symbolSize:compact?3:5,showSymbol:segment.length===1 || (segment.length<30 && !ctx.lowCpu),
+      // Data items stay plain [time,value,sourceTime] tuples -- axis-bounds
+      // (below) and the accessible-table `readings` builder both index into
+      // `line.data` assuming that exact shape; per-item object overrides
+      // broke both silently (empty y-axis, no visible line at all) the
+      // first time this was tried. The peak/markPoint duplicate is instead
+      // suppressed here, in the formatter, by returning "" for the one
+      // point whose x-coordinate matches the peak -- same data shape
+      // everywhere, only the rendered text differs.
+      label:{show:!previous&&!compact&&!ctx.lowCpu&&ctx.style!=="minimal"&&segment.length<=10,position:"top",fontSize:9,color:ctx.theme.text,formatter:params=>{
+        const point=params.value as number[];
+        if(peak && point[0]===peak.observedAt*1000) return "";
+        return ctx.number(point[1])+"%";
+      }},
       lineStyle:{color:ctx.theme.series(row.provider),width:previous?1.5:2,type:previous?"dashed":"solid",opacity:1},itemStyle:{color:ctx.theme.series(row.provider)},
       emphasis:{disabled:ctx.lowCpu,focus:"series"},
-      ...(!previous && index===0 && !compact && ctx.highFidelity && row.current.length ? {markPoint:{symbol:"circle",symbolSize:6,itemStyle:{color:ctx.theme.series(row.provider)},label:{color:ctx.theme.text,fontSize:10,position:"top",formatter:params=>ctx.number(params.value as number)+"%"},data:[row.current.reduce((a,b)=>a.usedPercent>b.usedPercent?a:b)].map(p=>({name:ctx.labels.used,coord:[p.observedAt*1000,p.usedPercent],value:p.usedPercent}))}}:{}),
+      ...(index===0 && peak ? {markPoint:{symbol:"circle",symbolSize:6,itemStyle:{color:ctx.theme.series(row.provider)},label:{color:ctx.theme.text,fontSize:10,position:"top",formatter:params=>ctx.number(params.value as number)+"%"},data:[{name:ctx.labels.used,coord:[peak.observedAt*1000,peak.usedPercent],value:peak.usedPercent}]}}:{}),
       ...(!previous && index===0 && !compact && ctx.style!=="minimal" && row.mean.value!==null ? {markLine:{silent:true,symbol:["none","none"],lineStyle:{color:ctx.theme.muted,width:1,type:"dashed"},label:{show:!ctx.lowCpu,formatter:ctx.number(row.mean.value)+"%",position:"insideEndTop",color:ctx.theme.muted},data:[{yAxis:row.mean.value}]}}:{})});
    });
   }
