@@ -102,6 +102,8 @@ nul
 !/scripts/vm/run_provider_proof_remote.sh
 !/scripts/vm/setup_syncthing_windows.ps1
 !/scripts/vm/windows_debug_relaunch.ps1
+!/scripts/dev-preflight.mjs
+!/scripts/scan-secrets.mjs
 version.env
 .stfolder-win-codexbar/
 

@@ -250,6 +250,30 @@ fn channel_launch_is_safe(dev_channel: bool, proof_requested: bool, exe_name: &s
 }
 
 fn main() {
+    // `--print-channel`: a pure, side-effect-free diagnostic exit -- no
+    // logging init, no settings load, no registry/notification
+    // registration, no window. Lets an external preflight script (see
+    // `scripts/dev-preflight.mjs`) PROVE which channel a compiled binary
+    // is before ever performing a real launch, instead of trusting the
+    // filename alone (the exact gap the Product V3 Personal-channel
+    // incident exposed -- see docs/validation/PRODUCT_V3_CHANNEL_INCIDENT.md).
+    if std::env::args().skip(1).any(|a| a == "--print-channel") {
+        let exe_name = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.file_name().map(|n| n.to_string_lossy().into_owned()))
+            .unwrap_or_default();
+        println!(
+            "channel={}",
+            if quotalis_core::paths::is_dev_channel() {
+                "dev"
+            } else {
+                "stable"
+            }
+        );
+        println!("exe={exe_name}");
+        println!("app_dir_name={}", quotalis_core::paths::APP_DIR_NAME);
+        std::process::exit(0);
+    }
     // Fail before logs, settings, registry registration or migrations can touch
     // Personal. A Dev filename/config alone is not a Rust channel boundary.
     let exe_name = std::env::current_exe()
