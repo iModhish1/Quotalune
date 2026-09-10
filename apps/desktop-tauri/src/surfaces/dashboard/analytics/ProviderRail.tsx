@@ -63,4 +63,3 @@ export default function ProviderRail({providers,settings,isDemo,onOpenProviders,
   </dialog>
  </section>;
 }
-

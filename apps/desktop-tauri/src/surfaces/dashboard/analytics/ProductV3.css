@@ -49,3 +49,9 @@
 .product-v3.dashboard-cosmic{padding:18px!important;gap:14px!important}.product-v3 .v3-overview-modules{grid-auto-flow:dense;gap:14px}.product-v3 .v3-page-header{gap:12px}.product-v3 .v3-page-header h2{font-size:23px}.product-v3 .v3-page-header p{margin-block:4px 0}
 .product-v3 .provider-rail{padding:14px 18px 8px}.product-v3 .provider-rail__viewport{margin-top:12px}.product-v3 .provider-rail__track{min-height:190px}.product-v3 .provider-rail__node{gap:6px}.product-v3 .provider-rail__node .provider-planet{width:78px;height:78px}.product-v3 .provider-rail__navigation{margin-top:4px}
 .settings-studio .settings-body .product-v3 .v3-section-nav button{border:0;border-bottom:2px solid transparent;background:transparent;padding:9px 12px;border-radius:6px 6px 0 0;font-size:12px}.settings-studio .settings-body .product-v3 .v3-section-nav button[aria-current=page],.settings-studio .settings-body .product-v3 .v3-section-nav button[aria-pressed=true]{border-bottom-color:var(--qa-analytics-accent);background:color-mix(in srgb,var(--qa-analytics-accent) 8%,transparent);color:var(--qa-analytics-accent)}
+
+/* A busy time band must not compress dozens of provider names into characters. */
+.product-v3 .cosmic-reset-bands{grid-template-columns:repeat(5,minmax(84px,1fr))!important;max-height:280px;overflow:auto;align-items:start}
+.product-v3.dashboard-cosmic .cosmic-reset-provider{flex:1 0 80px;min-width:80px;box-sizing:border-box;padding:12px 6px}
+.product-v3 .cosmic-reset-provider strong{max-width:100%;overflow-wrap:normal;word-break:normal}
+.product-v3 .cosmic-reset-bands__label{position:sticky;top:0;z-index:1;background:var(--cosmic-panel)}
