@@ -1,3 +1,4 @@
+import QuotalisSelect from "./analytics/QuotalisSelect";
 import type React from "react";
 
 // ── tiny reusable controls ──────────────────────────────────────────
@@ -51,27 +52,7 @@ export function Select({
   ariaLabel?: string;
   minWidth?: number;
 }) {
-  const selectedLabel = options.find((option) => option.value === value)?.label ?? value;
-  const calculatedWidth = Math.max(160, ...options.map(option => Math.ceil(option.label.length * 8.5) + 48));
-  const width = Math.max(calculatedWidth, minWidth ?? 0);
-
-  return (
-    <select
-      className="select"
-      style={{ width, maxWidth: "100%" }}
-      title={selectedLabel}
-      value={value}
-      disabled={disabled}
-      aria-label={ariaLabel}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </select>
-  );
+  return <div style={{width:Math.max(minWidth??160,Math.min(420,Math.max(0,...options.map(o=>o.label.length))*7.5+48)),maxWidth:"100%"}}><QuotalisSelect label={ariaLabel??options.find(o=>o.value===value)?.label??value} value={value} options={options} onChange={onChange} disabled={disabled} searchable={options.length>9}/></div>;
 }
 
 export function NumberInput({

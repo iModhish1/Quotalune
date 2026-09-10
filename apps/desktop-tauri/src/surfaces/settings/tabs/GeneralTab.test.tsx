@@ -4,6 +4,7 @@ import { LOGO_APPEARANCE_STORAGE_KEY } from "../../../design-system/logoAppearan
 
 vi.mock("../../../hooks/useLocale", () => ({
   useLocale: () => ({ t: (key: string) => key }),
+  useOptionalLocale: () => null,
 }));
 
 // Mock Tauri invoke for get_available_languages
@@ -110,45 +111,47 @@ describe("GeneralTab language picker", () => {
   it("renders all supported language options", () => {
     render(<GeneralTab settings={settings} set={vi.fn()} saving={false} />);
 
-    const select = screen.getByDisplayValue("English");
-    expect(select).toBeInTheDocument();
-
-    const options = select.querySelectorAll("option");
-    expect(options.length).toBeGreaterThanOrEqual(8);
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    expect(screen.getAllByRole("option")).toHaveLength(9);
   });
 
   it("includes spanish as a selectable option", () => {
     render(<GeneralTab settings={settings} set={vi.fn()} saving={false} />);
 
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
     expect(
-      screen.getByText("Español"),
+      screen.getByRole("option", { name: "Español" }),
     ).toBeInTheDocument();
   });
 
   it("includes russian as a selectable option", () => {
     render(<GeneralTab settings={settings} set={vi.fn()} saving={false} />);
 
-    expect(screen.getByText("Русский")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    expect(screen.getByRole("option", { name: "Русский" })).toBeInTheDocument();
   });
 
   it("includes turkish as a selectable option", () => {
     render(<GeneralTab settings={settings} set={vi.fn()} saving={false} />);
 
-    expect(screen.getByText("Türkçe")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    expect(screen.getByRole("option", { name: "Türkçe" })).toBeInTheDocument();
   });
 
   it("includes korean as a selectable option", () => {
     render(<GeneralTab settings={settings} set={vi.fn()} saving={false} />);
 
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
     expect(
-      screen.getByText("한국어"),
+      screen.getByRole("option", { name: "한국어" }),
     ).toBeInTheDocument();
   });
 
   it("includes Traditional Chinese as a selectable option", () => {
     render(<GeneralTab settings={settings} set={vi.fn()} saving={false} />);
 
-    expect(screen.getByText("繁體中文")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    expect(screen.getByRole("option", { name: "繁體中文" })).toBeInTheDocument();
   });
 
   it("updates the predictive pace warning preference", () => {
@@ -188,9 +191,8 @@ describe("GeneralTab language picker", () => {
     const set = vi.fn();
     render(<GeneralTab settings={settings} set={set} saving={false} />);
 
-    fireEvent.change(screen.getByDisplayValue("LowPowerModeOff"), {
-      target: { value: "automatic" },
-    });
+    fireEvent.click(screen.getByRole("button", { name: "LowPowerModeOff" }));
+    fireEvent.click(screen.getByRole("option", { name: "LowPowerModeAutomatic" }));
 
     expect(set).toHaveBeenCalledWith({ lowPowerModePreference: "automatic" });
   });
@@ -201,12 +203,9 @@ describe("GeneralTab language picker", () => {
       <GeneralTab mode="notifications" settings={settings} set={set} saving={false} />,
     );
 
-    const select = screen.getByRole("combobox", { name: "NotificationSoundTheme" });
-    expect(select.querySelectorAll("option")).toHaveLength(2);
-    expect(parseFloat((select as HTMLElement).style.width)).toBeGreaterThanOrEqual(180);
-    fireEvent.change(select, {
-      target: { value: "codexBar" },
-    });
+    fireEvent.click(screen.getByRole("button", { name: "NotificationSoundTheme" }));
+    expect(screen.getAllByRole("option")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("option", { name: "NotificationSoundThemeQuotaArc" }));
 
     expect(set).toHaveBeenCalledWith({ notificationSoundTheme: "codexBar" });
   });
@@ -338,9 +337,9 @@ describe("GeneralTab language picker", () => {
     render(
       <GeneralTab mode="general" settings={settings} set={set} saving={false} />,
     );
-    const select = screen.getByRole("combobox", { name: "StartupDestination" });
-    expect(select).toHaveValue("providerDisplay");
-    fireEvent.change(select, { target: { value: "lastOpened" } });
+    expect(screen.getByRole("button", { name: "StartupDestination" })).toHaveTextContent("StartupDestinationProviderDisplay");
+    fireEvent.click(screen.getByRole("button", { name: "StartupDestination" }));
+    fireEvent.click(screen.getByRole("option", { name: "StartupDestinationLastOpened" }));
     expect(set).toHaveBeenLastCalledWith({ startupDestination: "lastOpened" });
   });
 
@@ -353,9 +352,7 @@ describe("GeneralTab language picker", () => {
         saving={false}
       />,
     );
-    expect(
-      screen.getByRole("combobox", { name: "StartupDestination" }),
-    ).toHaveValue("dashboard");
+    expect(screen.getByRole("button", { name: "StartupDestination" })).toHaveTextContent("StartupDestinationDashboard");
   });
 
   it("toggles each notification category without disabling the others", () => {
@@ -404,9 +401,8 @@ describe("GeneralTab language picker", () => {
       />,
     );
 
-    fireEvent.change(screen.getByRole("combobox", { name: "TabProviders" }), {
-      target: { value: "gemini" },
-    });
+    fireEvent.click(screen.getByRole("button", { name: "TabProviders" }));
+    fireEvent.click(screen.getByRole("option", { name: "Gemini" }));
 
     expect(
       screen.getByRole("spinbutton", {
@@ -430,20 +426,19 @@ describe("GeneralTab language picker", () => {
   it("renders the theme picker with auto/light/dark options in general mode", () => {
     render(<GeneralTab settings={settings} set={vi.fn()} saving={false} />);
 
-    const select = screen.getByRole("combobox", { name: "ThemeLabel" });
-    expect(select).toBeInTheDocument();
-    expect(select.querySelectorAll("option")).toHaveLength(3);
-    expect(select.querySelector('option[value="light"]')).not.toBeNull();
-    expect(select.querySelector('option[value="dark"]')).not.toBeNull();
-    expect(select.querySelector('option[value="auto"]')).not.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "ThemeLabel" }));
+    expect(screen.getAllByRole("option")).toHaveLength(3);
+    expect(screen.getByRole("option", { name: "ThemeLightOption" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "ThemeDarkOption" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "ThemeAutoOption" })).toBeInTheDocument();
   });
 
   it("persists a light theme choice via updateSettings", () => {
     const set = vi.fn();
     render(<GeneralTab settings={settings} set={set} saving={false} />);
 
-    const select = screen.getByRole("combobox", { name: "ThemeLabel" });
-    fireEvent.change(select, { target: { value: "light" } });
+    fireEvent.click(screen.getByRole("button", { name: "ThemeLabel" }));
+    fireEvent.click(screen.getByRole("option", { name: "ThemeLightOption" }));
 
     expect(set).toHaveBeenCalledWith({ theme: "light" });
   });
@@ -453,7 +448,7 @@ describe("GeneralTab language picker", () => {
       <GeneralTab mode="notifications" settings={settings} set={vi.fn()} saving={false} />,
     );
 
-    expect(screen.queryByRole("combobox", { name: "ThemeLabel" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "ThemeLabel" })).toBeNull();
   });
 
   it("offers independent logo finishes and prominence with a live persisted preview", () => {

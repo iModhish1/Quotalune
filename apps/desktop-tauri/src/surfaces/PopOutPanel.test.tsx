@@ -378,20 +378,20 @@ describe("PopOutPanel", () => {
     );
 
     await waitFor(() => {
-      expect(container.querySelectorAll(".dashboard-limits__instrument")).toHaveLength(3);
+      expect(container.querySelectorAll(".provider-rail__node")).toHaveLength(3);
     });
 
     expect(
-      Array.from(container.querySelectorAll(".dashboard-limits__instrument header strong")).map(
+      Array.from(container.querySelectorAll(".provider-rail__node > strong")).map(
         (node) => node.textContent,
       ),
     ).toEqual(["Codex", "Claude", "Cursor"]);
   });
 
-  it("uses the same compact analytics limits at large provider counts without an orbital hero", async () => {
+  it("bounds the provider rail at large counts without a canvas", async () => {
     const providers = TEST_PROVIDER_CATALOG.map(([id, name]) => provider(id, name));
     const {container} = renderPopOut(providers, undefined, [], {enabledProviders: providers.map(p => p.providerId)});
-    await waitFor(() => expect(container.querySelectorAll(".dashboard-limits__instrument")).toHaveLength(providers.length));
+    await waitFor(() => expect(container.querySelectorAll(".provider-rail__node")).toHaveLength(Math.min(6, providers.length)));
     expect(container.querySelector("canvas")).toBeNull();
     expect(container.querySelector(".provider-grid")).toBeNull();
   });

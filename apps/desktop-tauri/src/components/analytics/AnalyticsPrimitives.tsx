@@ -1,5 +1,6 @@
 import {useId, useMemo, useState, type ReactNode} from "react";
 import "./analyticsPrimitives.css";
+import QuotalisMultiSelect from "./QuotalisMultiSelect";
 
 export function AnalyticsSection({title, description, action, children, className = ""}: {title: string; description?: string; action?: ReactNode; children: ReactNode; className?: string}) {
   const id = useId();
@@ -33,7 +34,6 @@ export function AnalyticsTable<T>({rows, columns, rowKey, caption, emptyLabel, p
   const [sort, setSort] = useState<{id: string; descending: boolean} | null>(null);
   const [visibility, setVisibility] = useState<Record<string, boolean>>({});
   const [page, setPage] = useState(0);
-  const controlsId = useId();
   const visibleColumns = columns.filter(column => visibility[column.id] ?? column.defaultVisible !== false);
   const renderColumns = visibleColumns.length ? visibleColumns : columns.slice(0, 1);
   const ordered = useMemo(() => {
@@ -53,23 +53,12 @@ export function AnalyticsTable<T>({rows, columns, rowKey, caption, emptyLabel, p
   const pageCount = Math.max(1, Math.ceil(ordered.length / safePageSize));
   const activePage = Math.min(page, pageCount - 1);
   const pagedRows = ordered.slice(activePage * safePageSize, (activePage + 1) * safePageSize);
-  const visibleCount = renderColumns.length;
-  const setColumnVisibility = (column: AnalyticsColumn<T>, next: boolean) => {
-    if (!next && visibleCount === 1) return;
-    setVisibility(current => ({...current, [column.id]: next}));
-    setPage(0);
-  };
   const toggleSort = (column: AnalyticsColumn<T>) => {
     setSort(current => ({id: column.id, descending: current?.id === column.id ? !current.descending : false}));
     setPage(0);
   };
   return <div className="analytics-table-shell" role="region" aria-label={caption}>
-    <div className="analytics-table__toolbar"><details className="analytics-table__columns"><summary aria-controls={controlsId}>{copy.columns}</summary><fieldset id={controlsId}>
-      <legend className="analytics-table__visually-hidden">{copy.columns}</legend>{columns.map(column => {
-        const checked = visibility[column.id] ?? column.defaultVisible !== false;
-        return <label key={column.id}><input type="checkbox" checked={checked} disabled={checked && visibleCount === 1} onChange={event => setColumnVisibility(column, event.target.checked)}/>{column.title}</label>;
-      })}
-    </fieldset></details></div>
+    <div className="analytics-table__toolbar"><QuotalisMultiSelect label={copy.columns} value={renderColumns.map(c=>c.id)} minSelected={1} options={columns.map(c=>({value:c.id,label:c.title}))} onChange={ids=>{setVisibility(Object.fromEntries(columns.map(c=>[c.id,ids.includes(c.id)])));setPage(0);}}/></div>
     <div className="analytics-table-scroll" tabIndex={0}>
       <table className="analytics-table"><caption>{caption}</caption><thead><tr>{renderColumns.map(column => <th key={column.id} scope="col" aria-sort={!column.sortValue ? undefined : sort?.id !== column.id ? "none" : sort.descending ? "descending" : "ascending"}>
         {column.sortValue ? <button type="button" onClick={() => toggleSort(column)}>{column.title}<span aria-hidden="true">{sort?.id === column.id ? sort.descending ? " ↓" : " ↑" : " ↕"}</span></button> : column.title}

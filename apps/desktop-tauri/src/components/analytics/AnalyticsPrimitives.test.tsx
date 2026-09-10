@@ -21,11 +21,12 @@ describe("analytical table", () => {
     render(<AnalyticsTable rows={[{id:"one",value:1}]} rowKey={row=>row.id} caption="Provider operations" emptyLabel="No data" columns={[
       {id:"name",title:"Provider",cell:row=>row.id}, {id:"value",title:"Usage",cell:row=>row.value},
     ]}/>);
-    fireEvent.click(document.querySelector(".analytics-table__columns summary")!);
-    fireEvent.click(screen.getByRole("checkbox",{name:"Usage"}));
+    fireEvent.click(screen.getByRole("button", {name: "Columns"}));
+    fireEvent.click(screen.getByRole("option", {name:"Usage"}));
     expect(screen.queryByRole("columnheader",{name:"Usage"})).toBeNull();
-    const provider = screen.getByRole("checkbox",{name:"Provider"});
-    expect(provider).toBeDisabled();
+    expect(screen.getByRole("button", {name: "Columns"})).toHaveTextContent("Columns · 1");
+    fireEvent.click(screen.getByRole("option", {name:"Provider"}));
+    expect(screen.getByRole("columnheader", {name:"Provider"})).toBeInTheDocument();
   });
   it.each([1_000,10_000])("keeps %i-row histories bounded to one page of DOM while retaining every page", (count) => {
     const rows = Array.from({length:count},(_, index)=>({id:`row-${index}`,value:index}));

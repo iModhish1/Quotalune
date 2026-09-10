@@ -16,7 +16,7 @@ const updateMocks = vi.hoisted(() => ({
 
 vi.mock("../../../lib/tauri", () => tauriMocks);
 vi.mock("../../../hooks/useLocale", () => ({
-  useLocale: () => ({ t: (key: string) => key }),
+  useOptionalLocale: () => null, useLocale: () => ({ t: (key: string) => key }),
 }));
 vi.mock("../../../hooks/useUpdateState", () => ({
   useUpdateState: () => ({

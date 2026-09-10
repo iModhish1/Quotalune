@@ -7,6 +7,7 @@ import { resolveCatalogTheme, type CatalogThemeSettings } from "./themeResolutio
 export function workspaceThemeStyle(settings: CatalogThemeSettings): CSSProperties {
   const theme = catalogBySlug(resolveCatalogTheme(settings).slug) ?? CANONICAL_THEME;
   return {
+    "--qa-analytics-surface-opaque": theme.core, "--qa-analytics-text-primary": theme.material?.text ?? "#f0f4f8", "--qa-analytics-accent":theme.accent,
     "--workspace-bg": theme.bg[0], "--workspace-surface": theme.core,
     "--workspace-edge": theme.coreEdge, "--workspace-accent": theme.accent,
     "--text-primary": theme.material?.text ?? "#f0f4f8",

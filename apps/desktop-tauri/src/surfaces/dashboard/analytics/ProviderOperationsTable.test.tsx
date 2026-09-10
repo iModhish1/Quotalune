@@ -4,7 +4,7 @@ import {currentProviderModel} from "../../../lib/analytics/currentProviders";
 import type {ProviderUsageSnapshot, SettingsSnapshot} from "../../../types/bridge";
 import ProviderOperationsTable from "./ProviderOperationsTable";
 
-vi.mock("../../../hooks/useLocale", () => ({useLocale: () => ({t: (key: string) => ({
+vi.mock("../../../hooks/useLocale", () => ({useOptionalLocale: () => null, useLocale: () => ({t: (key: string) => ({
   TabProviders:"Provider", V2CurrentState:"Status", Plan:"Plan", DashboardKpiHighestUsage:"Current usage",
   FloatBarRemainingSuffix:"Remaining", V2NextReset:"Next reset", V2ObservationAge:"Freshness",
   DashboardValueUnavailable:"Unavailable", DashboardNeedsAttention:"Needs attention", V2ProviderReady:"Reporting",
