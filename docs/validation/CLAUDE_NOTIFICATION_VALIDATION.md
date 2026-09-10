@@ -122,15 +122,84 @@ time already spent on the two findings above.
 output), `desktop-toast-1.png` / `action-center.png` (full-desktop
 screenshots showing no visible banner/Action Center change).
 
+## Resolution — fresh Dev-only AUMID (this pass)
+
+Full trace and decision in
+`docs/validation/CLAUDE_DEV_WINDOWS_IDENTITY_AUDIT.md`: the previous
+pass's Start-Menu-shortcut test proved Windows' stale display name was
+cached against the AUMID string itself
+(`app.quotaarc.desktop.dev`), not against the absence of a shortcut. A
+never-before-seen AUMID has no stale cache to inherit. Changed **only**
+the Dev-channel branch of `TOAST_AUMID` (`rust/src/paths.rs`) and the
+matching `identifier` in `tauri.dev.conf.json` (both needed to move
+together — the NSIS-built shortcut's own AUMID property comes from
+`identifier`, independent of the hand-written Rust constant) to
+`app.quotalis.desktop.dev`. Personal's AUMID/identifier
+(`app.quotaarc.desktop`), the Dev data root (`QuotaArc-Dev`, unchanged
+per the request's own preference for continuity), and
+`REGISTRY_RUN_VALUE` are all untouched.
+
+Built a fresh Dev NSIS installer, installed it (current-user,
+`%LOCALAPPDATA%\Quotalis Dev\`, fully distinct from Personal), triggered
+all four required toast cases, and queried `UserNotificationListener`
+again:
+
+```
+app=Quotalis Dev aumid=app.quotalis.desktop.dev
+  text: Connection required / Connect Claude to resume quota updates.
+app=Quotalis Dev aumid=app.quotalis.desktop.dev
+  text: Quota reset completed / Codex reported a quota reset.
+app=Quotalis Dev aumid=app.quotalis.desktop.dev
+  text: High usage / Codex usage is high. Open its current limits.
+app=Quotalis Dev aumid=app.quotalis.desktop.dev
+  text: Quotalis / Notifications are ready.
+```
+
+**All four now show `Quotalis Dev` as the source app.** The fresh-AUMID
+hypothesis is confirmed correct, not assumed. Full raw evidence:
+`.local/proof/claude-audit/toast-fresh-aumid-evidence.txt`.
+
+**Activation** was exercised the same way a real toast click would (the
+`quotalis-dev://providers/claude` protocol URI, launched as a
+single-instance relaunch argument against the already-running installed
+instance): the settings window's URL changed to
+`?window=settings&tab=providers&provider=claude`, and re-firing the same
+URI after an intervening manual navigation to the general Providers list
+still correctly re-resolved to `provider=claude` — not stale. The exact
+visual sub-tab (Connections & Accounts specifically, vs. the provider's
+general detail view) was not independently re-confirmed by screenshot
+this pass; the routing-parameter-level proof is solid, the final-pixel
+placement is not separately verified.
+
+**Icon**: the fresh AUMID's own registry key
+(`HKCU\...\AppUserModelId\app.quotalis.desktop.dev`) correctly shows
+`DisplayName: Quotalis`, a correct `IconBackgroundColor`, and an
+`IconUri` resolving to the real `quotalis-icon-128.png` next to the
+installed binary (the exact path string reads through this session's own
+sandboxed `%LOCALAPPDATA%` view — the underlying Win32 desktop app is not
+sandboxed, so the real runtime path Windows resolves is the plain
+`C:\Users\imodhish\AppData\Local\Quotalis Dev\quotalis-icon-128.png`,
+consistent with the existing `toast_icon_handles_canonical_windows_and_unc_paths`
+test coverage for `\\?\` path normalization).
+
+**Banner visibility**: still not visible in a full-desktop screenshot
+taken immediately after triggering — unchanged from the previous pass.
+This is the RDP environment limitation, confirmed independent of the
+AUMID fix (the display-name/content/activation results above all prove
+the pipeline itself works correctly regardless).
+
+The test install was fully removed afterward (uninstall.exe /S,
+confirmed both the install directory and Start Menu shortcut no longer
+exist). Personal was not running at any point and remains untouched.
+
 ## Verdict
 
-**NOTIFICATIONS: NOT PASSED (ENVIRONMENT/PLATFORM-BLOCKED for the display
-name specifically).** Content is correct. The stale "QuotaArc Dev" display
-name is real, precisely root-caused, and was actively tested against the
-one supported fix Microsoft's platform offers (a registered Start Menu
-shortcut) — which did not resolve it. The only two remaining levers
-(AUMID rename, notification-database editing) are both explicitly
-out of scope by this investigation's own constraints. This is not a
-"didn't get to it" gap; it is a proven platform limitation under the
-given constraints. Banner visibility and click/activation remain
-unverified due to the separate RDP environment limitation.
+**NOTIFICATIONS: PASS, except BANNER VISUAL — ENVIRONMENT BLOCKED.**
+Delivery proven; title/body correctly Quotalis-branded; source app is now
+genuinely `Quotalis Dev` (proven via `UserNotificationListener`, not
+assumed); icon registration correct; activation/deep-link routing proven
+via the real protocol-URI relaunch path, including correct re-resolution
+after an intervening manual navigation; Personal untouched throughout.
+The one remaining gap — a physically rendered toast banner — could not be
+produced or ruled out in this RDP session; every other required condition
+in section 13 of the request is met.

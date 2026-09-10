@@ -72,8 +72,19 @@ pub const REGISTRY_RUN_VALUE: &str = if cfg!(feature = "dev-channel") {
 /// this is what lets Windows recognize a future Quotalis-branded build as
 /// the same application as today's QuotaArc for toast notifications,
 /// single-instance identity, and Start Menu pin continuity.
+/// Fresh Dev-only AUMID (Claude continuation wave, 2026-09-10 --
+/// see `docs/validation/CLAUDE_DEV_WINDOWS_IDENTITY_AUDIT.md`). The
+/// previous Dev AUMID (`app.quotaarc.desktop.dev`) carried a stale
+/// "QuotaArc Dev" display name cached by Windows' own notification
+/// database from before the Quotalis rebrand; a real installed Start
+/// Menu shortcut carrying that same old AUMID did not clear the cache
+/// (proven, not assumed -- see `docs/validation/CLAUDE_NOTIFICATION_VALIDATION.md`).
+/// A never-before-seen AUMID has no stale cache to inherit. Personal's
+/// AUMID (`app.quotaarc.desktop`) is deliberately unchanged -- this is
+/// Dev-only, with zero effect on Personal's upgrade/toast/single-instance
+/// continuity.
 pub const TOAST_AUMID: &str = if cfg!(feature = "dev-channel") {
-    "app.quotaarc.desktop.dev"
+    "app.quotalis.desktop.dev"
 } else {
     "app.quotaarc.desktop"
 };
@@ -192,7 +203,7 @@ mod tests {
         if cfg!(feature = "dev-channel") {
             assert_eq!(APP_DIR_NAME, "QuotaArc-Dev");
             assert_eq!(REGISTRY_RUN_VALUE, "QuotaArc Dev");
-            assert_eq!(TOAST_AUMID, "app.quotaarc.desktop.dev");
+            assert_eq!(TOAST_AUMID, "app.quotalis.desktop.dev");
         } else {
             assert_eq!(APP_DIR_NAME, "QuotaArc");
             assert_eq!(REGISTRY_RUN_VALUE, "QuotaArc");
