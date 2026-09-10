@@ -1,12 +1,27 @@
-import {useState, type ReactNode} from "react";
+import {useEffect, useState, type ReactNode} from "react";
 import {useLocale} from "../../hooks/useLocale";
 import type {SettingsTabId} from "../../types/bridge";
 import {PRIMARY_GROUPS, SETTINGS_CATEGORIES, primaryDestination} from "./settingsCenterRegistry";
 import {TAB_META} from "./settingsTabs";
 
 const labels = new Map(TAB_META.map(tab => [tab.id, tab.labelKey]));
+type Branch = "settings" | "workspace" | "dashboard";
+const BRANCHES: readonly Branch[] = ["settings", "workspace", "dashboard"];
+const isBranch = (value: string): value is Branch => (BRANCHES as readonly string[]).includes(value);
+const onlyExpand = (active: string) => ({settings: active === "settings", workspace: active === "workspace", dashboard: active === "dashboard"});
 
-/** One navigation hierarchy; settings editors never create a second sidebar. */
+/**
+ * One navigation hierarchy; settings editors never create a second sidebar.
+ *
+ * Only the branch containing the active tab stays expanded -- all three
+ * used to default open and never collapsed on their own, so in the "top"/
+ * "bottom" navigation layouts every branch's full children list rendered
+ * inline at once (Settings alone has 7 categories), pushing the nav to
+ * ~38vh regardless of which page was actually open. Auto-collapsing
+ * siblings when the active branch changes reclaims that space in every
+ * navigation layout without hiding anything the user hasn't already
+ * chosen to look at.
+ */
 export default function ProductNavigation({activeTab, onNavigate, icons}: {
   activeTab: SettingsTabId;
   onNavigate: (tab: SettingsTabId) => void;
@@ -14,7 +29,13 @@ export default function ProductNavigation({activeTab, onNavigate, icons}: {
 }) {
   const {t} = useLocale();
   const primary = primaryDestination(activeTab);
-  const [expanded, setExpanded] = useState({settings: true, workspace: true, dashboard: true});
+  const [expanded, setExpanded] = useState(() => onlyExpand(primary));
+  // Keep the expanded branch in sync when the active tab changes through a
+  // path other than this component's own click handler (e.g. Settings'
+  // search results navigating directly to a tab in a different branch).
+  useEffect(() => {
+    setExpanded(current => (isBranch(primary) && current[primary] ? current : onlyExpand(primary)));
+  }, [primary]);
   const leaf = (tab: SettingsTabId) => <button type="button" key={tab}
     className="product-nav__leaf" aria-current={activeTab === tab ? "page" : undefined}
     onClick={() => onNavigate(tab)}>
@@ -43,7 +64,11 @@ export default function ProductNavigation({activeTab, onNavigate, icons}: {
             className={`settings-tab ${primary === tab.id ? "settings-tab--active" : ""}`}
             onClick={() => {
               if (branch) {
-                setExpanded(value => ({...value, [branch]: primary !== tab.id || !value[branch]}));
+                // Switching to a different branch collapses the other
+                // branches too -- otherwise every branch a user has ever
+                // visited stays expanded forever, which is what pushed the
+                // top/bottom navigation layouts to ~38vh of the window.
+                setExpanded(value => primary === tab.id ? {...value, [branch]: !value[branch]} : onlyExpand(branch));
                 if (primary !== tab.id) onNavigate(tab.target);
               } else onNavigate(tab.target);
             }}>

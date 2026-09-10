@@ -211,6 +211,17 @@
 .settings-nav-group__label{padding:6px 12px;color:var(--text-secondary);font-size:10px;font-weight:650;letter-spacing:.07em;text-transform:uppercase}
 .settings-studio[data-navigation="top"] .settings-nav-group,.settings-studio[data-navigation="bottom"] .settings-nav-group{flex-direction:row;align-items:center;flex:none;margin:0;padding-inline-end:10px;border-inline-end:1px solid var(--border-color)}
 .settings-studio[data-navigation="top"] .settings-nav-group__label,.settings-studio[data-navigation="bottom"] .settings-nav-group__label{display:none}
+/* Top/bottom navigation is a thin horizontal strip -- a branch's expanded
+   children must float over the page as a dropdown, not push the strip's
+   own height out to fit them (Settings alone has 7 categories / 10 leaf
+   tabs, which used to grow the nav row to ~38vh whenever Settings was the
+   active branch, on top of the other branches staying expanded forever --
+   see ProductNavigation.tsx). */
+.settings-studio[data-navigation="top"] .settings-tabs.product-nav,.settings-studio[data-navigation="bottom"] .settings-tabs.product-nav{overflow:visible}
+.settings-studio[data-navigation="top"] .product-nav__branch,.settings-studio[data-navigation="bottom"] .product-nav__branch{position:relative}
+.settings-studio[data-navigation="top"] .product-nav__children,.settings-studio[data-navigation="bottom"] .product-nav__children{position:absolute;inset-inline-start:0;z-index:20;min-width:200px;max-height:min(60vh,420px);overflow-y:auto;margin:0;padding:8px;border:1px solid var(--border-color);border-radius:10px;background:var(--workspace-bg,#101113);box-shadow:0 16px 40px rgba(0,0,0,.45)}
+.settings-studio[data-navigation="top"] .product-nav__children{top:calc(100% + 6px)}
+.settings-studio[data-navigation="bottom"] .product-nav__children{bottom:calc(100% + 6px)}
 @media(max-width:560px){.settings-studio[data-navigation="side"] .settings-nav-group__label{display:none}.settings-studio[data-navigation="side"] .settings-nav-group+.settings-nav-group{border-top:1px solid var(--border-color);padding-top:8px}}
 
 /* One Structure Theme projection for the entire preferences workspace. */
