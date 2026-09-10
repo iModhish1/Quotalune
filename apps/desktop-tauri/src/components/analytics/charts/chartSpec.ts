@@ -34,7 +34,7 @@ export function createTrendChartSpec(rows:readonly QuotaSeries[],title:(r:QuotaS
       label:{show:!previous&&!compact&&!ctx.lowCpu&&ctx.style!=="minimal"&&segment.length<=10,position:"top",fontSize:9,color:ctx.theme.text,formatter:params=>ctx.number((params.value as number[])[1])+"%"},
       lineStyle:{color:ctx.theme.series(row.provider),width:previous?1.5:2,type:previous?"dashed":"solid",opacity:1},itemStyle:{color:ctx.theme.series(row.provider)},
       emphasis:{disabled:ctx.lowCpu,focus:"series"},
-      ...(!previous && index===0 && !compact && ctx.highFidelity && row.current.length ? {markPoint:{symbol:"circle",symbolSize:6,itemStyle:{color:ctx.theme.series(row.provider)},label:{color:ctx.theme.text,fontSize:10,position:"top",formatter:"{c}%"},data:[row.current.reduce((a,b)=>a.usedPercent>b.usedPercent?a:b)].map(p=>({name:ctx.labels.used,coord:[p.observedAt*1000,p.usedPercent],value:p.usedPercent}))}}:{}),
+      ...(!previous && index===0 && !compact && ctx.highFidelity && row.current.length ? {markPoint:{symbol:"circle",symbolSize:6,itemStyle:{color:ctx.theme.series(row.provider)},label:{color:ctx.theme.text,fontSize:10,position:"top",formatter:params=>ctx.number(params.value as number)+"%"},data:[row.current.reduce((a,b)=>a.usedPercent>b.usedPercent?a:b)].map(p=>({name:ctx.labels.used,coord:[p.observedAt*1000,p.usedPercent],value:p.usedPercent}))}}:{}),
       ...(!previous && index===0 && !compact && ctx.style!=="minimal" && row.mean.value!==null ? {markLine:{silent:true,symbol:["none","none"],lineStyle:{color:ctx.theme.muted,width:1,type:"dashed"},label:{show:!ctx.lowCpu,formatter:ctx.number(row.mean.value)+"%",position:"insideEndTop",color:ctx.theme.muted},data:[{yAxis:row.mean.value}]}}:{})});
    });
   }

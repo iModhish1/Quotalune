@@ -30,6 +30,20 @@ describe("professional chart contracts",()=>{
  it("comparison offsets display time only and retains original tooltip timestamps",()=>{const rows=buildQuotaAnalytics(data,range);const spec=createTrendChartSpec(rows,r=>r.provider,context,true);const series=spec.option.series as {name:string;data:number[][]}[];expect(series.some(s=>s.name.includes("Previous"))).toBe(true);expect(series.find(s=>s.name.includes("Previous"))!.data[0]).toEqual([range.since*1000,0,0]);expect(rows[0].previous[0].observedAt).toBe(0);});
  it("does not draw comparison when the semantic guard fails",()=>{const rows=buildQuotaAnalytics(data.slice(8),range);expect(rows[0].comparison.value).toBeNull();const spec=createTrendChartSpec(rows,r=>r.provider,context,true);expect(JSON.stringify(spec.option)).not.toContain("Previous");});
  it("heatmap includes observed cells only, never fabricates zero coverage",()=>{const rows=buildQuotaAnalytics(data,range);const spec=createCoverageHeatmapSpec(rows,r=>r.provider,context);const series=spec.option.series as {data:number[][]}[];expect(series[0].data.every(cell=>cell[2]>0)).toBe(true);});
+ it("high-fidelity peak marker formats through the shared rounding formatter, never a raw float (regression: overlapping '41.88331035648%'/'37.7%' labels found in native Analytics review)",()=>{
+  const preciseData=data.map((p,i)=>({...p,usedPercent:i+0.883310356483,remainingPercent:100-(i+0.883310356483)}));
+  const rows=buildQuotaAnalytics(preciseData,range);
+  const rounding=new Intl.NumberFormat("en-US",{maximumFractionDigits:1});
+  const spec=createTrendChartSpec(rows,r=>r.provider,{...context,highFidelity:true,number:n=>rounding.format(n)});
+  const series=spec.option.series as {markPoint?:{label:{formatter:(p:{value:number})=>string}}}[];
+  const withMarkPoint=series.find(s=>s.markPoint);
+  expect(withMarkPoint).toBeDefined();
+  const formatter=withMarkPoint!.markPoint!.label.formatter;
+  expect(typeof formatter).toBe("function");
+  const formatted=formatter({value:15.883310356483});
+  expect(formatted).toBe("15.9%");
+  expect(formatted).not.toContain("15.883310356483");
+ });
  it("theme/preset changes affect styling without changing values",()=>{const rows=buildQuotaAnalytics(data,range);const one=createTrendChartSpec(rows,r=>r.provider,context);const two=createTrendChartSpec(rows,r=>r.provider,{...context,lowCpu:true,theme:{...context.theme,text:"#000000",grid:"#cccccc"}});expect((one.option.series as {data:unknown}[])[0].data).toEqual((two.option.series as {data:unknown}[])[0].data);expect(two.option.animation).toBe(false);});
  it("structure tokens are sourced from the catalog",()=>{for(const theme of [CANONICAL_THEME]){const mapped=chartTheme(theme,()=>"#123456");expect(mapped.background).toBe(theme.core);expect(mapped.accent).toBe(theme.accent);expect(mapped.series("codex")).toBe("#123456");}});
  it("coalesces resize and disposes observer/frame/engine exactly once",()=>{
