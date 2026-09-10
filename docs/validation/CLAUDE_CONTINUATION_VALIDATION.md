@@ -1,5 +1,28 @@
 # Claude continuation validation — 2026-09-10
 
+> **Update (same day, continuation wave):** ending HEAD for this document
+> was `db13b224`. The owner then requested a further continuation wave
+> ("QUOTALIS — CLAUDE CONTINUATION WAVE"), starting from that exact
+> reconciled HEAD (confirmed identical via `git rev-parse HEAD`, no
+> discrepancy — `db13b224` is simply the child commit of `03d55556`, both
+> real). That wave added two more commits:
+> `84c23e07` (fixed the residual chart duplicate-label overlap flagged
+> below — see its own commit message for the full story, including a
+> regression this fix initially introduced and caught via native
+> re-test before landing) and `84f4c247` (real native notification toast
+> validation — found and precisely root-caused a genuine "QuotaArc Dev"
+> vs "Quotalis" branding defect via Windows' own
+> `UserNotificationListener` API; see
+> `docs/validation/CLAUDE_NOTIFICATION_VALIDATION.md`). **New ending HEAD:
+> `84f4c247`.** The continuation wave's own further-requested scope (Waves
+> B–G: 250k-history performance, deep analytics correctness bug-hunt,
+> controls/settings/RTL/accessibility audit, systematic visual-quality
+> audit, provider/auth re-audit, security review, all-pages consistency)
+> was **not attempted** in the time available — each is real, substantial,
+> multi-hour work in its own right, and is left explicitly open rather
+> than given a rushed, shallow pass. A follow-up session should pick up
+> directly at Wave B.
+
 Final checkpoint for this session. Read this first if continuing the
 project without the pasted Codex conversation — combined with
 `CLAUDE_HANDOFF_RECONCILIATION.md` (forensic state proof) and
