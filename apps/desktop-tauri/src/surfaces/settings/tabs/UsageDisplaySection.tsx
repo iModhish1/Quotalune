@@ -14,6 +14,7 @@
  */
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { Select } from "../../../components/FormControls";
 import {
   applyUsageSemantics,
   resolveUsageMode,
@@ -355,24 +356,16 @@ export default function UsageDisplaySection({
                     ? "Unavailable"
                     : `${primary} ${s.label}`}
                 </output>
-                <select
-                  aria-label={`Usage display mode for ${p.name}`}
+                <Select
+                  ariaLabel={`Usage display mode for ${p.name}`}
                   value={overrides[p.id] ?? "global"}
                   disabled={saving}
-                  className="usage-display__mode-select"
-                  onChange={(e) =>
-                    setOverride(p.id, e.target.value as Mode)
-                  }
-                >
-                  <option value="global">
-                    {overridden ? "Use global" : "Follow global"}
-                  </option>
-                  {USAGE_MODES.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => setOverride(p.id, value as Mode)}
+                  options={[
+                    { value: "global", label: overridden ? "Use global" : "Follow global" },
+                    ...USAGE_MODES.map((m) => ({ value: m.value, label: m.label })),
+                  ]}
+                />
                 <details className="usage-display__provider-details" open={rows.length<=2 ? true : undefined}>
                   <summary><span>Customize {p.name} limits and identity</span><small>{selected.length} {selected.length===1?'limit':'limits'} · {(presentations[p.id]??globalPresentation).identity??'adaptive'}</small></summary>
                   <div className="usage-display__provider-details-content">

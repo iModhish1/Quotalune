@@ -1,7 +1,7 @@
 /** Settings for the single Quota Island overlay. */
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 
-import { Toggle } from "../../../components/FormControls";
+import { Select, Toggle } from "../../../components/FormControls";
 import { useLocale } from "../../../hooks/useLocale";
 import { useSurfaceDemo } from "../../../hooks/useSurfaceDemo";
 import {normalizeSurfaceInteractions} from "../../../design-system/surfaceInteractions";
@@ -229,16 +229,16 @@ export default function SurfacesTab() {
           </fieldset>
           <div className="surface-settings__docking-row">
           <SurfaceControl title="Position" description="Choose a safe anchor, or use the larger drag grip on the surface for free placement.">
-          <select
+          <Select
             value={config.topArcAnchor}
             disabled={!config.topArcEnabled}
-            aria-label="Quotalis surface position"
-            onChange={(event) => patch({ topArcAnchor: event.target.value as SurfaceSettings["topArcAnchor"] })}
-          >
-            {flowSurfaceAnchorOptions(config.topArcForm).map((anchor) => (
-              <option key={anchor} value={anchor}>{flowSurfaceAnchorLabel(config.topArcForm, anchor)}</option>
-            ))}
-          </select>
+            ariaLabel="Quotalis surface position"
+            onChange={(value) => patch({ topArcAnchor: value as SurfaceSettings["topArcAnchor"] })}
+            options={flowSurfaceAnchorOptions(config.topArcForm).map((anchor) => ({
+              value: anchor,
+              label: flowSurfaceAnchorLabel(config.topArcForm, anchor),
+            }))}
+          />
           </SurfaceControl>
           <SurfaceControl title="Restore position" description="Returns this structure to its compact default anchor.">
           <button

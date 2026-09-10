@@ -8,6 +8,14 @@ const api=vi.hoisted(()=>({getSettingsSnapshot:vi.fn(),setCatalogTheme:vi.fn()})
 vi.mock("../../../lib/tauri",()=>api);
 vi.mock("@tauri-apps/api/event",()=>({listen:vi.fn().mockResolvedValue(()=>{})}));
 
+/** These fields are QuotalisSelects (trigger button + portal-rendered
+ *  option list), not native <select>s -- open the trigger, then click the
+ *  matching option. */
+async function chooseQuotalisOption(triggerLabel:string,optionName:string){
+  fireEvent.click(await screen.findByLabelText(triggerLabel));
+  fireEvent.click(await screen.findByRole("option",{name:optionName}));
+}
+
 describe("ThemeGallery canonical foundation", () => {
   it('previews another structure and expands only the focused card without persisting',async()=>{
     api.getSettingsSnapshot.mockResolvedValue({catalogTheme:'smoked-silver'});
@@ -15,7 +23,7 @@ describe("ThemeGallery canonical foundation", () => {
     const {container}=render(<ThemeGallery/>);
     const apply=screen.getByRole('button',{name:'Apply Aurora Bloom'});
     await waitFor(()=>expect(apply).not.toBeDisabled());
-    fireEvent.change(screen.getByLabelText('Theme preview structure'),{target:{value:'seam'}});
+    await chooseQuotalisOption('Theme preview structure','Seam');
     expect(screen.getAllByLabelText('seam provider selector')).toHaveLength(THEME_CATALOG.length);
     fireEvent.focus(apply);
     expect(container.querySelectorAll('.structure-preview__stage[data-expanded=true]')).toHaveLength(1);
@@ -28,7 +36,7 @@ describe("ThemeGallery canonical foundation", () => {
     api.setCatalogTheme.mockResolvedValue(undefined);
     render(<ThemeGallery/>);
     await waitFor(()=>expect(screen.getByRole('button',{name:'Apply Ember Alloy'})).not.toBeDisabled());
-    fireEvent.change(screen.getByLabelText('Theme assignment'),{target:{value:'surface:top'}});
+    await chooseQuotalisOption('Theme assignment','top surface');
     expect(screen.getByText('Effective source: Current profile')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button',{name:'Apply Ember Alloy'}));
     await waitFor(()=>expect(api.setCatalogTheme).toHaveBeenCalledWith('ember-alloy','surface:top'));

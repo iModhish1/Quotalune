@@ -1,4 +1,5 @@
 import { useLocale } from "../../hooks/useLocale";
+import { Select } from "../../components/FormControls";
 import type { SettingsSnapshot, SettingsUpdate, WorkspacePreferences } from "../../types/bridge";
 
 export function WorkspacePreferencesControl({settings, navigation, update, disabled}: {
@@ -8,9 +9,12 @@ export function WorkspacePreferencesControl({settings, navigation, update, disab
   const { t } = useLocale();
   return <section className="settings-section">
     <h3>{t("WorkspaceDensity")}</h3><p className="settings-section__description">{t("WorkspaceDensityHelp")}</p>
-    <select aria-label={t("WorkspaceDensity")} disabled={disabled} value={settings.workspacePreferences?.density ?? "comfortable"}
-      onChange={e => update({workspacePreferences:{navigation,density:e.target.value as "comfortable" | "compact" | "dense"}})}>
-      <option value="comfortable">{t("WorkspaceComfortable")}</option><option value="compact">{t("WorkspaceCompact")}</option><option value="dense">{t("V2Dense")}</option>
-    </select>
+    <Select ariaLabel={t("WorkspaceDensity")} disabled={disabled} value={settings.workspacePreferences?.density ?? "comfortable"}
+      onChange={value => update({workspacePreferences:{navigation,density:value as "comfortable" | "compact" | "dense"}})}
+      options={[
+        {value:"comfortable",label:t("WorkspaceComfortable")},
+        {value:"compact",label:t("WorkspaceCompact")},
+        {value:"dense",label:t("V2Dense")},
+      ]}/>
   </section>;
 }

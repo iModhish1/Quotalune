@@ -10,6 +10,7 @@ import "./ThemeGallery.css";
 import StructurePreview from "../StructurePreview";
 import {FLOW_SURFACE_FORM_CATALOG,type FlowSurfaceForm} from "../../../design-system/flowSurface";
 import {catalogMotion} from "../../../design-system/themeMotion";
+import {Select} from "../../../components/FormControls";
 
 export default function ThemeGallery() {
   const tr = useSettingsCopy();
@@ -54,19 +55,20 @@ export default function ThemeGallery() {
       </div>
       <div className="theme-gallery__assignment">
         <label>{tr("Apply theme to")}
-          <select aria-label={tr("Theme assignment")} value={scope} disabled={saving||!ready} onChange={e=>setScope(e.target.value as CatalogThemeScope)}>
-            <option value="global">{tr("Global default")}</option><option value="profile">{tr("Current profile")}</option>
-            {(['taskbar','top','edge','hud','quick','dashboard'] as const).map(id=><option key={id} value={`surface:${id}`}>{id} surface</option>)}
-          </select>
+          <Select ariaLabel={tr("Theme assignment")} value={scope} disabled={saving||!ready} onChange={value=>setScope(value as CatalogThemeScope)}
+            options={[
+              {value:"global",label:tr("Global default")},
+              {value:"profile",label:tr("Current profile")},
+              ...(['taskbar','top','edge','hud','quick','dashboard'] as const).map(id=>({value:`surface:${id}`,label:`${id} surface`})),
+            ]}/>
         </label>
         {scope!=='global' && <button type="button" disabled={!ready||saving||!hasOverride} onClick={()=>void apply('')}>{tr("Use inherited theme")}</button>}
         <p>{tr("Surface overrides profile; profile overrides global. Provider brand colors remain independent from the selected theme.")}</p>
       </div>
       {error && <p role="alert" className="theme-gallery__error">{error}</p>}
       <div className="theme-gallery__preview-controls">
-        <label>{tr("Preview structure")} <select aria-label={tr("Theme preview structure")} value={previewForm} onChange={e=>setPreviewForm(e.target.value as FlowSurfaceForm)}>
-          {FLOW_SURFACE_FORM_CATALOG.map(form=><option key={form.id} value={form.id}>{form.name}</option>)}
-        </select></label>
+        <label>{tr("Preview structure")} <Select ariaLabel={tr("Theme preview structure")} value={previewForm} onChange={value=>setPreviewForm(value as FlowSurfaceForm)}
+          options={FLOW_SURFACE_FORM_CATALOG.map(form=>({value:form.id,label:form.name}))}/></label>
         <p>{tr("Hover or focus a card to reveal details. This preview does not change your desktop structure.")}</p>
       </div>
       <div className="theme-gallery__grid">

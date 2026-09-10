@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import { save } from "@tauri-apps/plugin-dialog";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useLocale } from "../../../hooks/useLocale";
+import { Select } from "../../../components/FormControls";
 import {
   getSettingsSnapshot,
   getUsageSpendSummary,
@@ -659,23 +660,17 @@ function CostSummaryStyleControl({ t }: { t: (key: LocaleKey) => string }) {
 
   return (
     <div className="usage-spend__summary-style">
-      <label className="settings-section__label" htmlFor="cost-summary-style">
+      <label className="settings-section__label">
         {t("CostSummaryDisplayStyle")}
       </label>
       <p className="settings-section__caption">{t("CostSummaryDisplayStyleHelper")}</p>
-      <select
-        id="cost-summary-style"
-        className="settings-select"
+      <Select
+        ariaLabel={t("CostSummaryDisplayStyle")}
         value={style}
         disabled={loading}
-        onChange={(e) => void handleChange(e.target.value as CostSummaryDisplayStyle)}
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        onChange={(value) => void handleChange(value as CostSummaryDisplayStyle)}
+        options={options}
+      />
     </div>
   );
 }

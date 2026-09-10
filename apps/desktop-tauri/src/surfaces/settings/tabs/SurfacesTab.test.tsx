@@ -8,13 +8,17 @@ const bridge = vi.hoisted(() => ({
   resetQuotaIslandPosition: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../../hooks/useLocale", () => ({
-  useLocale: () => ({
+const { locale } = vi.hoisted(() => ({
+  locale: {
     t: (key: string) =>
-      ({ TrayShowEdgeArc: "Show Edge Arc", TrayShowTopArc: "Show Top Arc", TabSurfaces: "Surfaces" })[
+      ({ TrayShowEdgeArc: "Show Edge Arc", TrayShowTopArc: "Show Top Arc", TabSurfaces: "Surfaces" } as Record<string, string>)[
         key
       ] ?? key,
-  }),
+  },
+}));
+vi.mock("../../../hooks/useLocale", () => ({
+  useLocale: () => locale,
+  useOptionalLocale: () => locale,
 }));
 
 vi.mock("../../../lib/surfaceBridge", () => ({
@@ -107,16 +111,19 @@ describe("SurfacesTab", () => {
       topArcForm: "horizon",
       topArcAnchor: "top",
     }));
-    expect(screen.getByRole("combobox", { name: "Quotalis surface position" })).toHaveValue("top");
+    // Position is a QuotalisSelect (trigger button, not a native <select>).
+    expect(screen.getByLabelText("Quotalis surface position")).toHaveTextContent("Top");
   });
 
   it("offers true wall docking for compact orbital structures", async () => {
     bridge.getSurfaceSettings.mockResolvedValue({ ...SETTINGS, topArcEnabled: true, topArcForm: "orbital", topArcAnchor: "right" });
     render(<SurfacesTab />);
 
-    const position = await screen.findByRole("combobox", { name: "Quotalis surface position" });
-    expect(screen.getByRole("option", { name: "Right wall" })).toHaveValue("right");
-    expect(position).toHaveValue("right");
+    const position = await screen.findByLabelText("Quotalis surface position");
+    expect(position).toHaveTextContent("Right wall");
+    // The option list only exists once the trigger opens it (portal-rendered).
+    fireEvent.click(position);
+    expect(await screen.findByRole("option", { name: "Right wall" })).toBeInTheDocument();
   });
 
   it("offers Lens as a bounded capsule structure with side-wall placement", async () => {
@@ -124,7 +131,9 @@ describe("SurfacesTab", () => {
     render(<SurfacesTab />);
 
     expect(await screen.findByRole("button", { name: /Lens/ })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Quotalis surface position" })).toHaveValue("left");
-    expect(screen.getByRole("option", { name: "Left wall" })).toHaveValue("left");
+    const position = screen.getByLabelText("Quotalis surface position");
+    expect(position).toHaveTextContent("Left wall");
+    fireEvent.click(position);
+    expect(await screen.findByRole("option", { name: "Left wall" })).toBeInTheDocument();
   });
 });

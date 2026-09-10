@@ -51,6 +51,14 @@ vi.mock("../../../hooks/useLocale", () => {
 
 import UsageDisplaySection from "./UsageDisplaySection";
 
+/** Usage display mode is a QuotalisSelect (trigger button + portal-
+ *  rendered option list), not a native <select> -- open the trigger,
+ *  then click the matching option. */
+async function chooseQuotalisOption(triggerLabel: string, optionName: string) {
+  fireEvent.click(await screen.findByLabelText(triggerLabel));
+  fireEvent.click(await screen.findByRole("option", { name: optionName }));
+}
+
 const catalog: ProviderCatalogEntry[] = [
   { id: "codex", displayName: "Codex", cookieDomain: null },
   { id: "claude", displayName: "Claude", cookieDomain: null },
@@ -210,11 +218,10 @@ describe("UsageDisplaySection", () => {
   });
   it("preserves the first provider override when a second provider is changed",async()=>{
     render(<UsageDisplaySection providerCatalog={catalog}/>);
-    const first=screen.getByRole("combobox",{name:"Usage display mode for Codex"});
     await waitFor(()=>expect(screen.getByText("34% remaining",{selector:'output'})).toBeInTheDocument());
-    fireEvent.change(first,{target:{value:"used"}});
-    await waitFor(()=>expect(first).not.toBeDisabled());
-    fireEvent.change(screen.getByRole("combobox",{name:"Usage display mode for Claude"}),{target:{value:"hybrid"}});
+    await chooseQuotalisOption("Usage display mode for Codex","Used");
+    await waitFor(()=>expect(screen.getByLabelText("Usage display mode for Codex")).not.toBeDisabled());
+    await chooseQuotalisOption("Usage display mode for Claude","Hybrid");
     await waitFor(()=>expect(tauriMocks.setUsageSettings).toHaveBeenLastCalledWith("remaining",{codex:"used",claude:"hybrid"}));
   });
   beforeEach(() => {
@@ -243,9 +250,9 @@ describe("UsageDisplaySection", () => {
     await waitFor(() => expect(screen.getByText("34% remaining",{selector:'output'})).toBeInTheDocument());
     expect(screen.getByText("61% remaining",{selector:'output'})).toBeInTheDocument();
     expect(screen.queryByText("79% remaining",{selector:'output'})).not.toBeInTheDocument();
-    expect(screen.queryByRole("combobox",{name:"Usage display mode for Gemini"})).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Usage display mode for Gemini")).not.toBeInTheDocument();
     fireEvent.change(screen.getByRole("searchbox",{name:"Find provider usage settings"}),{target:{value:"gem"}});
-    expect(screen.getByRole("combobox",{name:"Usage display mode for Gemini"})).toBeInTheDocument();
+    expect(screen.getByLabelText("Usage display mode for Gemini")).toBeInTheDocument();
     expect(screen.getByText("Unavailable", { selector: "output" })).toBeInTheDocument();
   });
 
@@ -259,7 +266,7 @@ describe("UsageDisplaySection", () => {
   it("keeps customized offline providers reachable without enabling all rows",async()=>{
     tauriMocks.getSettingsSnapshot.mockResolvedValue({...settings,providerUsageOverrides:{gemini:"used"}});
     render(<UsageDisplaySection providerCatalog={catalog}/>);
-    expect(await screen.findByRole("combobox",{name:"Usage display mode for Gemini"})).toHaveValue("used");
+    expect(await screen.findByLabelText("Usage display mode for Gemini")).toHaveTextContent("Used");
     expect(screen.getByRole("checkbox",{name:"Show all providers"})).not.toBeChecked();
   });
 

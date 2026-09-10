@@ -67,12 +67,59 @@ mechanical find-replace, which is real, bounded, but not-yet-started work.
   (`docs/validation/ANALYTICS_V3_VALIDATION.md` from an earlier wave);
   not re-verified this pass for a unified non-chart `QuotalisTooltip`.
 
-## Recommendation, not yet executed
+## Resolution — 2026-09-10, this pass
 
-Migrate the 8 files above to `QuotalisSelect` incrementally, one page at
-a time (Reset Display's 3 selects are the most self-contained starting
-point — one file, one page, no shared state with other settings tabs).
-Design/implement a `QuotalisPopover`/`QuotalisMenu` only if the existing
-`MenuSurface.tsx`/`MenuCard.tsx` family is found to be genuinely
-duplicative on inspection — not assumed duplicative from the file list
-alone.
+All 8 files migrated to the shared `Select` (`FormControls.tsx` wrapping
+`QuotalisSelect`), not merely re-inventoried:
+
+| File | Selects migrated |
+|---|---:|
+| `surfaces/settings/tabs/ResetDisplaySection.tsx` | 9 (Preset, Timezone mode, Regional Format, Clock Format, Meridiem, Month, Weekday, Year, Countdown Detail — global editor + per-surface override editor) |
+| `demoMode/DemoSettingsSection.tsx` | 1 (Scenario) |
+| `surfaces/dashboard/analytics/QuotaInsights.tsx` | 1 (History series) |
+| `surfaces/settings/providers/sections/MenuBarMetricSection.tsx` | 1 |
+| `surfaces/settings/providers/sections/RegionSection.tsx` | 1 |
+| `surfaces/settings/tabs/LimitPresentationEditor.tsx` | 2 (Content, Fill direction — shared by the global editor and `ProviderIdentityGallery`'s preview controls) |
+| `surfaces/settings/tabs/ProfilesTab.tsx` | 2 (Theme, Structure Theme) |
+| `surfaces/settings/tabs/ProviderIdentityGallery.tsx` | 4 (Preview shape, Indicator content, Fill direction, Preview state) |
+
+A repo-wide re-scan after these 8 files turned up **5 more production
+files the original inventory's search missed**
+(`surfaces/settings/tabs/SurfacesTab.tsx`,
+`surfaces/settings/tabs/ThemeGallery.tsx` (2),
+`surfaces/settings/tabs/UsageDisplaySection.tsx`,
+`surfaces/settings/tabs/UsageSpendTab.tsx`,
+`surfaces/settings/WorkspacePreferencesControl.tsx`) — 6 further raw
+`<select>` elements. All 6 are now migrated too (same `Select`/
+`QuotalisSelect` pattern; each paired test file updated the same way);
+the original inventory undercounted rather than the codebase changing
+between passes. A final repo-wide `grep -rln "<select" --include="*.tsx"
+. | grep -v "\.test\.tsx$" | grep -v "^./demo/"` after this second sweep
+returns **no matches** — genuinely zero raw `<select>` elements remain
+in production code. Each migration's paired test file was
+updated to drive the real `QuotalisSelect` interaction (open the trigger
+via its accessible name, click the target `role="option"`) instead of
+`fireEvent.change` against a DOM node that no longer exists; two test
+files (`LimitPresentationEditor.test.tsx`, `ProfilesTab.test.tsx`) were
+missing a `useOptionalLocale` mock that `QuotalisSelect` calls internally
+and would otherwise throw — added.
+
+Verified after each file and again at the end: `tsc --noEmit` clean;
+full frontend suite 173 files / 1048 tests passing; `cargo test
+--workspace` 1650 passed; `cargo clippy --workspace --all-targets` and
+`cargo fmt --check` both clean.
+
+**Column picker** (owner section 20/26, "not located" in the original
+pass): found on closer inspection — it's the "Columns" toolbar control in
+`AnalyticsTable` (`components/analytics/AnalyticsPrimitives.tsx`), and it
+**already uses `QuotalisMultiSelect`**, not a raw `<select>`. No
+migration was needed; the original inventory pass's search terms simply
+didn't match its implementation.
+
+**Popover/menu family** (`MenuSurface.tsx`, `MenuCard.tsx`,
+`MenuCardDetails.tsx`, `CodexAccountsMenu.tsx`): inspected directly this
+pass, not assumed. These are fixed tray/popout panel layouts and an
+inline multi-account switch list — none of them are a floating
+trigger+dropdown control in the shape `QuotalisSelect` addresses. **Not
+duplicative** of `QuotalisSelect`; no `QuotalisPopover`/`QuotalisMenu`
+primitive is warranted from this inspection.
