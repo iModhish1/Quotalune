@@ -18,6 +18,7 @@ import {useSettingsCopy} from "../useSettingsCopy";
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { Select } from "../../../components/FormControls";
 import {
   getSettingsSnapshot,
   setResetPresentation,
@@ -184,20 +185,13 @@ function ResetConfigEditor({
   return (
     <div className="reset-display__editor">
       <div className="reset-display__field">
-        <label htmlFor={`${idPrefix}-preset`}>{tr("Preset")}</label>
-        <select
-          id={`${idPrefix}-preset`}
-          className="select"
+        <label>{tr("Preset")}</label>
+        <Select
+          ariaLabel={tr("Preset")}
           value={config.preset}
-          onChange={(e) => setPreset(e.target.value as ResetPreset)}
-        >
-          {PRESET_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {tr(option.label)}
-            </option>
-          ))}
-        </select>
-
+          options={PRESET_OPTIONS.map((option) => ({ value: option.value, label: tr(option.label) }))}
+          onChange={(v) => setPreset(v as ResetPreset)}
+        />
       </div>
 
       {config.preset === "custom" && (
@@ -255,16 +249,16 @@ function ResetConfigEditor({
         <summary>{tr("Advanced formatting")}</summary>
         <div className="reset-display__grid">
           <div className="reset-display__field">
-            <label htmlFor={`${idPrefix}-tz-mode`}>{tr("Timezone")}</label>
-            <select
-              id={`${idPrefix}-tz-mode`}
-              className="select"
+            <label>{tr("Timezone")}</label>
+            <Select
+              ariaLabel={tr("Timezone")}
               value={config.timezoneMode}
-              onChange={(e) => patchConfig({ timezoneMode: e.target.value as typeof config.timezoneMode })}
-            >
-              <option value="system">{tr("Follow System")}</option>
-              <option value="custom">{tr("Custom")}</option>
-            </select>
+              options={[
+                { value: "system", label: tr("Follow System") },
+                { value: "custom", label: tr("Custom") },
+              ]}
+              onChange={(v) => patchConfig({ timezoneMode: v as typeof config.timezoneMode })}
+            />
             {config.timezoneMode === "system" ? (
               <small>Currently resolved: {config.customTimeZone || (() => {
                 try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return "UTC"; }
@@ -281,17 +275,17 @@ function ResetConfigEditor({
           </div>
 
           <div className="reset-display__field">
-            <label htmlFor={`${idPrefix}-regional`}>{tr("Regional Format")}</label>
-            <select
-              id={`${idPrefix}-regional`}
-              className="select"
+            <label>{tr("Regional Format")}</label>
+            <Select
+              ariaLabel={tr("Regional Format")}
               value={regionalFormat}
-              onChange={(e) => setRegionalFormat(e.target.value as ResetRegionalFormat)}
-            >
-              <option value="system">{tr("Follow System")}</option>
-              <option value="uiLanguage">{tr("Follow UI Language")}</option>
-              <option value="custom">{tr("Custom")}</option>
-            </select>
+              options={[
+                { value: "system", label: tr("Follow System") },
+                { value: "uiLanguage", label: tr("Follow UI Language") },
+                { value: "custom", label: tr("Custom") },
+              ]}
+              onChange={(v) => setRegionalFormat(v as ResetRegionalFormat)}
+            />
             {regionalFormat === "custom" && (
               <input
                 type="text"
@@ -304,87 +298,87 @@ function ResetConfigEditor({
           </div>
 
           <div className="reset-display__field">
-            <label htmlFor={`${idPrefix}-clock`}>{tr("Clock Format")}</label>
-            <select
-              id={`${idPrefix}-clock`}
-              className="select"
+            <label>{tr("Clock Format")}</label>
+            <Select
+              ariaLabel={tr("Clock Format")}
               value={config.clockFormat}
-              onChange={(e) => patchConfig({ clockFormat: e.target.value as typeof config.clockFormat })}
-            >
-              <option value="system">{tr("Follow System")}</option>
-              <option value="h12">12-hour</option>
-              <option value="h24">24-hour</option>
-            </select>
+              options={[
+                { value: "system", label: tr("Follow System") },
+                { value: "h12", label: "12-hour" },
+                { value: "h24", label: "24-hour" },
+              ]}
+              onChange={(v) => patchConfig({ clockFormat: v as typeof config.clockFormat })}
+            />
           </div>
 
           <div className="reset-display__field">
-            <label htmlFor={`${idPrefix}-meridiem`}>{tr("Meridiem")}</label>
-            <select
-              id={`${idPrefix}-meridiem`}
-              className="select"
+            <label>{tr("Meridiem")}</label>
+            <Select
+              ariaLabel={tr("Meridiem")}
               value={config.meridiemStyle}
-              onChange={(e) => patchConfig({ meridiemStyle: e.target.value as typeof config.meridiemStyle })}
-            >
-              <option value="auto">Auto / Localized</option>
-              <option value="latin">Latin AM/PM</option>
-              <option value="localized">{tr("Localized")}</option>
-            </select>
+              options={[
+                { value: "auto", label: "Auto / Localized" },
+                { value: "latin", label: "Latin AM/PM" },
+                { value: "localized", label: tr("Localized") },
+              ]}
+              onChange={(v) => patchConfig({ meridiemStyle: v as typeof config.meridiemStyle })}
+            />
           </div>
 
           <div className="reset-display__field">
-            <label htmlFor={`${idPrefix}-month`}>{tr("Month")}</label>
-            <select
-              id={`${idPrefix}-month`}
-              className="select"
+            <label>{tr("Month")}</label>
+            <Select
+              ariaLabel={tr("Month")}
               value={config.monthStyle}
-              onChange={(e) => patchConfig({ monthStyle: e.target.value as typeof config.monthStyle })}
-            >
-              <option value="numeric">{tr("Numeric")}</option>
-              <option value="short">{tr("Short Name")}</option>
-              <option value="full">{tr("Full Name")}</option>
-            </select>
+              options={[
+                { value: "numeric", label: tr("Numeric") },
+                { value: "short", label: tr("Short Name") },
+                { value: "full", label: tr("Full Name") },
+              ]}
+              onChange={(v) => patchConfig({ monthStyle: v as typeof config.monthStyle })}
+            />
           </div>
 
           <div className="reset-display__field">
-            <label htmlFor={`${idPrefix}-weekday`}>{tr("Weekday")}</label>
-            <select
-              id={`${idPrefix}-weekday`}
-              className="select"
+            <label>{tr("Weekday")}</label>
+            <Select
+              ariaLabel={tr("Weekday")}
               value={config.weekdayStyle}
-              onChange={(e) => patchConfig({ weekdayStyle: e.target.value as typeof config.weekdayStyle })}
-            >
-              <option value="off">Off</option>
-              <option value="short">{tr("Short")}</option>
-              <option value="full">{tr("Full")}</option>
-            </select>
+              options={[
+                { value: "off", label: "Off" },
+                { value: "short", label: tr("Short") },
+                { value: "full", label: tr("Full") },
+              ]}
+              onChange={(v) => patchConfig({ weekdayStyle: v as typeof config.weekdayStyle })}
+            />
           </div>
 
           <div className="reset-display__field">
-            <label htmlFor={`${idPrefix}-year`}>Year</label>
-            <select
-              id={`${idPrefix}-year`}
-              className="select"
+            <label>Year</label>
+            <Select
+              ariaLabel="Year"
               value={config.yearStyle}
-              onChange={(e) => patchConfig({ yearStyle: e.target.value as typeof config.yearStyle })}
-            >
-              <option value="off">Off</option>
-              <option value="on">On</option>
-              <option value="auto">Auto</option>
-            </select>
+              options={[
+                { value: "off", label: "Off" },
+                { value: "on", label: "On" },
+                { value: "auto", label: "Auto" },
+              ]}
+              onChange={(v) => patchConfig({ yearStyle: v as typeof config.yearStyle })}
+            />
           </div>
 
           <div className="reset-display__field">
-            <label htmlFor={`${idPrefix}-countdown-detail`}>{tr("Countdown Detail")}</label>
-            <select
-              id={`${idPrefix}-countdown-detail`}
-              className="select"
+            <label>{tr("Countdown Detail")}</label>
+            <Select
+              ariaLabel={tr("Countdown Detail")}
               value={config.countdownDetail}
-              onChange={(e) => patchConfig({ countdownDetail: e.target.value as typeof config.countdownDetail })}
-            >
-              <option value="adaptive">{tr("Adaptive")}</option>
-              <option value="compact">{tr("Compact")}</option>
-              <option value="detailed">{tr("Detailed")}</option>
-            </select>
+              options={[
+                { value: "adaptive", label: tr("Adaptive") },
+                { value: "compact", label: tr("Compact") },
+                { value: "detailed", label: tr("Detailed") },
+              ]}
+              onChange={(v) => patchConfig({ countdownDetail: v as typeof config.countdownDetail })}
+            />
           </div>
         </div>
       </details>

@@ -17,6 +17,19 @@ vi.mock("@tauri-apps/api/event", () => eventMocks);
 
 import ResetDisplaySection from "./ResetDisplaySection";
 
+/** The Preset field is now a QuotalisSelect (a button + portal-rendered
+ *  option list), not a native <select> -- this drives it the same way a
+ *  real user would: click the trigger (found by its accessible name,
+ *  same `getByLabelText` query that worked for the native <select>'s
+ *  htmlFor/label pairing, since QuotalisSelect's trigger button carries
+ *  the same text as an aria-label), then click the matching option. The
+ *  option panel is rendered via a document.body portal, so it must be
+ *  queried at the document level, never `within()` a specific row. */
+async function chooseQuotalisOption(triggerLabel: string, optionName: string) {
+  fireEvent.click(await screen.findByLabelText(triggerLabel));
+  fireEvent.click(await screen.findByRole("option", { name: optionName }));
+}
+
 function baseSnapshot(): Partial<SettingsSnapshot> {
   return {
     resetPresentation: {
@@ -49,8 +62,8 @@ describe("ResetDisplaySection", () => {
     render(<ResetDisplaySection />);
     await waitFor(() => expect(tauriMocks.getSettingsSnapshot).toHaveBeenCalled());
 
-    const presetSelect = await screen.findByLabelText("Preset");
-    expect((presetSelect as HTMLSelectElement).value).toBe("countdownOnly");
+    const presetTrigger = await screen.findByLabelText("Preset");
+    expect(presetTrigger).toHaveTextContent("Countdown Only");
 
     // The English preview should show a compact countdown ("5d 13h" for
     // the fixed 5-day-13-hour sample), never a hardcoded string.
@@ -75,8 +88,7 @@ describe("ResetDisplaySection", () => {
     render(<ResetDisplaySection />);
     await waitFor(() => expect(tauriMocks.getSettingsSnapshot).toHaveBeenCalled());
 
-    const presetSelect = await screen.findByLabelText("Preset");
-    fireEvent.change(presetSelect, { target: { value: "full" } });
+    await chooseQuotalisOption("Preset", "Full");
 
     await waitFor(() => {
       expect(tauriMocks.setResetPresentation).toHaveBeenCalledWith(
@@ -92,7 +104,7 @@ describe("ResetDisplaySection", () => {
     render(<ResetDisplaySection />);
     await waitFor(() => expect(tauriMocks.getSettingsSnapshot).toHaveBeenCalled());
 
-    fireEvent.change(await screen.findByLabelText("Preset"), { target: { value: "custom" } });
+    await chooseQuotalisOption("Preset", "Custom");
 
     await waitFor(() => {
       expect(screen.getByText("Modules shown")).toBeInTheDocument();
@@ -166,13 +178,13 @@ describe("ResetDisplaySection", () => {
     render(<ResetDisplaySection />);
     await waitFor(() => expect(tauriMocks.getSettingsSnapshot).toHaveBeenCalled());
 
-    fireEvent.change(await screen.findByLabelText("Preset"), { target: { value: "full" } });
+    await chooseQuotalisOption("Preset", "Full");
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent("disk full");
     });
     // Reverted back to the last-known-good preset.
-    expect((screen.getByLabelText("Preset") as HTMLSelectElement).value).toBe("countdownOnly");
+    expect(screen.getByLabelText("Preset")).toHaveTextContent("Countdown Only");
   });
 
   describe("surface overrides", () => {
@@ -204,8 +216,11 @@ describe("ResetDisplaySection", () => {
 
       // Editing a surface presets its own field set (idPrefix scoped) --
       // change its preset to prove a real, independent persisted override.
-      const surfacePreset = within(taskbarRow).getByLabelText("Preset") as HTMLSelectElement;
-      fireEvent.change(surfacePreset, { target: { value: "full" } });
+      // The trigger is scoped to this row, but QuotalisSelect's option
+      // panel portals to document.body, so the option click must be
+      // queried at the document level, not within(taskbarRow).
+      fireEvent.click(within(taskbarRow).getByLabelText("Preset"));
+      fireEvent.click(await screen.findByRole("option", { name: "Full" }));
 
       await waitFor(() => {
         expect(tauriMocks.setResetPresentationSurfaceOverride).toHaveBeenCalledWith(
