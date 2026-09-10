@@ -327,3 +327,18 @@ The professional analytics platform, measured rendering/lifecycle, native golden
 
 ## Analytics V4 owner-selected cosmic implementation
 Selected image implemented directly after owner rejected further concept sheets. Preserve original Quotalis/provider artwork, source-backed metrics, Dev-only validation and existing customization. Stop before Providers redesign. Evidence and remaining visual acceptance: docs/validation/ANALYTICS_V4_VALIDATION.md.
+
+## Product V3 execution
+1. Audit current native surfaces, capabilities and Windows notification identity; generate A–K concepts.
+2. Shared controls and nested navigation; operational overview and provider rail/quick detail.
+3. Capability-driven Analytics Center and safe source-backed views.
+4. Providers operations and shared page system.
+5. Notification identity/icon/actions repair in Dev only.
+6. Native scale/RTL/themes/controls/performance proof, full quality gates, final acceptance report.
+
+Product V3 checkpoint: implementation and bounded native evidence delivered in
+`docs/validation/PRODUCT_V3_VALIDATION.md`. **NOT PASSED**: earlier misconfigured
+builds touched Personal, visible toast acceptance remains unverified, the catalog
+has 68 native items rather than 70, and the 250k-history transfer budget is unmet.
+Engineering tests/builds pass. Do not turn this checkpoint into release approval
+or claim all page-level visual gates complete.

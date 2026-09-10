@@ -264,3 +264,8 @@ Owner explicitly selected the cosmic image (`CONCEPT_A_COSMIC_REVISED.png`, also
 
 ### L13 immediate implementation correction
 Owner rejected subsequent component concept sheets and explicitly instructed implementation of the selected image (re-attached as codex-clipboard-d4d6c0b7-2b2e-4808-b787-9587de8e1349.png). Stop alternative UI concept generation. The selected image itself is the component/layout contract: six planetary provider instruments on an orbit, compact status ribbon, Attention/Trend/Reset editorial row, lower matrix and quality. Produce actual code and native evidence. Decorative background asset extraction is implementation work, not another design proposal. Original logo geometry and truthful runtime data remain mandatory.
+
+## PRODUCT-V3 — owner operational / analytics separation (2026-09-10)
+Starting clean HEAD: 4f3e493e2150f813e96181460e05be63d6b46f1f.
+Source: owner Product V3 spec and ten screenshots. Owner rejects current product experience.
+Acceptance: nested Dashboard Overview/Analytics; clickable windowed provider rail with wheel/drag/keyboard and detected plans, scale1/6/12/24/40/70; remove meaningless ellipse; rich capability-gated global/provider analytics; Providers operations upgrade; shared accessible select/multiselect; native notification branding/icon/deep-link audit and repair; shared theme/RTL/responsive surfaces; native evidence and truthful full gates. Personal untouched, no WebGL, no fake metrics. Design concepts precede production UI. Implementation waves and incomplete proof stay explicit.
