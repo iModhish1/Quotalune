@@ -781,6 +781,18 @@ locale_keys! {
     ModelColumnShare,
     ModelColumnLastObserved,
     ModelNoBreakdownNote,
+    // Analytics -> Overview (data-universe summary, distinct from
+    // Dashboard's operational KPIs -- see docs/architecture/
+    // ANALYTICS_SUPERSTACK_DESIGN.md).
+    V3AnalyticsOverviewTitle,
+    V3AnalyticsOverviewHelp,
+    OverviewAvailableSources,
+    OverviewHistorySpan,
+    OverviewLocalActivitySources,
+    OverviewTokenActivity,
+    OverviewModelsObserved,
+    OverviewUpcomingResets,
+    OverviewFreshness,
     // Sidebar label for MainRoute::Dashboard — distinct from TrayDashboard
     // (same English text, kept as a separate key per this repo's convention
     // of one key per UI surface, so a future translation can diverge).

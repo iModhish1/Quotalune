@@ -11,6 +11,7 @@ import {ProviderPlanBadge} from "../../../components/providers/ProviderPlanBadge
 import LocalActivity from "./LocalActivity";
 import TokenAnalytics from "./TokenAnalytics";
 import ModelAnalytics from "./ModelAnalytics";
+import AnalyticsOverview from "./AnalyticsOverview";
 import CoverageHeatmap from "./CoverageHeatmap";
 import ProviderUsageMatrix from "./ProviderUsageMatrix";
 import KpiRow from "./KpiRow";
@@ -133,7 +134,7 @@ export default function DashboardAnalyticsPanel({
       {(historyProcessing||historyError)&&<p role="status" aria-live="polite">{t(historyProcessing?'UsageSpendLoading':'DashboardValueUnavailable')}</p>}
       {selectedProvider&&<div className="v3-provider-heading"><ProviderIcon providerId={selectedProvider.providerId} size={32}/><strong><bdi>{selectedProvider.displayName}</bdi></strong><ProviderPlanBadge plan={selectedProvider.planName}/><button type="button" onClick={()=>onOpenProviders(selectedProvider.providerId)}>{t('V3Details')}</button></div>}
       <nav className="v3-section-nav" aria-label={t('V3Analytics')}>{tabs.map(([id,key])=><button type="button" key={id} aria-current={section===id?'page':undefined} onClick={()=>setSection(id)}>{t(key)}</button>)}</nav>
-      {section==='overview'&&<><KpiRow kpis={kpis} settings={settings} resetTimeRelative={settings.resetTimeRelative}/><TrendIntelligence series={series} range={model.range} providers={liveProviders} settings={settings} preferences={preferences}/><ProviderUsageMatrix model={model} providers={liveProviders} settings={settings} onProvider={setProviderFilter}/></>}
+      {section==='overview'&&<AnalyticsOverview settings={settings} snapshot={snapshot} resetCount={model.resetHorizon.length} isDemo={provenance==='demo'}/>}
       {section==='usage'&&<><TrendIntelligence series={series} range={model.range} providers={liveProviders} settings={settings} preferences={preferences}/><QuotaComparison series={series} providers={liveProviders} settings={settings}/></>}
       {section==='tokens'&&(provenance==='demo'||hasCapability('tokens'))&&<TokenAnalytics settings={settings} providerId={providerFilter} isDemo={provenance==='demo'}/>}
       {section==='models'&&(provenance==='demo'||hasCapability('models'))&&<ModelAnalytics settings={settings} providerId={providerFilter} isDemo={provenance==='demo'}/>}

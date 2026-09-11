@@ -20,6 +20,15 @@ const tauriMocks = vi.hoisted(() => ({
       doesNotRead: "",
     },
   ]),
+  // AnalyticsOverview (the Analytics Center's "overview" section) fetches
+  // these to summarize real token/model activity -- default to a benign
+  // resolved value so pre-existing tests that never open that section
+  // don't need their own fixture.
+  getCodexWorkspacesSnapshot: vi.fn().mockResolvedValue({
+    total: { totalTokens: 0 },
+    modelTotals: [],
+  }),
+  getProviderChartData: vi.fn().mockResolvedValue({ localUsage: null }),
 }));
 const eventMocks = vi.hoisted(() => ({
   listen: vi.fn().mockResolvedValue(() => {}),
@@ -203,6 +212,7 @@ describe("DashboardAnalyticsPanel", () => {
   it("keeps deep diagnostics in dedicated Analytics destinations and shares one snapshot", async () => {
     renderPanel([provider()], snapshot());
     expect(await screen.findByText("Today")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", {name:"V3Usage"}));
     expect(screen.getByText("Trend intelligence")).toBeInTheDocument();
     expect(screen.queryByText("Data Status")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", {name:"V2DataQuality"}));
@@ -226,11 +236,15 @@ describe("DashboardAnalyticsPanel", () => {
   it("scopes both current analytics and history to the selected provider", async () => {
     renderPanel([provider({providerId:"claude",displayName:"Claude"}),provider({providerId:"codex",displayName:"Codex"})],snapshot());
     await screen.findByText("Today");
-    expect(screen.getByText("Active Providers").closest(".dashboard-kpi")).toHaveTextContent("2");
+    fireEvent.click(screen.getByRole("button",{name:"Providers"}));
+    const statusTable=()=>document.querySelector(".analytics-table") as HTMLElement;
+    expect(within(statusTable()).getByText("Claude")).toBeInTheDocument();
+    expect(within(statusTable()).getByText("Codex")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button",{name:"All Providers"}));
     fireEvent.click(screen.getByRole("option",{name:"Codex"}));
     await vi.waitFor(()=>expect(tauriMocks.getDashboardSnapshot).toHaveBeenLastCalledWith(expect.objectContaining({providers:["codex"]})));
-    expect(screen.getByText("Active Providers").closest(".dashboard-kpi")).toHaveTextContent("1");
+    expect(within(statusTable()).queryByText("Claude")).not.toBeInTheDocument();
+    expect(within(statusTable()).getByText("Codex")).toBeInTheDocument();
   });
 
   it("preserves default range and chart style in dedicated Analytics", async () => {
@@ -246,9 +260,12 @@ describe("DashboardAnalyticsPanel", () => {
   it("explicit all-sections filter also scopes current status", async () => {
     renderPanel([provider({providerId:"claude",displayName:"Claude"}),provider({providerId:"codex",displayName:"Codex"})], snapshot(), vi.fn(), {...SETTINGS,analyticsPreferences:{sectionOrder:[],hiddenSections:[],chartStyle:"precision",quotaTemplate:"precision",defaultRange:"last7Days",providerFilterScope:"all"}});
     await screen.findByText("Today");
+    fireEvent.click(screen.getByRole("button",{name:"Providers"}));
+    const statusTable=()=>document.querySelector(".analytics-table") as HTMLElement;
     fireEvent.click(screen.getByRole("button",{name:"All Providers"}));
     fireEvent.click(screen.getByRole("option",{name:"Codex"}));
-    expect(screen.getByText("Active Providers").closest(".dashboard-kpi")).toHaveTextContent("1");
+    await vi.waitFor(()=>expect(within(statusTable()).queryByText("Claude")).not.toBeInTheDocument());
+    expect(within(statusTable()).getByText("Codex")).toBeInTheDocument();
   });
 
   it("an auth-required provider surfaces a friendly alert with a working Reconnect action", async () => {
