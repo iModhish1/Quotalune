@@ -5,7 +5,22 @@ import { getCodexWorkspacesSnapshot, getProviderChartData } from '../../../lib/t
 import { formatCompactTokens } from '../../../lib/analytics/formatTokens';
 import { formatRelativeUpdated } from '../../../lib/relativeTime';
 import { availableHistoryDays } from './dashboardSelectors';
-import type { DashboardSnapshot, SettingsSnapshot } from '../../../types/bridge';
+import type { AnalyticsAvailability, AnalyticsScope, DashboardSnapshot, SettingsSnapshot } from '../../../types/bridge';
+import type { LocaleKey } from '../../../i18n/keys';
+
+// Mirrors AnalyticsSourcesTab.tsx's own status/scope grammar exactly --
+// one shared vocabulary for "what does this source mean", not a second
+// hand-maintained copy of the wording.
+const SOURCE_STATUS_KEY: Record<AnalyticsAvailability, LocaleKey> = {
+  available: 'AnalyticsSourceStatusAvailable',
+  noDataYet: 'AnalyticsSourceStatusNoDataYet',
+  unsupported: 'AnalyticsSourceStatusUnsupported',
+};
+const SOURCE_SCOPE_KEY: Record<AnalyticsScope, LocaleKey> = {
+  account: 'AnalyticsScopeAccount',
+  provider: 'AnalyticsScopeProvider',
+  device: 'AnalyticsScopeDevice',
+};
 
 /** Analytics -> Overview: the DATA UNIVERSE summary (owner: "Analytics
  *  Overview is NOT Dashboard Overview... do not duplicate Dashboard
@@ -41,6 +56,12 @@ export default function AnalyticsOverview({
   );
   const codexAvailable = !isDemo && sources.some((s) => s.id === 'codexLocalActivity' && s.availability === 'available' && s.capabilities.tokens);
   const claudeAvailable = !isDemo && sources.some((s) => s.id === 'claudeLocalActivity' && s.availability === 'available' && s.capabilities.tokens);
+  // Local device scanning (Claude in particular) can take several real
+  // seconds on a large transcript corpus -- render a stable placeholder
+  // cell immediately rather than silently omitting the Token/Model
+  // columns until the scan resolves, which would otherwise reflow the
+  // whole ribbon out from under the reader mid-glance.
+  const tokenActivityPending = (codexAvailable || claudeAvailable) && tokenTotal === null;
 
   useEffect(() => {
     let cancelled = false;
@@ -85,44 +106,67 @@ export default function AnalyticsOverview({
       {isDemo ? (
         <p className="analytics-empty">{t('V3ActivityDemo')}</p>
       ) : (
-        <dl className="analytics-metric-ribbon">
-          <div>
-            <dt>{t('OverviewAvailableSources')}</dt>
-            <dd>{availableSources.length}/{sources.length}</dd>
-          </div>
-          <div>
-            <dt>{t('OverviewHistorySpan')}</dt>
-            <dd>
-              {historyDays > 0
-                ? t('DashboardHistoryChipDays').replace('{}', String(historyDays))
-                : t('DashboardHistoryChipCollecting')}
-            </dd>
-          </div>
-          <div>
-            <dt>{t('OverviewLocalActivitySources')}</dt>
-            <dd>{localActivitySources.length}</dd>
-          </div>
-          {tokenTotal !== null && (
-            <div>
-              <dt>{t('OverviewTokenActivity')}</dt>
-              <dd title={tokenTotal.toLocaleString()}>{formatCompactTokens(tokenTotal)}</dd>
+        <>
+          <dl className="analytics-metric-ribbon analytics-overview-ribbon">
+            <div className="analytics-comparison-stat">
+              <dt>{t('OverviewAvailableSources')}</dt>
+              <dd>{availableSources.length}/{sources.length}</dd>
             </div>
-          )}
-          {modelsObserved !== null && modelsObserved > 0 && (
-            <div>
-              <dt>{t('OverviewModelsObserved')}</dt>
-              <dd>{modelsObserved}</dd>
+            <div className="analytics-comparison-stat">
+              <dt>{t('OverviewHistorySpan')}</dt>
+              {historyDays > 0 ? (
+                <dd>{historyDays} <small>{t('OverviewDaysOfHistorySuffix')}</small></dd>
+              ) : (
+                <dd className="analytics-comparison-stat--text">{t('DashboardHistoryChipCollecting')}</dd>
+              )}
             </div>
-          )}
-          <div>
-            <dt>{t('OverviewUpcomingResets')}</dt>
-            <dd>{resetCount}</dd>
-          </div>
-          <div>
-            <dt>{t('OverviewFreshness')}</dt>
-            <dd>{formatRelativeUpdated(lastSampleMs, t)}</dd>
-          </div>
-        </dl>
+            <div className="analytics-comparison-stat">
+              <dt>{t('OverviewLocalActivitySources')}</dt>
+              <dd>{localActivitySources.length}</dd>
+            </div>
+            {tokenActivityPending && (
+              <div className="analytics-comparison-stat analytics-comparison-stat--pending">
+                <dt>{t('OverviewTokenActivity')}</dt>
+                <dd aria-live="polite">{t('OverviewMeasuring')}</dd>
+              </div>
+            )}
+            {tokenTotal !== null && (
+              <div className="analytics-comparison-stat">
+                <dt>{t('OverviewTokenActivity')}</dt>
+                <dd title={tokenTotal.toLocaleString()}>{formatCompactTokens(tokenTotal)}</dd>
+              </div>
+            )}
+            {modelsObserved !== null && modelsObserved > 0 && (
+              <div className="analytics-comparison-stat">
+                <dt>{t('OverviewModelsObserved')}</dt>
+                <dd>{modelsObserved}</dd>
+              </div>
+            )}
+            <div className="analytics-comparison-stat">
+              <dt>{t('OverviewUpcomingResets')}</dt>
+              <dd>{resetCount}</dd>
+            </div>
+            <div className="analytics-comparison-stat">
+              <dt>{t('OverviewFreshness')}</dt>
+              <dd className="analytics-comparison-stat--text">{formatRelativeUpdated(lastSampleMs, t)}</dd>
+            </div>
+          </dl>
+          <ul className="analytics-overview-sources" aria-label={t('OverviewSourcesHeading')}>
+            {sources.map((source) => (
+              <li key={source.id} className={`analytics-overview-source analytics-overview-source--${source.availability}`}>
+                <span className="analytics-overview-source__dot" aria-hidden="true" />
+                <div className="analytics-overview-source__body">
+                  <strong>{source.label}</strong>
+                  <span className="analytics-overview-source__meta">
+                    {t(SOURCE_STATUS_KEY[source.availability])}
+                    {' · '}
+                    {t(SOURCE_SCOPE_KEY[source.scope])}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </section>
   );

@@ -88,6 +88,25 @@
 @media(max-width:1100px){.dashboard-command-bar{flex-wrap:wrap}.dashboard-command-bar>.dashboard-analytics__header{min-width:100%}}
 @media(max-width:720px){.dashboard-analytics .trend-intelligence .analytics-metric-ribbon,.dashboard-analytics [data-analytics-section=quality] .analytics-metric-ribbon{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
+/* Analytics -> Overview (the "data universe" summary, see AnalyticsOverview.tsx).
+ * The ribbon uses the shared analytics-comparison-stat cell grammar so it
+ * reads with the same weight as every other analytics ribbon in the app --
+ * it must never look like a second, unstyled component. A companion
+ * source list below it gives the section real editorial content instead
+ * of one thin row of numbers floating over the cosmic background. */
+.dashboard-analytics .analytics-overview-ribbon{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+.dashboard-analytics .analytics-comparison-stat--pending dd{color:var(--qa-analytics-text-secondary);font-weight:400;font-size:14px}
+.dashboard-analytics .analytics-comparison-stat dd.analytics-comparison-stat--text{font-size:14px;font-weight:500;line-height:1.4;margin-top:9px}
+.dashboard-analytics .analytics-overview-sources{list-style:none;margin:14px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1px;background:var(--qa-analytics-hairline)}
+.dashboard-analytics .analytics-overview-source{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:var(--qa-analytics-surface-primary)}
+.dashboard-analytics .analytics-overview-source__dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex:none;background:var(--qa-analytics-text-secondary)}
+.dashboard-analytics .analytics-overview-source--available .analytics-overview-source__dot{background:var(--qa-status-healthy)}
+.dashboard-analytics .analytics-overview-source--unsupported .analytics-overview-source__dot{background:var(--qa-analytics-hairline-strong)}
+.dashboard-analytics .analytics-overview-source__body{display:flex;flex-direction:column;gap:2px;min-width:0}
+.dashboard-analytics .analytics-overview-source__body strong{font-size:11px;font-weight:550}
+.dashboard-analytics .analytics-overview-source__meta{font-size:9px;color:var(--qa-analytics-text-secondary);letter-spacing:.02em}
+@media(max-width:720px){.dashboard-analytics .analytics-overview-ribbon{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-analytics .analytics-overview-sources{grid-template-columns:1fr}}
+
 .dashboard-analytics .reset-horizon__ticks{height:38px}.analytics-layout-editor>li[draggable=true]{cursor:grab}
 .dashboard-analytics .dashboard-limits__grid[data-provider-count="1"]{grid-template-columns:minmax(0,1fr)}
 .dashboard-analytics .dashboard-limits__grid[data-provider-count="2"]{grid-template-columns:repeat(2,minmax(0,1fr))}

@@ -22,7 +22,7 @@ vi.mock("../../../hooks/useLocale", () => ({
         OverviewUpcomingResets: "Upcoming resets",
         OverviewFreshness: "Freshness",
         V3ActivityDemo: "Demo mode",
-        DashboardHistoryChipDays: "Last {} days",
+        OverviewDaysOfHistorySuffix: "days of history",
         DashboardHistoryChipCollecting: "Collecting history",
         NeverUpdated: "Never",
         UpdatedJustNow: "Updated just now",
@@ -94,7 +94,8 @@ describe("AnalyticsOverview", () => {
 
     // 2 of 3 registered sources are available.
     await waitFor(() => expect(screen.getByText("2/3")).toBeInTheDocument());
-    expect(screen.getByText("Last 30 days")).toBeInTheDocument();
+    expect(screen.getByText("30")).toBeInTheDocument();
+    expect(screen.getByText("days of history")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("2M")).toBeInTheDocument()); // 1.5M + 0.5M = 2M total tokens
     // Codex + Claude both available and token/dailyActivity-capable (2
     // local activity sources); Codex reports 2 real models; 3 resets
