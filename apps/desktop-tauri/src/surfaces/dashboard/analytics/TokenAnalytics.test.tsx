@@ -1,0 +1,104 @@
+import { render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AnalyticsSourceDescriptor } from "../../../types/bridge";
+
+const tauriMocks = vi.hoisted(() => ({
+  getAnalyticsSourceRegistry: vi.fn(),
+  getCodexWorkspacesSnapshot: vi.fn(),
+  getProviderChartData: vi.fn(),
+}));
+vi.mock("../../../lib/tauri", () => tauriMocks);
+vi.mock("../../../hooks/useLocale", () => ({
+  useLocale: () => ({
+    t: (key: string) =>
+      ({
+        V3Tokens: "Tokens",
+        V3TokensHelp: "help",
+        TokenCardTotal: "Total Tokens",
+        TokenCardInput: "Input",
+        TokenCardOutput: "Output",
+        TokenCardCached: "Cached",
+        TokenNoBreakdownNote: "Only a daily total is available for this source.",
+        TokenCompareHeading: "Shared across providers",
+        V3ActivityDemo: "Demo mode",
+        DashboardValueUnavailable: "Unavailable",
+      })[key] ?? key,
+  }),
+}));
+
+import TokenAnalytics from "./TokenAnalytics";
+import type { SettingsSnapshot } from "../../../types/bridge";
+
+function source(overrides: Partial<AnalyticsSourceDescriptor> = {}): AnalyticsSourceDescriptor {
+  return {
+    id: "codexLocalActivity",
+    label: "Codex local activity",
+    scope: "device",
+    capabilities: { quota: false, resets: false, monetary: false, tokens: true, models: true, sessionCount: true, dailyActivity: true },
+    availability: "available",
+    reads: "reads",
+    doesNotRead: "does not read",
+    ...overrides,
+  };
+}
+
+const settings = {} as SettingsSnapshot;
+
+describe("TokenAnalytics", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("shows Codex's real input/cached/output breakdown", async () => {
+    tauriMocks.getAnalyticsSourceRegistry.mockResolvedValue([source()]);
+    tauriMocks.getCodexWorkspacesSnapshot.mockResolvedValue({
+      total: { inputTokens: 100, cachedInputTokens: 20, outputTokens: 50, totalTokens: 150 },
+    });
+    render(<TokenAnalytics settings={settings} providerId="codex" isDemo={false} />);
+    await waitFor(() => expect(screen.getByText("150")).toBeInTheDocument());
+    expect(screen.getByText("100")).toBeInTheDocument();
+    expect(screen.getByText("20")).toBeInTheDocument();
+    expect(screen.getByText("50")).toBeInTheDocument();
+    expect(screen.queryByText(/no breakdown/i)).not.toBeInTheDocument();
+  });
+
+  it("shows only a total for Claude -- no fabricated input/output/cache cards", async () => {
+    tauriMocks.getAnalyticsSourceRegistry.mockResolvedValue([
+      source({ id: "claudeLocalActivity", label: "Claude local activity" }),
+    ]);
+    tauriMocks.getProviderChartData.mockResolvedValue({
+      localUsage: { thirtyDayTokens: 4200 },
+      tokensHistory: [],
+    });
+    render(<TokenAnalytics settings={settings} providerId="claude" isDemo={false} />);
+    await waitFor(() => expect(screen.getByText("4,200")).toBeInTheDocument());
+    expect(screen.queryByText("Input")).not.toBeInTheDocument();
+    expect(screen.queryByText("Cached")).not.toBeInTheDocument();
+    expect(screen.getByText("Only a daily total is available for this source.")).toBeInTheDocument();
+  });
+
+  it("shows the shared-field comparison (Total only) when no provider is selected", async () => {
+    tauriMocks.getAnalyticsSourceRegistry.mockResolvedValue([
+      source(),
+      source({ id: "claudeLocalActivity", label: "Claude local activity" }),
+    ]);
+    tauriMocks.getCodexWorkspacesSnapshot.mockResolvedValue({
+      total: { inputTokens: 100, cachedInputTokens: 20, outputTokens: 50, totalTokens: 150 },
+    });
+    tauriMocks.getProviderChartData.mockResolvedValue({
+      localUsage: { thirtyDayTokens: 4200 },
+      tokensHistory: [],
+    });
+    render(<TokenAnalytics settings={settings} providerId={null} isDemo={false} />);
+    await waitFor(() => expect(screen.getByText("Shared across providers")).toBeInTheDocument());
+    expect(screen.getAllByText("Codex").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Claude").length).toBeGreaterThan(0);
+  });
+
+  it("skips real IPC calls and shows the demo notice in Demo Mode", async () => {
+    render(<TokenAnalytics settings={settings} providerId={null} isDemo={true} />);
+    expect(await screen.findByText("Demo mode")).toBeInTheDocument();
+    expect(tauriMocks.getCodexWorkspacesSnapshot).not.toHaveBeenCalled();
+    expect(tauriMocks.getProviderChartData).not.toHaveBeenCalled();
+  });
+});

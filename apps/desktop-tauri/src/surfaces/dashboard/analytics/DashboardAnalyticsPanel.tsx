@@ -9,6 +9,7 @@ import ProviderRail from "./ProviderRail";
 import {ProviderIcon} from "../../../components/providers/ProviderIcon";
 import {ProviderPlanBadge} from "../../../components/providers/ProviderPlanBadge";
 import LocalActivity from "./LocalActivity";
+import TokenAnalytics from "./TokenAnalytics";
 import CoverageHeatmap from "./CoverageHeatmap";
 import ProviderUsageMatrix from "./ProviderUsageMatrix";
 import KpiRow from "./KpiRow";
@@ -111,8 +112,8 @@ export default function DashboardAnalyticsPanel({
       : t("DashboardHistoryChipDays").replace("{}", String(days));
   }, [snapshot, t]);
 
-  const allTabs=[['overview','V3Overview'],['usage','V3Usage'],['activity','V3Activity'],['resets','V3Resets'],['providers','TabProviders'],['history','V3History'],['quality','V2DataQuality']] as const;
-  const tabs=allTabs.filter(([id])=>id!=='activity'||hasCapability('tokens')||hasCapability('dailyActivity'));
+  const allTabs=[['overview','V3Overview'],['usage','V3Usage'],['tokens','V3Tokens'],['activity','V3Activity'],['resets','V3Resets'],['providers','TabProviders'],['history','V3History'],['quality','V2DataQuality']] as const;
+  const tabs=allTabs.filter(([id])=>(id!=='activity'&&id!=='tokens')||hasCapability('tokens')||hasCapability('dailyActivity'));
   const selectedProvider=liveProviders.find(p=>p.providerId===providerFilter);
   return <div className={`dashboard-analytics dashboard-cosmic product-v3 ${view==='analytics'?'analytics-center':'operational-overview'}`} style={structureThemeStyle} data-light={Boolean(theme.material?.light)} data-density={settings.workspacePreferences?.density??'comfortable'} data-chart-style={preferences.chartStyle}>
     <header className="v3-page-header"><div><h2>{t(view==='analytics'?'V3Analytics':'V3Overview')}</h2><p>{t(view==='analytics'?'V3AnalyticsHelp':'V3OperationalHelp')}</p></div>{view==='overview'&&<button type="button" onClick={()=>onAnalytics?.()}>{t('V3ViewAnalytics')} ↗</button>}{provenance==='demo'&&<DemoIndicator providerCount={liveProviders.length} onExit={()=>onExitDemo?.()}/>}</header>
@@ -128,6 +129,7 @@ export default function DashboardAnalyticsPanel({
       <nav className="v3-section-nav" aria-label={t('V3Analytics')}>{tabs.map(([id,key])=><button type="button" key={id} aria-current={section===id?'page':undefined} onClick={()=>setSection(id)}>{t(key)}</button>)}</nav>
       {section==='overview'&&<><KpiRow kpis={kpis} settings={settings} resetTimeRelative={settings.resetTimeRelative}/><TrendIntelligence series={series} range={model.range} providers={liveProviders} settings={settings} preferences={preferences}/><ProviderUsageMatrix model={model} providers={liveProviders} settings={settings} onProvider={setProviderFilter}/></>}
       {section==='usage'&&<><TrendIntelligence series={series} range={model.range} providers={liveProviders} settings={settings} preferences={preferences}/><QuotaComparison series={series} providers={liveProviders} settings={settings}/></>}
+      {section==='tokens'&&(provenance==='demo'||hasCapability('tokens'))&&<TokenAnalytics settings={settings} providerId={providerFilter} isDemo={provenance==='demo'}/>}
       {section==='activity'&&(provenance==='demo'||hasCapability('tokens')||hasCapability('dailyActivity'))&&<LocalActivity settings={settings} isDemo={provenance==='demo'} providerId={providerFilter}/>}
       {section==='resets'&&<ResetHorizon models={models} settings={settings} now={now} resets={model.resetHorizon}/>}
       {section==='providers'&&<><div className="v3-provider-links">{liveProviders.map(p=><button type="button" key={p.providerId} onClick={()=>setProviderFilter(p.providerId)}><ProviderIcon providerId={p.providerId} size={18}/><bdi>{p.displayName}</bdi><ProviderPlanBadge plan={p.planName}/></button>)}</div><ProviderOperationsTable models={models} settings={settings} now={now}/><QuotaComparison series={series} providers={liveProviders} settings={settings}/></>}

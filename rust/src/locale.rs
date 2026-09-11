@@ -759,6 +759,17 @@ locale_keys! {
     AnalyticsCapabilityDailyActivity,
     AnalyticsSourceReadsLabel,
     AnalyticsSourceDoesNotReadLabel,
+    // Analytics -> Tokens (capability-gated on AnalyticsCapabilities.tokens).
+    // Shows only the fields the field matrix confirms are real per source --
+    // see docs/validation/LOCAL_ACTIVITY_FIELD_MATRIX.md.
+    V3Tokens,
+    V3TokensHelp,
+    TokenCardTotal,
+    TokenCardInput,
+    TokenCardOutput,
+    TokenCardCached,
+    TokenNoBreakdownNote,
+    TokenCompareHeading,
     // Sidebar label for MainRoute::Dashboard — distinct from TrayDashboard
     // (same English text, kept as a separate key per this repo's convention
     // of one key per UI surface, so a future translation can diverge).
