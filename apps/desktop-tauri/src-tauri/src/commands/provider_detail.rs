@@ -364,7 +364,9 @@ mod tests {
         let unsupported: Vec<&str> = all
             .iter()
             .filter(|id| {
-                build_provider_detail(id.cli_name()).unwrap().auth_capability
+                build_provider_detail(id.cli_name())
+                    .unwrap()
+                    .auth_capability
                     == ProviderAuthCapability::Unsupported
             })
             .map(|id| id.cli_name())
