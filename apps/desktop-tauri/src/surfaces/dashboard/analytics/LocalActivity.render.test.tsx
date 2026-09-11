@@ -79,6 +79,40 @@ describe("LocalActivity", () => {
     expect(tauriMocks.getProviderChartData).not.toHaveBeenCalled();
   });
 
+  /**
+   * Semantic regression test (owner: "sessions_count is a per-file proxy
+   * for BOTH providers, not a real session semantic" --
+   * docs/validation/LOCAL_ACTIVITY_FIELD_MATRIX.md). Claude's chart-data
+   * bridge has no genuine session identity to count -- `normalizeClaude`
+   * must always resolve `sessionCount: null` so the "Local sessions" metric
+   * never renders for Claude, even if a future backend change starts
+   * returning a `localUsage.sessionCount`-shaped field. This test fails
+   * loudly if Claude ever regains a "Sessions" number from a source that
+   * cannot honestly back it.
+   */
+  it("never shows a Sessions metric for Claude, even if the chart-data payload grows a session-shaped field", async () => {
+    tauriMocks.getProviderChartData.mockResolvedValue({
+      tokensHistory: [{ date: "2026-09-07", tokens: 40 }],
+      localUsage: {
+        thirtyDayTokens: 100,
+        latestTokens: 40,
+        topModel: "claude-sonnet-4-6",
+        todayCost: null,
+        thirtyDayCost: null,
+        estimateNote: "",
+        tokenCostUpdatedAtMs: 0,
+        // Not a real bridge field -- simulates a naive future change that
+        // starts threading cost_scanner.rs's file-count `sessions_count`
+        // through this same payload. LocalActivity must ignore it.
+        sessionCount: 7,
+      },
+    });
+    render(<LocalActivity settings={settings} isDemo={false} providerId="claude" />);
+    await waitFor(() => expect(screen.getByText("100")).toBeInTheDocument());
+    expect(screen.queryByText("Local sessions")).not.toBeInTheDocument();
+    expect(screen.queryByText("7")).not.toBeInTheDocument();
+  });
+
   it("shows the explicit demo label instead of fetching in demo mode", () => {
     render(<LocalActivity settings={settings} isDemo={true} providerId="claude" />);
     expect(screen.getByText("Demo activity")).toBeInTheDocument();
