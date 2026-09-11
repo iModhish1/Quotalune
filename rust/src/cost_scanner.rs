@@ -47,7 +47,7 @@ use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::pricing_eligibility::{
@@ -952,10 +952,20 @@ impl CostScanner {
 /// records, so a stale cache can never silently misrepresent the current
 /// dedup/cutoff state -- only the expensive file I/O and JSON parsing is
 /// skipped for a file whose identity is unchanged.
+///
+/// `records` is `Arc<Vec<_>>` (Phase 3G), not a plain owned `Vec` -- a
+/// cache HIT for an unchanged file used to deep-clone every
+/// `ClaudeUsageRecord` (two heap `String`s each) across the whole file on
+/// every single call, which at this machine's real corpus (80,000+
+/// records) was the dominant remaining warm-path cost even when nothing
+/// had changed (docs/validation/ANALYTICS_PHASE3F_HOT_FILE_TAIL_INDEXING.md
+/// "New finding"). Cloning the `Arc` is a reference-count bump; the
+/// underlying records are shared, never re-copied, until the file
+/// actually changes and a new `Arc` is built for it.
 struct CachedClaudeFileRecords {
     mtime_unix_ms: i64,
     size: i64,
-    records: Vec<ClaudeUsageRecord>,
+    records: Arc<Vec<ClaudeUsageRecord>>,
 }
 
 fn claude_file_records_cache() -> &'static Mutex<HashMap<String, CachedClaudeFileRecords>> {
@@ -970,6 +980,25 @@ fn clear_claude_file_records_cache_for_test() {
     if let Ok(mut guard) = claude_file_records_cache().lock() {
         guard.clear();
     }
+}
+
+/// Serializes every test that touches the process-global Claude caches
+/// (`claude_file_records_cache`/`claude_activity_index_cache`) relative to
+/// each OTHER such test -- `cargo test`'s default parallelism runs tests
+/// on multiple threads, and a test that clears the global cache while
+/// another test is mid-sequence (e.g. between two calls it expects to
+/// share one cached entry) would otherwise race. Acquiring this guard for
+/// a test's whole body keeps these tests correctly serialized without
+/// forcing the entire binary to `--test-threads=1`. Does not affect the
+/// real per-file `(mtime, size)` cache-hit fast path itself, which is
+/// unaffected by this test-only lock.
+#[cfg(test)]
+fn claude_cache_test_guard() -> std::sync::MutexGuard<'static, ()> {
+    static GUARD: OnceLock<Mutex<()>> = OnceLock::new();
+    GUARD
+        .get_or_init(|| Mutex::new(()))
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 /// Convert a persisted, privacy-safe record back into the in-memory shape,
@@ -1254,7 +1283,7 @@ fn parse_claude_file_records_cached(
     path: &Path,
     cancel: Option<&AtomicBool>,
     cache_root: Option<&Path>,
-) -> Vec<ClaudeUsageRecord> {
+) -> Arc<Vec<ClaudeUsageRecord>> {
     let path_key = path.to_string_lossy().to_string();
     let metadata = fs::metadata(path).ok();
     let mtime_unix_ms = metadata
@@ -1267,73 +1296,98 @@ fn parse_claude_file_records_cached(
     )]
     let size = metadata.map(|m| m.len() as i64).unwrap_or(0);
 
+    // Tier 1 (fastest): in-memory, unchanged file -- an Arc clone (a
+    // reference-count bump), never a deep copy of the record list. This
+    // is the fix for Phase 3F's finding: even a request where NOTHING
+    // changed used to deep-clone every `ClaudeUsageRecord` (two heap
+    // `String`s each) across the whole file, every single call.
     if let Ok(guard) = claude_file_records_cache().lock()
         && let Some(cached) = guard.get(&path_key)
         && cached.mtime_unix_ms == mtime_unix_ms
         && cached.size == size
     {
-        return cached.records.clone();
+        return Arc::clone(&cached.records);
     }
 
-    // In-memory miss: consult the persisted index before touching disk.
+    // Tier 2: persisted index. Copy out just this one file's small
+    // `PersistedClaudeFile` entry while the lock is held (a HashMap
+    // lookup + one entry clone -- cheap and bounded to a single file),
+    // then drop the lock before any per-record reconstruction or
+    // aggregation work runs. Never hold this mutex during the expensive
+    // part (owner: "Do NOT retain mutex/RwLock guard while... range
+    // aggregation").
     let index_key = claude_activity_index_cache_key(cache_root);
-    if let Ok(mut index_guard) = claude_activity_index_cache().lock() {
-        let index = index_guard
-            .entry(index_key.clone())
-            .or_insert_with(|| crate::claude_activity_index::ClaudeActivityIndex::load(cache_root));
-        if let Some(persisted_file) = index.files.get(&path_key)
-            && persisted_file.mtime_unix_ms == mtime_unix_ms
-            && persisted_file.size == size
-        {
-            let records: Vec<ClaudeUsageRecord> = persisted_file
+    let persisted_snapshot: Option<crate::claude_activity_index::PersistedClaudeFile> = {
+        if let Ok(mut index_guard) = claude_activity_index_cache().lock() {
+            let index = index_guard.entry(index_key.clone()).or_insert_with(|| {
+                crate::claude_activity_index::ClaudeActivityIndex::load(cache_root)
+            });
+            index.files.get(&path_key).cloned()
+        } else {
+            None
+        }
+    };
+
+    if let Some(persisted_file) = &persisted_snapshot
+        && persisted_file.mtime_unix_ms == mtime_unix_ms
+        && persisted_file.size == size
+    {
+        let records = Arc::new(
+            persisted_file
                 .records
                 .iter()
                 .map(claude_usage_record_from_persisted)
-                .collect();
-            drop(index_guard);
-            if let Ok(mut guard) = claude_file_records_cache().lock() {
-                guard.insert(
-                    path_key,
-                    CachedClaudeFileRecords {
-                        mtime_unix_ms,
-                        size,
-                        records: records.clone(),
-                    },
-                );
-            }
-            return records;
+                .collect::<Vec<_>>(),
+        );
+        if let Ok(mut guard) = claude_file_records_cache().lock() {
+            guard.insert(
+                path_key,
+                CachedClaudeFileRecords {
+                    mtime_unix_ms,
+                    size,
+                    records: Arc::clone(&records),
+                },
+            );
         }
+        return records;
+    }
 
-        // Phase 3F: append fast path. The whole file changed (mtime/size
-        // no longer match), but if it only GREW and the bytes right
-        // before the previously-indexed boundary are still exactly what
-        // we last saw there, this is a pure append -- parse only the new
-        // tail, never the 100MB+ we already indexed. Any continuity
-        // failure (shrank, boundary mismatch, tail too large) falls
-        // through to a full reparse below; it never produces a wrong
-        // result, only forfeits the fast path for this one file.
-        if let Some(persisted_file) = index.files.get(&path_key).cloned()
-            && size > persisted_file.size
-            && persisted_file.indexed_bytes > 0
-            && compute_boundary_fingerprint(path, persisted_file.indexed_bytes)
-                == Some(persisted_file.boundary_fingerprint)
-            && let Some((new_records, new_indexed_bytes)) =
-                parse_claude_appended_tail(path, persisted_file.indexed_bytes)
-        {
-            let mut all_records = persisted_file.records.clone();
-            all_records.extend(new_records.iter().map(persisted_claude_record_from_usage));
-            let boundary_fingerprint =
-                compute_boundary_fingerprint(path, new_indexed_bytes).unwrap_or(0);
-            let records: Vec<ClaudeUsageRecord> = all_records
+    // Phase 3F: append fast path. The whole file changed (mtime/size no
+    // longer match), but if it only GREW and the bytes right before the
+    // previously-indexed boundary are still exactly what we last saw
+    // there, this is a pure append -- parse only the new tail, never the
+    // 100MB+ we already indexed. Any continuity failure (shrank, boundary
+    // mismatch, tail too large) falls through to a full reparse below; it
+    // never produces a wrong result, only forfeits the fast path for this
+    // one file.
+    if let Some(persisted_file) = &persisted_snapshot
+        && size > persisted_file.size
+        && persisted_file.indexed_bytes > 0
+        && compute_boundary_fingerprint(path, persisted_file.indexed_bytes)
+            == Some(persisted_file.boundary_fingerprint)
+        && let Some((new_records, new_indexed_bytes)) =
+            parse_claude_appended_tail(path, persisted_file.indexed_bytes)
+    {
+        let mut all_persisted = persisted_file.records.clone();
+        all_persisted.extend(new_records.iter().map(persisted_claude_record_from_usage));
+        let boundary_fingerprint =
+            compute_boundary_fingerprint(path, new_indexed_bytes).unwrap_or(0);
+        let records = Arc::new(
+            all_persisted
                 .iter()
                 .map(claude_usage_record_from_persisted)
-                .collect();
+                .collect::<Vec<_>>(),
+        );
+        if let Ok(mut index_guard) = claude_activity_index_cache().lock() {
+            let index = index_guard.entry(index_key.clone()).or_insert_with(|| {
+                crate::claude_activity_index::ClaudeActivityIndex::load(cache_root)
+            });
             index.files.insert(
                 path_key.clone(),
                 crate::claude_activity_index::PersistedClaudeFile {
                     mtime_unix_ms,
                     size,
-                    records: all_records,
+                    records: all_persisted,
                     indexed_bytes: new_indexed_bytes,
                     boundary_fingerprint,
                 },
@@ -1341,19 +1395,18 @@ fn parse_claude_file_records_cached(
             index.schema_version =
                 crate::claude_activity_index::CLAUDE_ACTIVITY_INDEX_SCHEMA_VERSION;
             index.generated_at_unix_ms = unix_now_ms();
-            drop(index_guard);
-            if let Ok(mut guard) = claude_file_records_cache().lock() {
-                guard.insert(
-                    path_key,
-                    CachedClaudeFileRecords {
-                        mtime_unix_ms,
-                        size,
-                        records: records.clone(),
-                    },
-                );
-            }
-            return records;
         }
+        if let Ok(mut guard) = claude_file_records_cache().lock() {
+            guard.insert(
+                path_key,
+                CachedClaudeFileRecords {
+                    mtime_unix_ms,
+                    size,
+                    records: Arc::clone(&records),
+                },
+            );
+        }
+        return records;
     }
 
     let Ok(file) = File::open(path) else {
@@ -1366,7 +1419,7 @@ fn parse_claude_file_records_cached(
         {
             index.save(cache_root);
         }
-        return Vec::new();
+        return Arc::new(Vec::new());
     };
     let mut records = Vec::new();
     for_each_jsonl_text_line(BufReader::new(file), |line| {
@@ -1380,6 +1433,7 @@ fn parse_claude_file_records_cached(
         }
         true
     });
+    let records = Arc::new(records);
 
     if let Ok(mut guard) = claude_file_records_cache().lock() {
         guard.insert(
@@ -1387,7 +1441,7 @@ fn parse_claude_file_records_cached(
             CachedClaudeFileRecords {
                 mtime_unix_ms,
                 size,
-                records: records.clone(),
+                records: Arc::clone(&records),
             },
         );
     }
@@ -1492,10 +1546,11 @@ where
     F: FnMut(&ClaudeUsageRecord),
 {
     let mut counted = 0;
-    for record in parse_claude_file_records_cached(path, cancel, cache_root) {
-        if should_count_claude_record(&record, cutoff, seen) {
+    let records = parse_claude_file_records_cached(path, cancel, cache_root);
+    for record in records.iter() {
+        if should_count_claude_record(record, cutoff, seen) {
             counted += 1;
-            on_record(&record);
+            on_record(record);
         }
     }
     counted
@@ -2333,6 +2388,7 @@ mod tests {
     /// semantics instead.") -- deterministic via file content, not timing.
     #[test]
     fn deleted_claude_file_is_not_served_stale_from_cache() {
+        let _guard = claude_cache_test_guard();
         clear_claude_file_records_cache_for_test();
         clear_claude_activity_index_memory_cache_for_test();
         let index_root = tempfile::tempdir().unwrap();
@@ -2362,6 +2418,7 @@ mod tests {
 
     #[test]
     fn modified_claude_file_is_reparsed_not_served_stale() {
+        let _guard = claude_cache_test_guard();
         clear_claude_file_records_cache_for_test();
         clear_claude_activity_index_memory_cache_for_test();
         let index_root = tempfile::tempdir().unwrap();
@@ -2405,6 +2462,7 @@ mod tests {
 
     #[test]
     fn unchanged_claude_file_reads_are_stable_across_repeated_calls() {
+        let _guard = claude_cache_test_guard();
         clear_claude_file_records_cache_for_test();
         clear_claude_activity_index_memory_cache_for_test();
         let index_root = tempfile::tempdir().unwrap();
@@ -2431,6 +2489,61 @@ mod tests {
         let _removed = std::fs::remove_file(&path);
     }
 
+    /// Phase 3G zero-copy proof (owner: "Prove: unchanged warm request: 0
+    /// full-record materializations"). Deterministic, no timing: two
+    /// calls for the same unchanged file must return `Arc`s pointing at
+    /// the exact same heap allocation -- not merely equal content, the
+    /// SAME allocation -- proving the second call was a reference-count
+    /// bump, never a fresh clone of the record `Vec`.
+    #[test]
+    fn unchanged_file_second_call_shares_the_same_arc_allocation_not_a_deep_clone() {
+        let _guard = claude_cache_test_guard();
+        clear_claude_file_records_cache_for_test();
+        clear_claude_activity_index_memory_cache_for_test();
+        let index_root = tempfile::tempdir().unwrap();
+        let path = std::env::temp_dir().join(format!(
+            "codexbar-claude-zerocopy-{}.jsonl",
+            std::process::id()
+        ));
+        let ts = (Utc::now() - Duration::hours(1))
+            .format("%Y-%m-%dT%H:%M:%S%.3fZ")
+            .to_string();
+        std::fs::write(
+            &path,
+            format!(
+                "{}\n",
+                claude_transcript_line(&ts, "requestId", "req_zc", "msg_zc")
+            ),
+        )
+        .unwrap();
+
+        let first = parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+        let second = parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+        assert!(
+            Arc::ptr_eq(&first, &second),
+            "an unchanged file's second call must share the exact same Arc \
+             allocation as the first, not a fresh deep clone of the record Vec"
+        );
+
+        // Simulate a restart (in-memory tier gone, persisted tier still
+        // warm): the reconstructed Arc from the persisted tier is a new
+        // allocation (expected -- it's freshly rebuilt from disk once),
+        // but a THIRD call within that same "process" must then share
+        // THAT allocation too, not re-reconstruct again.
+        clear_claude_file_records_cache_for_test();
+        let after_restart_first =
+            parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+        let after_restart_second =
+            parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+        assert!(
+            Arc::ptr_eq(&after_restart_first, &after_restart_second),
+            "after an in-memory cache reset, the persisted-tier reconstruction \
+             must itself be shared across subsequent calls, not rebuilt every time"
+        );
+
+        let _removed = std::fs::remove_file(&path);
+    }
+
     /// Decisive proof that a "restart" (fresh process, so the in-memory
     /// tier is cold, but the persisted index on disk survives) genuinely
     /// serves an unchanged file from the persisted index rather than
@@ -2441,6 +2554,7 @@ mod tests {
     /// from the persisted index, not a fresh parse.
     #[test]
     fn restart_serves_unchanged_file_from_the_persisted_index_not_a_fresh_reparse() {
+        let _guard = claude_cache_test_guard();
         clear_claude_file_records_cache_for_test();
         clear_claude_activity_index_memory_cache_for_test();
         let index_root = tempfile::tempdir().unwrap();
@@ -2531,7 +2645,12 @@ mod tests {
             )
         }
 
-        fn setup() -> (tempfile::TempDir, std::path::PathBuf) {
+        fn setup() -> (
+            std::sync::MutexGuard<'static, ()>,
+            tempfile::TempDir,
+            std::path::PathBuf,
+        ) {
+            let guard = claude_cache_test_guard();
             clear_claude_file_records_cache_for_test();
             clear_claude_activity_index_memory_cache_for_test();
             let index_root = tempfile::tempdir().unwrap();
@@ -2540,7 +2659,7 @@ mod tests {
                 std::process::id(),
                 std::process::id() // unique enough within a single test process run; each test uses its own suffix below
             ));
-            (index_root, path)
+            (guard, index_root, path)
         }
 
         /// A: base file + one appended record. The append must be picked
@@ -2548,7 +2667,7 @@ mod tests {
         /// the new line (not stayed at the old size or reset to 0).
         #[test]
         fn a_one_appended_record_is_indexed_incrementally() {
-            let (index_root, base) = setup();
+            let (_guard, index_root, base) = setup();
             let path = base.with_file_name(format!(
                 "{}-a.jsonl",
                 base.file_stem().unwrap().to_string_lossy()
@@ -2582,7 +2701,7 @@ mod tests {
         /// each processed without duplicating any prior record.
         #[test]
         fn b_repeated_append_batches_never_duplicate_prior_records() {
-            let (index_root, base) = setup();
+            let (_guard, index_root, base) = setup();
             let path = base.with_file_name(format!(
                 "{}-b.jsonl",
                 base.file_stem().unwrap().to_string_lossy()
@@ -2625,7 +2744,7 @@ mod tests {
         /// newline yet) must not be double-counted once it completes.
         #[test]
         fn d_e_partial_trailing_line_completes_without_duplication() {
-            let (index_root, base) = setup();
+            let (_guard, index_root, base) = setup();
             let path = base.with_file_name(format!(
                 "{}-de.jsonl",
                 base.file_stem().unwrap().to_string_lossy()
@@ -2672,7 +2791,7 @@ mod tests {
         /// records onto unrelated new content.
         #[test]
         fn f_truncation_forces_a_full_reparse_not_a_bad_append() {
-            let (index_root, base) = setup();
+            let (_guard, index_root, base) = setup();
             let path = base.with_file_name(format!(
                 "{}-f.jsonl",
                 base.file_stem().unwrap().to_string_lossy()
@@ -2713,7 +2832,7 @@ mod tests {
         /// must catch it and force a full reparse.
         #[test]
         fn g_modification_before_old_eof_is_not_treated_as_append() {
-            let (index_root, base) = setup();
+            let (_guard, index_root, base) = setup();
             let path = base.with_file_name(format!(
                 "{}-g.jsonl",
                 base.file_stem().unwrap().to_string_lossy()
@@ -2755,7 +2874,7 @@ mod tests {
         /// it grew.
         #[test]
         fn h_larger_replacement_is_not_treated_as_append() {
-            let (index_root, base) = setup();
+            let (_guard, index_root, base) = setup();
             let path = base.with_file_name(format!(
                 "{}-h.jsonl",
                 base.file_stem().unwrap().to_string_lossy()
@@ -2803,7 +2922,7 @@ mod tests {
         /// stale appended content should linger.
         #[test]
         fn j_append_then_delete_leaves_no_stale_contribution() {
-            let (index_root, base) = setup();
+            let (_guard, index_root, base) = setup();
             let path = base.with_file_name(format!(
                 "{}-j.jsonl",
                 base.file_stem().unwrap().to_string_lossy()
@@ -2837,7 +2956,7 @@ mod tests {
         /// the append.
         #[test]
         fn m_n_oversized_and_malformed_appended_lines_are_discarded_safely() {
-            let (index_root, base) = setup();
+            let (_guard, index_root, base) = setup();
             let path = base.with_file_name(format!(
                 "{}-mn.jsonl",
                 base.file_stem().unwrap().to_string_lossy()
@@ -2879,6 +2998,7 @@ mod tests {
     /// that path.
     #[test]
     fn reconcile_deletions_prunes_a_persisted_entry_for_a_since_deleted_file() {
+        let _guard = claude_cache_test_guard();
         clear_claude_activity_index_memory_cache_for_test();
         let index_root = tempfile::tempdir().unwrap();
         let mut index = crate::claude_activity_index::ClaudeActivityIndex {
@@ -2930,6 +3050,7 @@ mod tests {
     /// would have computed on the same input.
     #[test]
     fn unified_claude_activity_matches_old_daily_and_summary_semantics() {
+        let _guard = claude_cache_test_guard();
         clear_claude_file_records_cache_for_test();
         clear_claude_activity_index_memory_cache_for_test();
         let dir = tempfile::tempdir().unwrap();
