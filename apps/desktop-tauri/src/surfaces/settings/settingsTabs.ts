@@ -7,6 +7,7 @@ export const SETTINGS_GROUPS: {labelKey: LocaleKey; tabs: {id: SettingsTabId; la
     {id: "dashboard", labelKey: "TabDashboard"},
     {id: "analytics", labelKey: "V3Analytics"},
     {id: "usageSpend", labelKey: "TabUsageSpend"},
+    {id: "analyticsSources", labelKey: "TabAnalyticsSources"},
   ]},
   {labelKey: "NavManage", tabs: [
     {id: "providers", labelKey: "TabProviders"},

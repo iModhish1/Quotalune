@@ -4,10 +4,11 @@ import { TAB_META } from "./settings/settingsTabs";
 
 describe("Settings navigation", () => {
   it("keeps Analytics immediately beside its Dashboard parent before other primary surfaces", () => {
-    expect(TAB_META.slice(0, 6)).toEqual([
+    expect(TAB_META.slice(0, 7)).toEqual([
       { id: "dashboard", labelKey: "TabDashboard" },
       { id: "analytics", labelKey: "V3Analytics" },
       { id: "usageSpend", labelKey: "TabUsageSpend" },
+      { id: "analyticsSources", labelKey: "TabAnalyticsSources" },
       { id: "providers", labelKey: "TabProviders" },
       { id: "collections", labelKey: "TabCollections" },
       { id: "profiles", labelKey: "TabProfiles" },

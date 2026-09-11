@@ -22,6 +22,7 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
   {id: "general", labelKey: "TabGeneral", descriptionKey: "V2GeneralHelp", tabs: ["general"], keywords: ["startup", "language", "updates", "refresh", "لغة", "تشغيل"]},
   {id: "appearance", labelKey: "V2Appearance", descriptionKey: "V2AppearanceHelp", tabs: ["themes", "providerDisplay"], keywords: ["theme", "identity", "density", "effects", "ثيم", "كثافة", "هوية"]},
   {id: "dashboard", labelKey: "TabDashboard", descriptionKey: "V2DashboardHelp", tabs: ["dashboardStudio"], keywords: ["layout", "charts", "demo", "preview", "range", "تجريبي", "مخططات"]},
+  {id: "analyticsSources", labelKey: "TabAnalyticsSources", descriptionKey: "AnalyticsSourcesHelp", tabs: ["analyticsSources"], keywords: ["tokens", "sessions", "codex", "claude", "privacy", "local activity"]},
   {id: "reset", labelKey: "V2LimitsReset", descriptionKey: "V2ResetHelp", tabs: ["resetDisplay"], keywords: ["reset", "time", "region", "remaining", "إعادة", "متبقي", "وقت"]},
   {id: "notifications", labelKey: "TabNotifications", descriptionKey: "V2NotificationsHelp", tabs: ["notifications"], keywords: ["alerts", "threshold", "sound", "تنبيهات", "صوت"]},
   {id: "surfaces", labelKey: "V2NavigationSurfaces", descriptionKey: "V2SurfacesHelp", tabs: ["menuBar", "menu", "surfaces"], keywords: ["menu bar", "navigation", "window", "floating", "قائمة", "نافذة", "تنقل"]},

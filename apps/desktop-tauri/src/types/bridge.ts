@@ -10,6 +10,7 @@ export type SettingsTabId =
   | "profiles"
   | "resetDisplay"
   | "dashboardStudio"
+  | "analyticsSources"
   | "notifications"
   | "menuBar"
   | "menu"
@@ -868,6 +869,47 @@ export interface DailyUsageBreakdown {
   day: string;
   services: ServiceUsagePoint[];
   totalCreditsUsed: number;
+}
+
+/** Mirrors rust/src/analytics_sources.rs::AnalyticsSourceId exactly --
+ *  do not add a source here that has no corresponding Rust variant. */
+export type AnalyticsSourceId =
+  | "providerCurrentState"
+  | "providerHistory"
+  | "providerReportedMonetary"
+  | "codexLocalActivity"
+  | "claudeLocalActivity";
+
+/** Mirrors AnalyticsScope. Local CLI-log scanning is always "device" --
+ *  never "account", even when only one account is configured. */
+export type AnalyticsScope = "account" | "provider" | "device";
+
+/** Mirrors AnalyticsAvailability. */
+export type AnalyticsAvailability = "available" | "noDataYet" | "unsupported";
+
+/** Mirrors AnalyticsCapabilities -- every flag is a real, cited capability,
+ *  never inferred client-side from a provider id string. */
+export interface AnalyticsCapabilities {
+  quota: boolean;
+  resets: boolean;
+  monetary: boolean;
+  tokens: boolean;
+  models: boolean;
+  sessionCount: boolean;
+  dailyActivity: boolean;
+}
+
+/** Mirrors AnalyticsSourceDescriptor -- the authoritative capability map
+ *  returned by `get_analytics_source_registry`. The frontend must consult
+ *  this rather than re-deriving capability rules from a provider id. */
+export interface AnalyticsSourceDescriptor {
+  id: AnalyticsSourceId;
+  label: string;
+  scope: AnalyticsScope;
+  capabilities: AnalyticsCapabilities;
+  availability: AnalyticsAvailability;
+  reads: string;
+  doesNotRead: string;
 }
 
 export interface ProviderLocalUsageSummary {

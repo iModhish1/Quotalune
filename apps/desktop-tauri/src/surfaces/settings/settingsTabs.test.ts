@@ -45,6 +45,7 @@ describe("TAB_META", () => {
       "profiles",
       "resetDisplay",
       "dashboardStudio",
+      "analyticsSources",
       "notifications",
       "menuBar",
       "menu",

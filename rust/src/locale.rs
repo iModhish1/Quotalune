@@ -742,6 +742,23 @@ locale_keys! {
     TabThemes,
     TabResetDisplay,
     TabDashboardStudio,
+    TabAnalyticsSources,
+    AnalyticsSourcesHelp,
+    AnalyticsSourceStatusAvailable,
+    AnalyticsSourceStatusNoDataYet,
+    AnalyticsSourceStatusUnsupported,
+    AnalyticsScopeAccount,
+    AnalyticsScopeProvider,
+    AnalyticsScopeDevice,
+    AnalyticsCapabilityQuota,
+    AnalyticsCapabilityResets,
+    AnalyticsCapabilityMonetary,
+    AnalyticsCapabilityTokens,
+    AnalyticsCapabilityModels,
+    AnalyticsCapabilitySessions,
+    AnalyticsCapabilityDailyActivity,
+    AnalyticsSourceReadsLabel,
+    AnalyticsSourceDoesNotReadLabel,
     // Sidebar label for MainRoute::Dashboard — distinct from TrayDashboard
     // (same English text, kept as a separate key per this repo's convention
     // of one key per UI surface, so a future translation can diverge).

@@ -25,6 +25,7 @@ import ThemeGallery from "./settings/tabs/ThemeGallery";
 import ProviderDisplayTab from "./settings/tabs/ProviderDisplayTab";
 import DashboardTab from "./settings/tabs/DashboardTab";
 import ResetDisplaySection from "./settings/tabs/ResetDisplaySection";
+import AnalyticsSourcesTab from "./settings/tabs/AnalyticsSourcesTab";
 import DashboardStudioTab from "./settings/tabs/DashboardStudioTab";
 import CollectionsTab from "./settings/tabs/CollectionsTab";
 import ProfilesTab from "./settings/tabs/ProfilesTab";
@@ -155,6 +156,13 @@ const TabIcons: Record<SettingsTabId, ReactElement> = {
     <Svg>
       <circle cx="8" cy="8" r="6" />
       <path d="M8 4.5V8l2.6 1.6" />
+    </Svg>
+  ),
+  analyticsSources: (
+    <Svg>
+      <rect x="2" y="9" width="3" height="5" rx="1" />
+      <rect x="6.5" y="5" width="3" height="9" rx="1" />
+      <rect x="11" y="2" width="3" height="12" rx="1" />
     </Svg>
   ),
   dashboardStudio: (
@@ -322,6 +330,7 @@ export default function Settings({ state, initialTab: propTab, navigationRevisio
         {activeTab === "collections" && <CollectionsTab />}
         {activeTab === "profiles" && <ProfilesTab />}
         {activeTab === "resetDisplay" && <ResetDisplaySection />}
+        {activeTab === "analyticsSources" && <AnalyticsSourcesTab />}
         {activeTab === "dashboardStudio" && (
           <DashboardStudioTab
             state={state}

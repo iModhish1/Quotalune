@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type {
+  AnalyticsSourceDescriptor,
   ApiKeyInfoBridge,
   ApiKeyProviderInfoBridge,
   AppInfoBridge,
@@ -326,6 +327,15 @@ export function getProviderLocalUsageSummary(
   providerId: string,
 ): Promise<ProviderLocalUsageSummary | null> {
   return invoke<ProviderLocalUsageSummary | null>("get_provider_local_usage_summary", { providerId });
+}
+
+/** The real analytics source registry -- capability map for the Analytics
+ *  UI, mirrored 1:1 from `analytics_source_registry()`
+ *  (rust/src/analytics_sources.rs). Cheap (directory-existence checks
+ *  only, no file-content scanning), safe to call on every Analytics/
+ *  Settings render. */
+export function getAnalyticsSourceRegistry(): Promise<AnalyticsSourceDescriptor[]> {
+  return invoke<AnalyticsSourceDescriptor[]>("get_analytics_source_registry");
 }
 
 export function getUsageSpendSummary(options?: { historyDays?: number; forceRefresh?: boolean }): Promise<UsageSpendSummary> {
