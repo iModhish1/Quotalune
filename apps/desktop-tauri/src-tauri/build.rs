@@ -25,5 +25,14 @@ fn main() {
 
     println!("cargo:rustc-env=QA_BUILD_ARCH={}", std::env::consts::ARCH);
     println!("cargo:rerun-if-changed=build.rs");
+    // QA_BUILD_COMMIT is only as fresh as the last time this script ran --
+    // without watching the repo's actual HEAD, a commit made in ANY crate
+    // (this one included) without touching build.rs itself leaves cargo
+    // free to reuse a cached build-script run and bake a stale commit into
+    // an otherwise-fresh binary. Explicit git-state watches close that gap
+    // (see scripts/build-dev-verified.mjs, which relies on git_head from
+    // `--print-build-info` matching the real `git rev-parse HEAD`).
+    println!("cargo:rerun-if-changed=../../../.git/HEAD");
+    println!("cargo:rerun-if-changed=../../../.git/index");
     tauri_build::build()
 }

@@ -274,6 +274,23 @@ fn main() {
         println!("app_dir_name={}", quotalis_core::paths::APP_DIR_NAME);
         std::process::exit(0);
     }
+    // `--print-build-info`: a second pure diagnostic, same shape and
+    // guarantees as `--print-channel` above, for the freshness proof in
+    // `scripts/build-dev-verified.mjs` -- reuses the `build_info`
+    // constants build.rs already embeds for the About page, so this is
+    // exposing existing provenance, not adding a new one.
+    if std::env::args().skip(1).any(|a| a == "--print-build-info") {
+        let exe_name = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.file_name().map(|n| n.to_string_lossy().into_owned()))
+            .unwrap_or_default();
+        println!("channel={}", build_info::CHANNEL);
+        println!("git_head={}", build_info::COMMIT);
+        println!("git_dirty={}", build_info::DIRTY);
+        println!("version={}", env!("CARGO_PKG_VERSION"));
+        println!("exe={exe_name}");
+        std::process::exit(0);
+    }
     // Fail before logs, settings, registry registration or migrations can touch
     // Personal. A Dev filename/config alone is not a Rust channel boundary.
     let exe_name = std::env::current_exe()
