@@ -46,6 +46,7 @@ use std::fs::{self, File};
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::pricing_eligibility::{
@@ -416,7 +417,7 @@ struct ClaudeCacheCreation {
     ephemeral_1h_input_tokens: Option<u64>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ClaudeUsageRecord {
     model: String,
     timestamp: Option<DateTime<Utc>>,
@@ -921,6 +922,104 @@ impl CostScanner {
     }
 }
 
+/// Per-file cache of a Claude transcript's raw, un-deduped usage records --
+/// the fix for a confirmed real defect: `for_each_claude_usage_record` used
+/// to open and re-parse every JSONL byte of every Claude transcript file on
+/// EVERY call, and a single `get_provider_chart_data` request already made
+/// three independent full walks (`get_daily_token_history`'s own walk, plus
+/// `load_local_usage_summary`'s 30-day and 1-day `scan_local_cost` calls) --
+/// three full corpus rescans per IPC call, ~100-112s reproduced on a real
+/// machine (docs/validation/ANALYTICS_PHASE3B_VISUAL_REVIEW.md Defect 3).
+///
+/// Keyed by canonical path string, invalidated by `(mtime, size)` -- the
+/// same defensible source-identity pair Codex's own `CostUsageFileUsage`
+/// cache already uses. Stores only the fields analytics needs (model,
+/// timestamp, token counters, a dedup key, cost) -- never prompt/response
+/// text, which this parser never deserializes into `ClaudeUsageRecord` in
+/// the first place (see `ClaudeMessage`/`ClaudeUsage`'s field lists).
+/// Process-lifetime only (not persisted to disk): a file's cross-file
+/// dedup pass still re-runs fresh on every call from the cached raw
+/// records, so a stale cache can never silently misrepresent the current
+/// dedup/cutoff state -- only the expensive file I/O and JSON parsing is
+/// skipped for a file whose identity is unchanged.
+struct CachedClaudeFileRecords {
+    mtime_unix_ms: i64,
+    size: i64,
+    records: Vec<ClaudeUsageRecord>,
+}
+
+fn claude_file_records_cache() -> &'static Mutex<HashMap<String, CachedClaudeFileRecords>> {
+    static CACHE: OnceLock<Mutex<HashMap<String, CachedClaudeFileRecords>>> = OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Test-only: force the next call to reparse every file from disk,
+/// regardless of what a previous test left cached under the same path.
+#[cfg(test)]
+fn clear_claude_file_records_cache_for_test() {
+    if let Ok(mut guard) = claude_file_records_cache().lock() {
+        guard.clear();
+    }
+}
+
+/// All raw usage records in one Claude transcript file -- no cutoff
+/// filtering, no cross-file dedup applied (both depend on the caller's
+/// window and running `seen` set, neither of which is safe to bake into a
+/// shared cache entry). Reuses the file's cached parse when its `(mtime,
+/// size)` match a prior call; otherwise parses fully and stores the result.
+fn parse_claude_file_records_cached(
+    path: &Path,
+    cancel: Option<&AtomicBool>,
+) -> Vec<ClaudeUsageRecord> {
+    let path_key = path.to_string_lossy().to_string();
+    let metadata = fs::metadata(path).ok();
+    let mtime_unix_ms = metadata
+        .as_ref()
+        .map(|m| system_time_to_unix_ms(m.modified().ok()))
+        .unwrap_or(0);
+    #[allow(
+        clippy::cast_possible_wrap,
+        reason = "local transcript file sizes fit i64"
+    )]
+    let size = metadata.map(|m| m.len() as i64).unwrap_or(0);
+
+    if let Ok(guard) = claude_file_records_cache().lock()
+        && let Some(cached) = guard.get(&path_key)
+        && cached.mtime_unix_ms == mtime_unix_ms
+        && cached.size == size
+    {
+        return cached.records.clone();
+    }
+
+    let Ok(file) = File::open(path) else {
+        return Vec::new();
+    };
+    let mut records = Vec::new();
+    for_each_jsonl_text_line(BufReader::new(file), |line| {
+        if is_cancelled(cancel) {
+            return false;
+        }
+        if let Ok(event) = serde_json::from_str::<ClaudeEvent>(line)
+            && let Some(record) = claude_usage_record_from_event(&event)
+        {
+            records.push(record);
+        }
+        true
+    });
+
+    if let Ok(mut guard) = claude_file_records_cache().lock() {
+        guard.insert(
+            path_key,
+            CachedClaudeFileRecords {
+                mtime_unix_ms,
+                size,
+                records: records.clone(),
+            },
+        );
+    }
+    records
+}
+
 /// Stream the de-duplicated, in-window usage records from one transcript
 /// file into `on_record`. Both the summary scan and the daily-history scan
 /// consume this single reader, so Claude log semantics live in one place.
@@ -936,27 +1035,13 @@ fn for_each_claude_usage_record<F>(
 where
     F: FnMut(&ClaudeUsageRecord),
 {
-    let Ok(file) = File::open(path) else {
-        return 0;
-    };
-
     let mut counted = 0;
-    // Use read_until so a final incomplete line (no trailing newline) is still
-    // processed when it is valid UTF-8 JSON, and so a single bad line does not
-    // stop the walk the way `lines().map_while(Result::ok)` would.
-    for_each_jsonl_text_line(BufReader::new(file), |line| {
-        if is_cancelled(cancel) {
-            return false;
-        }
-        if let Ok(event) = serde_json::from_str::<ClaudeEvent>(line)
-            && let Some(record) = claude_usage_record_from_event(&event)
-            && should_count_claude_record(&record, cutoff, seen)
-        {
+    for record in parse_claude_file_records_cached(path, cancel) {
+        if should_count_claude_record(&record, cutoff, seen) {
             counted += 1;
             on_record(&record);
         }
-        true
-    });
+    }
     counted
 }
 
@@ -1650,6 +1735,103 @@ mod tests {
         let counted = for_each_claude_usage_record(&path, &cutoff, &mut seen, None, |_| {});
         assert_eq!(counted, 1, "incomplete final JSONL line must be processed");
         // Best-effort test cleanup; the file may already be gone.
+        let _removed = std::fs::remove_file(&path);
+    }
+
+    /// Regression tests for the per-file Claude records cache (owner: "Do
+    /// not make timing-based unit tests flaky. Test work-count/invalidation
+    /// semantics instead.") -- deterministic via file content, not timing.
+    #[test]
+    fn deleted_claude_file_is_not_served_stale_from_cache() {
+        clear_claude_file_records_cache_for_test();
+        let path = std::env::temp_dir().join(format!(
+            "codexbar-claude-cache-deleted-{}.jsonl",
+            std::process::id()
+        ));
+        let ts = (Utc::now() - Duration::hours(1))
+            .format("%Y-%m-%dT%H:%M:%S%.3fZ")
+            .to_string();
+        std::fs::write(
+            &path,
+            claude_transcript_line(&ts, "requestId", "req_del", "msg_del"),
+        )
+        .unwrap();
+
+        let first = parse_claude_file_records_cached(&path, None);
+        assert_eq!(first.len(), 1, "real file must yield its one real record");
+
+        std::fs::remove_file(&path).unwrap();
+        let after_delete = parse_claude_file_records_cached(&path, None);
+        assert!(
+            after_delete.is_empty(),
+            "a removed file must never be served from a stale cache entry"
+        );
+    }
+
+    #[test]
+    fn modified_claude_file_is_reparsed_not_served_stale() {
+        clear_claude_file_records_cache_for_test();
+        let path = std::env::temp_dir().join(format!(
+            "codexbar-claude-cache-modified-{}.jsonl",
+            std::process::id()
+        ));
+        let ts = (Utc::now() - Duration::hours(1))
+            .format("%Y-%m-%dT%H:%M:%S%.3fZ")
+            .to_string();
+        std::fs::write(
+            &path,
+            claude_transcript_line(&ts, "requestId", "req_mod_1", "msg_mod_1"),
+        )
+        .unwrap();
+
+        let first = parse_claude_file_records_cached(&path, None);
+        assert_eq!(first.len(), 1);
+
+        // Append a second, distinct record -- both size and mtime change,
+        // so the cache must invalidate and pick up the new record too.
+        let mut body = std::fs::read_to_string(&path).unwrap();
+        body.push('\n');
+        body.push_str(&claude_transcript_line(
+            &ts,
+            "requestId",
+            "req_mod_2",
+            "msg_mod_2",
+        ));
+        std::fs::write(&path, body).unwrap();
+
+        let after_append = parse_claude_file_records_cached(&path, None);
+        assert_eq!(
+            after_append.len(),
+            2,
+            "a changed file's new content must be reflected, not the stale cached 1-record parse"
+        );
+
+        let _removed = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn unchanged_claude_file_reads_are_stable_across_repeated_calls() {
+        clear_claude_file_records_cache_for_test();
+        let path = std::env::temp_dir().join(format!(
+            "codexbar-claude-cache-stable-{}.jsonl",
+            std::process::id()
+        ));
+        let ts = (Utc::now() - Duration::hours(1))
+            .format("%Y-%m-%dT%H:%M:%S%.3fZ")
+            .to_string();
+        std::fs::write(
+            &path,
+            claude_transcript_line(&ts, "requestId", "req_stable", "msg_stable"),
+        )
+        .unwrap();
+
+        let first = parse_claude_file_records_cached(&path, None);
+        let second = parse_claude_file_records_cached(&path, None);
+        assert_eq!(first.len(), 1);
+        assert_eq!(second.len(), 1);
+        assert_eq!(first[0].model, second[0].model);
+        assert_eq!(first[0].input, second[0].input);
+
         let _removed = std::fs::remove_file(&path);
     }
 
