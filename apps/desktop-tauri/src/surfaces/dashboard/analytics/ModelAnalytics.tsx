@@ -3,8 +3,11 @@ import { getCodexWorkspacesSnapshot, getProviderChartData } from '../../../lib/t
 import type { CodexWorkspacesModelUsage, SettingsSnapshot } from '../../../types/bridge';
 import { useLocale } from '../../../hooks/useLocale';
 import { useAnalyticsSources } from '../../../hooks/useAnalyticsSources';
+import { useDashboardStructureTheme } from './useDashboardStructureTheme';
 import { formatRelativeUpdated } from '../../../lib/relativeTime';
 import { formatCompactTokens, formatExactTokens } from '../../../lib/analytics/formatTokens';
+
+const TOP_MODELS_SHOWN = 5;
 
 /** Analytics -> Models. Capability-gated on `models`. Codex has a real,
  *  ranked per-model token breakdown (`ModelUsage[]`, rust/src/
@@ -13,9 +16,10 @@ import { formatCompactTokens, formatExactTokens } from '../../../lib/analytics/f
  *  token split. Never merge the two into one fabricated ranked list --
  *  each provider's section shows exactly what its source can honestly
  *  back (docs/validation/LOCAL_ACTIVITY_FIELD_MATRIX.md). */
-export default function ModelAnalytics({ providerId, isDemo }: { settings: SettingsSnapshot; providerId: string | null; isDemo: boolean }) {
+export default function ModelAnalytics({ settings, providerId, isDemo }: { settings: SettingsSnapshot; providerId: string | null; isDemo: boolean }) {
   const { t } = useLocale();
   const { sources } = useAnalyticsSources();
+  const { theme } = useDashboardStructureTheme(settings);
   const [codexModels, setCodexModels] = useState<CodexWorkspacesModelUsage[] | null>(null);
   const [claudeTopModel, setClaudeTopModel] = useState<string | null | undefined>(undefined);
   const [error, setError] = useState(false);
@@ -63,6 +67,21 @@ export default function ModelAnalytics({ providerId, isDemo }: { settings: Setti
           <section className="analytics-section model-analytics-provider">
             <header><h3><bdi>Codex</bdi></h3></header>
             {codexModels.length === 0 ? <p role="status">{t('DashboardValueUnavailable')}</p> : (
+              <>
+              <ol className="model-analytics-ranked" aria-label={t('ModelColumnShare')}>
+                {codexModels.slice(0, TOP_MODELS_SHOWN).map((m) => {
+                  const share = codexTotal > 0 ? (m.totalTokens / codexTotal) * 100 : 0;
+                  return (
+                    <li key={m.model}>
+                      <div className="model-analytics-ranked__row">
+                        <bdi className="model-analytics-ranked__name">{m.model}</bdi>
+                        <span className="model-analytics-ranked__value" title={formatExactTokens(m.totalTokens)}>{formatCompactTokens(m.totalTokens)} · {share.toFixed(1)}%</span>
+                      </div>
+                      <div className="model-analytics-ranked__track"><div className="model-analytics-ranked__bar" style={{ width: `${Math.max(share, share > 0 ? 1 : 0)}%`, background: theme.accent }} /></div>
+                    </li>
+                  );
+                })}
+              </ol>
               <table className="analytics-table">
                 <thead>
                   <tr>
@@ -83,6 +102,7 @@ export default function ModelAnalytics({ providerId, isDemo }: { settings: Setti
                   ))}
                 </tbody>
               </table>
+              </>
             )}
           </section>
         )
@@ -92,7 +112,7 @@ export default function ModelAnalytics({ providerId, isDemo }: { settings: Setti
           <header><h3><bdi>Claude</bdi></h3></header>
           {claudeTopModel === undefined ? <p role="status">…</p> : claudeTopModel === null ? <p role="status">{t('DashboardValueUnavailable')}</p> : (
             <dl className="analytics-metric-ribbon">
-              <div><dt>{t('PanelTopModelPrefix')}</dt><dd><bdi>{claudeTopModel}</bdi></dd></div>
+              <div className="analytics-comparison-stat"><dt>{t('PanelTopModelPrefix')}</dt><dd className="analytics-comparison-stat--text"><bdi>{claudeTopModel}</bdi></dd></div>
             </dl>
           )}
           <small className="analytics-note">{t('ModelNoBreakdownNote')}</small>

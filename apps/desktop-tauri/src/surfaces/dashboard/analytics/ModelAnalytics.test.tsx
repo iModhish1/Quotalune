@@ -59,8 +59,10 @@ describe("ModelAnalytics", () => {
       ],
     });
     render(<ModelAnalytics settings={settings} providerId="codex" isDemo={false} />);
-    await waitFor(() => expect(screen.getByText("gpt-5")).toBeInTheDocument());
-    expect(screen.getByText("gpt-5-mini")).toBeInTheDocument();
+    // "gpt-5" appears twice by design: once in the new ranked bar list,
+    // once in the still-present detailed table below it.
+    await waitFor(() => expect(screen.getAllByText("gpt-5").length).toBeGreaterThan(0));
+    expect(screen.getAllByText("gpt-5-mini").length).toBeGreaterThan(0);
     expect(screen.getByText("3.6k")).toBeInTheDocument();
     // 3600 / 3750 = 96.0%
     expect(screen.getByText("96.0%")).toBeInTheDocument();

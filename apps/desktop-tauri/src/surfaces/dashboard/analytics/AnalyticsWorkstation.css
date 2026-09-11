@@ -116,6 +116,20 @@
 .dashboard-analytics .token-analytics-provider .analytics-metric-ribbon{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
 @media(max-width:720px){.dashboard-analytics .token-analytics-provider .analytics-metric-ribbon{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
+/* Analytics -> Models: ranked instrument rows above the detailed table
+ * (owner: "do not leave it as a raw table only"). A precise horizontal
+ * bar per top model -- share-proportional width, real values, no pie
+ * chart (explicitly avoided per the design brief: a pie invites reading
+ * angle instead of the actual number, which is always shown alongside
+ * the bar here). The detailed table below is unchanged and still the
+ * complete, honest record (including the "unknown" bucket). */
+.dashboard-analytics .model-analytics-ranked{list-style:none;margin:0 0 20px;padding:0 0 18px;border-bottom:1px solid var(--qa-analytics-hairline);display:flex;flex-direction:column;gap:10px}
+.dashboard-analytics .model-analytics-ranked__row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-size:11px}
+.dashboard-analytics .model-analytics-ranked__name{font-weight:550;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dashboard-analytics .model-analytics-ranked__value{color:var(--qa-analytics-text-secondary);font-variant-numeric:tabular-nums;flex:none}
+.dashboard-analytics .model-analytics-ranked__track{height:6px;border-radius:3px;background:var(--qa-analytics-hairline);overflow:hidden;margin-top:4px}
+.dashboard-analytics .model-analytics-ranked__bar{height:100%;border-radius:3px;transition:none}
+
 .dashboard-analytics .reset-horizon__ticks{height:38px}.analytics-layout-editor>li[draggable=true]{cursor:grab}
 .dashboard-analytics .dashboard-limits__grid[data-provider-count="1"]{grid-template-columns:minmax(0,1fr)}
 .dashboard-analytics .dashboard-limits__grid[data-provider-count="2"]{grid-template-columns:repeat(2,minmax(0,1fr))}
