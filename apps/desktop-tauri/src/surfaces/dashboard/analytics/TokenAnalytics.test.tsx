@@ -20,6 +20,13 @@ vi.mock("../../../hooks/useLocale", () => ({
         TokenCardCached: "Cached",
         TokenNoBreakdownNote: "Only a daily total is available for this source.",
         TokenCompareHeading: "Shared across providers",
+        TokenCardObservedDays: "Observed Days",
+        TokenCardModels: "Models",
+        TokenScopeLocalDevice: "Local device activity",
+        TokenTrendHeading: "Token trend",
+        PanelTopModelPrefix: "Top model",
+        V3Daily: "Daily",
+        V3Weekly: "Weekly",
         V3ActivityDemo: "Demo mode",
         DashboardValueUnavailable: "Unavailable",
       })[key] ?? key,
@@ -53,6 +60,11 @@ describe("TokenAnalytics", () => {
     tauriMocks.getAnalyticsSourceRegistry.mockResolvedValue([source()]);
     tauriMocks.getCodexWorkspacesSnapshot.mockResolvedValue({
       total: { inputTokens: 100, cachedInputTokens: 20, outputTokens: 50, totalTokens: 150 },
+      modelTotals: [{ model: "gpt-5", totalTokens: 150, lastObserved: null }],
+    });
+    tauriMocks.getProviderChartData.mockResolvedValue({
+      localUsage: { topModel: "gpt-5" },
+      tokensHistory: [],
     });
     render(<TokenAnalytics settings={settings} providerId="codex" isDemo={false} />);
     await waitFor(() => expect(screen.getByText("150")).toBeInTheDocument());
@@ -84,9 +96,10 @@ describe("TokenAnalytics", () => {
     ]);
     tauriMocks.getCodexWorkspacesSnapshot.mockResolvedValue({
       total: { inputTokens: 100, cachedInputTokens: 20, outputTokens: 50, totalTokens: 150 },
+      modelTotals: [{ model: "gpt-5", totalTokens: 150, lastObserved: null }],
     });
     tauriMocks.getProviderChartData.mockResolvedValue({
-      localUsage: { thirtyDayTokens: 4200 },
+      localUsage: { thirtyDayTokens: 4200, topModel: "claude-opus" },
       tokensHistory: [],
     });
     render(<TokenAnalytics settings={settings} providerId={null} isDemo={false} />);
@@ -107,7 +120,9 @@ describe("TokenAnalytics", () => {
     tauriMocks.getAnalyticsSourceRegistry.mockResolvedValue([source()]);
     tauriMocks.getCodexWorkspacesSnapshot.mockResolvedValue({
       total: { inputTokens: 63_747_046_211, cachedInputTokens: 59_510_984_827, outputTokens: 118_632_705, totalTokens: 63_865_678_916 },
+      modelTotals: [],
     });
+    tauriMocks.getProviderChartData.mockResolvedValue({ localUsage: null, tokensHistory: [] });
     render(<TokenAnalytics settings={settings} providerId="codex" isDemo={false} />);
     await waitFor(() => expect(screen.getByText("63.9B")).toBeInTheDocument());
     expect(screen.queryByText("63,865,678,916")).not.toBeInTheDocument();

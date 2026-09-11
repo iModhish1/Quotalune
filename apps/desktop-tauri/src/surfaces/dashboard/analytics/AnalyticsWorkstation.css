@@ -107,6 +107,15 @@
 .dashboard-analytics .analytics-overview-source__meta{font-size:9px;color:var(--qa-analytics-text-secondary);letter-spacing:.02em}
 @media(max-width:720px){.dashboard-analytics .analytics-overview-ribbon{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-analytics .analytics-overview-sources{grid-template-columns:1fr}}
 
+/* Analytics -> Tokens: the shared 180px-minimum auto-fit in
+ * analyticsPrimitives.css leaves 2 trailing empty cells whenever a
+ * provider card has 5-6 real fields at the panel's typical ~880px width
+ * (4 columns fit, not 6) -- same asymmetric-row defect as Overview's
+ * ribbon, same fix: a narrower minimum so a 6-field card (Codex: Total/
+ * Input/Cached/Output/Observed Days/Models) fits one row. */
+.dashboard-analytics .token-analytics-provider .analytics-metric-ribbon{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+@media(max-width:720px){.dashboard-analytics .token-analytics-provider .analytics-metric-ribbon{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
 .dashboard-analytics .reset-horizon__ticks{height:38px}.analytics-layout-editor>li[draggable=true]{cursor:grab}
 .dashboard-analytics .dashboard-limits__grid[data-provider-count="1"]{grid-template-columns:minmax(0,1fr)}
 .dashboard-analytics .dashboard-limits__grid[data-provider-count="2"]{grid-template-columns:repeat(2,minmax(0,1fr))}

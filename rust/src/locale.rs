@@ -770,6 +770,10 @@ locale_keys! {
     TokenCardCached,
     TokenNoBreakdownNote,
     TokenCompareHeading,
+    TokenCardObservedDays,
+    TokenCardModels,
+    TokenScopeLocalDevice,
+    TokenTrendHeading,
     // Analytics -> Models (capability-gated on AnalyticsCapabilities.models).
     // Codex-only real ranked breakdown (ModelUsage); Claude shows only its
     // single topModel guess with an explicit no-breakdown note -- see
