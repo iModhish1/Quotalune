@@ -7,7 +7,8 @@
 
 use quotalis_core::core::OpenAIDashboardCacheStore;
 use quotalis_core::cost_scanner::{
-    CostScanner, CostSummary, get_daily_cost_history, get_daily_token_history,
+    CostScanner, CostSummary, get_claude_local_activity, get_daily_cost_history,
+    get_daily_token_history,
 };
 use quotalis_core::locale::{self, LocaleKey};
 use serde::{Deserialize, Serialize};
@@ -200,6 +201,10 @@ fn load_local_usage_summary_with_unknown_models(
     provider_id: &str,
     cancel: Option<&AtomicBool>,
 ) -> (Option<ProviderLocalUsageSummary>, HashSet<String>) {
+    if provider_id == "claude" {
+        return load_claude_local_usage_summary(cancel);
+    }
+
     let Some(thirty_day) = scan_local_cost(provider_id, 30, cancel) else {
         return (None, HashSet::new());
     };
@@ -237,6 +242,39 @@ fn load_local_usage_summary_with_unknown_models(
             token_cost_updated_at_ms: current_unix_ms(),
         }),
         unknown_models,
+    )
+}
+
+/// Phase 3E: Claude's local-usage summary now comes from ONE shared
+/// traversal (`get_claude_local_activity`) instead of two separate
+/// 30-day/1-day `scan_claude_with_cancel` walks -- see
+/// docs/validation/ANALYTICS_PHASE3E_UNIFIED_CLAUDE_QUERY.md. Semantics
+/// preserved exactly: `today_cost`/`thirty_day_cost` were always `None`
+/// for Claude before this change too (billing-channel ineligible), so
+/// hardcoding them here changes nothing observable.
+fn load_claude_local_usage_summary(
+    cancel: Option<&AtomicBool>,
+) -> (Option<ProviderLocalUsageSummary>, HashSet<String>) {
+    let activity = get_claude_local_activity(30, None, cancel);
+    if cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)) {
+        return (None, activity.unknown_models);
+    }
+    if activity.trailing_tokens == 0 {
+        return (None, activity.unknown_models);
+    }
+
+    let lang = locale::current_language();
+    (
+        Some(ProviderLocalUsageSummary {
+            today_cost: None,
+            thirty_day_cost: None,
+            thirty_day_tokens: non_zero_u64(activity.trailing_tokens),
+            latest_tokens: non_zero_u64(activity.today_tokens),
+            top_model: activity.top_model.clone(),
+            estimate_note: localized_estimate_note("claude", lang),
+            token_cost_updated_at_ms: current_unix_ms(),
+        }),
+        activity.unknown_models,
     )
 }
 

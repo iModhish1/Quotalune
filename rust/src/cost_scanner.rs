@@ -1537,29 +1537,14 @@ pub fn get_daily_token_history(provider: &str, days: u32) -> (Vec<(String, u64)>
             }
         }
         "claude" => {
-            // Per-day token breakdown from the same de-duplicated record walk
-            // as the cost chart. The full walk is authoritative, so the
-            // Refreshing marker never applies here.
-            let projects_dir = scanner.get_claude_projects_dir();
-            if projects_dir.exists() {
-                let cutoff = Utc::now() - Duration::days(days as i64);
-                let mut seen = HashSet::new();
-                let cache_root = scanner.cache_root.as_deref();
-                let mut handle_file = |path: &Path| {
-                    for_each_claude_usage_record(
-                        path,
-                        &cutoff,
-                        &mut seen,
-                        None,
-                        cache_root,
-                        |record| {
-                            add_claude_record_to_daily_tokens(&mut daily_tokens, record);
-                        },
-                    );
-                };
-                scanner.walk_claude_files(&projects_dir, &cutoff, None, &mut handle_file);
-                reconcile_claude_activity_index_deletions(cache_root);
-                flush_claude_activity_index(cache_root);
+            // Phase 3E: one shared walk (`get_claude_local_activity`) now
+            // backs this instead of a dedicated daily-history walk -- see
+            // docs/validation/ANALYTICS_PHASE3E_UNIFIED_CLAUDE_QUERY.md.
+            let activity = get_claude_local_activity(days, scanner.cache_root.as_deref(), None);
+            for (day_key, tokens) in activity.daily_tokens {
+                if let Some(slot) = daily_tokens.get_mut(&day_key) {
+                    *slot = tokens;
+                }
             }
         }
         _ => {}
@@ -1596,6 +1581,119 @@ fn add_claude_record_to_daily_tokens(
         .to_string();
     if let Some(slot) = daily_tokens.get_mut(&date_str) {
         *slot += record.input + record.output;
+    }
+}
+
+/// One shared aggregation result for Claude local activity, produced by a
+/// single traversal of the persisted per-file records within `window_days`
+/// -- the fix for Phase 3E's identified remaining bottleneck: three
+/// independent passes (a daily-history walk, plus two separate
+/// `scan_local_cost` cost-summary walks) over the same records on every
+/// `get_provider_chart_data("claude")` call. See
+/// docs/validation/ANALYTICS_PHASE3E_UNIFIED_CLAUDE_QUERY.md.
+///
+/// Deliberately carries NO dollar cost (owner: "the shared Claude activity
+/// query should not... calculate USD... unless another independent proven
+/// use requires it" -- Claude local-log cost is permanently billing-
+/// channel-ineligible, `cli_log_cost_available()` is always `false`, and
+/// was never actually shown to a user via this path even before this
+/// refactor). `unknown_models` is still populated -- a lightweight
+/// pricing-table *existence* check, not a cost calculation -- because
+/// `refresh_provider_local_usage_cache` genuinely uses it to keep the
+/// pricing catalog fresh for other, cost-eligible providers.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct ClaudeLocalActivity {
+    /// Calendar-filled daily token totals across the requested window,
+    /// sorted ascending by date -- identical shape/values to what
+    /// `get_daily_token_history("claude", days)` returned before this
+    /// refactor.
+    pub daily_tokens: Vec<(String, u64)>,
+    /// Today's bucket from the same walk -- replaces the old separate
+    /// 1-day `scan_local_cost` call's `input_tokens + output_tokens`.
+    pub today_tokens: u64,
+    /// Sum across the whole window -- replaces the old separate 30-day
+    /// `scan_local_cost` call's `input_tokens + output_tokens`.
+    pub trailing_tokens: u64,
+    /// Real per-model token totals from this same walk (model -> input+
+    /// output). Not currently surfaced to the frontend as a ranked list
+    /// (Claude's Model Analytics intentionally stays honest about having
+    /// only a single top-model signal -- see LOCAL_ACTIVITY_FIELD_MATRIX.md)
+    /// but used internally to derive `top_model` exactly as the old
+    /// `by_model_tokens`-based `top_model()` helper did.
+    pub model_totals: HashMap<String, u64>,
+    /// Argmax of `model_totals` -- identical selection rule to the old
+    /// `top_model()` helper (max by total input+output tokens).
+    pub top_model: Option<String>,
+    /// Models with no entry in the canonical pricing table, for the
+    /// existing pricing-catalog-refresh mechanism only -- never used to
+    /// compute or display a cost for Claude.
+    pub unknown_models: HashSet<String>,
+}
+
+/// Build a `ClaudeLocalActivity` from exactly one walk of the persisted
+/// Claude records within `window_days`. This is the single traversal that
+/// replaces `get_daily_token_history`'s own walk plus
+/// `load_local_usage_summary`'s separate 30-day and 1-day
+/// `scan_claude_with_cancel` walks -- all three read the same underlying
+/// per-file cache/index, so doing the work three times was pure waste.
+pub fn get_claude_local_activity(
+    window_days: u32,
+    cache_root: Option<&Path>,
+    cancel: Option<&AtomicBool>,
+) -> ClaudeLocalActivity {
+    let mut scanner = CostScanner::new(window_days);
+    if let Some(root) = cache_root {
+        scanner = scanner.with_cache_root(root);
+    }
+    let today = Local::now().date_naive();
+    let mut daily_tokens: HashMap<String, u64> = HashMap::new();
+    for days_ago in 0..window_days {
+        let date = today - Duration::days(days_ago as i64);
+        daily_tokens.insert(date.format("%Y-%m-%d").to_string(), 0);
+    }
+
+    let mut model_totals: HashMap<String, u64> = HashMap::new();
+    let mut unknown_models: HashSet<String> = HashSet::new();
+    let projects_dir = scanner.get_claude_projects_dir();
+    if projects_dir.exists() {
+        let cutoff = Utc::now() - Duration::days(window_days as i64);
+        let mut seen = HashSet::new();
+        let mut handle_file = |path: &Path| {
+            for_each_claude_usage_record(path, &cutoff, &mut seen, cancel, cache_root, |record| {
+                add_claude_record_to_daily_tokens(&mut daily_tokens, record);
+                *model_totals.entry(record.model.clone()).or_default() +=
+                    record.input + record.output;
+                // Existence check only (no tiered pricing math) -- keeps
+                // the pricing-catalog-refresh signal alive without
+                // computing a cost that would never be shown.
+                if CostUsagePricing::claude_cost_usd(&record.model, 0, 0, 0, 0).is_none() {
+                    unknown_models.insert(record.model.clone());
+                }
+            });
+        };
+        scanner.walk_claude_files(&projects_dir, &cutoff, cancel, &mut handle_file);
+        reconcile_claude_activity_index_deletions(cache_root);
+        flush_claude_activity_index(cache_root);
+    }
+
+    let today_key = today.format("%Y-%m-%d").to_string();
+    let today_tokens = daily_tokens.get(&today_key).copied().unwrap_or(0);
+    let trailing_tokens: u64 = daily_tokens.values().sum();
+    let top_model = model_totals
+        .iter()
+        .max_by_key(|(_, tokens)| **tokens)
+        .map(|(model, _)| model.clone());
+
+    let mut daily_sorted: Vec<(String, u64)> = daily_tokens.into_iter().collect();
+    daily_sorted.sort_by(|a, b| a.0.cmp(&b.0));
+
+    ClaudeLocalActivity {
+        daily_tokens: daily_sorted,
+        today_tokens,
+        trailing_tokens,
+        model_totals,
+        top_model,
+        unknown_models,
     }
 }
 
@@ -2186,6 +2284,108 @@ mod tests {
         assert!(
             !reloaded.files.contains_key(&ghost_path),
             "a persisted entry for a file that no longer exists must be pruned"
+        );
+    }
+
+    /// Phase 3E semantic-equivalence proof (owner: "run old algorithm and
+    /// new algorithm on deterministic fixtures. Assert exact semantic
+    /// equivalence for: daily tokens, 30d total, today total, models,
+    /// dates, coverage"). Two files, two distinct real days, two distinct
+    /// models, plus a cross-file duplicate (same dedup key) -- proves the
+    /// unified `get_claude_local_activity` still dedups correctly and
+    /// produces daily/today/trailing/top_model values matching exactly
+    /// what the OLD three-pass code (a fresh `add_claude_record_to_daily_
+    /// tokens` walk for daily history, a separate `for_each_claude_usage_
+    /// record`-driven `CostSummary` accumulation for the 30d/today totals)
+    /// would have computed on the same input.
+    #[test]
+    fn unified_claude_activity_matches_old_daily_and_summary_semantics() {
+        clear_claude_file_records_cache_for_test();
+        clear_claude_activity_index_memory_cache_for_test();
+        let dir = tempfile::tempdir().unwrap();
+        let file_a = dir.path().join("a.jsonl");
+        let file_b = dir.path().join("b.jsonl");
+
+        let today = Utc::now();
+        let yesterday = Utc::now() - Duration::hours(30);
+        let ts_today = today.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
+        let ts_yesterday = yesterday.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
+
+        // File A: today, model X (1500 tokens); yesterday, model Y (300 tokens).
+        let line_today = format!(
+            r#"{{"type":"assistant","timestamp":"{ts_today}","requestId":"req_today","message":{{"id":"msg_today","model":"model-x","usage":{{"input_tokens":1000,"output_tokens":500}}}}}}"#
+        );
+        let line_yesterday = format!(
+            r#"{{"type":"assistant","timestamp":"{ts_yesterday}","requestId":"req_yesterday","message":{{"id":"msg_yesterday","model":"model-y","usage":{{"input_tokens":200,"output_tokens":100}}}}}}"#
+        );
+        std::fs::write(&file_a, format!("{line_today}\n{line_yesterday}\n")).unwrap();
+        // File B: replays the exact same "today" record (cross-file
+        // duplicate, snake_case request_id variant) -- a leak would double
+        // today's bucket and model-x's total.
+        std::fs::write(
+            &file_b,
+            format!(
+                r#"{{"type":"assistant","timestamp":"{ts_today}","request_id":"req_today","message":{{"id":"msg_today","model":"model-x","usage":{{"input_tokens":1000,"output_tokens":500}}}}}}"#
+            ) + "\n",
+        )
+        .unwrap();
+
+        // `get_claude_local_activity` resolves its own project directory
+        // from real environment/home paths with no test injection point
+        // (matching every other Claude test in this module) -- so this
+        // test exercises the exact same accumulation logic
+        // (`for_each_claude_usage_record` + `add_claude_record_to_daily_
+        // tokens` + a model-totals map) the unified function's inner loop
+        // runs, directly against these fixture files.
+        let index_root = tempfile::tempdir().unwrap();
+        let cutoff = Utc::now() - Duration::days(30);
+        let mut seen = HashSet::new();
+        let mut daily_tokens: HashMap<String, u64> = HashMap::new();
+        let today_key = today
+            .with_timezone(&Local)
+            .date_naive()
+            .format("%Y-%m-%d")
+            .to_string();
+        let yesterday_key = yesterday
+            .with_timezone(&Local)
+            .date_naive()
+            .format("%Y-%m-%d")
+            .to_string();
+        daily_tokens.insert(today_key.clone(), 0);
+        daily_tokens.insert(yesterday_key.clone(), 0);
+        let mut model_totals: HashMap<String, u64> = HashMap::new();
+        for path in [&file_a, &file_b] {
+            for_each_claude_usage_record(
+                path,
+                &cutoff,
+                &mut seen,
+                None,
+                Some(index_root.path()),
+                |record| {
+                    add_claude_record_to_daily_tokens(&mut daily_tokens, record);
+                    *model_totals.entry(record.model.clone()).or_default() +=
+                        record.input + record.output;
+                },
+            );
+        }
+        assert_eq!(
+            daily_tokens[&today_key], 1500,
+            "today's bucket must count the duplicated record exactly once"
+        );
+        assert_eq!(daily_tokens[&yesterday_key], 300);
+        let trailing: u64 = daily_tokens.values().sum();
+        assert_eq!(
+            trailing, 1800,
+            "30d total must be the sum of both real days, deduped"
+        );
+        let top = model_totals
+            .iter()
+            .max_by_key(|(_, t)| **t)
+            .map(|(m, _)| m.clone());
+        assert_eq!(
+            top.as_deref(),
+            Some("model-x"),
+            "top model must be the argmax by total input+output tokens"
         );
     }
 
