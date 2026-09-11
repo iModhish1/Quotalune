@@ -4,6 +4,7 @@
 //! while giving the rewrite a stable crate dependency for future shells.
 
 pub mod agent_sessions;
+pub mod analytics_sources;
 pub mod browser;
 pub mod cli;
 pub mod codex_accounts;

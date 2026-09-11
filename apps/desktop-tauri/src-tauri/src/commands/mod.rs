@@ -30,6 +30,7 @@ mod updater;
 mod usage_spend;
 
 mod agent_sessions;
+mod analytics_sources;
 mod bridge;
 mod browser_import;
 mod codex_accounts;
@@ -48,6 +49,7 @@ mod surface;
 mod system;
 
 pub use agent_sessions::*;
+pub use analytics_sources::*;
 pub(crate) use bridge::*;
 pub use browser_import::*;
 pub use codex_accounts::*;

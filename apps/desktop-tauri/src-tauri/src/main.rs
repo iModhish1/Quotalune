@@ -436,6 +436,7 @@ fn main() {
             commands::write_usage_spend_export,
             commands::get_spend_contract,
             commands::get_codex_workspaces_snapshot,
+            commands::get_analytics_source_registry,
             commands::reorder_providers,
             commands::set_provider_cookie_source,
             commands::set_provider_usage_source,
