@@ -13,7 +13,7 @@ use crate::core::{CostUsageDayRange, CostUsagePricing, JsonlScanner, sha256_hex}
 
 use super::sidecar::{SidecarError, WorkspaceUsageSidecar};
 use super::types::{
-    CodexLocalProjectUsageSnapshot, CostEstimate, DailyPoint, Progress, ProgressPhase,
+    CodexLocalProjectUsageSnapshot, CostEstimate, DailyPoint, ModelUsage, Progress, ProgressPhase,
     ProjectUsage, SessionUsage, SourceStatus, UsageTotals,
 };
 use super::{CHATS_DISPLAY_NAME, CHATS_PROJECT_ID};
@@ -244,6 +244,8 @@ impl CodexWorkspacesIndex {
             .collect();
         daily.sort_by(|a, b| a.day.cmp(&b.day));
 
+        let model_totals = build_model_totals(&session_buckets);
+
         let mut sessions: Vec<SessionUsage> = session_buckets
             .values()
             .map(SessionBucket::to_session_usage)
@@ -265,6 +267,7 @@ impl CodexWorkspacesIndex {
             projects,
             daily,
             source_status,
+            model_totals,
         };
 
         progress(Progress::phase(ProgressPhase::Saving));
@@ -379,6 +382,49 @@ struct DailyAcc {
     cached_input_tokens: u64,
     known_usd: f64,
     unknown_tokens: u64,
+}
+
+/// Global per-model token aggregate across every session in the window
+/// (owner: Model Analytics section -- real ranked breakdown, not a
+/// dominant-model proxy). Sums each session's already-parsed
+/// `model_tokens` map and tracks the latest `latest_activity` seen for
+/// that model, then ranks descending by total tokens (ties broken by
+/// model id for determinism).
+fn build_model_totals(sessions: &HashMap<String, SessionBucket>) -> Vec<ModelUsage> {
+    let mut totals: HashMap<String, u64> = HashMap::new();
+    let mut last_observed: HashMap<String, DateTime<Utc>> = HashMap::new();
+    for session in sessions.values() {
+        for (model, tokens) in &session.model_tokens {
+            *totals.entry(model.clone()).or_default() += *tokens;
+            if let Some(activity) = session.latest_activity {
+                last_observed
+                    .entry(model.clone())
+                    .and_modify(|existing| {
+                        if activity > *existing {
+                            *existing = activity;
+                        }
+                    })
+                    .or_insert(activity);
+            }
+        }
+    }
+    let mut ranked: Vec<ModelUsage> = totals
+        .into_iter()
+        .map(|(model, total_tokens)| {
+            let last_observed = last_observed.get(&model).copied();
+            ModelUsage {
+                model,
+                total_tokens,
+                last_observed,
+            }
+        })
+        .collect();
+    ranked.sort_by(|a, b| {
+        b.total_tokens
+            .cmp(&a.total_tokens)
+            .then_with(|| a.model.cmp(&b.model))
+    });
+    ranked
 }
 
 fn build_projects(sessions: &HashMap<String, SessionBucket>) -> Vec<ProjectUsage> {
@@ -839,6 +885,68 @@ mod tests {
     }
 
     #[test]
+    fn model_totals_ranks_models_by_real_token_sum_across_sessions() {
+        let tmp = TempDir::new().unwrap();
+        let home = tmp.path().join("codex");
+        let sessions = home.join("sessions");
+        fs::create_dir_all(&sessions).unwrap();
+        let day = Local::now().date_naive().format("%Y-%m-%d").to_string();
+
+        // Two sessions on gpt-5 (1500 + 2100 = 3600 tokens), one on
+        // gpt-5-mini (150 tokens) -- gpt-5 must rank first.
+        write_session(
+            &sessions,
+            &day,
+            "sess-aaa.jsonl",
+            &tmp.path().join("proj-a").to_string_lossy(),
+            "gpt-5",
+            1000,
+            500,
+        );
+        write_session(
+            &sessions,
+            &day,
+            "sess-bbb.jsonl",
+            &tmp.path().join("proj-b").to_string_lossy(),
+            "gpt-5",
+            2000,
+            100,
+        );
+        write_session(
+            &sessions,
+            &day,
+            "sess-ccc.jsonl",
+            &tmp.path().join("proj-a").to_string_lossy(),
+            "gpt-5-mini",
+            100,
+            50,
+        );
+        fs::create_dir_all(tmp.path().join("proj-a")).unwrap();
+        fs::create_dir_all(tmp.path().join("proj-b")).unwrap();
+
+        let sidecar = tmp.path().join("sidecar.sqlite");
+        let index = CodexWorkspacesIndex::new(30)
+            .with_codex_home(&home)
+            .with_sidecar_path(&sidecar);
+        let snap = index.load_snapshot(true, |_| {}).expect("snapshot");
+
+        assert_eq!(
+            snap.model_totals.len(),
+            2,
+            "exactly the two real models seen, no invented entries"
+        );
+        assert_eq!(snap.model_totals[0].model, "gpt-5");
+        assert_eq!(snap.model_totals[0].total_tokens, 3600);
+        assert_eq!(snap.model_totals[1].model, "gpt-5-mini");
+        assert_eq!(snap.model_totals[1].total_tokens, 150);
+        assert!(snap.model_totals[0].last_observed.is_some());
+        // Global sum across models must equal the snapshot's own total --
+        // no double counting, no dropped session.
+        let sum: u64 = snap.model_totals.iter().map(|m| m.total_tokens).sum();
+        assert_eq!(sum, snap.total.input_tokens + snap.total.output_tokens);
+    }
+
+    #[test]
     fn foreign_user_version_is_rejected() {
         let tmp = TempDir::new().unwrap();
         let path = tmp.path().join("bad.sqlite");
@@ -914,6 +1022,7 @@ mod tests {
             }],
             daily: vec![],
             source_status: SourceStatus::Complete,
+            model_totals: vec![],
         };
         snap.redact_for_privacy();
         assert_eq!(snap.projects[0].display_name, "Workspace");

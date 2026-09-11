@@ -149,6 +149,23 @@ pub struct SessionUsage {
     pub top_model: Option<String>,
 }
 
+/// Global per-model token aggregate across every indexed session in the
+/// history window (owner: Model Analytics must show a real ranked
+/// breakdown, not just each session's single `top_model`). `total_tokens`
+/// sums `SessionBucket::model_tokens` across all sessions that used this
+/// model; `last_observed` is the latest `latest_activity` among those
+/// sessions. Codex-only -- Claude's local scanner has no per-message model
+/// attribution beyond a single `topModel` guess (see
+/// docs/validation/LOCAL_ACTIVITY_FIELD_MATRIX.md), so it cannot populate
+/// an equivalent list.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelUsage {
+    pub model: String,
+    pub total_tokens: u64,
+    pub last_observed: Option<DateTime<Utc>>,
+}
+
 /// Per-project usage aggregate.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -180,6 +197,11 @@ pub struct CodexLocalProjectUsageSnapshot {
     pub projects: Vec<ProjectUsage>,
     pub daily: Vec<DailyPoint>,
     pub source_status: SourceStatus,
+    /// Ranked (descending `total_tokens`) global model breakdown. Empty on
+    /// snapshots cached before this field existed -- `#[serde(default)]`
+    /// keeps old sidecar files loadable.
+    #[serde(default)]
+    pub model_totals: Vec<ModelUsage>,
 }
 
 impl CodexLocalProjectUsageSnapshot {

@@ -603,6 +603,16 @@ export interface CodexWorkspacesProjectUsage {
   topSessions: CodexWorkspacesSessionUsage[];
 }
 
+/** Global per-model token aggregate (rust/src/codex_workspaces::ModelUsage).
+ *  Codex-only -- Claude's local scanner has no per-message model
+ *  attribution beyond a single `topModel` guess (field matrix). Ranked
+ *  descending by `totalTokens` server-side; do not re-sort/re-derive here. */
+export interface CodexWorkspacesModelUsage {
+  model: string;
+  totalTokens: number;
+  lastObserved: string | null;
+}
+
 export interface CodexLocalProjectUsageSnapshot {
   updatedAt: string;
   historyDays: number;
@@ -615,6 +625,8 @@ export interface CodexLocalProjectUsageSnapshot {
   projects: CodexWorkspacesProjectUsage[];
   daily: CodexWorkspacesDailyPoint[];
   sourceStatus: CodexWorkspacesSourceStatus;
+  /** Empty on snapshots cached before this field existed. */
+  modelTotals: CodexWorkspacesModelUsage[];
 }
 
 

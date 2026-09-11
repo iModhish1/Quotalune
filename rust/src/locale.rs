@@ -770,6 +770,17 @@ locale_keys! {
     TokenCardCached,
     TokenNoBreakdownNote,
     TokenCompareHeading,
+    // Analytics -> Models (capability-gated on AnalyticsCapabilities.models).
+    // Codex-only real ranked breakdown (ModelUsage); Claude shows only its
+    // single topModel guess with an explicit no-breakdown note -- see
+    // docs/validation/LOCAL_ACTIVITY_FIELD_MATRIX.md.
+    V3Models,
+    V3ModelsHelp,
+    ModelColumnModel,
+    ModelColumnTokens,
+    ModelColumnShare,
+    ModelColumnLastObserved,
+    ModelNoBreakdownNote,
     // Sidebar label for MainRoute::Dashboard — distinct from TrayDashboard
     // (same English text, kept as a separate key per this repo's convention
     // of one key per UI surface, so a future translation can diverge).

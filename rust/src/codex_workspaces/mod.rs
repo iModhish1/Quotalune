@@ -10,7 +10,7 @@ mod types;
 pub use indexer::{CodexLocalDataScope, CodexWorkspacesIndex, IndexError, project_identity};
 pub use sidecar::{PAYLOAD_FORMAT_VERSION, SCHEMA_VERSION, SidecarError, WorkspaceUsageSidecar};
 pub use types::{
-    CodexLocalProjectUsageSnapshot, CostEstimate, DailyPoint, Progress, ProgressPhase,
+    CodexLocalProjectUsageSnapshot, CostEstimate, DailyPoint, ModelUsage, Progress, ProgressPhase,
     ProjectUsage, SessionUsage, SourceStatus, UsageTotals,
 };
 
