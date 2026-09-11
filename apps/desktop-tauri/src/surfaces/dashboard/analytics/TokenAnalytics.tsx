@@ -3,6 +3,7 @@ import { getCodexWorkspacesSnapshot, getProviderChartData } from '../../../lib/t
 import type { CodexWorkspacesUsageTotals, SettingsSnapshot } from '../../../types/bridge';
 import { useLocale } from '../../../hooks/useLocale';
 import { useAnalyticsSources } from '../../../hooks/useAnalyticsSources';
+import { formatCompactTokens, formatExactTokens } from '../../../lib/analytics/formatTokens';
 
 /** Per-provider token totals, kept honest to what each source actually
  *  reports (docs/validation/LOCAL_ACTIVITY_FIELD_MATRIX.md):
@@ -69,16 +70,20 @@ export default function TokenAnalytics({ providerId, isDemo }: { settings: Setti
     return () => { cancelled = true; };
   }, [showClaude]);
 
+  function tokenCard(labelKey: 'TokenCardTotal' | 'TokenCardInput' | 'TokenCardCached' | 'TokenCardOutput', value: number) {
+    return <div><dt>{t(labelKey)}</dt><dd title={formatExactTokens(value)}>{formatCompactTokens(value)}</dd></div>;
+  }
+
   function providerCard(sourceLabel: string, totals: ProviderTokenTotals | null) {
-    if (!totals) return <p role="status">…</p>;
+    if (!totals) return <section className="analytics-section token-analytics-provider" key={sourceLabel}><header><h3><bdi>{sourceLabel}</bdi></h3></header><p role="status">…</p></section>;
     return (
       <section className="analytics-section token-analytics-provider" key={sourceLabel}>
         <header><h3><bdi>{sourceLabel}</bdi></h3></header>
         <dl className="analytics-metric-ribbon">
-          <div><dt>{t('TokenCardTotal')}</dt><dd>{(totals.total ?? 0).toLocaleString()}</dd></div>
-          {totals.breakdown && <div><dt>{t('TokenCardInput')}</dt><dd>{totals.breakdown.inputTokens.toLocaleString()}</dd></div>}
-          {totals.breakdown && <div><dt>{t('TokenCardCached')}</dt><dd>{totals.breakdown.cachedInputTokens.toLocaleString()}</dd></div>}
-          {totals.breakdown && <div><dt>{t('TokenCardOutput')}</dt><dd>{totals.breakdown.outputTokens.toLocaleString()}</dd></div>}
+          {tokenCard('TokenCardTotal', totals.total ?? 0)}
+          {totals.breakdown && tokenCard('TokenCardInput', totals.breakdown.inputTokens)}
+          {totals.breakdown && tokenCard('TokenCardCached', totals.breakdown.cachedInputTokens)}
+          {totals.breakdown && tokenCard('TokenCardOutput', totals.breakdown.outputTokens)}
         </dl>
         {!totals.breakdown && <small className="analytics-note">{t('TokenNoBreakdownNote')}</small>}
       </section>
@@ -92,12 +97,12 @@ export default function TokenAnalytics({ providerId, isDemo }: { settings: Setti
       {error && <p role="status">{t('DashboardValueUnavailable')}</p>}
       {showCodex && providerCard('Codex', codex)}
       {showClaude && providerCard('Claude', claude)}
-      {!providerId && showCodex && showClaude && (
+      {!providerId && showCodex && showClaude && codex && claude && (
         <section className="analytics-section token-analytics-compare">
           <header><h3>{t('TokenCompareHeading')}</h3></header>
           <dl className="analytics-metric-ribbon">
-            <div><dt>Codex</dt><dd>{(codex?.total ?? 0).toLocaleString()}</dd></div>
-            <div><dt>Claude</dt><dd>{(claude?.total ?? 0).toLocaleString()}</dd></div>
+            <div><dt>Codex</dt><dd title={formatExactTokens(codex.total ?? 0)}>{formatCompactTokens(codex.total ?? 0)}</dd></div>
+            <div><dt>Claude</dt><dd title={formatExactTokens(claude.total ?? 0)}>{formatCompactTokens(claude.total ?? 0)}</dd></div>
           </dl>
         </section>
       )}

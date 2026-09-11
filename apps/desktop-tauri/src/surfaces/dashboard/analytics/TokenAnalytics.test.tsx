@@ -71,7 +71,7 @@ describe("TokenAnalytics", () => {
       tokensHistory: [],
     });
     render(<TokenAnalytics settings={settings} providerId="claude" isDemo={false} />);
-    await waitFor(() => expect(screen.getByText("4,200")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("4.2k")).toBeInTheDocument());
     expect(screen.queryByText("Input")).not.toBeInTheDocument();
     expect(screen.queryByText("Cached")).not.toBeInTheDocument();
     expect(screen.getByText("Only a daily total is available for this source.")).toBeInTheDocument();
@@ -93,6 +93,25 @@ describe("TokenAnalytics", () => {
     await waitFor(() => expect(screen.getByText("Shared across providers")).toBeInTheDocument());
     expect(screen.getAllByText("Codex").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Claude").length).toBeGreaterThan(0);
+  });
+
+  /**
+   * Regression test for a real defect found via native inspection against
+   * a machine with tens of billions of accumulated local Codex tokens
+   * (docs/validation/ANALYTICS_PHASE3B_VISUAL_REVIEW.md): the card showed
+   * a raw 11-digit integer ("63,747,046,211") rather than a compact,
+   * readable figure. The exact value must still be recoverable (title
+   * attribute), just not as the primary display text.
+   */
+  it("shows a large real value compactly, not as a raw giant integer", async () => {
+    tauriMocks.getAnalyticsSourceRegistry.mockResolvedValue([source()]);
+    tauriMocks.getCodexWorkspacesSnapshot.mockResolvedValue({
+      total: { inputTokens: 63_747_046_211, cachedInputTokens: 59_510_984_827, outputTokens: 118_632_705, totalTokens: 63_865_678_916 },
+    });
+    render(<TokenAnalytics settings={settings} providerId="codex" isDemo={false} />);
+    await waitFor(() => expect(screen.getByText("63.9B")).toBeInTheDocument());
+    expect(screen.queryByText("63,865,678,916")).not.toBeInTheDocument();
+    expect(screen.getByText("63.9B")).toHaveAttribute("title", "63,865,678,916");
   });
 
   it("skips real IPC calls and shows the demo notice in Demo Mode", async () => {

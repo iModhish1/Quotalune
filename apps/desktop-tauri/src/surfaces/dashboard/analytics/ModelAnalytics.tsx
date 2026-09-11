@@ -4,6 +4,7 @@ import type { CodexWorkspacesModelUsage, SettingsSnapshot } from '../../../types
 import { useLocale } from '../../../hooks/useLocale';
 import { useAnalyticsSources } from '../../../hooks/useAnalyticsSources';
 import { formatRelativeUpdated } from '../../../lib/relativeTime';
+import { formatCompactTokens, formatExactTokens } from '../../../lib/analytics/formatTokens';
 
 /** Analytics -> Models. Capability-gated on `models`. Codex has a real,
  *  ranked per-model token breakdown (`ModelUsage[]`, rust/src/
@@ -75,7 +76,7 @@ export default function ModelAnalytics({ providerId, isDemo }: { settings: Setti
                   {codexModels.map((m) => (
                     <tr key={m.model}>
                       <td><bdi>{m.model}</bdi></td>
-                      <td>{m.totalTokens.toLocaleString()}</td>
+                      <td title={formatExactTokens(m.totalTokens)}>{formatCompactTokens(m.totalTokens)}</td>
                       <td>{codexTotal > 0 ? `${((m.totalTokens / codexTotal) * 100).toFixed(1)}%` : '—'}</td>
                       <td>{formatRelativeUpdated(m.lastObserved ? Date.parse(m.lastObserved) : null, t)}</td>
                     </tr>

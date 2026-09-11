@@ -61,7 +61,7 @@ describe("ModelAnalytics", () => {
     render(<ModelAnalytics settings={settings} providerId="codex" isDemo={false} />);
     await waitFor(() => expect(screen.getByText("gpt-5")).toBeInTheDocument());
     expect(screen.getByText("gpt-5-mini")).toBeInTheDocument();
-    expect(screen.getByText("3,600")).toBeInTheDocument();
+    expect(screen.getByText("3.6k")).toBeInTheDocument();
     // 3600 / 3750 = 96.0%
     expect(screen.getByText("96.0%")).toBeInTheDocument();
     expect(screen.getByText("4.0%")).toBeInTheDocument();
