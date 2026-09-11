@@ -12,6 +12,7 @@ import LocalActivity from "./LocalActivity";
 import TokenAnalytics from "./TokenAnalytics";
 import ModelAnalytics from "./ModelAnalytics";
 import AnalyticsOverview from "./AnalyticsOverview";
+import MonetaryAnalytics from "./MonetaryAnalytics";
 import CoverageHeatmap from "./CoverageHeatmap";
 import ProviderUsageMatrix from "./ProviderUsageMatrix";
 import KpiRow from "./KpiRow";
@@ -114,13 +115,23 @@ export default function DashboardAnalyticsPanel({
       : t("DashboardHistoryChipDays").replace("{}", String(days));
   }, [snapshot, t]);
 
-  const allTabs=[['overview','V3Overview'],['usage','V3Usage'],['tokens','V3Tokens'],['models','V3Models'],['activity','V3Activity'],['resets','V3Resets'],['providers','TabProviders'],['history','V3History'],['quality','V2DataQuality']] as const;
+  const allTabs=[['overview','V3Overview'],['usage','V3Usage'],['tokens','V3Tokens'],['models','V3Models'],['activity','V3Activity'],['resets','V3Resets'],['providers','TabProviders'],['monetary','V3Monetary'],['history','V3History'],['quality','V2DataQuality']] as const;
   const tabs=allTabs.filter(([id])=>{
     if(id==='models')return hasCapability('models');
     if(id==='tokens')return hasCapability('tokens');
     if(id==='activity')return hasCapability('tokens')||hasCapability('dailyActivity');
+    if(id==='monetary')return hasCapability('monetary');
     return true;
   });
+  // If the selected section's capability disappears out from under it
+  // (a source stops reporting, or Demo Mode is exited) the nav button for
+  // that section vanishes, but without this the content pane would just
+  // go blank with no tab marked current -- a dead-looking screen rather
+  // than a real destination. Route back to the one section that always
+  // exists instead.
+  useEffect(() => {
+    if (!tabs.some(([id]) => id === section)) setSection('overview');
+  }, [tabs, section]);
   const selectedProvider=liveProviders.find(p=>p.providerId===providerFilter);
   return <div className={`dashboard-analytics dashboard-cosmic product-v3 ${view==='analytics'?'analytics-center':'operational-overview'}`} style={structureThemeStyle} data-light={Boolean(theme.material?.light)} data-density={settings.workspacePreferences?.density??'comfortable'} data-chart-style={preferences.chartStyle}>
     <header className="v3-page-header"><div><h2>{t(view==='analytics'?'V3Analytics':'V3Overview')}</h2><p>{t(view==='analytics'?'V3AnalyticsHelp':'V3OperationalHelp')}</p></div>{view==='overview'&&<button type="button" onClick={()=>onAnalytics?.()}>{t('V3ViewAnalytics')} ↗</button>}{provenance==='demo'&&<DemoIndicator providerCount={liveProviders.length} onExit={()=>onExitDemo?.()}/>}</header>
@@ -141,6 +152,7 @@ export default function DashboardAnalyticsPanel({
       {section==='activity'&&(provenance==='demo'||hasCapability('tokens')||hasCapability('dailyActivity'))&&<LocalActivity settings={settings} isDemo={provenance==='demo'} providerId={providerFilter}/>}
       {section==='resets'&&<ResetHorizon models={models} settings={settings} now={now} resets={model.resetHorizon}/>}
       {section==='providers'&&<><div className="v3-provider-links">{liveProviders.map(p=><button type="button" key={p.providerId} onClick={()=>setProviderFilter(p.providerId)}><ProviderIcon providerId={p.providerId} size={18}/><bdi>{p.displayName}</bdi><ProviderPlanBadge plan={p.planName}/></button>)}</div><ProviderOperationsTable models={models} settings={settings} now={now}/><QuotaComparison series={series} providers={liveProviders} settings={settings}/></>}
+      {section==='monetary'&&(provenance==='demo'||hasCapability('monetary'))&&<MonetaryAnalytics snapshot={snapshot} providerId={providerFilter} isDemo={provenance==='demo'}/>}
       {section==='history'&&<><QuotaHistory series={series} snapshot={snapshot} settings={settings} preferences={preferences}/><details className="cosmic-disclosure"><summary>{t('V2LegacyHistory')}</summary><p>{t('V2LegacyHistoryHelp')}</p><UsageTrendSection snapshot={snapshot}/></details></>}
       {section==='quality'&&<><ProviderUsageMatrix model={model} providers={liveProviders} settings={settings} onProvider={setProviderFilter}/><QuotaCoverage series={series} snapshot={snapshot} settings={settings}/><CoverageHeatmap model={model} settings={settings} preferences={preferences} providers={liveProviders}/><details className="cosmic-disclosure"><summary>{t('V2DataQuality')}</summary><DataStatusPanel snapshot={snapshot}/></details></>}
     </>}
