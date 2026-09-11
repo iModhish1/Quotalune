@@ -17,8 +17,10 @@ use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
-/// Maximum retained Codex JSONL line size (upstream session-metadata bound).
-const CODEX_JSONL_MAX_LINE_BYTES: usize = 256 * 1024;
+/// Maximum retained JSONL line size for both the Codex and Claude local
+/// scanners (upstream session-metadata bound) -- see
+/// [`read_bounded_jsonl_line`].
+pub(crate) const CODEX_JSONL_MAX_LINE_BYTES: usize = 256 * 1024;
 
 /// Default scanner-side refresh debounce (upstream CostUsageScanner).
 pub const DEFAULT_COST_SCAN_REFRESH_MIN_INTERVAL_SECS: u64 = 60;
@@ -604,7 +606,13 @@ fn contained_total_delta(
 
 /// Read one JSONL line, discarding content when it exceeds `max_bytes`.
 /// Returns `(line_without_newline, bytes_consumed_including_newline)`.
-fn read_bounded_jsonl_line<R: BufRead>(
+///
+/// `pub(crate)` so `cost_scanner.rs`'s Claude transcript reader
+/// (`for_each_jsonl_text_line`) can share this bound instead of using an
+/// unbounded `read_until` -- a single pathological or corrupted line in a
+/// Claude transcript previously had no size cap at all, unlike this
+/// Codex-side reader.
+pub(crate) fn read_bounded_jsonl_line<R: BufRead>(
     reader: &mut R,
     max_bytes: usize,
 ) -> std::io::Result<Option<(Vec<u8>, usize)>> {

@@ -98,8 +98,8 @@ use crate::codex_costs::{
 };
 use crate::codex_sessions::{codex_sessions_dir_candidates, default_wsl_roots};
 use crate::core::{
-    CostScanOptions, CostUsageCache, CostUsageDayRange, CostUsageFileUsage, CostUsagePricing,
-    JsonlScanner, ProviderId,
+    CODEX_JSONL_MAX_LINE_BYTES, CostScanOptions, CostUsageCache, CostUsageDayRange,
+    CostUsageFileUsage, CostUsagePricing, JsonlScanner, ProviderId, read_bounded_jsonl_line,
 };
 use crate::providers::opencodego::local as opencodego_local;
 use crate::settings::Settings;
@@ -456,6 +456,23 @@ impl CostScanner {
             cache_root: None,
             sessions_dirs_override: None,
         }
+    }
+
+    /// Cheap availability check for the analytics source registry
+    /// (`analytics_sources.rs`) -- true when at least one real Codex
+    /// sessions directory exists on this machine, without scanning any
+    /// file contents. Kept here rather than duplicating the directory
+    /// discovery logic (`CODEX_HOME`/WSL roots/custom dirs) elsewhere.
+    pub fn codex_local_activity_available(&self) -> bool {
+        self.get_codex_sessions_dirs()
+            .iter()
+            .any(|dir| dir.exists())
+    }
+
+    /// Same, for Claude -- true when the real Claude projects directory
+    /// exists, without scanning any transcript contents.
+    pub fn claude_local_activity_available(&self) -> bool {
+        self.get_claude_projects_dir().exists()
     }
 
     /// Override scan options (e.g. [`CostScanOptions::app_driven`] for force refresh).
@@ -945,23 +962,26 @@ where
 
 /// Walk JSONL text lines from `reader`, including a final incomplete line at EOF.
 /// Continues past invalid UTF-8 segments. `on_line` returns `false` to stop early.
+///
+/// Uses [`read_bounded_jsonl_line`] (shared with the Codex scanner) rather
+/// than an unbounded `read_until` -- a single pathological or corrupted
+/// line in a Claude transcript previously had no size cap at all: a
+/// multi-gigabyte line with no newline would grow an unbounded buffer
+/// until OOM. An oversized line is now discarded (matching Codex's own
+/// documented behavior) rather than parsed or allowed to exhaust memory;
+/// parsing resumes cleanly at the next line.
 fn for_each_jsonl_text_line<R, F>(mut reader: R, mut on_line: F)
 where
     R: BufRead,
     F: FnMut(&str) -> bool,
 {
-    let mut buf = Vec::new();
-    loop {
-        buf.clear();
-        match reader.read_until(b'\n', &mut buf) {
-            Ok(0) => break,
-            Ok(_) => {}
-            Err(_) => break,
+    while let Ok(Some((mut line, _consumed))) =
+        read_bounded_jsonl_line(&mut reader, CODEX_JSONL_MAX_LINE_BYTES)
+    {
+        while matches!(line.last(), Some(b'\n' | b'\r')) {
+            line.pop();
         }
-        while matches!(buf.last(), Some(b'\n' | b'\r')) {
-            buf.pop();
-        }
-        let Ok(line) = std::str::from_utf8(&buf) else {
+        let Ok(line) = std::str::from_utf8(&line) else {
             continue;
         };
         if !on_line(line) {
@@ -1281,6 +1301,32 @@ fn add_claude_record_to_daily_tokens(
 mod tests {
     use super::*;
     use std::io::Write;
+
+    #[test]
+    fn claude_jsonl_reader_discards_oversized_line_and_recovers_next_line() {
+        // Reproduces the security finding this test guards against: before
+        // for_each_jsonl_text_line used the shared bounded reader, a
+        // single pathological line with no newline (or an enormous one)
+        // grew an unbounded in-memory buffer. Now it must discard the
+        // oversized line and still yield the next valid one.
+        let padding = "x".repeat(CODEX_JSONL_MAX_LINE_BYTES + 1024);
+        let input = format!("{{\"oversized\":\"{padding}\"}}\n{{\"type\":\"assistant\"}}\n");
+        let mut seen = Vec::new();
+        for_each_jsonl_text_line(std::io::Cursor::new(input.into_bytes()), |line| {
+            seen.push(line.to_string());
+            true
+        });
+        assert_eq!(
+            seen.len(),
+            2,
+            "the oversized line and the valid line after it must both be visited, not one dropped or hung"
+        );
+        assert!(
+            seen[0].is_empty() || seen[0].len() <= CODEX_JSONL_MAX_LINE_BYTES,
+            "oversized line content must be discarded, never retained past the cap"
+        );
+        assert_eq!(seen[1], r#"{"type":"assistant"}"#);
+    }
 
     #[test]
     fn test_unknown_model_falls_back_to_sonnet() {

@@ -482,9 +482,16 @@ impl CodexRolloutFirstLineParser {
         })
     }
 
+    /// Bounded to [`FIRST_LINE_MAX_BYTES`] -- an unbounded `read_line`
+    /// here would allocate without limit if a rollout file's first line
+    /// were enormous (malformed or corrupted). A line at or past the
+    /// cap is truncated mid-content, which then fails to parse as valid
+    /// session-metadata JSON downstream and correctly yields `None`
+    /// rather than ever growing memory unboundedly.
     pub fn read_first_line(path: &Path) -> Option<String> {
+        const FIRST_LINE_MAX_BYTES: u64 = 256 * 1024;
         let file = File::open(path).ok()?;
-        let mut reader = BufReader::new(file);
+        let mut reader = BufReader::new(file).take(FIRST_LINE_MAX_BYTES);
         let mut line = String::new();
         let bytes = reader.read_line(&mut line).ok()?;
         if bytes == 0 {

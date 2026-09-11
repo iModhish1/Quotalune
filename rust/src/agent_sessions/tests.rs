@@ -6,6 +6,33 @@ mod tests {
     use std::sync::Arc;
 
     #[test]
+    fn read_first_line_is_bounded_and_does_not_hang_on_an_oversized_first_line() {
+        // Security finding: read_first_line previously used an unbounded
+        // BufRead::read_line, so a rollout file whose first line was
+        // enormous (malformed/corrupted) could allocate without limit.
+        // It must now stop at a bounded number of bytes and return
+        // whatever (truncated, therefore unparseable-as-JSON) content
+        // was read within the cap, rather than growing forever.
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("oversized-first-line.jsonl");
+        let padding = "x".repeat(2 * 1024 * 1024); // 2 MiB, far past the 256 KiB cap
+        std::fs::write(&path, format!("{{\"padding\":\"{padding}\"}}\n")).expect("write");
+
+        let line = CodexRolloutFirstLineParser::read_first_line(&path);
+        assert!(line.is_some(), "a bounded read must still return the truncated prefix, not fail outright");
+        let line = line.unwrap();
+        assert!(
+            line.len() <= 256 * 1024 + 64,
+            "returned line must be capped near the bound, not the full 2 MiB input (got {} bytes)",
+            line.len()
+        );
+        // Truncated mid-string content is not valid JSON, so the real
+        // metadata parser correctly yields nothing rather than a corrupt
+        // partial value.
+        assert!(CodexRolloutFirstLineParser::parse(&line).is_none());
+    }
+
+    #[test]
     fn process_parser_filters_helpers_app_server_duplicates_and_malformed_lines() {
         let output = "\
 101   1 Mon Jul  6 09:00:00 2026 /Applications/Claude.app/Contents/Resources/disclaimer /Users/test/Library/Application Support/Claude/claude-code/claude --dangerously-skip-permissions
