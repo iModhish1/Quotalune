@@ -774,6 +774,13 @@ locale_keys! {
     TokenCardModels,
     TokenScopeLocalDevice,
     TokenTrendHeading,
+    V3ActivityAll,
+    V3ActivitySourceLabel,
+    V3ActivityHeatmapHeading,
+    V3ActivityMissingNote,
+    V3ActivityViewAsTable,
+    V3ActivityTableDate,
+    V3ActivityTableTokens,
     // Analytics -> Models (capability-gated on AnalyticsCapabilities.models).
     // Codex-only real ranked breakdown (ModelUsage); Claude shows only its
     // single topModel guess with an explicit no-breakdown note -- see

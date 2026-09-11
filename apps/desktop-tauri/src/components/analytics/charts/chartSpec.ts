@@ -1,11 +1,11 @@
 import {supportsVisualization} from "../../../lib/analytics/metricRegistry";
 import type {ComposeOption} from "echarts/core";
 import type {LineSeriesOption,HeatmapSeriesOption,BarSeriesOption} from "echarts/charts";
-import type {GridComponentOption,TooltipComponentOption,LegendComponentOption,DataZoomComponentOption,VisualMapComponentOption,MarkLineComponentOption,MarkPointComponentOption,AriaComponentOption} from "echarts/components";
+import type {GridComponentOption,TooltipComponentOption,LegendComponentOption,DataZoomComponentOption,VisualMapComponentOption,MarkLineComponentOption,MarkPointComponentOption,AriaComponentOption,CalendarComponentOption} from "echarts/components";
 import type {QuotaSeries,AnalyticsRange} from "../../../lib/analytics/quotaAnalytics";
 import type {QuotalisChartTheme} from "./chartTheme";
 import {visualSegments} from "./visualSeries";
-export type ChartOption=ComposeOption<BarSeriesOption|LineSeriesOption|HeatmapSeriesOption|GridComponentOption|TooltipComponentOption|LegendComponentOption|DataZoomComponentOption|VisualMapComponentOption|MarkLineComponentOption|MarkPointComponentOption|AriaComponentOption>;
+export type ChartOption=ComposeOption<BarSeriesOption|LineSeriesOption|HeatmapSeriesOption|GridComponentOption|TooltipComponentOption|LegendComponentOption|DataZoomComponentOption|VisualMapComponentOption|MarkLineComponentOption|MarkPointComponentOption|AriaComponentOption|CalendarComponentOption>;
 export interface ChartSpec {option:ChartOption; label:string; height:number; points:number; empty:boolean; readings?:{key:string;scope:string;time:string;value:string}[];}
 export interface ChartLabels {current:string; previous:string; used:string; samples:string; missing:string; zoom:string; source:string;}
 export interface ChartContext {theme:QuotalisChartTheme; range:AnalyticsRange; date:(time:number)=>string; number:(n:number)=>string; labels:ChartLabels; style:"precision"|"minimal"|"detailed"; lowCpu:boolean; highFidelity?:boolean; rtl?:boolean;}

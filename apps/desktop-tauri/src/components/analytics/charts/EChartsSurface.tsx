@@ -1,11 +1,11 @@
 import {useEffect,useRef,useState} from "react";
 import {init,use} from "echarts/core";
 import {LineChart,HeatmapChart,BarChart} from "echarts/charts";
-import {GridComponent,TooltipComponent,LegendComponent,DataZoomComponent,MarkPointComponent,MarkLineComponent,VisualMapComponent,AriaComponent} from "echarts/components";
+import {GridComponent,TooltipComponent,LegendComponent,DataZoomComponent,MarkPointComponent,MarkLineComponent,VisualMapComponent,AriaComponent,CalendarComponent} from "echarts/components";
 import {SVGRenderer} from "echarts/renderers";
 import type {ChartSpec} from "./chartSpec";
 import {mountChart} from "./chartLifecycle";
-use([LineChart,HeatmapChart,BarChart,GridComponent,TooltipComponent,LegendComponent,DataZoomComponent,MarkPointComponent,MarkLineComponent,VisualMapComponent,AriaComponent,SVGRenderer]);
+use([LineChart,HeatmapChart,BarChart,GridComponent,TooltipComponent,LegendComponent,DataZoomComponent,MarkPointComponent,MarkLineComponent,VisualMapComponent,AriaComponent,CalendarComponent,SVGRenderer]);
 /** Only this lazy module imports the chart runtime. No frame loop or timer. */
 export default function EChartsSurface({spec,unavailable}:{spec:ChartSpec;unavailable:string}) {
  const host=useRef<HTMLDivElement>(null),controller=useRef<ReturnType<typeof mountChart>|null>(null);

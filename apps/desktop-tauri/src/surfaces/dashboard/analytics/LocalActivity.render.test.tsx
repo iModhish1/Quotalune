@@ -5,6 +5,10 @@ import type { SettingsSnapshot } from "../../../types/bridge";
 const tauriMocks = vi.hoisted(() => ({
   getCodexWorkspacesSnapshot: vi.fn(),
   getProviderChartData: vi.fn(),
+  getAnalyticsSourceRegistry: vi.fn().mockResolvedValue([
+    { id: "codexLocalActivity", label: "Codex local activity", scope: "device", capabilities: { quota: false, resets: false, monetary: false, tokens: true, models: true, sessionCount: true, dailyActivity: true }, availability: "available", reads: "", doesNotRead: "" },
+    { id: "claudeLocalActivity", label: "Claude local activity", scope: "device", capabilities: { quota: false, resets: false, monetary: false, tokens: true, models: true, sessionCount: false, dailyActivity: true }, availability: "available", reads: "", doesNotRead: "" },
+  ]),
 }));
 vi.mock("../../../lib/tauri", () => tauriMocks);
 
@@ -23,6 +27,14 @@ const locale = vi.hoisted(() => ({
       DashboardHistoryChipDays: "Last {} days",
       DashboardValueUnavailable: "Unavailable",
       V2DataQuality: "Data quality",
+      V3ActivityAll: "All compatible",
+      V3ActivitySourceLabel: "Activity source",
+      V3ActivityHeatmapHeading: "Activity heatmap",
+      V3ActivityMissingNote: "Missing note",
+      V3ActivityViewAsTable: "View as a table",
+      V3ActivityTableDate: "Date",
+      V3ActivityTableTokens: "Tokens",
+      TokenScopeLocalDevice: "Local device activity",
     })[key] ?? key,
 }));
 vi.mock("../../../hooks/useLocale", () => ({ useLocale: () => locale }));
@@ -50,7 +62,9 @@ describe("LocalActivity", () => {
       skippedFileCount: 1,
     });
     render(<LocalActivity settings={settings} isDemo={false} providerId="codex" />);
-    await waitFor(() => expect(screen.getByText("100")).toBeInTheDocument());
+    // "100" now legitimately appears twice: the ribbon total and the new
+    // accessible "view as a table" heatmap-data row for the same one day.
+    await waitFor(() => expect(screen.getAllByText("100").length).toBeGreaterThan(0));
     expect(screen.getByText("2")).toBeInTheDocument(); // session count
     expect(screen.getByText(/ok · 5 indexed · 1 skipped/)).toBeInTheDocument();
   });
@@ -113,9 +127,13 @@ describe("LocalActivity", () => {
     expect(screen.queryByText("7")).not.toBeInTheDocument();
   });
 
-  it("shows the explicit demo label instead of fetching in demo mode", () => {
+  it("shows the explicit demo label instead of fetching in demo mode", async () => {
     render(<LocalActivity settings={settings} isDemo={true} providerId="claude" />);
     expect(screen.getByText("Demo activity")).toBeInTheDocument();
     expect(tauriMocks.getProviderChartData).not.toHaveBeenCalled();
+    // useAnalyticsSources() still fetches the registry in the background
+    // (it has no isDemo concept of its own) -- await its resolution so the
+    // test doesn't unmount before that state update lands.
+    await waitFor(() => expect(tauriMocks.getAnalyticsSourceRegistry).toHaveBeenCalled());
   });
 });
