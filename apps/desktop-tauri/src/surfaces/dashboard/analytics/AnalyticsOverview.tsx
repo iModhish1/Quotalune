@@ -115,7 +115,7 @@ export default function AnalyticsOverview({
             <div className="analytics-comparison-stat">
               <dt>{t('OverviewHistorySpan')}</dt>
               {historyDays > 0 ? (
-                <dd>{historyDays} <small>{t('OverviewDaysOfHistorySuffix')}</small></dd>
+                <dd><bdi>{historyDays} <small>{t('OverviewDaysOfHistorySuffix')}</small></bdi></dd>
               ) : (
                 <dd className="analytics-comparison-stat--text">{t('DashboardHistoryChipCollecting')}</dd>
               )}
@@ -148,7 +148,7 @@ export default function AnalyticsOverview({
             </div>
             <div className="analytics-comparison-stat">
               <dt>{t('OverviewFreshness')}</dt>
-              <dd className="analytics-comparison-stat--text">{formatRelativeUpdated(lastSampleMs, t)}</dd>
+              <dd className="analytics-comparison-stat--text"><bdi>{formatRelativeUpdated(lastSampleMs, t)}</bdi></dd>
             </div>
           </dl>
           <ul className="analytics-overview-sources" aria-label={t('OverviewSourcesHeading')}>

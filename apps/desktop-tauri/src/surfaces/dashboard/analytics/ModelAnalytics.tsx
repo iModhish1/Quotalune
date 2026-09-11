@@ -97,7 +97,7 @@ export default function ModelAnalytics({ settings, providerId, isDemo }: { setti
                       <td><bdi>{m.model}</bdi></td>
                       <td title={formatExactTokens(m.totalTokens)}>{formatCompactTokens(m.totalTokens)}</td>
                       <td>{codexTotal > 0 ? `${((m.totalTokens / codexTotal) * 100).toFixed(1)}%` : '—'}</td>
-                      <td>{formatRelativeUpdated(m.lastObserved ? Date.parse(m.lastObserved) : null, t)}</td>
+                      <td><bdi>{formatRelativeUpdated(m.lastObserved ? Date.parse(m.lastObserved) : null, t)}</bdi></td>
                     </tr>
                   ))}
                 </tbody>
