@@ -638,16 +638,25 @@ impl CostScanner {
         // that appear across multiple files.
         if projects_dir.exists() {
             let mut seen = HashSet::new();
+            let cache_root = self.cache_root.as_deref();
             let mut handle_file = |path: &Path| {
-                let counted =
-                    for_each_claude_usage_record(path, &cutoff, &mut seen, cancel, |record| {
+                let counted = for_each_claude_usage_record(
+                    path,
+                    &cutoff,
+                    &mut seen,
+                    cancel,
+                    cache_root,
+                    |record| {
                         add_claude_record_to_summary(&mut summary, record);
-                    });
+                    },
+                );
                 if counted > 0 {
                     summary.sessions_count += 1;
                 }
             };
             self.walk_claude_files(&projects_dir, &cutoff, cancel, &mut handle_file);
+            reconcile_claude_activity_index_deletions(cache_root);
+            flush_claude_activity_index(cache_root);
         }
 
         // OMP / pi-compatible anthropic rows, deduped across shared files.
@@ -962,14 +971,121 @@ fn clear_claude_file_records_cache_for_test() {
     }
 }
 
+/// Convert a persisted, privacy-safe record back into the in-memory shape,
+/// recomputing `cost` fresh from the current pricing table rather than
+/// trusting a persisted dollar figure that could have gone stale (see
+/// docs/validation/CLAUDE_ACTIVITY_INDEX_PRIVACY.md).
+fn claude_usage_record_from_persisted(
+    persisted: &crate::claude_activity_index::PersistedClaudeRecord,
+) -> ClaudeUsageRecord {
+    // `cost` is deliberately NOT recomputed here (root cause of a real
+    // measured Phase 3D regression: 329 real files / 80,821 real records
+    // on this machine meant every reconstruction ran a pricing-table
+    // lookup 80,821+ times per call, across the still-present 3x
+    // redundant walks -- restart-warm measured 59.7s, barely better than
+    // a fresh cold build, before this fix). `cli_log_cost_available()` is
+    // permanently false for Claude (billing-channel ambiguity, see this
+    // module's doc comment), so no eligible cost display ever reads this
+    // field for a Claude record -- computing it is pure wasted CPU on
+    // this hot path. `0.0` is not shown as a real cost anywhere it
+    // matters for the same reason it was never eligible in the first
+    // place.
+    ClaudeUsageRecord {
+        model: persisted.model.clone(),
+        timestamp: persisted
+            .timestamp_unix_ms
+            .and_then(DateTime::<Utc>::from_timestamp_millis),
+        dedup_key: persisted.dedup_key.clone(),
+        input: persisted.input,
+        output: persisted.output,
+        cache_create: persisted.cache_create,
+        cache_read: persisted.cache_read,
+        cost: 0.0,
+    }
+}
+
+fn persisted_claude_record_from_usage(
+    record: &ClaudeUsageRecord,
+) -> crate::claude_activity_index::PersistedClaudeRecord {
+    crate::claude_activity_index::PersistedClaudeRecord {
+        model: record.model.clone(),
+        timestamp_unix_ms: record.timestamp.map(|t| t.timestamp_millis()),
+        dedup_key: record.dedup_key.clone(),
+        input: record.input,
+        output: record.output,
+        cache_create: record.cache_create,
+        cache_read: record.cache_read,
+    }
+}
+
+/// Process-lifetime, keyed-by-cache-root cache of the loaded persisted
+/// Claude activity index -- loaded from disk at most once per distinct
+/// `cache_root` per process, then kept warm in memory and flushed back to
+/// disk whenever a file's contribution changes. Keying by `cache_root`
+/// (rather than a single global) keeps tests that pass a temp directory
+/// fully isolated from both the real default cache and each other.
+fn claude_activity_index_cache()
+-> &'static Mutex<HashMap<String, crate::claude_activity_index::ClaudeActivityIndex>> {
+    static CACHE: OnceLock<
+        Mutex<HashMap<String, crate::claude_activity_index::ClaudeActivityIndex>>,
+    > = OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn claude_activity_index_cache_key(cache_root: Option<&Path>) -> String {
+    cache_root
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_default()
+}
+
+/// Test-only: force the next call to reload the persisted index from disk
+/// rather than reusing whatever a previous test left warm in memory under
+/// the same `cache_root` key.
+#[cfg(test)]
+fn clear_claude_activity_index_memory_cache_for_test() {
+    if let Ok(mut guard) = claude_activity_index_cache().lock() {
+        guard.clear();
+    }
+}
+
+/// Remove persisted index entries whose source file no longer exists.
+/// Deliberately decoupled from `walk_claude_files`'s own mtime>=cutoff
+/// visitation filter: a file legitimately outside the *current* request's
+/// window (but indexed by an earlier, wider-window scan) must never be
+/// mistaken for deleted just because this particular walk didn't visit
+/// it. Checked directly against the filesystem instead.
+fn reconcile_claude_activity_index_deletions(cache_root: Option<&Path>) {
+    let index_key = claude_activity_index_cache_key(cache_root);
+    if let Ok(mut index_guard) = claude_activity_index_cache().lock() {
+        let index = index_guard
+            .entry(index_key)
+            .or_insert_with(|| crate::claude_activity_index::ClaudeActivityIndex::load(cache_root));
+        let before = index.files.len();
+        index.files.retain(|path, _| Path::new(path).exists());
+        if index.files.len() != before {
+            index.generated_at_unix_ms = unix_now_ms();
+            index.save(cache_root);
+        }
+    }
+}
+
 /// All raw usage records in one Claude transcript file -- no cutoff
 /// filtering, no cross-file dedup applied (both depend on the caller's
 /// window and running `seen` set, neither of which is safe to bake into a
-/// shared cache entry). Reuses the file's cached parse when its `(mtime,
-/// size)` match a prior call; otherwise parses fully and stores the result.
+/// shared cache entry).
+///
+/// Two-tier cache, both keyed by `(path, mtime, size)`:
+/// 1. Process-lifetime in-memory (`CachedClaudeFileRecords`) -- fastest,
+///    survives only this process.
+/// 2. Persisted-to-disk (`claude_activity_index`) -- survives a restart;
+///    consulted on an in-memory miss, and updated (in memory + flushed to
+///    disk) whenever a file is freshly parsed. This is what fixes cold
+///    startup after the first successful run (docs/validation/
+///    ANALYTICS_PHASE3D_PERSISTENT_CLAUDE_INDEX.md).
 fn parse_claude_file_records_cached(
     path: &Path,
     cancel: Option<&AtomicBool>,
+    cache_root: Option<&Path>,
 ) -> Vec<ClaudeUsageRecord> {
     let path_key = path.to_string_lossy().to_string();
     let metadata = fs::metadata(path).ok();
@@ -991,7 +1107,46 @@ fn parse_claude_file_records_cached(
         return cached.records.clone();
     }
 
+    // In-memory miss: consult the persisted index before touching disk.
+    let index_key = claude_activity_index_cache_key(cache_root);
+    if let Ok(mut index_guard) = claude_activity_index_cache().lock() {
+        let index = index_guard
+            .entry(index_key.clone())
+            .or_insert_with(|| crate::claude_activity_index::ClaudeActivityIndex::load(cache_root));
+        if let Some(persisted_file) = index.files.get(&path_key)
+            && persisted_file.mtime_unix_ms == mtime_unix_ms
+            && persisted_file.size == size
+        {
+            let records: Vec<ClaudeUsageRecord> = persisted_file
+                .records
+                .iter()
+                .map(claude_usage_record_from_persisted)
+                .collect();
+            drop(index_guard);
+            if let Ok(mut guard) = claude_file_records_cache().lock() {
+                guard.insert(
+                    path_key,
+                    CachedClaudeFileRecords {
+                        mtime_unix_ms,
+                        size,
+                        records: records.clone(),
+                    },
+                );
+            }
+            return records;
+        }
+    }
+
     let Ok(file) = File::open(path) else {
+        // Genuinely gone (or unreadable): make sure a stale persisted
+        // entry for this exact path cannot linger and contribute a
+        // deleted file's old content on a future call.
+        if let Ok(mut index_guard) = claude_activity_index_cache().lock()
+            && let Some(index) = index_guard.get_mut(&index_key)
+            && index.files.remove(&path_key).is_some()
+        {
+            index.save(cache_root);
+        }
         return Vec::new();
     };
     let mut records = Vec::new();
@@ -1009,7 +1164,7 @@ fn parse_claude_file_records_cached(
 
     if let Ok(mut guard) = claude_file_records_cache().lock() {
         guard.insert(
-            path_key,
+            path_key.clone(),
             CachedClaudeFileRecords {
                 mtime_unix_ms,
                 size,
@@ -1017,7 +1172,48 @@ fn parse_claude_file_records_cached(
             },
         );
     }
+
+    // Record the fresh parse in the warm in-memory index so a future
+    // restart can skip re-reading this file too, as long as it stays
+    // unchanged. Deliberately NOT saved to disk here: this function runs
+    // once per file during a walk, and an eager per-file save would
+    // reserialize and rewrite the whole (growing) index on every single
+    // file -- O(files^2) disk I/O on a large first-ever cold build. The
+    // scan-level caller flushes exactly once after the whole walk
+    // completes (`flush_claude_activity_index`), matching how Codex's own
+    // cache is saved once per `scan_codex()` call, not once per file.
+    if let Ok(mut index_guard) = claude_activity_index_cache().lock() {
+        let index = index_guard
+            .entry(index_key)
+            .or_insert_with(|| crate::claude_activity_index::ClaudeActivityIndex::load(cache_root));
+        index.files.insert(
+            path_key,
+            crate::claude_activity_index::PersistedClaudeFile {
+                mtime_unix_ms,
+                size,
+                records: records
+                    .iter()
+                    .map(persisted_claude_record_from_usage)
+                    .collect(),
+            },
+        );
+        index.schema_version = crate::claude_activity_index::CLAUDE_ACTIVITY_INDEX_SCHEMA_VERSION;
+        index.generated_at_unix_ms = unix_now_ms();
+    }
+
     records
+}
+
+/// Flush the in-memory persisted-index representation to disk exactly
+/// once. Call after a full walk completes (alongside
+/// `reconcile_claude_activity_index_deletions`), never per-file.
+fn flush_claude_activity_index(cache_root: Option<&Path>) {
+    let index_key = claude_activity_index_cache_key(cache_root);
+    if let Ok(index_guard) = claude_activity_index_cache().lock()
+        && let Some(index) = index_guard.get(&index_key)
+    {
+        index.save(cache_root);
+    }
 }
 
 /// Stream the de-duplicated, in-window usage records from one transcript
@@ -1030,13 +1226,14 @@ fn for_each_claude_usage_record<F>(
     cutoff: &DateTime<Utc>,
     seen: &mut HashSet<String>,
     cancel: Option<&AtomicBool>,
+    cache_root: Option<&Path>,
     mut on_record: F,
 ) -> usize
 where
     F: FnMut(&ClaudeUsageRecord),
 {
     let mut counted = 0;
-    for record in parse_claude_file_records_cached(path, cancel) {
+    for record in parse_claude_file_records_cached(path, cancel, cache_root) {
         if should_count_claude_record(&record, cutoff, seen) {
             counted += 1;
             on_record(&record);
@@ -1261,12 +1458,22 @@ pub fn get_daily_cost_history(provider: &str, days: u32) -> Vec<(String, f64)> {
             if projects_dir.exists() {
                 let cutoff = Utc::now() - Duration::days(days as i64);
                 let mut seen = HashSet::new();
+                let cache_root = scanner.cache_root.as_deref();
                 let mut handle_file = |path: &Path| {
-                    for_each_claude_usage_record(path, &cutoff, &mut seen, None, |record| {
-                        add_claude_record_to_daily_costs(&mut daily_costs, record);
-                    });
+                    for_each_claude_usage_record(
+                        path,
+                        &cutoff,
+                        &mut seen,
+                        None,
+                        cache_root,
+                        |record| {
+                            add_claude_record_to_daily_costs(&mut daily_costs, record);
+                        },
+                    );
                 };
                 scanner.walk_claude_files(&projects_dir, &cutoff, None, &mut handle_file);
+                reconcile_claude_activity_index_deletions(cache_root);
+                flush_claude_activity_index(cache_root);
             }
         }
         "opencodego" => {
@@ -1337,12 +1544,22 @@ pub fn get_daily_token_history(provider: &str, days: u32) -> (Vec<(String, u64)>
             if projects_dir.exists() {
                 let cutoff = Utc::now() - Duration::days(days as i64);
                 let mut seen = HashSet::new();
+                let cache_root = scanner.cache_root.as_deref();
                 let mut handle_file = |path: &Path| {
-                    for_each_claude_usage_record(path, &cutoff, &mut seen, None, |record| {
-                        add_claude_record_to_daily_tokens(&mut daily_tokens, record);
-                    });
+                    for_each_claude_usage_record(
+                        path,
+                        &cutoff,
+                        &mut seen,
+                        None,
+                        cache_root,
+                        |record| {
+                            add_claude_record_to_daily_tokens(&mut daily_tokens, record);
+                        },
+                    );
                 };
                 scanner.walk_claude_files(&projects_dir, &cutoff, None, &mut handle_file);
+                reconcile_claude_activity_index_deletions(cache_root);
+                flush_claude_activity_index(cache_root);
             }
         }
         _ => {}
@@ -1698,10 +1915,18 @@ mod tests {
 
         let cutoff = Utc::now() - Duration::days(30);
         let mut seen = HashSet::new();
+        let index_root = tempfile::tempdir().unwrap();
         for path in [&file_a, &file_b] {
-            for_each_claude_usage_record(path, &cutoff, &mut seen, None, |record| {
-                add_claude_record_to_daily_costs(&mut daily_costs, record);
-            });
+            for_each_claude_usage_record(
+                path,
+                &cutoff,
+                &mut seen,
+                None,
+                Some(index_root.path()),
+                |record| {
+                    add_claude_record_to_daily_costs(&mut daily_costs, record);
+                },
+            );
         }
 
         let day_one_cost = daily_costs[&day_key(&day_one)];
@@ -1732,7 +1957,15 @@ mod tests {
 
         let cutoff = Utc::now() - Duration::days(1);
         let mut seen = HashSet::new();
-        let counted = for_each_claude_usage_record(&path, &cutoff, &mut seen, None, |_| {});
+        let index_root = tempfile::tempdir().unwrap();
+        let counted = for_each_claude_usage_record(
+            &path,
+            &cutoff,
+            &mut seen,
+            None,
+            Some(index_root.path()),
+            |_| {},
+        );
         assert_eq!(counted, 1, "incomplete final JSONL line must be processed");
         // Best-effort test cleanup; the file may already be gone.
         let _removed = std::fs::remove_file(&path);
@@ -1744,6 +1977,8 @@ mod tests {
     #[test]
     fn deleted_claude_file_is_not_served_stale_from_cache() {
         clear_claude_file_records_cache_for_test();
+        clear_claude_activity_index_memory_cache_for_test();
+        let index_root = tempfile::tempdir().unwrap();
         let path = std::env::temp_dir().join(format!(
             "codexbar-claude-cache-deleted-{}.jsonl",
             std::process::id()
@@ -1757,11 +1992,11 @@ mod tests {
         )
         .unwrap();
 
-        let first = parse_claude_file_records_cached(&path, None);
+        let first = parse_claude_file_records_cached(&path, None, Some(index_root.path()));
         assert_eq!(first.len(), 1, "real file must yield its one real record");
 
         std::fs::remove_file(&path).unwrap();
-        let after_delete = parse_claude_file_records_cached(&path, None);
+        let after_delete = parse_claude_file_records_cached(&path, None, Some(index_root.path()));
         assert!(
             after_delete.is_empty(),
             "a removed file must never be served from a stale cache entry"
@@ -1771,6 +2006,8 @@ mod tests {
     #[test]
     fn modified_claude_file_is_reparsed_not_served_stale() {
         clear_claude_file_records_cache_for_test();
+        clear_claude_activity_index_memory_cache_for_test();
+        let index_root = tempfile::tempdir().unwrap();
         let path = std::env::temp_dir().join(format!(
             "codexbar-claude-cache-modified-{}.jsonl",
             std::process::id()
@@ -1784,7 +2021,7 @@ mod tests {
         )
         .unwrap();
 
-        let first = parse_claude_file_records_cached(&path, None);
+        let first = parse_claude_file_records_cached(&path, None, Some(index_root.path()));
         assert_eq!(first.len(), 1);
 
         // Append a second, distinct record -- both size and mtime change,
@@ -1799,7 +2036,7 @@ mod tests {
         ));
         std::fs::write(&path, body).unwrap();
 
-        let after_append = parse_claude_file_records_cached(&path, None);
+        let after_append = parse_claude_file_records_cached(&path, None, Some(index_root.path()));
         assert_eq!(
             after_append.len(),
             2,
@@ -1812,6 +2049,8 @@ mod tests {
     #[test]
     fn unchanged_claude_file_reads_are_stable_across_repeated_calls() {
         clear_claude_file_records_cache_for_test();
+        clear_claude_activity_index_memory_cache_for_test();
+        let index_root = tempfile::tempdir().unwrap();
         let path = std::env::temp_dir().join(format!(
             "codexbar-claude-cache-stable-{}.jsonl",
             std::process::id()
@@ -1825,14 +2064,129 @@ mod tests {
         )
         .unwrap();
 
-        let first = parse_claude_file_records_cached(&path, None);
-        let second = parse_claude_file_records_cached(&path, None);
+        let first = parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+        let second = parse_claude_file_records_cached(&path, None, Some(index_root.path()));
         assert_eq!(first.len(), 1);
         assert_eq!(second.len(), 1);
         assert_eq!(first[0].model, second[0].model);
         assert_eq!(first[0].input, second[0].input);
 
         let _removed = std::fs::remove_file(&path);
+    }
+
+    /// Decisive proof that a "restart" (fresh process, so the in-memory
+    /// tier is cold, but the persisted index on disk survives) genuinely
+    /// serves an unchanged file from the persisted index rather than
+    /// silently re-reading it from disk. Directly tampers with the saved
+    /// JSON's record content (keeping the same mtime/size key) so a real
+    /// re-read of the untouched file would produce DIFFERENT data than
+    /// what's returned -- if this test passes, the result must have come
+    /// from the persisted index, not a fresh parse.
+    #[test]
+    fn restart_serves_unchanged_file_from_the_persisted_index_not_a_fresh_reparse() {
+        clear_claude_file_records_cache_for_test();
+        clear_claude_activity_index_memory_cache_for_test();
+        let index_root = tempfile::tempdir().unwrap();
+        let path = std::env::temp_dir().join(format!(
+            "codexbar-claude-cache-restart-{}.jsonl",
+            std::process::id()
+        ));
+        let ts = (Utc::now() - Duration::hours(1))
+            .format("%Y-%m-%dT%H:%M:%S%.3fZ")
+            .to_string();
+        std::fs::write(
+            &path,
+            claude_transcript_line(&ts, "requestId", "req_real", "msg_real"),
+        )
+        .unwrap();
+
+        // First "run": populates the in-memory tier, then flush (the real
+        // scan-level call every production call site makes exactly once
+        // per walk, never per file) to persist it to disk.
+        let first = parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+        assert_eq!(first.len(), 1);
+        assert_eq!(first[0].input, 1000);
+        flush_claude_activity_index(Some(index_root.path()));
+
+        // Simulate a restart: the in-memory tier is gone, but the
+        // persisted index file on disk is untouched.
+        clear_claude_file_records_cache_for_test();
+        clear_claude_activity_index_memory_cache_for_test();
+
+        // Tamper with the saved index's persisted record content directly
+        // (same mtime/size key -- a real reparse would still see the
+        // original file content, so this value can only appear in the
+        // result if it truly came from the persisted index).
+        let index_file = index_root
+            .path()
+            .join("cost-usage")
+            .join("claude-activity-index-v1.json");
+        let raw = std::fs::read_to_string(&index_file).unwrap();
+        let tampered = raw.replace("\"input\":1000", "\"input\":424242");
+        assert_ne!(
+            raw, tampered,
+            "the fixture's real input value must be present to tamper with"
+        );
+        std::fs::write(&index_file, tampered).unwrap();
+
+        let after_restart = parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+        assert_eq!(
+            after_restart.len(),
+            1,
+            "an unchanged file's persisted record count must be reused"
+        );
+        assert_eq!(
+            after_restart[0].input, 424242,
+            "the tampered persisted value must be what's returned -- proving \
+             this path served from the persisted index rather than silently \
+             re-reading the real (untampered) file from disk"
+        );
+
+        let _removed = std::fs::remove_file(&path);
+    }
+
+    /// Proves the actual deletion-reconciliation path used by every
+    /// production scan (`reconcile_claude_activity_index_deletions`,
+    /// called after every `walk_claude_files` pass): a persisted entry for
+    /// a file that no longer exists on disk must be pruned, independent of
+    /// whether the walk that triggered reconciliation happened to visit
+    /// that path.
+    #[test]
+    fn reconcile_deletions_prunes_a_persisted_entry_for_a_since_deleted_file() {
+        clear_claude_activity_index_memory_cache_for_test();
+        let index_root = tempfile::tempdir().unwrap();
+        let mut index = crate::claude_activity_index::ClaudeActivityIndex {
+            schema_version: crate::claude_activity_index::CLAUDE_ACTIVITY_INDEX_SCHEMA_VERSION,
+            generated_at_unix_ms: 1,
+            files: HashMap::new(),
+        };
+        // A path that never existed on this machine -- stands in for a
+        // real transcript file that was since deleted.
+        let ghost_path = std::env::temp_dir()
+            .join(format!(
+                "codexbar-claude-ghost-{}.jsonl",
+                std::process::id()
+            ))
+            .to_string_lossy()
+            .to_string();
+        index.files.insert(
+            ghost_path.clone(),
+            crate::claude_activity_index::PersistedClaudeFile {
+                mtime_unix_ms: 1,
+                size: 1,
+                records: vec![],
+            },
+        );
+        index.save(Some(index_root.path()));
+
+        reconcile_claude_activity_index_deletions(Some(index_root.path()));
+
+        let reloaded =
+            crate::claude_activity_index::ClaudeActivityIndex::load(Some(index_root.path()));
+        assert!(
+            !reloaded.files.contains_key(&ghost_path),
+            "a persisted entry for a file that no longer exists must be pruned"
+        );
     }
 
     fn write_codex_session_fixture(sessions_root: &Path, name: &str, input_tokens: u64) -> PathBuf {
