@@ -5,6 +5,21 @@ const tauriMocks = vi.hoisted(() => ({
   getLocaleStrings: vi.fn(),
   setUiLanguage: vi.fn(),
   getDashboardSnapshot: vi.fn(),
+  // Real capability by default (tokens + dailyActivity available) so the
+  // pre-existing tests below -- written before the Local activity tab
+  // became capability-gated -- keep seeing that tab without each needing
+  // its own registry fixture.
+  getAnalyticsSourceRegistry: vi.fn().mockResolvedValue([
+    {
+      id: "codexLocalActivity",
+      label: "Codex local activity",
+      scope: "device",
+      capabilities: { quota: false, resets: false, monetary: false, tokens: true, models: true, sessionCount: true, dailyActivity: true },
+      availability: "available",
+      reads: "",
+      doesNotRead: "",
+    },
+  ]),
 }));
 const eventMocks = vi.hoisted(() => ({
   listen: vi.fn().mockResolvedValue(() => {}),
@@ -283,5 +298,36 @@ describe("DashboardAnalyticsPanel", () => {
     expect(rootB.style.getPropertyValue("--qa-analytics-accent")).not.toBe(
       rootA.style.getPropertyValue("--qa-analytics-accent"),
     );
+  });
+
+  it("hides the Local activity tab when no analytics source has a real token/daily-activity capability", async () => {
+    // Owner invariant: "Analytics UI must NEVER show a tab/filter simply
+    // because the design supports it." An empty/unsupported registry (no
+    // AVAILABLE source with tokens or dailyActivity) must hide the tab
+    // entirely, not just disable it.
+    tauriMocks.getAnalyticsSourceRegistry.mockResolvedValue([]);
+    renderPanel([provider()], snapshot());
+    await screen.findByText("Today");
+    expect(screen.queryByRole("button", { name: "V3Activity" })).not.toBeInTheDocument();
+  });
+
+  it("shows the Local activity tab when a real source has the capability", async () => {
+    // vi.clearAllMocks() (beforeEach) clears call history but not a
+    // mockResolvedValue set by a prior test -- restore the real-capability
+    // fixture explicitly rather than relying on suite ordering.
+    tauriMocks.getAnalyticsSourceRegistry.mockResolvedValue([
+      {
+        id: "codexLocalActivity",
+        label: "Codex local activity",
+        scope: "device",
+        capabilities: { quota: false, resets: false, monetary: false, tokens: true, models: true, sessionCount: true, dailyActivity: true },
+        availability: "available",
+        reads: "",
+        doesNotRead: "",
+      },
+    ]);
+    renderPanel([provider()], snapshot());
+    await screen.findByText("Today");
+    expect(await screen.findByRole("button", { name: "V3Activity" })).toBeInTheDocument();
   });
 });

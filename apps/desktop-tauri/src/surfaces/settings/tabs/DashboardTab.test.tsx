@@ -32,6 +32,7 @@ const tauriMocks = vi.hoisted(() => ({
     usageTrend: [],
     spendTrend: [],
   }),
+  getAnalyticsSourceRegistry: vi.fn().mockResolvedValue([]),
 }));
 
 const eventMocks = vi.hoisted(() => ({
