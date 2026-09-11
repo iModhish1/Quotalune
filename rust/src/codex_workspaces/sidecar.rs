@@ -1,7 +1,7 @@
 //! CodexBar-owned SQLite sidecar for Workspaces snapshots.
 //!
 //! Never attaches to or writes Codex's `state_5.sqlite`. Schema version 5 and
-//! payload format 3 match upstream; foreign `user_version` values are refused.
+//! payload format 4 match upstream; foreign `user_version` values are refused.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -11,7 +11,17 @@ use rusqlite::{Connection, OpenFlags, OptionalExtension, params};
 use super::types::CodexLocalProjectUsageSnapshot;
 
 pub const SCHEMA_VERSION: i32 = 5;
-pub const PAYLOAD_FORMAT_VERSION: i32 = 3;
+/// Bumped 3 -> 4 when `CodexLocalProjectUsageSnapshot` gained `model_totals`
+/// (Model Analytics). A cached payload written under format 3 deserializes
+/// fine via `#[serde(default)]` (empty `model_totals`) but would then be
+/// served forever with an empty Model Analytics table on a real machine
+/// with a pre-existing sidecar cache, since `load_latest_snapshot` returns
+/// the cached snapshot verbatim without rescanning. Bumping this constant
+/// makes `format_version != PAYLOAD_FORMAT_VERSION` reject the stale
+/// payload once, forcing exactly one real rescan that populates
+/// `model_totals` correctly -- discovered via native proof against a real
+/// machine's existing cache (docs/validation/ANALYTICS_PHASE3B_VISUAL_REVIEW.md).
+pub const PAYLOAD_FORMAT_VERSION: i32 = 4;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SidecarError {
@@ -186,5 +196,70 @@ impl WorkspaceUsageSidecar {
             )?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::codex_workspaces::types::{SourceStatus, UsageTotals};
+    use chrono::Utc;
+    use tempfile::TempDir;
+
+    fn sample_snapshot() -> CodexLocalProjectUsageSnapshot {
+        CodexLocalProjectUsageSnapshot {
+            updated_at: Utc::now(),
+            history_days: 30,
+            scope_signature: "scope-a".into(),
+            indexed_file_count: 1,
+            skipped_file_count: 0,
+            total: UsageTotals::from_parts(10, 0, 5),
+            sessions: vec![],
+            projects: vec![],
+            daily: vec![],
+            source_status: SourceStatus::Complete,
+            model_totals: vec![],
+        }
+    }
+
+    /// Regression test for the real defect found via native proof against a
+    /// machine with a pre-existing sidecar cache (owner: Model Analytics
+    /// showed an empty table despite 70B+ real tokens, because
+    /// `load_latest_snapshot` returned a cached payload serialized before
+    /// `model_totals` existed, verbatim, forever -- see
+    /// docs/validation/ANALYTICS_PHASE3B_VISUAL_REVIEW.md). A payload
+    /// written under the OLD format version must be rejected as a cache
+    /// miss so the caller re-scans and gets a snapshot with real
+    /// `model_totals`, not silently served as-is.
+    #[test]
+    fn stale_payload_format_version_is_treated_as_a_cache_miss() {
+        let tmp = TempDir::new().unwrap();
+        let sidecar = WorkspaceUsageSidecar::new(tmp.path().join("side.sqlite"));
+        sidecar.publish_snapshot(&sample_snapshot()).unwrap();
+
+        // Sanity: a freshly published snapshot (current format) IS found.
+        let fresh = sidecar
+            .load_latest_snapshot("scope-a", 30)
+            .unwrap()
+            .expect("current-format snapshot must be served from cache");
+        assert_eq!(fresh.scope_signature, "scope-a");
+
+        // Now simulate a payload written under an OLDER format version
+        // (e.g. from before model_totals existed) by overwriting the
+        // stored payload_format_version directly.
+        let conn = Connection::open(tmp.path().join("side.sqlite")).unwrap();
+        conn.execute(
+            "UPDATE snapshot_payloads SET payload_format_version = ?1 WHERE scope_signature = 'scope-a'",
+            params![PAYLOAD_FORMAT_VERSION - 1],
+        )
+        .unwrap();
+
+        let stale = sidecar.load_latest_snapshot("scope-a", 30).unwrap();
+        assert!(
+            stale.is_none(),
+            "a payload written under an old format version must be treated as a cache miss, \
+             not served verbatim -- otherwise a newly added field (like model_totals) stays \
+             empty forever on any machine with a pre-existing cache"
+        );
     }
 }
