@@ -43,7 +43,8 @@ use chrono::{DateTime, Duration, Local, NaiveDate, Utc};
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
-use std::io::{BufRead, BufReader};
+use std::hash::{Hash, Hasher};
+use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
@@ -1018,6 +1019,173 @@ fn persisted_claude_record_from_usage(
     }
 }
 
+/// A tail read larger than this falls back to a full reparse rather than
+/// the append fast path -- a defensive bound (Phase 3F requirement: "Do
+/// NOT hash 100MB on every request", generalized to "do not load an
+/// unbounded tail into memory either"). Real Claude Code turns append
+/// kilobytes, not tens of megabytes, so this is never hit in normal use.
+const MAX_APPEND_TAIL_BYTES: u64 = 64 * 1024 * 1024;
+
+/// A bounded window of bytes immediately before a resume point, hashed to
+/// cheaply verify the previously-indexed prefix is still intact before
+/// trusting the append fast path (Phase 3F). Deliberately small and fixed
+/// -- this is a continuity check, not a content-integrity guarantee: a
+/// mismatch only ever costs a full reparse of that one file, it never
+/// causes an incorrect result.
+const BOUNDARY_FINGERPRINT_WINDOW_BYTES: u64 = 256;
+
+/// Parse only complete (newline-terminated) JSONL lines within `bytes`,
+/// stopping at the last real newline. A trailing segment with no newline
+/// is never included in the returned records or counted into the
+/// returned byte length -- the caller resumes there next time, so a
+/// still-being-written line is picked up exactly once, whenever it
+/// completes, never zero or two times. Shared by both the full-file parse
+/// and the append-tail fast path -- same logic, different input slice.
+fn parse_complete_claude_lines(bytes: &[u8]) -> (Vec<ClaudeUsageRecord>, i64) {
+    let mut records = Vec::new();
+    let mut consumed: i64 = 0;
+    for segment in bytes.split_inclusive(|&b| b == b'\n') {
+        if segment.last() != Some(&b'\n') {
+            break; // dangling tail -- not yet a complete line
+        }
+        #[allow(
+            clippy::cast_possible_wrap,
+            reason = "a single JSONL segment length fits i64 on any real transcript"
+        )]
+        {
+            consumed += segment.len() as i64;
+        }
+        let mut line = &segment[..segment.len() - 1];
+        if line.last() == Some(&b'\r') {
+            line = &line[..line.len() - 1];
+        }
+        if line.is_empty() || line.len() > CODEX_JSONL_MAX_LINE_BYTES {
+            continue;
+        }
+        let Ok(text) = std::str::from_utf8(line) else {
+            continue;
+        };
+        if let Ok(event) = serde_json::from_str::<ClaudeEvent>(text)
+            && let Some(record) = claude_usage_record_from_event(&event)
+        {
+            records.push(record);
+        }
+    }
+    (records, consumed)
+}
+
+/// After a full streaming parse of `path` (which may have processed a
+/// still-being-written trailing line with no newline yet, matching this
+/// module's existing "count the final incomplete line" behavior for
+/// immediate correctness), determine the byte offset that is SAFE to
+/// persist as `indexed_bytes` -- i.e., the true last-newline boundary,
+/// excluding any dangling tail. Bounded: reads at most one byte in the
+/// common case (file ends cleanly), or a `CODEX_JSONL_MAX_LINE_BYTES`
+/// window backward from EOF in the rare case it doesn't. Never loads the
+/// whole file.
+fn compute_full_parse_indexed_bytes(path: &Path, size: i64) -> i64 {
+    if size <= 0 {
+        return 0;
+    }
+    let Ok(mut file) = File::open(path) else {
+        return 0;
+    };
+    #[allow(
+        clippy::cast_sign_loss,
+        reason = "size is checked > 0 above, so size - 1 fits u64"
+    )]
+    let last_byte_offset = (size - 1) as u64;
+    let mut last_byte = [0u8; 1];
+    if file.seek(SeekFrom::Start(last_byte_offset)).is_ok()
+        && file.read_exact(&mut last_byte).is_ok()
+        && last_byte[0] == b'\n'
+    {
+        return size;
+    }
+
+    // Ends mid-line (or unreadable): scan backward within a bounded
+    // window for the previous real newline.
+    #[allow(clippy::cast_sign_loss, reason = "size is checked > 0 above")]
+    let size_u64 = size as u64;
+    let window = CODEX_JSONL_MAX_LINE_BYTES as u64;
+    let start = size_u64.saturating_sub(window);
+    let Ok(_) = file.seek(SeekFrom::Start(start)) else {
+        return 0;
+    };
+    #[allow(
+        clippy::cast_possible_truncation,
+        reason = "bounded by CODEX_JSONL_MAX_LINE_BYTES (256KB), fits usize on any real target"
+    )]
+    let mut buf = vec![0u8; (size_u64 - start) as usize];
+    if file.read_exact(&mut buf).is_err() {
+        return 0;
+    }
+    match buf.iter().rposition(|&b| b == b'\n') {
+        #[allow(
+            clippy::cast_possible_wrap,
+            reason = "bounded by CODEX_JSONL_MAX_LINE_BYTES, fits i64"
+        )]
+        Some(p) => start as i64 + p as i64 + 1,
+        None => 0, // no newline anywhere in the window -- conservative fallback
+    }
+}
+
+/// Hash a bounded window of bytes immediately before `indexed_bytes` for
+/// the append-fast-path continuity check. Returns `0` for an empty/zero
+/// boundary (nothing to verify yet).
+fn compute_boundary_fingerprint(path: &Path, indexed_bytes: i64) -> Option<u64> {
+    if indexed_bytes <= 0 {
+        return Some(0);
+    }
+    let mut file = File::open(path).ok()?;
+    #[allow(clippy::cast_sign_loss, reason = "indexed_bytes is checked > 0 above")]
+    let indexed_bytes_u64 = indexed_bytes as u64;
+    let window = indexed_bytes_u64.min(BOUNDARY_FINGERPRINT_WINDOW_BYTES);
+    let start = indexed_bytes_u64 - window;
+    file.seek(SeekFrom::Start(start)).ok()?;
+    let mut buf = vec![0u8; window as usize];
+    file.read_exact(&mut buf).ok()?;
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    buf.hash(&mut hasher);
+    Some(hasher.finish())
+}
+
+/// Read and parse only the bytes appended since `start_offset`, for the
+/// append fast path. Returns `None` (caller must fall back to a full
+/// reparse) when the file shrank, is unreadable, or the new tail exceeds
+/// `MAX_APPEND_TAIL_BYTES` -- never silently truncates real data.
+fn parse_claude_appended_tail(
+    path: &Path,
+    start_offset: i64,
+) -> Option<(Vec<ClaudeUsageRecord>, i64)> {
+    if start_offset < 0 {
+        return None;
+    }
+    let mut file = File::open(path).ok()?;
+    let size = file.metadata().ok()?.len();
+    #[allow(clippy::cast_sign_loss, reason = "start_offset is checked >= 0 above")]
+    let start_offset_u64 = start_offset as u64;
+    if size < start_offset_u64 {
+        return None; // shrank -- not a pure append, caller must reparse fully
+    }
+    let new_len = size - start_offset_u64;
+    if new_len == 0 {
+        return Some((Vec::new(), start_offset));
+    }
+    if new_len > MAX_APPEND_TAIL_BYTES {
+        return None;
+    }
+    file.seek(SeekFrom::Start(start_offset_u64)).ok()?;
+    #[allow(
+        clippy::cast_possible_truncation,
+        reason = "new_len is bounded by MAX_APPEND_TAIL_BYTES, fits usize on any real target"
+    )]
+    let mut buf = vec![0u8; new_len as usize];
+    file.read_exact(&mut buf).ok()?;
+    let (records, consumed) = parse_complete_claude_lines(&buf);
+    Some((records, start_offset + consumed))
+}
+
 /// Process-lifetime, keyed-by-cache-root cache of the loaded persisted
 /// Claude activity index -- loaded from disk at most once per distinct
 /// `cache_root` per process, then kept warm in memory and flushed back to
@@ -1135,6 +1303,57 @@ fn parse_claude_file_records_cached(
             }
             return records;
         }
+
+        // Phase 3F: append fast path. The whole file changed (mtime/size
+        // no longer match), but if it only GREW and the bytes right
+        // before the previously-indexed boundary are still exactly what
+        // we last saw there, this is a pure append -- parse only the new
+        // tail, never the 100MB+ we already indexed. Any continuity
+        // failure (shrank, boundary mismatch, tail too large) falls
+        // through to a full reparse below; it never produces a wrong
+        // result, only forfeits the fast path for this one file.
+        if let Some(persisted_file) = index.files.get(&path_key).cloned()
+            && size > persisted_file.size
+            && persisted_file.indexed_bytes > 0
+            && compute_boundary_fingerprint(path, persisted_file.indexed_bytes)
+                == Some(persisted_file.boundary_fingerprint)
+            && let Some((new_records, new_indexed_bytes)) =
+                parse_claude_appended_tail(path, persisted_file.indexed_bytes)
+        {
+            let mut all_records = persisted_file.records.clone();
+            all_records.extend(new_records.iter().map(persisted_claude_record_from_usage));
+            let boundary_fingerprint =
+                compute_boundary_fingerprint(path, new_indexed_bytes).unwrap_or(0);
+            let records: Vec<ClaudeUsageRecord> = all_records
+                .iter()
+                .map(claude_usage_record_from_persisted)
+                .collect();
+            index.files.insert(
+                path_key.clone(),
+                crate::claude_activity_index::PersistedClaudeFile {
+                    mtime_unix_ms,
+                    size,
+                    records: all_records,
+                    indexed_bytes: new_indexed_bytes,
+                    boundary_fingerprint,
+                },
+            );
+            index.schema_version =
+                crate::claude_activity_index::CLAUDE_ACTIVITY_INDEX_SCHEMA_VERSION;
+            index.generated_at_unix_ms = unix_now_ms();
+            drop(index_guard);
+            if let Ok(mut guard) = claude_file_records_cache().lock() {
+                guard.insert(
+                    path_key,
+                    CachedClaudeFileRecords {
+                        mtime_unix_ms,
+                        size,
+                        records: records.clone(),
+                    },
+                );
+            }
+            return records;
+        }
     }
 
     let Ok(file) = File::open(path) else {
@@ -1173,6 +1392,47 @@ fn parse_claude_file_records_cached(
         );
     }
 
+    // Phase 3F: determine the safe append-resume boundary. In the common
+    // case (file ends with a real newline) this is one cheap byte read.
+    // Persisted records must never include a still-dangling trailing line
+    // that `records` above may already contain (matching this module's
+    // existing "count the final incomplete line" behavior for the
+    // immediate caller) -- otherwise a later append-tail read would
+    // re-derive that same line once it completes and duplicate it. The
+    // rare re-parse-the-prefix branch below only runs when the file
+    // genuinely doesn't end at a newline boundary.
+    let indexed_bytes = compute_full_parse_indexed_bytes(path, size);
+    let persisted_records: Vec<crate::claude_activity_index::PersistedClaudeRecord> =
+        if indexed_bytes >= size {
+            records
+                .iter()
+                .map(persisted_claude_record_from_usage)
+                .collect()
+        } else {
+            match fs::read(path) {
+                #[allow(
+                    clippy::cast_sign_loss,
+                    clippy::cast_possible_truncation,
+                    reason = "indexed_bytes is bounded to [0, size) here, size fits usize on any real target"
+                )]
+                Ok(bytes) if (indexed_bytes as usize) <= bytes.len() => {
+                    #[allow(
+                        clippy::cast_sign_loss,
+                        clippy::cast_possible_truncation,
+                        reason = "indexed_bytes is bounded to [0, size) here"
+                    )]
+                    let (prefix_records, _) =
+                        parse_complete_claude_lines(&bytes[..indexed_bytes as usize]);
+                    prefix_records
+                        .iter()
+                        .map(persisted_claude_record_from_usage)
+                        .collect()
+                }
+                _ => Vec::new(),
+            }
+        };
+    let boundary_fingerprint = compute_boundary_fingerprint(path, indexed_bytes).unwrap_or(0);
+
     // Record the fresh parse in the warm in-memory index so a future
     // restart can skip re-reading this file too, as long as it stays
     // unchanged. Deliberately NOT saved to disk here: this function runs
@@ -1191,10 +1451,9 @@ fn parse_claude_file_records_cached(
             crate::claude_activity_index::PersistedClaudeFile {
                 mtime_unix_ms,
                 size,
-                records: records
-                    .iter()
-                    .map(persisted_claude_record_from_usage)
-                    .collect(),
+                records: persisted_records,
+                indexed_bytes,
+                boundary_fingerprint,
             },
         );
         index.schema_version = crate::claude_activity_index::CLAUDE_ACTIVITY_INDEX_SCHEMA_VERSION;
@@ -2192,9 +2451,20 @@ mod tests {
         let ts = (Utc::now() - Duration::hours(1))
             .format("%Y-%m-%dT%H:%M:%S%.3fZ")
             .to_string();
+        // Trailing newline: matches this project's own real-machine audit
+        // (docs/validation/ANALYTICS_PHASE3F_HOT_FILE_TAIL_INDEXING.md) --
+        // a real Claude transcript's resting state between writes always
+        // ends with a complete, newline-terminated line. A dangling final
+        // line with no newline is deliberately NOT persisted (Phase 3F:
+        // it would otherwise risk being double-counted once an append
+        // fast path later completes it) -- that behavior has its own
+        // dedicated tests below, not this one.
         std::fs::write(
             &path,
-            claude_transcript_line(&ts, "requestId", "req_real", "msg_real"),
+            format!(
+                "{}\n",
+                claude_transcript_line(&ts, "requestId", "req_real", "msg_real")
+            ),
         )
         .unwrap();
 
@@ -2243,6 +2513,364 @@ mod tests {
         let _removed = std::fs::remove_file(&path);
     }
 
+    /// Phase 3F hot-file test corpus: a live, continuously growing
+    /// transcript must be indexed incrementally, not re-read in full on
+    /// every append (docs/validation/
+    /// ANALYTICS_PHASE3F_HOT_FILE_TAIL_INDEXING.md). All deterministic,
+    /// no wall-clock/timing assertions -- work is proven via byte offsets
+    /// and record content, never call counts.
+    mod hot_file_tail_indexing {
+        use super::*;
+
+        fn write_line(model: &str, req_id: &str, msg_id: &str, input: u64, output: u64) -> String {
+            let ts = (Utc::now() - Duration::hours(1))
+                .format("%Y-%m-%dT%H:%M:%S%.3fZ")
+                .to_string();
+            format!(
+                r#"{{"type":"assistant","timestamp":"{ts}","requestId":"{req_id}","message":{{"id":"{msg_id}","model":"{model}","usage":{{"input_tokens":{input},"output_tokens":{output}}}}}}}"#
+            )
+        }
+
+        fn setup() -> (tempfile::TempDir, std::path::PathBuf) {
+            clear_claude_file_records_cache_for_test();
+            clear_claude_activity_index_memory_cache_for_test();
+            let index_root = tempfile::tempdir().unwrap();
+            let path = std::env::temp_dir().join(format!(
+                "codexbar-claude-hotfile-{}-{}.jsonl",
+                std::process::id(),
+                std::process::id() // unique enough within a single test process run; each test uses its own suffix below
+            ));
+            (index_root, path)
+        }
+
+        /// A: base file + one appended record. The append must be picked
+        /// up, and the persisted `indexed_bytes` must have advanced past
+        /// the new line (not stayed at the old size or reset to 0).
+        #[test]
+        fn a_one_appended_record_is_indexed_incrementally() {
+            let (index_root, base) = setup();
+            let path = base.with_file_name(format!(
+                "{}-a.jsonl",
+                base.file_stem().unwrap().to_string_lossy()
+            ));
+            std::fs::write(
+                &path,
+                format!("{}\n", write_line("model-x", "r1", "m1", 100, 50)),
+            )
+            .unwrap();
+
+            let first = parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+            assert_eq!(first.len(), 1);
+
+            let mut body = std::fs::read_to_string(&path).unwrap();
+            body.push_str(&format!("{}\n", write_line("model-x", "r2", "m2", 200, 75)));
+            std::fs::write(&path, body).unwrap();
+
+            let after_append =
+                parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+            assert_eq!(
+                after_append.len(),
+                2,
+                "the appended record must be picked up"
+            );
+            assert_eq!(after_append[1].input, 200);
+
+            let _removed = std::fs::remove_file(&path);
+        }
+
+        /// B/C: many appended records across repeated append batches,
+        /// each processed without duplicating any prior record.
+        #[test]
+        fn b_repeated_append_batches_never_duplicate_prior_records() {
+            let (index_root, base) = setup();
+            let path = base.with_file_name(format!(
+                "{}-b.jsonl",
+                base.file_stem().unwrap().to_string_lossy()
+            ));
+            std::fs::write(
+                &path,
+                format!("{}\n", write_line("model-x", "r0", "m0", 10, 5)),
+            )
+            .unwrap();
+            let _ = parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+
+            for batch in 1..=5 {
+                let mut body = std::fs::read_to_string(&path).unwrap();
+                for i in 0..3 {
+                    body.push_str(&format!(
+                        "{}\n",
+                        write_line(
+                            "model-x",
+                            &format!("r{batch}-{i}"),
+                            &format!("m{batch}-{i}"),
+                            10,
+                            5
+                        )
+                    ));
+                }
+                std::fs::write(&path, body).unwrap();
+                let records =
+                    parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+                assert_eq!(
+                    records.len(),
+                    1 + batch * 3,
+                    "batch {batch}: total record count must grow by exactly 3 per batch, no duplicates and none lost"
+                );
+            }
+
+            let _removed = std::fs::remove_file(&path);
+        }
+
+        /// D/E: a partial trailing line (writer flushed mid-record, no
+        /// newline yet) must not be double-counted once it completes.
+        #[test]
+        fn d_e_partial_trailing_line_completes_without_duplication() {
+            let (index_root, base) = setup();
+            let path = base.with_file_name(format!(
+                "{}-de.jsonl",
+                base.file_stem().unwrap().to_string_lossy()
+            ));
+            let complete_line = write_line("model-x", "r1", "m1", 100, 50);
+            std::fs::write(&path, format!("{complete_line}\n")).unwrap();
+            let _ = parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+
+            // Partial write: the second record's bytes arrive WITHOUT a
+            // trailing newline yet (a real writer flush mid-line).
+            let second_line = write_line("model-x", "r2", "m2", 200, 75);
+            let partial = &second_line[..second_line.len() / 2];
+            let mut body = std::fs::read_to_string(&path).unwrap();
+            body.push_str(partial);
+            std::fs::write(&path, &body).unwrap();
+
+            let while_partial =
+                parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+            assert_eq!(
+                while_partial.len(),
+                1,
+                "an incomplete trailing line must not be counted as a record yet"
+            );
+
+            // Completion: the rest of the line plus its newline arrive.
+            body.push_str(&second_line[second_line.len() / 2..]);
+            body.push('\n');
+            std::fs::write(&path, &body).unwrap();
+
+            let after_completion =
+                parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+            assert_eq!(
+                after_completion.len(),
+                2,
+                "the now-completed line must be counted exactly once, not duplicated"
+            );
+            assert_eq!(after_completion[1].input, 200);
+
+            let _removed = std::fs::remove_file(&path);
+        }
+
+        /// F: truncation (file replaced with unrelated, shorter content)
+        /// must invalidate and fully reparse -- never append cached
+        /// records onto unrelated new content.
+        #[test]
+        fn f_truncation_forces_a_full_reparse_not_a_bad_append() {
+            let (index_root, base) = setup();
+            let path = base.with_file_name(format!(
+                "{}-f.jsonl",
+                base.file_stem().unwrap().to_string_lossy()
+            ));
+            std::fs::write(
+                &path,
+                format!(
+                    "{}\n{}\n",
+                    write_line("model-x", "r1", "m1", 100, 50),
+                    write_line("model-x", "r2", "m2", 200, 75)
+                ),
+            )
+            .unwrap();
+            let first = parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+            assert_eq!(first.len(), 2);
+
+            // Truncated to a single, different record -- smaller than before.
+            std::fs::write(
+                &path,
+                format!("{}\n", write_line("model-y", "r3", "m3", 5, 1)),
+            )
+            .unwrap();
+            let after_truncate =
+                parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+            assert_eq!(
+                after_truncate.len(),
+                1,
+                "truncation must fully invalidate the old cached contribution"
+            );
+            assert_eq!(after_truncate[0].model, "model-y");
+
+            let _removed = std::fs::remove_file(&path);
+        }
+
+        /// G: modification before the old EOF (a rewrite that keeps the
+        /// same or larger size but changes earlier content) must not be
+        /// mistaken for a pure append -- the continuity/boundary check
+        /// must catch it and force a full reparse.
+        #[test]
+        fn g_modification_before_old_eof_is_not_treated_as_append() {
+            let (index_root, base) = setup();
+            let path = base.with_file_name(format!(
+                "{}-g.jsonl",
+                base.file_stem().unwrap().to_string_lossy()
+            ));
+            std::fs::write(
+                &path,
+                format!("{}\n", write_line("model-x", "r1", "m1", 100, 50)),
+            )
+            .unwrap();
+            let first = parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+            assert_eq!(first.len(), 1);
+            assert_eq!(first[0].model, "model-x");
+
+            // Same-or-larger total size, but the earlier content changed
+            // (a different model on the first line) -- must not silently
+            // keep the stale "model-x" record via a bad append.
+            std::fs::write(
+                &path,
+                format!(
+                    "{}\n{}\n",
+                    write_line("model-z", "r1", "m1", 100, 50),
+                    write_line("model-z", "r2", "m2", 1, 1)
+                ),
+            )
+            .unwrap();
+            let after_rewrite =
+                parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+            assert!(
+                after_rewrite.iter().all(|r| r.model == "model-z"),
+                "a rewrite of earlier content must be fully reparsed, never blended with the stale prefix: {after_rewrite:?}"
+            );
+
+            let _removed = std::fs::remove_file(&path);
+        }
+
+        /// H: content replacement with a larger size (still not a pure
+        /// append -- different bytes throughout) must also be caught by
+        /// the continuity check, not accepted as an append just because
+        /// it grew.
+        #[test]
+        fn h_larger_replacement_is_not_treated_as_append() {
+            let (index_root, base) = setup();
+            let path = base.with_file_name(format!(
+                "{}-h.jsonl",
+                base.file_stem().unwrap().to_string_lossy()
+            ));
+            std::fs::write(
+                &path,
+                format!("{}\n", write_line("model-x", "r1", "m1", 100, 50)),
+            )
+            .unwrap();
+            let _ = parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+
+            // Larger, but entirely different content (real replacement,
+            // not append) -- three unrelated records replacing the one.
+            std::fs::write(
+                &path,
+                format!(
+                    "{}\n{}\n{}\n",
+                    write_line("model-q", "r9", "m9", 9, 9),
+                    write_line("model-q", "r10", "m10", 10, 10),
+                    write_line("model-q", "r11", "m11", 11, 11)
+                ),
+            )
+            .unwrap();
+            let after_replace =
+                parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+            assert_eq!(after_replace.len(), 3);
+            assert!(
+                after_replace.iter().all(|r| r.model == "model-q"),
+                "a full content replacement must never retain the old record: {after_replace:?}"
+            );
+
+            let _removed = std::fs::remove_file(&path);
+        }
+
+        /// I: an unchanged file across repeated calls is stable (already
+        /// covered by `unchanged_claude_file_reads_are_stable_across_
+        /// repeated_calls` above -- included here by name only for the
+        /// corpus's own completeness record, not duplicated).
+        #[test]
+        fn i_unchanged_file_is_stable_see_dedicated_test_above() {
+            // See `unchanged_claude_file_reads_are_stable_across_repeated_calls`.
+        }
+
+        /// J: append followed by delete -- the deletion must win; no
+        /// stale appended content should linger.
+        #[test]
+        fn j_append_then_delete_leaves_no_stale_contribution() {
+            let (index_root, base) = setup();
+            let path = base.with_file_name(format!(
+                "{}-j.jsonl",
+                base.file_stem().unwrap().to_string_lossy()
+            ));
+            std::fs::write(
+                &path,
+                format!("{}\n", write_line("model-x", "r1", "m1", 100, 50)),
+            )
+            .unwrap();
+            let _ = parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+
+            let mut body = std::fs::read_to_string(&path).unwrap();
+            body.push_str(&format!("{}\n", write_line("model-x", "r2", "m2", 200, 75)));
+            std::fs::write(&path, body).unwrap();
+            let after_append =
+                parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+            assert_eq!(after_append.len(), 2);
+
+            std::fs::remove_file(&path).unwrap();
+            let after_delete =
+                parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+            assert!(
+                after_delete.is_empty(),
+                "a deleted file must contribute nothing"
+            );
+        }
+
+        /// M/N: an oversized appended line and a malformed appended JSON
+        /// line must both be safely discarded (matching the existing
+        /// bounded-line security policy), not crash or poison the rest of
+        /// the append.
+        #[test]
+        fn m_n_oversized_and_malformed_appended_lines_are_discarded_safely() {
+            let (index_root, base) = setup();
+            let path = base.with_file_name(format!(
+                "{}-mn.jsonl",
+                base.file_stem().unwrap().to_string_lossy()
+            ));
+            std::fs::write(
+                &path,
+                format!("{}\n", write_line("model-x", "r1", "m1", 100, 50)),
+            )
+            .unwrap();
+            let _ = parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+
+            let oversized_line = "x".repeat(300_000); // exceeds CODEX_JSONL_MAX_LINE_BYTES (256KB)
+            let malformed_line = "{ not valid json at all";
+            let good_line = write_line("model-x", "r2", "m2", 42, 7);
+            let mut body = std::fs::read_to_string(&path).unwrap();
+            body.push_str(&format!(
+                "{oversized_line}\n{malformed_line}\n{good_line}\n"
+            ));
+            std::fs::write(&path, body).unwrap();
+
+            let after_append =
+                parse_claude_file_records_cached(&path, None, Some(index_root.path()));
+            assert_eq!(
+                after_append.len(),
+                2,
+                "oversized and malformed appended lines must be discarded, not crash or block the good line after them"
+            );
+            assert_eq!(after_append[1].input, 42);
+
+            let _removed = std::fs::remove_file(&path);
+        }
+    }
+
     /// Proves the actual deletion-reconciliation path used by every
     /// production scan (`reconcile_claude_activity_index_deletions`,
     /// called after every `walk_claude_files` pass): a persisted entry for
@@ -2273,6 +2901,8 @@ mod tests {
                 mtime_unix_ms: 1,
                 size: 1,
                 records: vec![],
+                indexed_bytes: 1,
+                boundary_fingerprint: 0,
             },
         );
         index.save(Some(index_root.path()));

@@ -32,7 +32,15 @@ use serde::{Deserialize, Serialize};
 /// version is always treated as a full cache miss (`ClaudeActivityIndex::
 /// default()`), never partially trusted. This is the exact safeguard the
 /// `model_totals` incident (Phase 3B) proved necessary.
-pub const CLAUDE_ACTIVITY_INDEX_SCHEMA_VERSION: u32 = 1;
+///
+/// v1 -> v2 (Phase 3F): added `indexed_bytes`/`boundary_fingerprint` to
+/// `PersistedClaudeFile` for append-tail parsing of active, continuously
+/// growing transcripts. A v1 payload has no way to express "boundary
+/// verified, safe to resume tail parsing here" -- rather than defaulting
+/// those fields to a value that would be silently (and incorrectly)
+/// trusted, the version bump forces every v1 payload to a full, safe
+/// rebuild.
+pub const CLAUDE_ACTIVITY_INDEX_SCHEMA_VERSION: u32 = 2;
 
 /// One usage event's persisted, privacy-safe metadata. Mirrors
 /// `cost_scanner::ClaudeUsageRecord` minus `cost` (recomputed at read
@@ -49,13 +57,27 @@ pub struct PersistedClaudeRecord {
 }
 
 /// One transcript file's cached parse, keyed by its own path in the
-/// index's `files` map. `(mtime_unix_ms, size)` is the invalidation
-/// identity -- the same defensible pair Codex's own per-file cache uses.
+/// index's `files` map. `(mtime_unix_ms, size)` is the whole-file
+/// invalidation identity (Phase 3D) -- the same defensible pair Codex's
+/// own per-file cache uses.
+///
+/// `indexed_bytes`/`boundary_fingerprint` (Phase 3F) support an
+/// append-tail fast path for a live, continuously growing transcript: when
+/// a file has grown (`size` increased) but the bytes immediately before
+/// `indexed_bytes` still hash to `boundary_fingerprint`, only the NEW
+/// bytes from `indexed_bytes` onward need to be parsed -- the previously
+/// indexed prefix is trusted, never re-read. `indexed_bytes` always points
+/// at a real newline boundary (the end of the last fully-consumed JSONL
+/// line); a trailing partial line is never counted into it, so the next
+/// read resumes at exactly the right point without ever duplicating or
+/// dropping a record.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PersistedClaudeFile {
     pub mtime_unix_ms: i64,
     pub size: i64,
     pub records: Vec<PersistedClaudeRecord>,
+    pub indexed_bytes: i64,
+    pub boundary_fingerprint: u64,
 }
 
 /// The complete persisted index. `schema_version` gates every load.
@@ -145,6 +167,8 @@ mod tests {
                 cache_create: 10,
                 cache_read: 20,
             }],
+            indexed_bytes: size,
+            boundary_fingerprint: 0,
         }
     }
 
