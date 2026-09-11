@@ -38,10 +38,12 @@ export default function AnalyticsSourcesTab() {
   const { sources, loading, error } = useAnalyticsSources();
 
   return (
+    // No repeated <h3>/description here: the Settings shell's own page
+    // header already renders this tab's title and help text verbatim
+    // (both come from the same `TabAnalyticsSources`/`AnalyticsSourcesHelp`
+    // keys via settingsCenterRegistry.ts) -- a native screenshot caught
+    // the exact same heading and sentence rendered twice in a row.
     <section className="settings-section analytics-sources-tab" aria-label={t("TabAnalyticsSources")}>
-      <h3 className="settings-section__title">{t("TabAnalyticsSources")}</h3>
-      <p className="settings-section__description">{t("AnalyticsSourcesHelp")}</p>
-
       {error && <p role="alert" className="analytics-sources-tab__error">{error}</p>}
       {loading && !error && <p role="status">…</p>}
 

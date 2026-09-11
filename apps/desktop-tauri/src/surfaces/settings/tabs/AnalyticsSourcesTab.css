@@ -4,7 +4,8 @@
 .analytics-sources-tab__row[data-availability="unsupported"]{opacity:.6}
 .analytics-sources-tab__row-header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .analytics-sources-tab__row-header strong{color:var(--qa-ink-1);font-size:13px}
-.analytics-sources-tab__status{padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.analytics-sources-tab__status{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:10px;font-weight:600;letter-spacing:.02em}
+.analytics-sources-tab__status::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 .analytics-sources-tab__status--available{border:1px solid color-mix(in srgb,var(--qa-accent) 42%,var(--qa-hairline));color:var(--qa-accent)}
 .analytics-sources-tab__status--noDataYet{border:1px solid var(--qa-hairline-strong);color:var(--qa-ink-3)}
 .analytics-sources-tab__status--unsupported{border:1px solid var(--qa-hairline);color:var(--qa-ink-3)}
