@@ -2067,6 +2067,92 @@ mod tests {
         assert!(summary.unknown_models.contains("claude-retired-unknown"));
     }
 
+    /// Security/robustness regression (Phase 3M): a malformed/impossible
+    /// `timestamp` string must never panic the JSON deserializer, and a
+    /// record that ends up with `timestamp: None` because of it must never
+    /// silently pollute a daily bucket -- `add_claude_record_to_daily_costs`
+    /// documents (and this proves) that a missing timestamp is excluded,
+    /// not defaulted to "today" or dropped into whatever bucket happens to
+    /// be iterated. This was previously "safe by construction" (verified by
+    /// reading `DateTime::parse_from_rfc3339(...).ok()` and the `let Some
+    /// = ... else { return }` guard) but had no dedicated test proving it.
+    #[test]
+    fn invalid_timestamp_never_panics_and_never_pollutes_a_daily_bucket() {
+        for bad_timestamp in [
+            r#""not-a-timestamp""#,
+            r#""2026-13-99T99:99:99Z""#, // impossible calendar date/time
+            r#""""#,                     // empty string
+            "null",
+            "12345", // wrong JSON type entirely
+        ] {
+            let line = format!(
+                r#"{{"type":"assistant","timestamp":{bad_timestamp},"requestId":"req_bad_ts","message":{{"id":"msg_bad_ts","model":"claude-sonnet-4-6","usage":{{"input_tokens":100,"output_tokens":50}}}}}}"#
+            );
+            // Must not panic to deserialize, regardless of which malformed
+            // shape the timestamp field takes.
+            let event: Result<ClaudeEvent, _> = serde_json::from_str(&line);
+            let Ok(event) = event else {
+                // A few of these (wrong JSON type) are rejected by serde at
+                // the struct level -- that is a safe, non-panicking failure
+                // mode too, just via a different path than `None`.
+                continue;
+            };
+            let Some(record) = claude_usage_record_from_event(&event) else {
+                continue;
+            };
+            assert!(
+                record.timestamp.is_none(),
+                "expected no usable timestamp from {bad_timestamp}, got {:?}",
+                record.timestamp
+            );
+            // Must not panic, and must not add this record's cost to any
+            // date bucket -- the map stays exactly as it started.
+            let mut daily_costs: HashMap<String, f64> = HashMap::new();
+            daily_costs.insert("2026-01-15".to_string(), 5.0);
+            add_claude_record_to_daily_costs(&mut daily_costs, &record);
+            assert_eq!(daily_costs.get("2026-01-15"), Some(&5.0));
+            assert_eq!(
+                daily_costs.len(),
+                1,
+                "a None-timestamp record must never create a new bucket"
+            );
+        }
+    }
+
+    /// Security/robustness regression (Phase 3M): Codex's daily token cache
+    /// (`CostUsageCache::days`, packed as `[input, cached, output]` `i32`
+    /// triples) merges same-day/same-model totals across files via
+    /// `i32::saturating_add` (`rebuild_cache_days`). A real heavy-usage
+    /// machine can plausibly approach `i32::MAX` (~2.1B) tokens in a single
+    /// day/model bucket -- this dev box's own native Tokens screenshots
+    /// this project already showed multi-billion-token days. Prove the
+    /// merge saturates instead of wrapping to a negative/corrupt total.
+    #[test]
+    fn huge_daily_token_count_saturates_instead_of_overflowing() {
+        let mut cache = CostUsageCache::default();
+        for file_id in ["file-a", "file-b"] {
+            let usage = CostUsageFileUsage {
+                mtime_unix_ms: 0,
+                size: 0,
+                days: HashMap::from([(
+                    "2026-01-15".to_string(),
+                    HashMap::from([("gpt-5".to_string(), vec![i32::MAX, 0, 0])]),
+                )]),
+                parsed_bytes: None,
+                last_model: None,
+                last_totals: None,
+            };
+            cache.files.insert(file_id.to_string(), usage);
+        }
+
+        rebuild_cache_days(&mut cache);
+
+        let merged = &cache.days["2026-01-15"]["gpt-5"];
+        // i32::MAX + i32::MAX saturates at i32::MAX, never wraps negative.
+        assert_eq!(merged[0], i32::MAX);
+        assert!(merged[0] >= 0, "must never wrap to a negative token count");
+    }
+
     #[test]
     fn test_claude_fable_5_pricing() {
         let cost = ClaudePricing::cost_usd_with_cache_ttl("claude-fable-5", 100, 10, 0, 20, 5);
