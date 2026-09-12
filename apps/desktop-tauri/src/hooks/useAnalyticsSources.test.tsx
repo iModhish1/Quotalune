@@ -24,8 +24,8 @@ function source(overrides: Partial<AnalyticsSourceDescriptor> = {}): AnalyticsSo
       dailyActivity: false,
     },
     availability: "available",
-    reads: "",
-    doesNotRead: "",
+    reads: [],
+    doesNotRead: [],
     ...overrides,
   };
 }

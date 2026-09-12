@@ -43,8 +43,8 @@ function source(overrides: Partial<AnalyticsSourceDescriptor> = {}): AnalyticsSo
     scope: "device",
     capabilities: { quota: false, resets: false, monetary: false, tokens: true, models: true, sessionCount: true, dailyActivity: true },
     availability: "available",
-    reads: "reads",
-    doesNotRead: "does not read",
+    reads: [],
+    doesNotRead: [],
     ...overrides,
   };
 }

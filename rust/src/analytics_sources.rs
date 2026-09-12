@@ -98,6 +98,52 @@ pub enum AnalyticsAvailability {
     Unsupported,
 }
 
+/// One atomic, real fact about what a source reads or does not read.
+/// Backend-authoritative (owner Phase 3M: "do not duplicate backend
+/// truth in frontend code") -- the frontend/locale layer only ever maps
+/// one of these identifiers to a short localized phrase; it never
+/// re-derives which facts apply to which source. Stable `as_str()` form
+/// is the wire identifier the bridge/frontend switches on, independent
+/// of Rust's own variant names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AnalyticsSourceFact {
+    /// "Each configured provider's live quota, plan, and connection status."
+    ProviderLiveQuotaPlanStatus,
+    /// "Persisted quota-percentage and reset-boundary samples over time,
+    /// per resolved account."
+    PersistedQuotaResetSamples,
+    /// "Spend, Balance, or Credits figures the provider itself reports,
+    /// only when the cost contract is eligible."
+    ProviderReportedMonetaryFigures,
+    /// A parsed event/message timestamp.
+    Timestamps,
+    /// Real token counters (input/output/cached) -- never a dollar amount.
+    TokenCounts,
+    /// A parsed model identifier string.
+    ModelIdentifiers,
+    /// Prompt or assistant response text -- never deserialized by any
+    /// local scanner (see `docs/validation/LOCAL_ACTIVITY_PRIVACY.md`).
+    PromptOrResponseContent,
+    /// Codex's own CLI log directory contents beyond the bounded fields
+    /// this registry's other facts already name.
+    LocalCliLogs,
+    /// A dollar figure Quotalis computed itself from local token counts
+    /// -- the channel this registry's `ProviderReportedMonetary` source
+    /// is permanently ineligible to show (see `CostOrigin`).
+    LocallyEstimatedCost,
+    /// A per-session/per-conversation drillable record -- only ever an
+    /// aggregate count is available (Codex), or not even that (Claude).
+    PerSessionRecord,
+    /// A locally-computed dollar cost for local activity (distinct from
+    /// `LocallyEstimatedCost`, which is specifically the Monetary
+    /// source's ineligible channel) -- local scanners never surface one.
+    DollarCost,
+    /// Any per-conversation/session identity -- Claude's local scanner
+    /// has no authenticated session concept at all.
+    SessionIdentity,
+}
+
 /// One row in the analytics source registry -- the UI's authoritative
 /// capability map (owner: "capability registry drives available
 /// sections").
@@ -109,14 +155,15 @@ pub struct AnalyticsSourceDescriptor {
     pub scope: AnalyticsScope,
     pub capabilities: AnalyticsCapabilities,
     pub availability: AnalyticsAvailability,
-    /// A short, honest description of what this source reads -- shown
-    /// verbatim in Settings -> Analytics -> Data Sources (owner section
-    /// 71: "Explain what each source reads... only claim that if
-    /// implementation proves it").
-    pub reads: &'static str,
+    /// The real, atomic facts this source reads -- shown in Settings ->
+    /// Analytics -> Data Sources (owner section 71: "Explain what each
+    /// source reads... only claim that if implementation proves it").
+    /// Structured, not prose: the frontend localizes each identifier,
+    /// it does not receive (or need to translate) English sentences.
+    pub reads: Vec<AnalyticsSourceFact>,
     /// What this source explicitly does NOT read, stated for the same
-    /// reason.
-    pub does_not_read: &'static str,
+    /// reason and in the same structured form.
+    pub does_not_read: Vec<AnalyticsSourceFact>,
 }
 
 /// Build the current, real analytics source registry. Availability
@@ -136,8 +183,12 @@ pub fn analytics_source_registry() -> Vec<AnalyticsSourceDescriptor> {
                 ..Default::default()
             },
             availability: AnalyticsAvailability::Available,
-            reads: "Each configured provider's live quota, plan, and connection status.",
-            does_not_read: "Prompt or response content; token counts; local CLI logs.",
+            reads: vec![AnalyticsSourceFact::ProviderLiveQuotaPlanStatus],
+            does_not_read: vec![
+                AnalyticsSourceFact::PromptOrResponseContent,
+                AnalyticsSourceFact::TokenCounts,
+                AnalyticsSourceFact::LocalCliLogs,
+            ],
         },
         AnalyticsSourceDescriptor {
             id: AnalyticsSourceId::ProviderHistory,
@@ -150,8 +201,11 @@ pub fn analytics_source_registry() -> Vec<AnalyticsSourceDescriptor> {
                 ..Default::default()
             },
             availability: AnalyticsAvailability::Available,
-            reads: "Persisted quota-percentage and reset-boundary samples over time, per resolved account.",
-            does_not_read: "Prompt or response content; token counts.",
+            reads: vec![AnalyticsSourceFact::PersistedQuotaResetSamples],
+            does_not_read: vec![
+                AnalyticsSourceFact::PromptOrResponseContent,
+                AnalyticsSourceFact::TokenCounts,
+            ],
         },
         AnalyticsSourceDescriptor {
             id: AnalyticsSourceId::ProviderReportedMonetary,
@@ -162,8 +216,8 @@ pub fn analytics_source_registry() -> Vec<AnalyticsSourceDescriptor> {
                 ..Default::default()
             },
             availability: AnalyticsAvailability::Available,
-            reads: "Spend, Balance, or Credits figures the provider itself reports, only when the cost contract is eligible.",
-            does_not_read: "Locally-estimated cost derived from token counts -- that channel is permanently ineligible for display.",
+            reads: vec![AnalyticsSourceFact::ProviderReportedMonetaryFigures],
+            does_not_read: vec![AnalyticsSourceFact::LocallyEstimatedCost],
         },
         AnalyticsSourceDescriptor {
             id: AnalyticsSourceId::CodexLocalActivity,
@@ -181,8 +235,16 @@ pub fn analytics_source_registry() -> Vec<AnalyticsSourceDescriptor> {
             } else {
                 AnalyticsAvailability::NoDataYet
             },
-            reads: "Timestamps, token counters, and model identifiers from local Codex CLI session logs on this device.",
-            does_not_read: "Prompt or response content; a per-session record (only an aggregate count); dollar cost.",
+            reads: vec![
+                AnalyticsSourceFact::Timestamps,
+                AnalyticsSourceFact::TokenCounts,
+                AnalyticsSourceFact::ModelIdentifiers,
+            ],
+            does_not_read: vec![
+                AnalyticsSourceFact::PromptOrResponseContent,
+                AnalyticsSourceFact::PerSessionRecord,
+                AnalyticsSourceFact::DollarCost,
+            ],
         },
         AnalyticsSourceDescriptor {
             id: AnalyticsSourceId::ClaudeLocalActivity,
@@ -205,8 +267,16 @@ pub fn analytics_source_registry() -> Vec<AnalyticsSourceDescriptor> {
             } else {
                 AnalyticsAvailability::NoDataYet
             },
-            reads: "Timestamps, token counters, and model identifiers from local Claude Code transcript files on this device.",
-            does_not_read: "Prompt or response content; session identity; dollar cost.",
+            reads: vec![
+                AnalyticsSourceFact::Timestamps,
+                AnalyticsSourceFact::TokenCounts,
+                AnalyticsSourceFact::ModelIdentifiers,
+            ],
+            does_not_read: vec![
+                AnalyticsSourceFact::PromptOrResponseContent,
+                AnalyticsSourceFact::SessionIdentity,
+                AnalyticsSourceFact::DollarCost,
+            ],
         },
     ]
 }
@@ -264,11 +334,9 @@ mod tests {
             .unwrap();
         assert!(!monetary.capabilities.tokens);
         assert!(
-            monetary.does_not_read.contains("locally-estimated")
-                || monetary
-                    .does_not_read
-                    .to_lowercase()
-                    .contains("locally-estimated")
+            monetary
+                .does_not_read
+                .contains(&AnalyticsSourceFact::LocallyEstimatedCost)
         );
     }
 

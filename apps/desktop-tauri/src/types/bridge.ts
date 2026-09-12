@@ -920,9 +920,28 @@ export interface AnalyticsSourceDescriptor {
   scope: AnalyticsScope;
   capabilities: AnalyticsCapabilities;
   availability: AnalyticsAvailability;
-  reads: string;
-  doesNotRead: string;
+  reads: AnalyticsSourceFact[];
+  doesNotRead: AnalyticsSourceFact[];
 }
+
+/** One atomic, real fact about what a source reads/does not read
+ *  (`quotalis_core::analytics_sources::AnalyticsSourceFact`). Backend-
+ *  authoritative -- the frontend maps each identifier to one localized
+ *  phrase (`AnalyticsSourcesTab.tsx`'s `SOURCE_FACT_KEY`); it never
+ *  re-derives which facts apply to which source. */
+export type AnalyticsSourceFact =
+  | "providerLiveQuotaPlanStatus"
+  | "persistedQuotaResetSamples"
+  | "providerReportedMonetaryFigures"
+  | "timestamps"
+  | "tokenCounts"
+  | "modelIdentifiers"
+  | "promptOrResponseContent"
+  | "localCliLogs"
+  | "locallyEstimatedCost"
+  | "perSessionRecord"
+  | "dollarCost"
+  | "sessionIdentity";
 
 export interface ProviderLocalUsageSummary {
   todayCost: number | null;
