@@ -342,3 +342,15 @@ builds touched Personal, visible toast acceptance remains unverified, the catalo
 has 68 native items rather than 70, and the 250k-history transfer budget is unmet.
 Engineering tests/builds pass. Do not turn this checkpoint into release approval
 or claim all page-level visual gates complete.
+
+## POST-RELEASE-01 — 2026-09-12 continuation
+
+Latest release lineage reconciled at 0f108437. Subsequent Analytics/promotion
+closeouts supersede the older unfinished analytics checklist above; preserve its
+historical verdict. Native baseline exposed missing Tauri Dev identity in the
+verified build workflow. Repair this boundary first, independently review it,
+then complete native smoke and source gates. Current source repair: 7efe92d5.
+Rollback instructions corrected separately at 4b7869cd; no rollback/install run.
+Current findings, exact gates and remaining authorized backlog are recorded in
+docs/validation/CODEX_POST_RELEASE_HANDOFF.md. Personal remains frozen; its actual
+shortcut drift is reported, not silently repaired.

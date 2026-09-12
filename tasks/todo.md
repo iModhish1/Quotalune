@@ -1085,3 +1085,17 @@ Engineering/evidence verdict: ANALYTICS V3 PASS. Report: `docs/validation/ANALYT
 - [x] Truthful matrix, reset bands, comparison and accessible provider picker tested.
 - [x] Native Dev iteration, RTL/narrow/real-data and lifecycle evidence captured.
 - [ ] Owner visual acceptance of the native result; no next-wave work authorized by this checkpoint.
+
+## POST-RELEASE-01 — current continuation, 2026-09-12
+
+- [x] Reconcile latest source 0f108437, accepted app dfd81974 and packaging 1b3a6db3.
+- [x] Verify installed 0.11.0 binary hash/version with read-only diagnostics.
+- [x] Run fresh frontend/Rust/build/locale/quality baseline gates.
+- [x] Repair reproduced Dev Tauri/single-instance identity gap, preserve base window config.
+- [x] Add mixed/missing identity and alternate-output checks; independent critical review.
+- [x] Correct unsafe rollback guidance; record 23 matching payloads and manifest self-entry mismatch.
+- [x] Native Dev baseline pages open, charts load and native Windows click works.
+- [ ] Personal shortcut repair/re-pin: later explicit Personal authorization required.
+- [ ] Separate future slices: deferred Claude warm aggregation, reset editor consolidation, visible copy/title residue.
+
+Full current evidence and qualifications: docs/validation/CODEX_POST_RELEASE_HANDOFF.md.

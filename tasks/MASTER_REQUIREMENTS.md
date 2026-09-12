@@ -269,3 +269,14 @@ Owner rejected subsequent component concept sheets and explicitly instructed imp
 Starting clean HEAD: 4f3e493e2150f813e96181460e05be63d6b46f1f.
 Source: owner Product V3 spec and ten screenshots. Owner rejects current product experience.
 Acceptance: nested Dashboard Overview/Analytics; clickable windowed provider rail with wheel/drag/keyboard and detected plans, scale1/6/12/24/40/70; remove meaningless ellipse; rich capability-gated global/provider analytics; Providers operations upgrade; shared accessible select/multiselect; native notification branding/icon/deep-link audit and repair; shared theme/RTL/responsive surfaces; native evidence and truthful full gates. Personal untouched, no WebGL, no fake metrics. Design concepts precede production UI. Implementation waves and incomplete proof stay explicit.
+
+## POST-RELEASE-01 — forensic continuation (2026-09-12)
+Source: owner attachment 62c69d2e-5740-4fa1-b453-f72ec3089110.
+Continue from latest source 0f108437, preserving accepted application dfd81974,
+installer-only 1b3a6db3 and installed stable Personal 0.11.0 as distinct identities.
+Reconcile release/rollback evidence, run current source gates and a freshly verified
+Dev native smoke, inventory real open work, then complete one evidence-backed
+hardening slice. Personal is frozen: no install, settings/data/shortcut/pin changes.
+Closed Analytics acceptance and historical incidents remain intact; no speculative
+reopening, fake sessions, monetary conversions, cloud or 3D. Checkpoint and exact
+verification results: docs/validation/CODEX_POST_RELEASE_HANDOFF.md.
