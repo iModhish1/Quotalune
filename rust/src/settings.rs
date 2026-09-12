@@ -699,6 +699,7 @@ pub struct WorkspacePreferences {
     pub density: String,
     pub navigation: String,
     pub sidebar_width: u16,
+    pub provider_sidebar_width: u16,
     pub sidebar_collapsed: bool,
     pub background: String,
     pub background_motion: String,
@@ -710,6 +711,7 @@ impl Default for WorkspacePreferences {
             density: "comfortable".into(),
             navigation: "side".into(),
             sidebar_width: 232,
+            provider_sidebar_width: 256,
             sidebar_collapsed: false,
             background: "cosmic".into(),
             background_motion: "static".into(),
@@ -726,10 +728,23 @@ impl WorkspacePreferences {
             self.navigation = "side".into();
         }
         self.sidebar_width = self.sidebar_width.clamp(184, 360);
-        if !matches!(
-            self.background.as_str(),
-            "none" | "cosmic" | "aurora" | "starfield"
-        ) {
+        self.provider_sidebar_width = self.provider_sidebar_width.clamp(184, 360);
+        let generated_background = ["atmosphere-", "motion-"].iter().any(|prefix| {
+            self.background
+                .strip_prefix(prefix)
+                .is_some_and(|number| (1..=12).any(|value| number == format!("{value:02}")))
+        });
+        let custom_background = self.background.strip_prefix("custom:").is_some_and(|id| {
+            uuid::Uuid::parse_str(id)
+                .is_ok_and(|value| value.get_version_num() == 4 && value.to_string() == id)
+        });
+        if !generated_background
+            && !custom_background
+            && !matches!(
+                self.background.as_str(),
+                "none" | "cosmic" | "aurora" | "starfield"
+            )
+        {
             self.background = "cosmic".into();
         }
         if self.background_motion != "interactive" {
@@ -797,6 +812,69 @@ mod dashboard_mode_tests {
     fn performance_preset_rejects_unknown_strings() {
         assert_eq!(DashboardPerformancePreset::parse("ultra"), None);
         assert_eq!(DashboardPerformancePreset::parse(""), None);
+    }
+}
+
+#[cfg(test)]
+mod workspace_library_preferences_tests {
+    use super::WorkspacePreferences;
+
+    #[test]
+    fn accepts_catalog_batches_and_generated_custom_ids_without_accepting_paths() {
+        for prefix in ["atmosphere-", "motion-"] {
+            for number in 1..=12 {
+                let background = format!("{prefix}{number:02}");
+                let prefs = WorkspacePreferences {
+                    background: background.clone(),
+                    ..Default::default()
+                };
+                assert_eq!(prefs.normalized().background, background);
+            }
+        }
+        let custom = format!("custom:{}", uuid::Uuid::new_v4());
+        assert_eq!(
+            WorkspacePreferences {
+                background: custom.clone(),
+                ..Default::default()
+            }
+            .normalized()
+            .background,
+            custom
+        );
+        for background in [
+            "motion-00",
+            "motion-13",
+            "atmosphere-1",
+            "custom:../../settings.json",
+            "file:///image.png",
+        ] {
+            assert_eq!(
+                WorkspacePreferences {
+                    background: background.into(),
+                    ..Default::default()
+                }
+                .normalized()
+                .background,
+                "cosmic"
+            );
+        }
+    }
+
+    #[test]
+    fn missing_provider_width_defaults_and_out_of_range_values_are_clamped() {
+        let old: WorkspacePreferences =
+            serde_json::from_str(r#"{"sidebarWidth":280,"background":"cosmic"}"#).unwrap();
+        assert_eq!(old.provider_sidebar_width, 256);
+        assert_eq!(old.sidebar_width, 280);
+        assert_eq!(
+            WorkspacePreferences {
+                provider_sidebar_width: 999,
+                ..Default::default()
+            }
+            .normalized()
+            .provider_sidebar_width,
+            360
+        );
     }
 }
 

@@ -33,6 +33,7 @@ pub mod surface_layout;
 pub mod status;
 pub mod tray;
 pub mod updater;
+pub mod workspace_backgrounds;
 pub mod wsl;
 
 mod codex_costs;

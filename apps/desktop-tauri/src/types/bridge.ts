@@ -238,8 +238,9 @@ export interface WorkspacePreferences {
   density: "comfortable" | "compact" | "dense";
   navigation: "side" | "top" | "bottom";
   sidebarWidth?: number;
+  providerSidebarWidth?: number;
   sidebarCollapsed?: boolean;
-  background?: "none" | "cosmic" | "aurora" | "starfield";
+  background?: "none" | "cosmic" | "aurora" | "starfield" | `atmosphere-${string}` | `motion-${string}` | `custom:${string}`;
   backgroundMotion?: "static" | "interactive";
   backgroundIntensity?: "subtle" | "balanced" | "vivid";
 }

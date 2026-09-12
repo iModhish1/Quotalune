@@ -47,6 +47,8 @@ mod settings;
 mod shortcuts;
 mod surface;
 mod system;
+mod workspace_backgrounds;
+pub use workspace_backgrounds::*;
 
 pub use agent_sessions::*;
 pub use analytics_sources::*;

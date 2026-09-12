@@ -91,6 +91,12 @@ fn deserialize_workspace_preferences<'de, D: serde::Deserializer<'de>>(
                 .get("sidebarCollapsed")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false),
+            provider_sidebar_width: object
+                .get("providerSidebarWidth")
+                .and_then(|v| v.as_u64())
+                .map(|v| v.clamp(184, 360) as u16)
+                .unwrap_or(256),
+            /* sidebar collapse is independent of the provider pane width. */
             background: object
                 .get("background")
                 .and_then(|v| v.as_str())

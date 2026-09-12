@@ -418,6 +418,10 @@ fn main() {
             },
         ))
         .invoke_handler(tauri::generate_handler![
+            commands::list_workspace_backgrounds,
+            commands::read_workspace_background,
+            commands::import_workspace_background,
+            commands::remove_workspace_background,
             commands::get_bootstrap_state,
             commands::get_provider_catalog,
             commands::get_settings_snapshot,

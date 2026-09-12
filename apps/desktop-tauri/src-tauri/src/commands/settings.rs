@@ -2,7 +2,7 @@ use super::*;
 
 // Serialize the entire shared-patch transaction, not just the final write.
 // Detached windows may invoke this async command concurrently.
-static SETTINGS_PATCH_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+pub(super) static SETTINGS_PATCH_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 // ── Settings mutation ─────────────────────────────────────────────────
 
