@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { DashboardSnapshot } from "../types/bridge";
+import type { DashboardRangeKind, DashboardSnapshot } from "../types/bridge";
 
 const tauriMocks = vi.hoisted(() => ({
   getDashboardSnapshot: vi.fn(),
@@ -61,6 +61,33 @@ describe("useDashboardSnapshot", () => {
     expect(result.current.snapshot?.timezone).toBe("new-result");
     await act(async () => pending[0](snapshot({timezone: "old-result"})));
     expect(result.current.snapshot?.timezone).toBe("new-result");
+  });
+
+  /**
+   * Same-source range race (owner Phase 3N section 24, "Claude 30d ->
+   * Claude 7d"): the existing test above only varies the provider
+   * filter between the two competing requests. This proves the exact
+   * complementary case -- provider held constant, only `range`
+   * changes -- since `requestKey` folds range/timezone/providers into
+   * one key and `revision` gates every in-flight promise, but neither
+   * had a dedicated deterministic test for a pure range change before.
+   * Deferred promises, no sleeps, no wall-clock race.
+   */
+  it("rejects a late result from a superseded range on the same provider", async () => {
+    const pending: ((value: DashboardSnapshot) => void)[] = [];
+    tauriMocks.getDashboardSnapshot.mockImplementation(() => new Promise((resolve) => pending.push(resolve)));
+    const { result, rerender } = renderHook(({ range }: { range: DashboardRangeKind }) => useDashboardSnapshot(range, undefined, ["claude"]), {
+      initialProps: { range: "last30Days" },
+    });
+    rerender({ range: "last7Days" });
+    // The narrower (7d) request resolves first, exactly as a real fast
+    // local query would versus a slower 30-day scan.
+    await act(async () => pending[1](snapshot({ timezone: "7d-result" })));
+    expect(result.current.snapshot?.timezone).toBe("7d-result");
+    // The late 30d completion must never overwrite the 7d result the
+    // user is now looking at.
+    await act(async () => pending[0](snapshot({ timezone: "30d-result" })));
+    expect(result.current.snapshot?.timezone).toBe("7d-result");
   });
 
   it("loads a snapshot on mount for the requested range", async () => {
