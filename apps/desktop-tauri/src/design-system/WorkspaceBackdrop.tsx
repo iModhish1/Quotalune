@@ -43,11 +43,15 @@ export default function WorkspaceBackdrop({settings}: {settings: SettingsSnapsho
     if (!enabled || !root || !glow.current) return;
     return attachBackgroundInteraction(root, glow.current);
   }, [enabled]);
-  const art = customId ? (customImage?.id===customId ? `linear-gradient(110deg,color-mix(in srgb,var(--workspace-bg) 60%,transparent),transparent),url("${customImage.url}") center/cover` : "none") : selected?.art;
+  // Large data URLs exceed WebView2's CSS custom-property token limit. Keep
+  // imported pixels in an image element, with a separate theme scrim.
+  const art = customId ? "none" : selected?.art;
   return <div ref={layer} className="workspace-backdrop" aria-hidden="true" data-interactive={enabled}
     data-motion={selected?.motion} data-animate={enabled&&active&&selected?.kind==="animated"}
     style={art ? {"--workspace-art":art} as CSSProperties : undefined}>
-    <div className="workspace-backdrop__art"/>
+    <div className="workspace-backdrop__art">
+      {customId&&customImage?.id===customId&&<><img className="workspace-backdrop__image" src={customImage.url} alt=""/><span className="workspace-backdrop__scrim"/></>}
+    </div>
     <div ref={glow} className="workspace-backdrop__glow"/>
   </div>;
 }
