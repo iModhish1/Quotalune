@@ -289,3 +289,6 @@ button (left English, right Arabic); draggable sidebar width; and larger, cleare
 Dashboard/Workspace/Settings branch controls. Persist presentation preferences,
 preserve logos and data, keep keyboard access and RTL, and validate freshly built
 Dev with native Windows interaction. Personal remains frozen.
+
+Implemented and validated at 8a925f5e; scope, screenshots and qualifications:
+`docs/validation/WORKSPACE_SHELL_COMPACT.md`. Owner visual approval remains separate.

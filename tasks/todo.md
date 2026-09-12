@@ -1101,7 +1101,9 @@ Engineering/evidence verdict: ANALYTICS V3 PASS. Report: `docs/validation/ANALYT
 Full current evidence and qualifications: docs/validation/CODEX_POST_RELEASE_HANDOFF.md.
 
 ## SHELL-01
-- [ ] Compact shared toolbar and Settings context/search header.
-- [ ] Persist sidebar width/collapse; support drag, keyboard and RTL.
-- [ ] Improve primary navigation branch targets and chevrons.
-- [ ] Source gates and native Dev wide/narrow/RTL interaction proof.
+- [x] Compact shared toolbar and Settings context/search header.
+- [x] Persist sidebar width/collapse; support drag, keyboard and RTL.
+- [x] Improve primary navigation branch targets and chevrons.
+- [x] Source gates and native Dev wide/narrow/RTL interaction proof.
+
+Candidate 8a925f5e; evidence and limitations: docs/validation/WORKSPACE_SHELL_COMPACT.md.

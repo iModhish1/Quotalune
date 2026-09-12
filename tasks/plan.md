@@ -359,3 +359,6 @@ shortcut drift is reported, not silently repaired.
 Compact the shared shell and merge repeated Settings introductions. Add persisted
 sidebar width/collapse with pointer and keyboard resizing, improve branch controls,
 then validate migrations, frontend interactions, full gates and fresh native Dev.
+
+Completed at 8a925f5e. Fresh native CUA and narrow/RTL evidence, exact source gates,
+and graceful restart verification: docs/validation/WORKSPACE_SHELL_COMPACT.md.
