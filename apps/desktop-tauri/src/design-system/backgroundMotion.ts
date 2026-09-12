@@ -9,13 +9,14 @@ export function attachBackgroundInteraction(root: HTMLElement, glow: HTMLElement
     frame = 0;
     glow.style.opacity = "0";
   };
-  const paint = (now: number) => {
+  const paint = () => {
     frame = 0;
     if (!active) return;
     const rect = root.getBoundingClientRect();
     glow.style.transform = `translate3d(${Math.round(x - rect.left - 180)}px,${Math.round(y - rect.top - 180)}px,0)`;
     glow.style.opacity = "1";
-    lastPaint = now;
+    // RAF's frame timestamp can precede this callback; use the same clock as input.
+    lastPaint = performance.now();
   };
   const move = (event: PointerEvent) => {
     if (!active || event.pointerType === "touch") return;
