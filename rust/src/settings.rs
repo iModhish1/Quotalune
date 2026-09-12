@@ -700,6 +700,9 @@ pub struct WorkspacePreferences {
     pub navigation: String,
     pub sidebar_width: u16,
     pub sidebar_collapsed: bool,
+    pub background: String,
+    pub background_motion: String,
+    pub background_intensity: String,
 }
 impl Default for WorkspacePreferences {
     fn default() -> Self {
@@ -708,6 +711,9 @@ impl Default for WorkspacePreferences {
             navigation: "side".into(),
             sidebar_width: 232,
             sidebar_collapsed: false,
+            background: "cosmic".into(),
+            background_motion: "static".into(),
+            background_intensity: "balanced".into(),
         }
     }
 }
@@ -720,6 +726,18 @@ impl WorkspacePreferences {
             self.navigation = "side".into();
         }
         self.sidebar_width = self.sidebar_width.clamp(184, 360);
+        if !matches!(
+            self.background.as_str(),
+            "none" | "cosmic" | "aurora" | "starfield"
+        ) {
+            self.background = "cosmic".into();
+        }
+        if self.background_motion != "interactive" {
+            self.background_motion = "static".into();
+        }
+        if !matches!(self.background_intensity.as_str(), "subtle" | "vivid") {
+            self.background_intensity = "balanced".into();
+        }
         self
     }
 }

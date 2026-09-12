@@ -1759,3 +1759,48 @@ fn workspace_sidebar_migration_bounds_and_roundtrip() {
         );
     }
 }
+
+#[test]
+fn workspace_background_fields_are_isolated_and_preserve_layout() {
+    for (background, motion, intensity, expected) in [
+        (
+            "aurora",
+            "interactive",
+            "subtle",
+            ("aurora", "interactive", "subtle"),
+        ),
+        (
+            "starfield",
+            "static",
+            "vivid",
+            ("starfield", "static", "vivid"),
+        ),
+        ("none", "static", "balanced", ("none", "static", "balanced")),
+        ("bad", "bad", "bad", ("cosmic", "static", "balanced")),
+    ] {
+        let json = serde_json::json!({"workspace_preferences": {
+            "density":"compact", "navigation":"bottom", "sidebarWidth":288, "sidebarCollapsed":true,
+            "background":background,"backgroundMotion":motion,"backgroundIntensity":intensity
+        }});
+        let settings: Settings = serde_json::from_value(json).unwrap();
+        let p = settings.workspace_preferences.as_ref().unwrap();
+        assert_eq!(
+            (
+                p.background.as_str(),
+                p.background_motion.as_str(),
+                p.background_intensity.as_str()
+            ),
+            expected
+        );
+        assert_eq!(p.sidebar_width, 288);
+        assert!(p.sidebar_collapsed);
+        assert_eq!(p.density, "compact");
+        assert_eq!(p.navigation, "bottom");
+        let restored: Settings =
+            serde_json::from_str(&serde_json::to_string(&settings).unwrap()).unwrap();
+        assert_eq!(
+            restored.workspace_preferences,
+            settings.workspace_preferences
+        );
+    }
+}

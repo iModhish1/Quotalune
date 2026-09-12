@@ -91,6 +91,21 @@ fn deserialize_workspace_preferences<'de, D: serde::Deserializer<'de>>(
                 .get("sidebarCollapsed")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false),
+            background: object
+                .get("background")
+                .and_then(|v| v.as_str())
+                .unwrap_or("cosmic")
+                .into(),
+            background_motion: object
+                .get("backgroundMotion")
+                .and_then(|v| v.as_str())
+                .unwrap_or("static")
+                .into(),
+            background_intensity: object
+                .get("backgroundIntensity")
+                .and_then(|v| v.as_str())
+                .unwrap_or("balanced")
+                .into(),
         }
         .normalized()
     }))

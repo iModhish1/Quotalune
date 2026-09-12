@@ -239,6 +239,9 @@ export interface WorkspacePreferences {
   navigation: "side" | "top" | "bottom";
   sidebarWidth?: number;
   sidebarCollapsed?: boolean;
+  background?: "none" | "cosmic" | "aurora" | "starfield";
+  backgroundMotion?: "static" | "interactive";
+  backgroundIntensity?: "subtle" | "balanced" | "vivid";
 }
 
 export interface SettingsSnapshot {
