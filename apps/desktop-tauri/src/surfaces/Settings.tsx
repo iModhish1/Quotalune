@@ -37,6 +37,8 @@ import SettingsShellHeader from "./settings/SettingsShellHeader";
 import ProductNavigation from "./settings/ProductNavigation";
 import SettingsShell, {WorkspaceShell} from "./settings/SettingsShell";
 import {PRIMARY_DESTINATIONS, primaryDestination} from "./settings/settingsCenterRegistry";
+import {SidebarResizeHandle, SidebarToggle, useSidebarLayout} from "./settings/SidebarControls";
+import "./settings/WorkspaceLayout.css";
 
 function ContentShell({tab, navigate, children}: {tab: SettingsTabId; navigate: (tab: SettingsTabId) => void; children: ReactNode}) {
   const destination = primaryDestination(tab);
@@ -199,6 +201,7 @@ export default function Settings({ state, initialTab: propTab, navigationRevisio
 
   const { settings, saving, error, update } = useSettings(state.settings);
   const navigation = settings.workspacePreferences?.navigation ?? legacyNavigation;
+  const sidebar = useSidebarLayout(settings.workspacePreferences, navigation, update);
   const { t } = useLocale();
   const shellTarget = useSurfaceTarget("settings");
   const initialTab: SettingsTabId =
@@ -285,13 +288,17 @@ export default function Settings({ state, initialTab: propTab, navigationRevisio
   return (
     <div
       className={`settings settings-studio${activeTab === "providers" ? " settings--providers-active" : ""}`}
-      style={workspaceThemeStyle(settings)}
+      style={{...workspaceThemeStyle(settings), "--workspace-sidebar-width": `${sidebar.width}px`} as React.CSSProperties}
       data-navigation={navigation}
+      data-sidebar-collapsed={sidebar.collapsed}
     >
-      <SettingsShellHeader section={t(PRIMARY_DESTINATIONS.find(tab=>tab.id===primary)!.labelKey)}>
+      <SettingsShellHeader section={t(PRIMARY_DESTINATIONS.find(tab=>tab.id===primary)!.labelKey)}
+        leading={navigation === "side" && <SidebarToggle collapsed={sidebar.collapsed} onToggle={() => void sidebar.toggle()} disabled={saving}/> }>
         <SettingsWindowActions />
       </SettingsShellHeader>
-      <ProductNavigation activeTab={activeTab} onNavigate={handleTabClick} icons={TabIcons} />
+      <ProductNavigation activeTab={activeTab} onNavigate={handleTabClick} icons={TabIcons} hidden={sidebar.collapsed}/>
+      {navigation === "side" && !sidebar.collapsed && <SidebarResizeHandle width={sidebar.width}
+        onPreview={sidebar.preview} onCommit={next => void sidebar.resize(next)} disabled={saving}/>}
 
       {/* status bar */}
       {(saving || error) && (
@@ -349,7 +356,7 @@ export default function Settings({ state, initialTab: propTab, navigationRevisio
         )}
         {activeTab === "menuBar" && (
           <><NavigationPreference value={navigation} error={!!error} onChange={next=>{
-            void update({workspacePreferences: {density: settings.workspacePreferences?.density ?? "comfortable", navigation: next}});
+            void update({workspacePreferences: {...settings.workspacePreferences, density: settings.workspacePreferences?.density ?? "comfortable", navigation: next}});
           }}/><DisplayTab mode="menuBar" settings={settings} set={set} saving={saving} /></>
         )}
         {activeTab === "menu" && (

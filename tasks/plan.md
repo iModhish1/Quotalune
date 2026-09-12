@@ -354,3 +354,8 @@ Rollback instructions corrected separately at 4b7869cd; no rollback/install run.
 Current findings, exact gates and remaining authorized backlog are recorded in
 docs/validation/CODEX_POST_RELEASE_HANDOFF.md. Personal remains frozen; its actual
 shortcut drift is reported, not silently repaired.
+
+## SHELL-01 — 2026-09-12
+Compact the shared shell and merge repeated Settings introductions. Add persisted
+sidebar width/collapse with pointer and keyboard resizing, improve branch controls,
+then validate migrations, frontend interactions, full gates and fresh native Dev.

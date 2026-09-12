@@ -280,3 +280,12 @@ hardening slice. Personal is frozen: no install, settings/data/shortcut/pin chan
 Closed Analytics acceptance and historical incidents remain intact; no speculative
 reopening, fake sessions, monetary conversions, cloud or 3D. Checkpoint and exact
 verification results: docs/validation/CODEX_POST_RELEASE_HANDOFF.md.
+
+## SHELL-01 — Compact workspace and adjustable navigation (2026-09-12)
+
+Owner annotated screenshot 56582426 requests compact application/context/category
+headers across pages, especially Settings; a top logical-start collapse/expand
+button (left English, right Arabic); draggable sidebar width; and larger, clearer
+Dashboard/Workspace/Settings branch controls. Persist presentation preferences,
+preserve logos and data, keep keyboard access and RTL, and validate freshly built
+Dev with native Windows interaction. Personal remains frozen.

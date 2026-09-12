@@ -188,6 +188,10 @@ locale_keys! {
 
     // Tab names (Preferences)
     V2Workspace,
+    WorkspaceExpandSidebar,
+    WorkspaceCollapseSidebar,
+    WorkspaceResizeSidebar,
+    WorkspaceResizeSidebarHelp,
     V2Settings,
     V2SettingsHelp,
     V2WorkspaceHelp,

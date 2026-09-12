@@ -773,3 +773,8 @@ V3LocalSessions = الجلسات المفهرسة
 V3Coverage = التغطية المرصودة
 V3Browse = تصفح المزوّدين
 V3AccountUnavailable = الحساب غير متاح
+
+WorkspaceExpandSidebar = توسيع القائمة الجانبية
+WorkspaceCollapseSidebar = طي القائمة الجانبية
+WorkspaceResizeSidebar = عرض القائمة الجانبية
+WorkspaceResizeSidebarHelp = اسحب أو استخدم مفاتيح الأسهم لتغيير العرض. انقر مرتين لاستعادة العرض الافتراضي.

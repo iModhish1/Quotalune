@@ -1527,3 +1527,8 @@ V3LocalSessions = Indexed sessions
 V3Coverage = Observed coverage
 V3Browse = Browse providers
 V3AccountUnavailable = Account unavailable
+
+WorkspaceExpandSidebar = Expand sidebar
+WorkspaceCollapseSidebar = Collapse sidebar
+WorkspaceResizeSidebar = Sidebar width
+WorkspaceResizeSidebarHelp = Drag or use the arrow keys to resize. Double-click to reset.

@@ -235,7 +235,7 @@
 .settings-studio .settings-field{border-color:var(--workspace-edge)}
 /* Product V3 shared operations surfaces. Domains and credential flows unchanged. */
 .settings-studio .settings-nav-group__label{font-weight:750;letter-spacing:.12em;border-inline-start:2px solid var(--workspace-accent);padding-inline-start:10px;font-size:10px}
-.settings-studio .provider-workspace__header h2,.settings-studio .settings-center__header h2{font-size:26px;letter-spacing:-.025em}
+.settings-studio .provider-workspace__header h2{font-size:26px;letter-spacing:-.025em}
 .settings-studio .provider-workspace__toolbar{padding:8px;border:1px solid var(--workspace-edge);background:var(--workspace-surface);border-radius:12px;gap:6px}
 .settings-studio .provider-workspace__toolbar button{border-radius:8px;min-height:36px;font-size:12px}.settings-studio .provider-workspace__toolbar button[aria-pressed=true]{background:color-mix(in srgb,var(--workspace-accent) 15%,var(--workspace-surface));color:var(--workspace-accent)}
 .settings-studio .provider-detail-header-block{padding:22px;background:var(--workspace-surface);border:1px solid var(--workspace-edge);border-radius:14px}

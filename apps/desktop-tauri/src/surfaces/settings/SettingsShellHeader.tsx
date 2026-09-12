@@ -4,14 +4,17 @@ import QuotaArcMark from "../../components/QuotaArcMark";
 
 export default function SettingsShellHeader({
   section,
+  leading,
   children,
 }: {
   section: string;
+  leading?: ReactNode;
   children?: ReactNode;
 }) {
   return (
     <header className="settings-studio-toolbar">
       <div className="settings-shell-brand">
+        {leading}
         <span className="settings-shell-brand__mark">
           <QuotaArcMark size={32} label="Quotalis" />
         </span>

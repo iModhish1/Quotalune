@@ -16,7 +16,7 @@ export default function SettingsShell({activeTab, onNavigate, children}: {
   const results = searchSettings(query, t, labels);
   return <div className="settings-center">
     <header className="settings-center__header">
-      <div><h2>{t("V2Settings")}</h2><p>{t("V2SettingsHelp")}</p></div>
+      <div><h2 id={id}>{t(category.labelKey)}</h2><p>{t(category.descriptionKey)}</p></div>
       <label className="settings-center__search"><span>{t("V2SearchSettings")}</span>
         <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={t("V2SearchPlaceholder")} />
       </label>
@@ -27,7 +27,6 @@ export default function SettingsShell({activeTab, onNavigate, children}: {
         {results.length === 0 && <p role="status">{t("V2SearchEmpty")}</p>}
       </nav>}
       <section className="settings-center__content" aria-labelledby={id}>
-        <header className="settings-center__section-title"><h2 id={id}>{t(category.labelKey)}</h2><p>{t(category.descriptionKey)}</p></header>
         <div className="settings-center__editor">{children}</div>
       </section>
     </div>

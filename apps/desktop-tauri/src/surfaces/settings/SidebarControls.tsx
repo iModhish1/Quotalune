@@ -1,0 +1,99 @@
+import {useRef, useState, type PointerEvent} from "react";
+import {useLocale} from "../../hooks/useLocale";
+import type {SettingsUpdate, WorkspacePreferences} from "../../types/bridge";
+
+export const SIDEBAR_DEFAULT = 232;
+export const SIDEBAR_MIN = 184;
+export const SIDEBAR_MAX = 360;
+export function clampSidebarWidth(width = SIDEBAR_DEFAULT): number {
+  return Number.isFinite(width) ? Math.round(Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, width))) : SIDEBAR_DEFAULT;
+}
+
+/** Preview locally while dragging; only release persists through the shared settings authority. */
+export function useSidebarLayout(preferences: WorkspacePreferences | null | undefined,
+  navigation: WorkspacePreferences["navigation"], update: (patch: SettingsUpdate) => Promise<void>) {
+  const [preview, setPreview] = useState<number | null>(null);
+  const width = preview ?? clampSidebarWidth(preferences?.sidebarWidth);
+  const persist = async (patch: Partial<WorkspacePreferences>) => {
+    await update({workspacePreferences: {density: "comfortable", ...preferences, navigation, ...patch}});
+  };
+  return {
+    width,
+    collapsed: navigation === "side" && Boolean(preferences?.sidebarCollapsed),
+    preview: setPreview,
+    resize: async (next: number) => {
+      try { await persist({sidebarWidth: clampSidebarWidth(next)}); }
+      finally { setPreview(null); }
+    },
+    toggle: () => persist({sidebarCollapsed: !preferences?.sidebarCollapsed}),
+  };
+}
+
+export function SidebarToggle({collapsed, onToggle, disabled}: {
+  collapsed: boolean; onToggle: () => void; disabled?: boolean;
+}) {
+  const {t} = useLocale();
+  const label = t(collapsed ? "WorkspaceExpandSidebar" : "WorkspaceCollapseSidebar");
+  return <button className="workspace-sidebar-toggle" type="button" title={label} aria-label={label}
+    aria-controls="product-navigation" aria-expanded={!collapsed} disabled={disabled} onClick={onToggle}>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/>
+      <path d={collapsed ? "m13 9 3 3-3 3" : "m16 9-3 3 3 3"}/>
+    </svg>
+  </button>;
+}
+
+export function SidebarResizeHandle({width, onPreview, onCommit, disabled}: {
+  width: number; onPreview: (width: number | null) => void;
+  onCommit: (width: number) => void; disabled?: boolean;
+}) {
+  const {t} = useLocale();
+  const drag = useRef<{id: number; x: number; start: number; width: number; sign: number} | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const cancel = () => { drag.current = null; setDragging(false); onPreview(null); };
+  const finish = (event: PointerEvent<HTMLDivElement>) => {
+    const active = drag.current;
+    if (!active || active.id !== event.pointerId) return;
+    drag.current = null;
+    setDragging(false);
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    if (active.width !== active.start) onCommit(active.width);
+    else onPreview(null);
+  };
+  return <div className="workspace-sidebar-resizer" data-dragging={dragging} role="separator" tabIndex={disabled ? -1 : 0}
+    aria-label={t("WorkspaceResizeSidebar")} title={t("WorkspaceResizeSidebarHelp")}
+    aria-controls="product-navigation" aria-orientation="vertical" aria-valuemin={SIDEBAR_MIN}
+    aria-valuemax={SIDEBAR_MAX} aria-valuenow={width} aria-disabled={disabled || undefined}
+    onPointerDown={event => {
+      if (disabled || event.button !== 0 || drag.current) return;
+      event.preventDefault();
+      event.currentTarget.focus();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      drag.current = {id: event.pointerId, x: event.clientX, start: width, width,
+        sign: getComputedStyle(event.currentTarget).direction === "rtl" ? -1 : 1};
+      setDragging(true);
+    }}
+    onPointerMove={event => {
+      const active = drag.current;
+      if (!active || active.id !== event.pointerId) return;
+      active.width = clampSidebarWidth(active.start + (event.clientX - active.x) * active.sign);
+      onPreview(active.width);
+    }} onPointerUp={finish} onPointerCancel={cancel}
+    onLostPointerCapture={() => { if (drag.current) cancel(); }}
+    onDoubleClick={() => { if (!disabled) onCommit(SIDEBAR_DEFAULT); }}
+    onKeyDown={event => {
+      if (event.key === "Escape" && drag.current) {
+        event.preventDefault();
+        const id = drag.current.id;
+        cancel();
+        event.currentTarget.releasePointerCapture(id);
+        return;
+      }
+      if (disabled || drag.current || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const sign = getComputedStyle(event.currentTarget).direction === "rtl" ? -1 : 1;
+      const next = event.key === "Home" ? SIDEBAR_MIN : event.key === "End" ? SIDEBAR_MAX
+        : clampSidebarWidth(width + (event.key === "ArrowRight" ? 16 : -16) * sign);
+      if (next !== width) onCommit(next);
+    }}><span aria-hidden="true"/></div>;
+}

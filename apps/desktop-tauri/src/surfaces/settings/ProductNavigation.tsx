@@ -22,10 +22,11 @@ const onlyExpand = (active: string) => ({settings: active === "settings", worksp
  * navigation layout without hiding anything the user hasn't already
  * chosen to look at.
  */
-export default function ProductNavigation({activeTab, onNavigate, icons}: {
+export default function ProductNavigation({activeTab, onNavigate, icons, hidden = false}: {
   activeTab: SettingsTabId;
   onNavigate: (tab: SettingsTabId) => void;
   icons: Partial<Record<SettingsTabId, ReactNode>>;
+  hidden?: boolean;
 }) {
   const {t} = useLocale();
   const primary = primaryDestination(activeTab);
@@ -42,7 +43,7 @@ export default function ProductNavigation({activeTab, onNavigate, icons}: {
     <span className="product-nav__leaf-icon" aria-hidden="true">{icons[tab]}</span>
     <span>{t(tab === "dashboard" ? "V3Overview" : labels.get(tab)!)}</span>
   </button>;
-  return <nav className="settings-tabs product-nav" aria-label={t("V2PrimaryNavigation")}
+  return <nav id="product-navigation" hidden={hidden} className="settings-tabs product-nav" aria-label={t("V2PrimaryNavigation")}
     onKeyDown={event => {
       if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
       const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("button")].filter(button => !button.closest("[hidden]"));
@@ -74,7 +75,7 @@ export default function ProductNavigation({activeTab, onNavigate, icons}: {
             }}>
             <span className="settings-tab__icon" aria-hidden="true">{icons[tab.target]}</span>
             <span className="settings-tab__label">{t(tab.labelKey)}</span>
-            {branch && <span className="product-nav__chevron" aria-hidden="true">{expanded[branch] ? "⌄" : "›"}</span>}
+            {branch && <span className="product-nav__chevron" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 5 7 7-7 7"/></svg></span>}
           </button>
           {branch === "dashboard" && <div id="product-nav-dashboard" className="product-nav__children" hidden={!expanded.dashboard}>{leaf("dashboard")}{leaf("analytics")}</div>}
           {branch === "workspace" && <div id="product-nav-workspace" className="product-nav__children" hidden={!expanded.workspace}>

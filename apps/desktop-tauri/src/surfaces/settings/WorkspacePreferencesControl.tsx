@@ -10,7 +10,7 @@ export function WorkspacePreferencesControl({settings, navigation, update, disab
   return <section className="settings-section">
     <h3>{t("WorkspaceDensity")}</h3><p className="settings-section__description">{t("WorkspaceDensityHelp")}</p>
     <Select ariaLabel={t("WorkspaceDensity")} disabled={disabled} value={settings.workspacePreferences?.density ?? "comfortable"}
-      onChange={value => update({workspacePreferences:{navigation,density:value as "comfortable" | "compact" | "dense"}})}
+      onChange={value => update({workspacePreferences:{...settings.workspacePreferences,navigation,density:value as "comfortable" | "compact" | "dense"}})}
       options={[
         {value:"comfortable",label:t("WorkspaceComfortable")},
         {value:"compact",label:t("WorkspaceCompact")},

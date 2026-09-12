@@ -4,6 +4,12 @@ import SettingsShell, {WorkspaceShell} from "./SettingsShell";
 vi.mock("../../hooks/useLocale", () => ({useLocale: () => ({t: (key: string) => key})}));
 
 describe("SettingsShell", () => {
+  it("has one compact category heading and no duplicate Settings introduction", () => {
+    render(<SettingsShell activeTab="providerDisplay" onNavigate={vi.fn()}><p>Provider display editor</p></SettingsShell>);
+    expect(screen.getAllByRole("heading", {level:2})).toHaveLength(1);
+    expect(screen.queryByText("V2SettingsHelp")).toBeNull();
+    expect(screen.getByRole("searchbox")).toHaveAccessibleName("V2SearchSettings");
+  });
   it("opens the matching legacy editor from search and keeps the current editor mounted while searching", () => {
     const navigate = vi.fn();
     render(<SettingsShell activeTab="general" onNavigate={navigate}><input aria-label="current draft" defaultValue="unsaved" /></SettingsShell>);

@@ -5,6 +5,10 @@
 // response so a mismatch fails loudly in development.
 
 export const ALL_LOCALE_KEYS = [
+  "WorkspaceExpandSidebar",
+  "WorkspaceCollapseSidebar",
+  "WorkspaceResizeSidebar",
+  "WorkspaceResizeSidebarHelp",
   "V2Workspace",
   "V2Settings",
   "V2SettingsHelp",
