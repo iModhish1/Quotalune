@@ -9,7 +9,7 @@ use std::{
     sync::{LazyLock, Mutex},
 };
 use tauri::{
-    AppHandle, Emitter,
+    AppHandle,
     image::Image,
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
@@ -188,7 +188,24 @@ fn accent(id: &str, c: &ProviderTrayConfig, settings: &Settings) -> [u8; 3] {
     }
     quotalis_core::tray::provider::provider_accent(id)
 }
-pub fn update(app: &AppHandle, settings: &Settings, snapshots: &[ProviderUsageSnapshot]) {
+/// Tauri tray calls synchronously dispatch to the main thread. Never acquire
+/// OWNED on a worker before that dispatch: locale/reorder calls also run here.
+pub fn update(app: &AppHandle, _settings: &Settings, snapshots: &[ProviderUsageSnapshot]) {
+    let handle = app.clone();
+    let snapshots = snapshots.to_vec();
+    if let Err(error) = app.run_on_main_thread(move || {
+        // A queued older update must not re-pin after a newer settings change.
+        let settings = Settings::load();
+        reconcile_on_main_thread(&handle, &settings, &snapshots);
+    }) {
+        tracing::warn!(%error,"Could not schedule provider tray update");
+    }
+}
+fn reconcile_on_main_thread(
+    app: &AppHandle,
+    settings: &Settings,
+    snapshots: &[ProviderUsageSnapshot],
+) {
     let mut wanted: BTreeMap<String, ProviderTrayConfig> = settings
         .provider_tray_configs
         .iter()
@@ -249,14 +266,27 @@ pub fn update(app: &AppHandle, settings: &Settings, snapshots: &[ProviderUsageSn
                 .icon(icon)
                 .tooltip(tip)
                 .on_tray_icon_event(move |tray, event| {
-                    if let TrayIconEvent::Click {
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
-                        ..
-                    } = event
-                    {
-                        crate::activate_configured_destination(tray.app_handle());
-                        let _ = tray.app_handle().emit("quotalis:focus-provider", &provider);
+                    match event {
+                        TrayIconEvent::Click {
+                            button: MouseButton::Left,
+                            button_state: MouseButtonState::Up,
+                            ..
+                        } => {
+                            if let Err(error) =
+                                crate::shell::settings_window::open_or_focus_provider(
+                                    tray.app_handle(),
+                                    "providers",
+                                    ProviderId::from_cli_name(&provider),
+                                )
+                            {
+                                tracing::warn!(%error,"Could not open tray provider");
+                            }
+                        }
+                        // Refresh the tooltip date/coverage at hover, even in manual-refresh mode.
+                        TrayIconEvent::Enter { .. } => {
+                            crate::tray_bridge::refresh_tray_presentation(tray.app_handle())
+                        }
+                        _ => {}
                     }
                 })
                 .build(app)
