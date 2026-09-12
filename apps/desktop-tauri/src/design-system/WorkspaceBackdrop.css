@@ -16,6 +16,10 @@
   /* No blur/filter, video, animated gradients, canvas, or permanent compositor hint. */
 }
 .settings.settings-studio .settings-body {background:transparent}
+.settings.settings-studio :is(.profiles-page,.collections-page) {
+  background:var(--workspace-surface);border:1px solid var(--workspace-edge);
+  border-radius:12px;padding:16px;min-width:0;box-sizing:border-box;
+}
 .settings.settings-studio .settings-studio-toolbar,
 .settings.settings-studio .product-nav {background:color-mix(in srgb,var(--workspace-bg) 86%,transparent)}
 .settings.settings-studio[data-background=none] :is(.settings-studio-toolbar,.product-nav) {background:var(--workspace-bg)}
