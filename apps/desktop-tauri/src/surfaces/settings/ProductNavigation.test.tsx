@@ -4,6 +4,17 @@ import ProductNavigation from "./ProductNavigation";
 vi.mock("../../hooks/useLocale", () => ({useLocale: () => ({t: (key: string) => key})}));
 
 describe("ProductNavigation", () => {
+  it("keeps usage/spend under the monitoring branch and settings editors grouped by purpose",()=>{
+    const navigate=vi.fn();
+    const {rerender}=render(<ProductNavigation activeTab="usageSpend" onNavigate={navigate} icons={{}}/>);
+    const usage=screen.getByRole("button",{name:"TabUsageSpend"});
+    expect(usage.closest("#product-nav-dashboard")).not.toBeNull();
+    expect(usage).toHaveAttribute("aria-current","page");
+    rerender(<ProductNavigation activeTab="resetDisplay" onNavigate={navigate} icons={{}}/>);
+    const reset=screen.getByRole("button",{name:"TabResetDisplay"});
+    expect(reset.closest(".product-nav__category")).toHaveTextContent("TabThemes");
+    expect(reset.closest(".product-nav__category")).toHaveTextContent("TabProviderDisplay");
+  });
   it("expands settings in place and navigates directly to the existing editor", () => {
     const navigate = vi.fn();
     render(<ProductNavigation activeTab="general" onNavigate={navigate} icons={{}} />);

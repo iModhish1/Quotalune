@@ -292,3 +292,13 @@ Dev with native Windows interaction. Personal remains frozen.
 
 Implemented and validated at 8a925f5e; scope, screenshots and qualifications:
 `docs/validation/WORKSPACE_SHELL_COMPACT.md`. Owner visual approval remains separate.
+
+## SHELL-02 — Related navigation and shared backgrounds (2026-09-12)
+Owner requests remaining layout corrections, meaningful grouping of related pages,
+and customizable app backgrounds beyond the two currently decorated pages. Reuse
+the original cosmic asset and Structure Theme colors across workspace pages;
+provide procedural, optional interactive backgrounds without video, WebGL or new
+dependencies. Bound rendering work, honor reduced motion/low CPU/disabled animation,
+measure native cost and validate navigation, persisted choices, RTL and narrow
+layouts. Retain SHELL-01 sidebar controls, original branding and truthful data.
+Dev-only implementation and QA; Personal stays frozen.

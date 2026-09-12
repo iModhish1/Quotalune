@@ -39,6 +39,8 @@ import SettingsShell, {WorkspaceShell} from "./settings/SettingsShell";
 import {PRIMARY_DESTINATIONS, primaryDestination} from "./settings/settingsCenterRegistry";
 import {SidebarResizeHandle, SidebarToggle, useSidebarLayout} from "./settings/SidebarControls";
 import "./settings/WorkspaceLayout.css";
+import WorkspaceBackdrop from "../design-system/WorkspaceBackdrop";
+import WorkspaceBackgroundControl from "./settings/WorkspaceBackgroundControl";
 
 function ContentShell({tab, navigate, children}: {tab: SettingsTabId; navigate: (tab: SettingsTabId) => void; children: ReactNode}) {
   const destination = primaryDestination(tab);
@@ -291,7 +293,10 @@ export default function Settings({ state, initialTab: propTab, navigationRevisio
       style={{...workspaceThemeStyle(settings), "--workspace-sidebar-width": `${sidebar.width}px`} as React.CSSProperties}
       data-navigation={navigation}
       data-sidebar-collapsed={sidebar.collapsed}
+      data-background={settings.workspacePreferences?.background ?? "cosmic"}
+      data-background-intensity={settings.workspacePreferences?.backgroundIntensity ?? "balanced"}
     >
+      <WorkspaceBackdrop settings={settings}/>
       <SettingsShellHeader section={t(PRIMARY_DESTINATIONS.find(tab=>tab.id===primary)!.labelKey)}
         leading={navigation === "side" && <SidebarToggle collapsed={sidebar.collapsed} onToggle={() => void sidebar.toggle()} disabled={saving}/> }>
         <SettingsWindowActions />
@@ -367,7 +372,7 @@ export default function Settings({ state, initialTab: propTab, navigationRevisio
         )}
         {activeTab === "surfaces" && <SurfacesTab />}
         {activeTab === "themes" && (
-          <><WorkspacePreferencesControl settings={settings} navigation={navigation} update={update} disabled={saving}/><ThemeGallery /></>
+          <><WorkspaceBackgroundControl settings={settings} navigation={navigation} update={update} disabled={saving}/><WorkspacePreferencesControl settings={settings} navigation={navigation} update={update} disabled={saving}/><ThemeGallery /></>
         )}
         {activeTab === "advanced" && (
           <AdvancedTab settings={settings} set={set} saving={saving} />

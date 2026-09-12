@@ -3,8 +3,12 @@ import {PRIMARY_DESTINATIONS, SETTINGS_CATEGORIES, categoryForTab, primaryDestin
 import {TAB_META} from "./settingsTabs";
 
 describe("Settings Center route contract", () => {
-  it("exposes five primary destinations and maps every legacy route exactly once", () => {
-    expect(PRIMARY_DESTINATIONS.map(item => item.id)).toEqual(["dashboard", "usageSpend", "providers", "workspace", "settings"]);
+  it("groups related monitoring under Dashboard and maps every legacy route exactly once", () => {
+    expect(PRIMARY_DESTINATIONS.map(item => item.id)).toEqual(["dashboard", "providers", "workspace", "settings"]);
+    expect(primaryDestination("usageSpend")).toBe("dashboard");
+    expect(categoryForTab("resetDisplay")?.id).toBe("appearance");
+    expect(categoryForTab("analyticsSources")?.id).toBe("dashboard");
+    expect(categoryForTab("notifications")?.id).toBe("general");
     for (const tab of TAB_META) {
       const parent = primaryDestination(tab.id);
       expect(PRIMARY_DESTINATIONS.some(item => item.id === parent)).toBe(true);
@@ -24,5 +28,12 @@ describe("Settings Center route contract", () => {
     expect(searchSettings("المظهر", t, labels).map(c => c.id)).toEqual(["appearance"]);
     expect(searchSettings("menu bar", t, labels).map(c => c.id)).toEqual(["surfaces"]);
     expect(searchSettings("not-a-setting", t, labels)).toEqual([]);
+  });
+  it("opens matching siblings instead of the first page in a merged category",()=>{
+    const labels=new Map(TAB_META.map(tab=>[tab.id,tab.labelKey]));
+    for(const [query,tab] of [["sound","notifications"],["sessions","analyticsSources"],["وقت","resetDisplay"],["background","themes"]]) {
+      expect(searchSettings(query,key=>key,labels)[0].tabs[0]).toBe(tab);
+    }
+    expect(categoryForTab("notifications")?.tabs[0]).toBe("general");
   });
 });

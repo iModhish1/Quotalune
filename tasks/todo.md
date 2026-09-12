@@ -1107,3 +1107,9 @@ Full current evidence and qualifications: docs/validation/CODEX_POST_RELEASE_HAN
 - [x] Source gates and native Dev wide/narrow/RTL interaction proof.
 
 Candidate 8a925f5e; evidence and limitations: docs/validation/WORKSPACE_SHELL_COMPACT.md.
+
+## SHELL-02
+- [ ] Group monitoring/configuration destinations and preserve deep links.
+- [ ] Shared background controls and optional bounded interaction.
+- [ ] Remove page-owned shell overrides and fix layout inconsistencies.
+- [ ] Native performance/visual evidence and full source gates.

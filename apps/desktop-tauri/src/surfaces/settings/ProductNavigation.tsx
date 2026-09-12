@@ -77,7 +77,7 @@ export default function ProductNavigation({activeTab, onNavigate, icons, hidden 
             <span className="settings-tab__label">{t(tab.labelKey)}</span>
             {branch && <span className="product-nav__chevron" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 5 7 7-7 7"/></svg></span>}
           </button>
-          {branch === "dashboard" && <div id="product-nav-dashboard" className="product-nav__children" hidden={!expanded.dashboard}>{leaf("dashboard")}{leaf("analytics")}</div>}
+          {branch === "dashboard" && <div id="product-nav-dashboard" className="product-nav__children" hidden={!expanded.dashboard}>{leaf("dashboard")}{leaf("analytics")}{leaf("usageSpend")}</div>}
           {branch === "workspace" && <div id="product-nav-workspace" className="product-nav__children" hidden={!expanded.workspace}>
             {leaf("profiles")}{leaf("collections")}
           </div>}

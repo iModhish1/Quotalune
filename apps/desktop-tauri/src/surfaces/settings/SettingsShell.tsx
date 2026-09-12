@@ -23,7 +23,7 @@ export default function SettingsShell({activeTab, onNavigate, children}: {
     </header>
     <div className="settings-center__layout">
       {query.trim() && <nav className="settings-center__search-results" aria-label={t("V2SearchSettings")}>
-        {results.map(item => <button key={item.id} type="button" onClick={() => {onNavigate(item.tabs[0]); setQuery("");}}>{t(item.labelKey)}<span>{t(item.descriptionKey)}</span></button>)}
+        {results.map(item => <button key={item.id} type="button" onClick={() => {onNavigate(item.tabs[0]); setQuery("");}}>{t(item.labelKey)}<strong>{t(labels.get(item.tabs[0])!)}</strong><span>{t(item.descriptionKey)}</span></button>)}
         {results.length === 0 && <p role="status">{t("V2SearchEmpty")}</p>}
       </nav>}
       <section className="settings-center__content" aria-labelledby={id}>

@@ -197,12 +197,6 @@
 .cosmic-trend-summary dd {margin:0 0 12px;font-size:22px;font-weight:650;font-variant-numeric:tabular-nums}
 .cosmic-trend-summary dd.cosmic-trend-delta {font-size:16px;color:var(--qa-analytics-accent)}
 .cosmic-trend-summary small {font-size:8px;color:var(--qa-analytics-text-secondary)}
-.settings-studio:has(.dashboard-cosmic) {background:#020916 url('../../../assets/analytics/cosmic-observatory.png') center top/cover}
-.settings-studio:has(.dashboard-cosmic) .settings-body {background:transparent;padding:0 8px 8px!important}
-.settings-studio:has(.dashboard-cosmic) .settings-studio-toolbar {background:#030c18b8;border-bottom:1px solid #22476a;padding-block:10px;min-height:64px}
-.settings-studio:has(.dashboard-cosmic) .product-nav {background:#020a16b8;border-inline-end:1px solid #22476a}
-.settings-studio:has(.dashboard-cosmic) .settings-tab--active {background:linear-gradient(90deg,#0758af66,#10245688);border-color:#216baa;box-shadow:inset 3px 0 #45caff,0 0 15px #167fff18}
-.settings-studio:has(.dashboard-cosmic[data-light=true]) {background:var(--qa-analytics-surface-primary,#edf0f5)}
 @media(min-width:1101px){.dashboard-cosmic .dashboard-limits__grid {grid-template-columns:repeat(6,minmax(0,1fr))!important}}
 @media(max-width:1100px){.dashboard-cosmic [data-analytics-section=attention]{grid-column:span 4}.dashboard-cosmic [data-analytics-section=overview]{grid-column:span 8}.dashboard-cosmic [data-analytics-section=resets]{grid-column:1/-1}.dashboard-cosmic .dashboard-limits__grid{grid-template-columns:repeat(3,minmax(0,1fr))}.dashboard-cosmic .reset-horizon__agenda{grid-template-columns:repeat(6,minmax(0,1fr))}.dashboard-cosmic .dashboard-command-bar>.dashboard-analytics__header{min-width:0}.dashboard-cosmic .dashboard-limits__grid::before{display:none}}
 @media(max-width:720px){.dashboard-cosmic.dashboard-analytics{padding:10px!important}.dashboard-cosmic .dashboard-limits__grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-cosmic [data-analytics-section]{grid-column:1/-1!important}.dashboard-cosmic .dashboard-analytics__header{flex-wrap:wrap}.dashboard-cosmic .reset-horizon__agenda{grid-template-columns:repeat(3,minmax(0,1fr))}.dashboard-cosmic .dashboard-analytics__range{flex-wrap:wrap}.dashboard-cosmic .dashboard-limits__instrument>small{font-size:10px}}

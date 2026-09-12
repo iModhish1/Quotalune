@@ -10,6 +10,7 @@ export function workspaceThemeStyle(settings: CatalogThemeSettings): CSSProperti
     "--qa-analytics-surface-opaque": theme.core, "--qa-analytics-text-primary": theme.material?.text ?? "#f0f4f8", "--qa-analytics-accent":theme.accent,
     "--workspace-bg": theme.bg[0], "--workspace-surface": theme.core,
     "--workspace-edge": theme.coreEdge, "--workspace-accent": theme.accent,
+    "--workspace-accent-secondary": theme.accent2,
     "--text-primary": theme.material?.text ?? "#f0f4f8",
     "--text-secondary": theme.material?.muted ?? "#aeb9c5",
     "--text-muted": theme.material?.muted ?? "#aeb9c5",

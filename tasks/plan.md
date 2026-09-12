@@ -362,3 +362,9 @@ then validate migrations, frontend interactions, full gates and fresh native Dev
 
 Completed at 8a925f5e. Fresh native CUA and narrow/RTL evidence, exact source gates,
 and graceful restart verification: docs/validation/WORKSPACE_SHELL_COMPACT.md.
+
+## SHELL-02
+Consolidate related destinations without changing native route IDs. Add shared
+persisted background choices and opt-in bounded pointer interaction, remove
+page-owned shell styling and repair observed layout issues, then validate native
+visuals/performance and full source gates.

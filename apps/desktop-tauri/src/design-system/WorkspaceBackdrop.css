@@ -1,0 +1,25 @@
+/* One backdrop owned by the workspace, not by a dashboard route. */
+.settings.settings-studio {position:relative;isolation:isolate;background:var(--workspace-bg)}
+.workspace-backdrop {position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;contain:strict}
+.workspace-backdrop__art {position:absolute;inset:0;background:var(--workspace-art);opacity:var(--workspace-art-opacity,.65)}
+:is(.settings-studio,.workspace-background-preview)[data-background=cosmic] {--workspace-art:linear-gradient(110deg,color-mix(in srgb,var(--workspace-bg) 65%,transparent),transparent),url('../assets/analytics/cosmic-observatory.png') center top/cover}
+:is(.settings-studio,.workspace-background-preview)[data-background=aurora] {--workspace-art:radial-gradient(ellipse at 85% 5%,color-mix(in srgb,var(--workspace-accent) 48%,transparent),transparent 62%),radial-gradient(ellipse at 5% 95%,color-mix(in srgb,var(--workspace-accent-secondary) 40%,transparent),transparent 65%)}
+:is(.settings-studio,.workspace-background-preview)[data-background=starfield] {--workspace-art:radial-gradient(circle at 23px 29px,color-mix(in srgb,var(--text-primary) 40%,transparent) 1px,transparent 1.8px) 0 0/127px 139px,radial-gradient(circle at 59px 67px,color-mix(in srgb,var(--workspace-accent) 60%,transparent) 1px,transparent 2px) 0 0/211px 193px,radial-gradient(ellipse at 75% 0%,color-mix(in srgb,var(--workspace-accent-secondary) 28%,transparent),transparent 65%)}
+.settings-studio[data-background=none] .workspace-backdrop {display:none}
+.workspace-background-preview[data-background=none] {--workspace-art:var(--workspace-bg)}
+.settings-studio[data-background-intensity=subtle] {--workspace-art-opacity:.3}
+.settings-studio[data-background-intensity=balanced] {--workspace-art-opacity:.65}
+.settings-studio[data-background-intensity=vivid] {--workspace-art-opacity:1}
+.workspace-backdrop__glow {
+  position:absolute;inset:0 auto auto 0;width:360px;height:360px;opacity:0;
+  background:radial-gradient(circle,color-mix(in srgb,var(--workspace-accent) 18%,transparent),transparent 68%);
+  /* No blur/filter, video, animated gradients, canvas, or permanent compositor hint. */
+}
+.settings.settings-studio .settings-body {background:transparent}
+.settings.settings-studio .settings-studio-toolbar,
+.settings.settings-studio .product-nav {background:color-mix(in srgb,var(--workspace-bg) 86%,transparent)}
+.settings.settings-studio[data-background=none] :is(.settings-studio-toolbar,.product-nav) {background:var(--workspace-bg)}
+.settings.settings-studio .dashboard-cosmic.dashboard-analytics {background:transparent}
+.settings.settings-studio .settings-body:has(.dashboard-cosmic) {padding:12px}
+@media(max-width:600px) {.settings.settings-studio .product-nav {background:var(--workspace-bg)}}
+@media(prefers-reduced-motion:reduce) {.workspace-backdrop__glow {display:none}}

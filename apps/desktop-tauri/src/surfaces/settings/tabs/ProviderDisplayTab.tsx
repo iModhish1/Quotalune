@@ -27,16 +27,8 @@ export default function ProviderDisplayTab({
     <div className="provider-display-page">
       <header className="provider-display-page__hero">
         <div>
-          <span>{t("ProviderIdentityGalleryEyebrow")}</span>
           <h2>{t("TabProviderDisplay")}</h2>
           <p>{t("ProviderPresentationIdentityHelper")}</p>
-        </div>
-        <div className="provider-display-page__layers" aria-label={t("TabProviderDisplay")}>
-          <span>{t("TabThemes")}</span>
-          <i aria-hidden="true">≠</i>
-          <strong>{t("TabProviderDisplay")}</strong>
-          <i aria-hidden="true">≠</i>
-          <span>{t("TabSurfaces")}</span>
         </div>
       </header>
 
