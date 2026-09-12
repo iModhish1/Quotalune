@@ -16,7 +16,7 @@ function setup() {
     Object.defineProperty(event,"pointerType",{value:pointerType});
     root.dispatchEvent(event);
   };
-  return {request,cancel,now,root,glow,stop,move,paint:()=>callback(performance.now())};
+  return {request,cancel,now,root,glow,stop,move,paint:(stamp=performance.now())=>callback(stamp)};
 }
 describe("bounded workspace background interaction", () => {
   it("does no idle work, coalesces input and never schedules its next frame", () => {
@@ -39,6 +39,13 @@ describe("bounded workspace background interaction", () => {
     expect(s.glow.style.opacity).toBe("0");
     s.move();expect(s.request).toHaveBeenCalledTimes(1);
     window.dispatchEvent(new Event("focus"));s.move();
+    expect(s.request).toHaveBeenCalledTimes(2);s.stop();
+  });
+  it("keeps the rate cap when the frame timestamp predates the actual callback", () => {
+    const s=setup();s.move();s.paint(80);
+    s.now.mockReturnValue(120);s.move();
+    expect(s.request).toHaveBeenCalledTimes(1);
+    s.now.mockReturnValue(140);s.move();
     expect(s.request).toHaveBeenCalledTimes(2);s.stop();
   });
   it("cleans up all input work and ignores touch", () => {
