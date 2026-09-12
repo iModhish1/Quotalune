@@ -62,8 +62,18 @@ Source: "{#VCRedistPath}"; Flags: dontcopy
 Source: "{#WebView2BootstrapperPath}"; Flags: dontcopy
 
 [Icons]
-Name: "{autoprograms}\Quotalis"; Filename: "{app}\Quotalis.exe"; Parameters: "menubar"; WorkingDir: "{app}"; IconFilename: "{app}\icon.ico"
-Name: "{autodesktop}\Quotalis"; Filename: "{app}\Quotalis.exe"; Parameters: "menubar"; WorkingDir: "{app}"; Tasks: desktopicon; IconFilename: "{app}\icon.ico"
+; AppUserModelID must match the identity the running app registers itself
+; (app.quotaarc.desktop -- see the [Registry] section below and
+; docs/validation/QUOTALIS_WINDOWS_IDENTITY_MIGRATION.md's Option A).
+; Without it, Inno lets Windows synthesize its own AppID from the
+; shortcut's target+arguments, which does NOT match the app's real
+; identity -- verified via `Get-StartApps` against a real install: the
+; shortcut resolved to an auto-generated GUID-based AppID instead of
+; app.quotaarc.desktop, breaking the "Start Menu pin survives
+; automatically" guarantee Option A depends on, even though the app
+; itself was registering the correct AUMID at runtime the whole time.
+Name: "{autoprograms}\Quotalis"; Filename: "{app}\Quotalis.exe"; Parameters: "menubar"; WorkingDir: "{app}"; IconFilename: "{app}\icon.ico"; AppUserModelID: "app.quotaarc.desktop"
+Name: "{autodesktop}\Quotalis"; Filename: "{app}\Quotalis.exe"; Parameters: "menubar"; WorkingDir: "{app}"; Tasks: desktopicon; IconFilename: "{app}\icon.ico"; AppUserModelID: "app.quotaarc.desktop"
 
 [Registry]
 ; Give this installer the same stable Windows notification identity as the
