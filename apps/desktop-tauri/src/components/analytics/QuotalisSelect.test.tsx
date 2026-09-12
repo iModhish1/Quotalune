@@ -26,3 +26,10 @@ describe("QuotalisSelect",()=>{
   expect(change).not.toHaveBeenCalled();fireEvent.pointerDown(document.body);expect(screen.queryByRole("listbox")).toBeNull();
  });
 });
+
+it("skips disabled options and closes if the trigger becomes disabled",()=>{
+ const change=vi.fn();const opts=[{value:"a",label:"First"},{value:"b",label:"Blocked",disabled:true},{value:"c",label:"Last"}];
+ const {rerender}=render(<QuotalisSelect label="Choice" value="a" options={opts} onChange={change}/>);
+ fireEvent.click(screen.getByRole('button',{name:'Choice'}));fireEvent.keyDown(screen.getByRole('combobox'),{key:'ArrowDown'});fireEvent.keyDown(screen.getByRole('combobox'),{key:'Enter'});expect(change).toHaveBeenCalledWith('c');
+ fireEvent.click(screen.getByRole('button',{name:'Choice'}));rerender(<QuotalisSelect label="Choice" value="a" options={opts} onChange={change} disabled/>);expect(screen.queryByRole('listbox')).toBeNull();
+});
