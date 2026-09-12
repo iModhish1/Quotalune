@@ -299,6 +299,20 @@ fn reconcile_on_main_thread(
         }
     }
 }
+/// Dev proof reports registration, never claims Windows chose a visible placement.
+pub(crate) fn registered_icons(app: &AppHandle) -> Vec<(String, bool)> {
+    OWNED
+        .lock()
+        .map(|ids| {
+            let mut values: Vec<_> = ids
+                .iter()
+                .map(|id| (id.clone(), app.tray_by_id(id).is_some()))
+                .collect();
+            values.sort();
+            values
+        })
+        .unwrap_or_default()
+}
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -568,6 +568,7 @@ fn main() {
             command_profiles::set_reset_presentation,
             command_profiles::set_reset_presentation_surface_override,
             proof_harness::show_notification_proof,
+            proof_harness::get_provider_tray_proof,
         ])
         .setup(move |app| {
             if let Ok(icon_path) = app

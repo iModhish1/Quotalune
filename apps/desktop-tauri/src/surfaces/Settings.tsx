@@ -380,7 +380,7 @@ export default function Settings({ state, initialTab: propTab, navigationRevisio
         )}
         {activeTab === "surfaces" && <SurfacesTab />}
         {activeTab === "themes" && (
-          <><WorkspaceBackgroundControl settings={settings} navigation={navigation} update={update} disabled={saving}/><WorkspacePreferencesControl settings={settings} navigation={navigation} update={update} disabled={saving}/><ThemeGallery /></>
+          <><WorkspaceBackgroundControl settings={settings} navigation={navigation} update={update} disabled={saving}/><WorkspacePreferencesControl settings={settings} navigation={navigation} update={update} disabled={saving}/><GeneralTab mode="appearance" settings={settings} set={set} saving={saving}/><ThemeGallery /></>
         )}
         {activeTab === "advanced" && (
           <AdvancedTab settings={settings} set={set} saving={saving} />

@@ -6,7 +6,7 @@ export type PrimaryDestination = "dashboard" | "analytics" | "usageSpend" | "pro
 export const PRIMARY_GROUPS: {labelKey: LocaleKey; tabs: {id: PrimaryDestination; target: SettingsTabId; labelKey: LocaleKey}[]}[] = [
   {labelKey: "NavMonitor", tabs: [{id: "dashboard", target: "dashboard", labelKey: "TabDashboard"}, {id:"analytics",target:"analytics",labelKey:"V3Analytics"}, {id:"usageSpend",target:"usageSpend",labelKey:"TabUsageSpend"}]},
   {labelKey: "NavManage", tabs: [{id: "providers", target: "providers", labelKey: "TabProviders"}, {id: "profiles", target: "profiles", labelKey: "TabProfiles"}, {id:"collections",target:"collections",labelKey:"TabCollections"}]},
-  {labelKey: "V2Appearance", tabs: [{id:"appearance",target:"themes",labelKey:"V2Appearance"},{id:"surfaceStudio",target:"surfaces",labelKey:"TabSurfaces"},{id:"trayStudio",target:"menuBar",labelKey:"TabMenuBar"}]},
+  {labelKey: "V2Appearance", tabs: [{id:"appearance",target:"themes",labelKey:"V2Appearance"},{id:"surfaceStudio",target:"surfaces",labelKey:"TabSurfaces"},{id:"trayStudio",target:"menuBar",labelKey:"TrayStudioTitle"}]},
   {labelKey: "V2Settings", tabs: [{id: "settings", target: "general", labelKey: "V2Settings"}, {id:"about",target:"about",labelKey:"TabAbout"}]},
 ];
 export const PRIMARY_DESTINATIONS = PRIMARY_GROUPS.flatMap(group => group.tabs);

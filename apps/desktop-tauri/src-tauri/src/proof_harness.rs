@@ -110,6 +110,15 @@ pub fn show_notification_proof(
     Ok(())
 }
 
+/// Read-only native registration evidence, restricted to the isolated Dev proof process.
+#[tauri::command]
+pub fn get_provider_tray_proof(app: AppHandle) -> Result<Vec<(String, bool)>, String> {
+    if !quotalis_core::paths::is_dev_channel() || !is_proof_mode(&app) {
+        return Err("tray proof requires Dev proof mode".into());
+    }
+    Ok(crate::provider_tray::registered_icons(&app))
+}
+
 /// Proof configuration parsed from `CODEXBAR_PROOF_MODE`.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

@@ -298,7 +298,7 @@ export default function GeneralTab({
   saving,
   providerCatalog = FALLBACK_PROVIDER_CATALOG,
 }: TabProps & {
-  mode?: "general" | "notifications";
+  mode?: "general" | "notifications" | "appearance";
   providerCatalog?: ProviderCatalogEntry[];
 }) {
   const { t } = useLocale();
@@ -397,7 +397,7 @@ export default function GeneralTab({
           </Field>
         </div>
       </section>}
-      {mode === "general" && <section className="settings-section general-settings-card general-settings-card--identity">
+      {mode === "appearance" && <section className="settings-section general-settings-card general-settings-card--identity">
         <h3 className="settings-section__title">{t("LogoIdentitySection")}</h3>
         <div className="settings-section__group">
           <Field label={t("LogoFinishLabel")} description={t("LogoFinishHelper")}>
@@ -432,7 +432,7 @@ export default function GeneralTab({
         </div>
       </section>}
 
-      {mode === "general" && <section className="settings-section general-settings-card general-settings-card--theme">
+      {mode === "appearance" && <section className="settings-section general-settings-card general-settings-card--theme">
         <h3 className="settings-section__title">{t("SectionTheme")}</h3>
         <div className="settings-section__group">
           <Field label={t("ThemeLabel")} description={t("ThemeHelper")}>

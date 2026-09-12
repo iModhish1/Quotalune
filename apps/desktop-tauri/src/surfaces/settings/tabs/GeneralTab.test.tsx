@@ -423,8 +423,8 @@ describe("GeneralTab language picker", () => {
 });
 
 
-  it("renders the theme picker with auto/light/dark options in general mode", () => {
-    render(<GeneralTab settings={settings} set={vi.fn()} saving={false} />);
+  it("renders the theme picker with auto/light/dark options in appearance mode", () => {
+    render(<GeneralTab mode="appearance" settings={settings} set={vi.fn()} saving={false} />);
 
     fireEvent.click(screen.getByRole("button", { name: "ThemeLabel" }));
     expect(screen.getAllByRole("option")).toHaveLength(3);
@@ -435,7 +435,7 @@ describe("GeneralTab language picker", () => {
 
   it("persists a light theme choice via updateSettings", () => {
     const set = vi.fn();
-    render(<GeneralTab settings={settings} set={set} saving={false} />);
+    render(<GeneralTab mode="appearance" settings={settings} set={set} saving={false} />);
 
     fireEvent.click(screen.getByRole("button", { name: "ThemeLabel" }));
     fireEvent.click(screen.getByRole("option", { name: "ThemeLightOption" }));
@@ -452,7 +452,7 @@ describe("GeneralTab language picker", () => {
   });
 
   it("offers independent logo finishes and prominence with a live persisted preview", () => {
-    render(<GeneralTab settings={settings} set={vi.fn()} saving={false} />);
+    render(<GeneralTab mode="appearance" settings={settings} set={vi.fn()} saving={false} />);
 
     fireEvent.click(screen.getByRole("button", { name: "LogoAurora" }));
     fireEvent.click(screen.getByRole("button", { name: "LogoBalanced" }));
