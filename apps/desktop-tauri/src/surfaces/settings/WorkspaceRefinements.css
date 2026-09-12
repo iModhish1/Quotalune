@@ -14,6 +14,7 @@
 .settings-studio ::-webkit-scrollbar-thumb {background:color-mix(in srgb,var(--text-muted) 45%,transparent);border:2px solid transparent;background-clip:padding-box;border-radius:8px}
 .settings-studio ::-webkit-scrollbar-thumb:hover {background-color:var(--workspace-accent)}
 .settings-studio ::-webkit-scrollbar-button {display:none;width:0;height:0}
+@supports selector(::-webkit-scrollbar) {.settings-studio * {scrollbar-width:auto}}
 .workspace-sidebar-resizer::before {width:1px}
 
 /* The thumb's position, rather than a checkmark, conveys the state. */
@@ -48,11 +49,12 @@
 .settings-studio .providers-sidebar__reorder-controls {gap:2px}
 .settings-studio .providers-sidebar__reorder-button {min-height:22px;width:22px;padding:0;font-size:11px}
 .settings-studio .provider-detail {padding:12px;scrollbar-gutter:stable;overflow:auto;box-sizing:border-box;isolation:isolate;scroll-padding-block:12px}
-.settings-studio .provider-detail-header-block {padding:4px 0 12px}
+.settings-studio .provider-workspace .provider-detail-header-block {position:static;top:auto;margin:0 0 12px;padding:12px}
 .settings-studio .provider-detail-header {flex-wrap:wrap}
 .settings-studio .provider-detail-section {padding:12px;min-width:0;overflow-wrap:anywhere}
 .settings-studio .provider-detail-composition__tabs {top:0;gap:4px;padding:6px 0;flex-wrap:wrap}
-.settings-studio .provider-detail-composition__tabs button {min-width:0;flex:1 1 110px;padding:7px;font-size:11px}
+.settings-studio .provider-detail-composition__tabs button {min-width:0;flex:1 1 110px;padding:7px;font-size:11px;white-space:normal;overflow-wrap:anywhere}
+.settings-studio .providers-sidebar__row:not(.providers-sidebar__row--selected) .providers-sidebar__reorder-controls {display:none}
 .settings-studio .provider-workspace>.provider-split[data-narrow=true] {display:flex;flex-direction:column;overflow:auto;gap:10px}
 .settings-studio .provider-split[data-narrow=true]>.providers-sidebar-shell {flex:0 0 220px}
 .settings-studio .provider-split[data-narrow=true]>.provider-pane-resizer {display:none}
