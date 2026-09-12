@@ -302,3 +302,6 @@ dependencies. Bound rendering work, honor reduced motion/low CPU/disabled animat
 measure native cost and validate navigation, persisted choices, RTL and narrow
 layouts. Retain SHELL-01 sidebar controls, original branding and truthful data.
 Dev-only implementation and QA; Personal stays frozen.
+
+SHELL-02 implemented and verified at a42f1ab6. Architecture, exact checks, native
+captures and performance qualifications: docs/validation/WORKSPACE_BACKGROUNDS_NAVIGATION.md.

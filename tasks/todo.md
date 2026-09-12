@@ -1109,7 +1109,10 @@ Full current evidence and qualifications: docs/validation/CODEX_POST_RELEASE_HAN
 Candidate 8a925f5e; evidence and limitations: docs/validation/WORKSPACE_SHELL_COMPACT.md.
 
 ## SHELL-02
-- [ ] Group monitoring/configuration destinations and preserve deep links.
-- [ ] Shared background controls and optional bounded interaction.
-- [ ] Remove page-owned shell overrides and fix layout inconsistencies.
-- [ ] Native performance/visual evidence and full source gates.
+- [x] Group monitoring/configuration destinations and preserve deep links.
+- [x] Shared background controls and optional bounded interaction.
+- [x] Remove page-owned shell overrides and fix layout inconsistencies.
+- [x] Native performance/visual evidence and full source gates.
+
+Candidate a42f1ab6; evidence, measurements and limits:
+docs/validation/WORKSPACE_BACKGROUNDS_NAVIGATION.md. Owner visual acceptance remains separate.

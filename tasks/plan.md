@@ -368,3 +368,7 @@ Consolidate related destinations without changing native route IDs. Add shared
 persisted background choices and opt-in bounded pointer interaction, remove
 page-owned shell styling and repair observed layout issues, then validate native
 visuals/performance and full source gates.
+
+Completed at a42f1ab6: four primary destinations, five settings groups, four shared
+backgrounds, live motion guards, native CUA/RTL/light/narrow proof and 1,116 frontend
+tests. Evidence: docs/validation/WORKSPACE_BACKGROUNDS_NAVIGATION.md.
