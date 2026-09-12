@@ -86,4 +86,16 @@ describe("workspace sidebar", () => {
     const {result} = renderHook(() => useSidebarLayout({density:"compact",navigation:"top",sidebarCollapsed:true}, "top", vi.fn()));
     expect(result.current.collapsed).toBe(false);
   });
+
+  it("bounds the narrow overlay and restores desktop width without persisting viewport changes", () => {
+    vi.stubGlobal("innerWidth", 320);
+    const update = vi.fn();
+    const {result} = renderHook(() => useSidebarLayout({density:"compact",navigation:"side",sidebarWidth:360}, "side", update));
+    expect(result.current.width).toBe(256);
+    expect(result.current.maxWidth).toBe(256);
+    vi.stubGlobal("innerWidth", 1216);
+    act(() => window.dispatchEvent(new Event("resize")));
+    expect(result.current.width).toBe(360);
+    expect(update).not.toHaveBeenCalled();
+  });
 });

@@ -297,7 +297,7 @@ export default function Settings({ state, initialTab: propTab, navigationRevisio
         <SettingsWindowActions />
       </SettingsShellHeader>
       <ProductNavigation activeTab={activeTab} onNavigate={handleTabClick} icons={TabIcons} hidden={sidebar.collapsed}/>
-      {navigation === "side" && !sidebar.collapsed && <SidebarResizeHandle width={sidebar.width}
+      {navigation === "side" && !sidebar.collapsed && <SidebarResizeHandle width={sidebar.width} maxWidth={sidebar.maxWidth}
         onPreview={sidebar.preview} onCommit={next => void sidebar.resize(next)} disabled={saving}/>}
 
       {/* status bar */}
