@@ -316,3 +316,8 @@ About. Upgrade About. Add All/Static/Animated/My backgrounds filters, multiple b
 of original lightweight backgrounds and device import/persist/delete for custom images.
 Preserve original logos, truthful status and prior reduced-motion/low-CPU/visibility
 budgets. Work in Dev; no Personal deployment or credential mutations for QA.
+
+SHELL-03 implemented and verified at code candidate d0bb0165: eight primary pages,
+compact resizable provider workspace, logo-aligned switches, 28 bundled background
+choices and managed local imports. Exact source gates, native proof and limitations:
+docs/validation/WORKSPACE_LIBRARY_PROVIDER_LAYOUT.md.

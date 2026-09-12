@@ -1118,8 +1118,11 @@ Candidate a42f1ab6; evidence, measurements and limits:
 docs/validation/WORKSPACE_BACKGROUNDS_NAVIGATION.md. Owner visual acceptance remains separate.
 
 ## SHELL-03
-- [ ] Compact provider/page layouts, safe gutters, shared resize and scroll behavior.
-- [ ] Logo-aligned switches, truthful enabled/unconnected provider visibility.
-- [ ] Eight primary pages and standalone About upgrade.
-- [ ] Categorized background batches, local import/persist/delete and motion guards.
-- [ ] Full source gates and native Dev functional/visual/performance evidence.
+- [x] Compact provider/page layouts, safe gutters, shared resize and scroll behavior.
+- [x] Logo-aligned switches, truthful enabled/unconnected provider visibility.
+- [x] Eight primary pages and standalone About upgrade.
+- [x] Categorized background batches, local import/persist/delete and motion guards.
+- [x] Full source gates and native Dev functional/visual/performance evidence.
+
+Code candidate d0bb0165; 1,132 frontend tests, 32 native route checks, Cua and
+WebView2 interaction proof: docs/validation/WORKSPACE_LIBRARY_PROVIDER_LAYOUT.md.
