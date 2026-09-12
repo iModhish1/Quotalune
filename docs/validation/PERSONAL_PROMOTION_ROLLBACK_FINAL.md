@@ -57,12 +57,62 @@ personal-rollback/20260912-051322/
 
 ## Rollback procedure (if this promotion needs to be reversed)
 
-1. Stop the new Personal process if running.
-2. Run the new Personal's own `uninstall.exe` (if installed via the canonical NSIS installer) — or, if that fails, delete `C:\Users\imodhish\AppData\Local\QuotaArc\` manually.
-3. Restore `app/QuotaArc.exe`, `app/uninstall.exe`, `app/quotaarc-icon-128.png` from this backup into `C:\Users\imodhish\AppData\Local\QuotaArc\`.
-4. Restore `data/QuotaArc/` byte-for-byte over `C:\Users\imodhish\AppData\Roaming\QuotaArc\` (delete anything the new version added first).
-5. Re-import `registry/QuotaArc-uninstall-key.reg` (`reg import`) if the uninstall key was overwritten with new metadata.
-6. Restore `shortcuts/QuotaArc.StartMenu.lnk` → Start Menu Programs, `shortcuts/QuotaArc.Desktop.lnk` → Desktop.
-7. Verify: executable SHA256 matches `763e4f32...`, `Get-StartApps` shows version/AppID as before, app launches and loads existing history/settings correctly.
+**Corrected 2026-09-12 during post-release reconciliation; NOT EXECUTED.**
+The original step 2 incorrectly described NSIS and proposed deleting the old
+application directory. Actual promotion used Inno and installed into a separate
+directory. Those obsolete instructions must not be followed.
+
+Rollback is a future, explicitly authorized Personal operation, not a Dev QA
+step. This document does not authorize stopping, uninstalling, restoring or
+changing the current Personal application.
+
+1. Before any change, identify the running Personal processes by exact executable
+   path and obtain a fresh backup of the **current 0.11.0 state**, including opaque
+   credentials, SQLite database/WAL/SHM consistently captured after an authorized
+   orderly shutdown, both install locations, shortcuts and relevant registry
+   metadata. Preserve newer history/settings; the pre-promotion snapshot is older.
+2. Revalidate the historical backup payloads against its manifest and the pinned
+   old executable hash. Resolve any payload mismatch before proceeding. See the
+   manifest qualification below; do not claim the self-entry validates itself.
+3. Confirm the real registered uninstall entry:
+   `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\QuotaArcDesktop_is1`.
+   At reconciliation it identifies Inno's
+   `C:\Users\imodhish\AppData\Local\Programs\Quotalis\unins000.exe` and install
+   location `C:\Users\imodhish\AppData\Local\Programs\Quotalis\`.
+   Re-read and verify these values at rollback time. Do not substitute the legacy
+   `Local\QuotaArc\uninstall.exe` or guess an uninstaller from its filename.
+4. Only in that authorized rollback phase, use the verified new install's supported
+   uninstaller. It owns shared shortcut/AUMID registration metadata; account for
+   those removals explicitly. If uninstall fails, stop and diagnose. **There is no
+   recursive-delete fallback**, particularly against the old `Local\QuotaArc` app
+   or the shared `Roaming\QuotaArc` data root.
+5. Verify the retained old app at `Local\QuotaArc\QuotaArc.exe` first. Restore its
+   app files from this backup only if necessary. A historical-data restore is a
+   separate explicit decision: it discards post-backup changes. Do not overwrite
+   shared data or delete newly added files merely because the binary is rolled back.
+   Keep the fresh 0.11.0 backup available for recovery in either direction.
+6. Restore legacy uninstall metadata/shortcuts only where the verified rollback
+   requires it, from their captured backups. Reconcile current and legacy shell
+   identity separately. Use supported owner pin/unpin actions if needed; do not
+   modify undocumented Start storage.
+7. Verify the old executable's full SHA256
+   `763e4f3228fd2ca08c16c2f55744bfe32336893133c3155b3aef789501e78efd`, shortcut
+   target/AUMID, and then authorized native launch, real history/settings and
+   credential continuity. A rollback is not successful merely because files copied.
+
+## Post-release read-only backup verification — 2026-09-12
+
+All 24 recorded entries were checked against files under the exact backup root.
+**23 payload entries match**, including the old executable and the captured data.
+The remaining entry is `manifest.sha256` itself: its recorded digest does not match
+the final manifest bytes. This self-entry cannot certify the manifest's integrity.
+No backup file or manifest was edited, regenerated, decrypted or restored.
+
+Thus the available evidence is payload consistency with the retained manifest,
+not an independently authenticated or fully matching 24-entry manifest. The backup
+is retained and inspectable; full rollback execution has not been rehearsed.
+Preserve this qualification when reporting readiness. The historical promotion
+PASS remains a record of that earlier acceptance, not proof these later findings
+were absent.
 
 This checkpoint and the prior, older rollback checkpoint are both retained — neither is deleted by this promotion.
