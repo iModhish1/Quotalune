@@ -15,8 +15,8 @@ describe("background choices",()=>{
     const prefs={density:"dense",navigation:"side",sidebarWidth:280,sidebarCollapsed:true,background:"cosmic"} as const;
     const update=vi.fn();
     render(<WorkspaceBackgroundControl settings={{workspacePreferences:prefs} as unknown as SettingsSnapshot} navigation="side" update={update} disabled={false}/>);
-    fireEvent.click(screen.getByRole("button",{name:/^WorkspaceBackgroundAurora /}));
-    expect(update).toHaveBeenLastCalledWith({workspacePreferences:{...prefs,background:"aurora"}});
+    fireEvent.click(screen.getByRole("button",{name:/^WorkspaceScene01 WorkspaceBackgroundStaticOnly/}));
+    expect(update).toHaveBeenLastCalledWith({workspacePreferences:{...prefs,background:"atmosphere-01"}});
     fireEvent.click(screen.getByRole("button",{name:"WorkspaceBackgroundInteractive"}));
     expect(update).toHaveBeenLastCalledWith({workspacePreferences:{...prefs,backgroundMotion:"interactive"}});
     fireEvent.click(screen.getByRole("button",{name:"WorkspaceBackgroundSubtle"}));
@@ -27,7 +27,7 @@ describe("background choices",()=>{
     const update=vi.fn();
     render(<WorkspaceBackgroundControl settings={{} as unknown as SettingsSnapshot} navigation="side" update={update} disabled={false}/>);
     fireEvent.click(screen.getByRole("button",{name:"WorkspaceBackgroundAnimated"}));
-    expect(screen.getAllByRole("button",{name:/^WorkspaceScene/})).toHaveLength(12);
+    expect(screen.getAllByRole("button",{name:/^WorkspaceScene/})).toHaveLength(4);
     expect(screen.queryByRole("button",{name:/^WorkspaceBackgroundCosmic /})).toBeNull();
     fireEvent.click(screen.getByRole("button",{name:/^WorkspaceScene01 /}));
     expect(update).toHaveBeenLastCalledWith({workspacePreferences:{density:"comfortable",navigation:"side",background:"motion-01",backgroundMotion:"interactive"}});

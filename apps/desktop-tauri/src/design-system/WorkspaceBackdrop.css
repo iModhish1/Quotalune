@@ -1,6 +1,7 @@
 /* One backdrop owned by the workspace, not by a dashboard route. */
 .settings.settings-studio {position:relative;isolation:isolate;background:var(--workspace-bg)}
-.workspace-backdrop {position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;contain:strict}
+.workspace-backdrop {position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;contain:strict}
+.workspace-backdrop__stars {position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .workspace-backdrop__art {position:absolute;inset:0;background:var(--workspace-art);opacity:var(--workspace-art-opacity,.65)}
 .workspace-backdrop__image {width:100%;height:100%;object-fit:cover;display:block}
 .workspace-backdrop__scrim {position:absolute;inset:0;background:linear-gradient(110deg,color-mix(in srgb,var(--workspace-bg) 60%,transparent),transparent)}
@@ -15,7 +16,7 @@
 .workspace-backdrop__glow {
   position:absolute;inset:0 auto auto 0;width:360px;height:360px;opacity:0;
   background:radial-gradient(circle,color-mix(in srgb,var(--workspace-accent) 18%,transparent),transparent 68%);
-  /* No blur/filter, video, animated gradients, canvas, or permanent compositor hint. */
+  /* Pointer glow has no blur/filter or permanent compositor hint. */
 }
 .settings.settings-studio .settings-body {background:transparent}
 .settings.settings-studio :is(.profiles-page,.collections-page) {
@@ -23,7 +24,7 @@
   border-radius:12px;padding:16px;min-width:0;box-sizing:border-box;
 }
 .settings.settings-studio .settings-studio-toolbar,
-.settings.settings-studio .product-nav {background:color-mix(in srgb,var(--workspace-bg) 86%,transparent)}
+.settings.settings-studio .product-nav {background:color-mix(in srgb,var(--workspace-bg) 55%,transparent)}
 .settings.settings-studio[data-background=none] :is(.settings-studio-toolbar,.product-nav) {background:var(--workspace-bg)}
 .settings.settings-studio .dashboard-cosmic.dashboard-analytics {background:transparent}
 .settings.settings-studio .settings-body:has(.dashboard-cosmic) {padding:12px}

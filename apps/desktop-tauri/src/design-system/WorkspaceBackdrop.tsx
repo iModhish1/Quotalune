@@ -6,6 +6,7 @@ import type {SettingsSnapshot} from "../types/bridge";
 import {useReducedMotion} from "./motion";
 import {attachBackgroundInteraction} from "./backgroundMotion";
 import "./WorkspaceBackdrop.css";
+import {attachSpaceScene} from "./spaceScene";
 
 export function backgroundInteractionAllowed(settings: SettingsSnapshot, reducedMotion: boolean | null): boolean {
   return settings.workspacePreferences?.backgroundMotion === "interactive"
@@ -18,6 +19,7 @@ export function backgroundInteractionAllowed(settings: SettingsSnapshot, reduced
 export default function WorkspaceBackdrop({settings}: {settings: SettingsSnapshot}) {
   const layer = useRef<HTMLDivElement>(null);
   const glow = useRef<HTMLDivElement>(null);
+  const stars = useRef<HTMLCanvasElement>(null);
   const reducedMotion = useReducedMotion();
   const enabled = backgroundInteractionAllowed(settings, reducedMotion);
   const background = settings.workspacePreferences?.background ?? "cosmic";
@@ -25,6 +27,11 @@ export default function WorkspaceBackdrop({settings}: {settings: SettingsSnapsho
   const customId=customBackgroundId(background);
   const [customImage,setCustomImage]=useState<{id:string;url:string}|null>(null);
   const [active,setActive]=useState(()=>document.visibilityState==="visible"&&document.hasFocus());
+  const animate=enabled&&active&&selected?.kind==="animated";
+  useEffect(()=>{
+    if(!animate||!stars.current||!layer.current?.parentElement)return;
+    return attachSpaceScene(stars.current,layer.current.parentElement,settings.dashboardPerformancePreset==="highFidelity"?30:24);
+  },[animate,settings.dashboardPerformancePreset]);
   useEffect(()=>{
     const sync=()=>setActive(document.visibilityState==="visible"&&document.hasFocus());
     window.addEventListener("focus",sync);window.addEventListener("blur",sync);document.addEventListener("visibilitychange",sync);
@@ -45,13 +52,15 @@ export default function WorkspaceBackdrop({settings}: {settings: SettingsSnapsho
   }, [enabled]);
   // Large data URLs exceed WebView2's CSS custom-property token limit. Keep
   // imported pixels in an image element, with a separate theme scrim.
-  const art = customId ? "none" : selected?.art;
+  const art = customId||selected?.image ? "none" : selected?.art;
+  const imageUrl=customId?(customImage?.id===customId?customImage.url:null):selected?.image;
   return <div ref={layer} className="workspace-backdrop" aria-hidden="true" data-interactive={enabled}
-    data-motion={selected?.motion} data-animate={enabled&&active&&selected?.kind==="animated"}
+    data-motion={selected?.motion} data-animate={animate}
     style={art ? {"--workspace-art":art} as CSSProperties : undefined}>
     <div className="workspace-backdrop__art">
-      {customId&&customImage?.id===customId&&<><img className="workspace-backdrop__image" src={customImage.url} alt=""/><span className="workspace-backdrop__scrim"/></>}
+      {imageUrl&&<><img className="workspace-backdrop__image" src={imageUrl} alt=""/><span className="workspace-backdrop__scrim"/></>}
     </div>
+    {selected?.kind==="animated"&&<canvas ref={stars} className="workspace-backdrop__stars"/>}
     <div ref={glow} className="workspace-backdrop__glow"/>
   </div>;
 }
