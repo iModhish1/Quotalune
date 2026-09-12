@@ -27,3 +27,12 @@
 .settings.settings-studio .settings-body:has(.dashboard-cosmic) {padding:12px}
 @media(max-width:600px) {.settings.settings-studio .product-nav {background:var(--workspace-bg)}}
 @media(prefers-reduced-motion:reduce) {.workspace-backdrop__glow {display:none}}
+/* A single bounded compositor layer; previews never animate. No animated filters or gradients. */
+.workspace-backdrop[data-motion] .workspace-backdrop__art {inset:-4%;animation:workspace-drift 48s ease-in-out infinite alternate;animation-play-state:paused}
+.workspace-backdrop[data-motion=tide] .workspace-backdrop__art {animation-name:workspace-tide;animation-duration:64s}
+.workspace-backdrop[data-motion=breathe] .workspace-backdrop__art {animation-name:workspace-breathe;animation-duration:56s}
+.workspace-backdrop[data-animate=true] .workspace-backdrop__art {animation-play-state:running}
+@keyframes workspace-drift {from{transform:translate(-1.5%,-1%)}to{transform:translate(1.5%,1%)}}
+@keyframes workspace-tide {from{transform:translateX(-2%) rotate(-1deg)}to{transform:translateX(2%) rotate(1deg)}}
+@keyframes workspace-breathe {from{transform:scale(1)}to{transform:scale(1.04)}}
+@media(prefers-reduced-motion:reduce) {.workspace-backdrop[data-motion] .workspace-backdrop__art {animation:none}}

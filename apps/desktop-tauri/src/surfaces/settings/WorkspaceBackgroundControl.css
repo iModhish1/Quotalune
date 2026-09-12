@@ -12,3 +12,11 @@
 .workspace-background-segments {display:flex;flex-wrap:wrap;gap:6px}
 .settings-studio .workspace-background-segments>button {background:var(--workspace-bg);color:var(--text-primary);border-color:var(--workspace-edge)}
 .workspace-background-control button:focus-visible {outline:2px solid var(--workspace-accent);outline-offset:3px}
+.workspace-background-library-toolbar {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.workspace-background-choices {max-height:440px;overflow:auto;padding:4px;scrollbar-gutter:stable}
+.workspace-background-custom {display:grid;align-content:start;gap:4px;min-width:0;border:1px solid var(--workspace-edge);border-radius:10px;padding:6px}
+.workspace-background-custom>button:first-child {display:grid;text-align:start;gap:6px;padding:0;background:transparent;border:0;min-width:0}
+.workspace-background-custom strong {overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.workspace-background-custom img {width:100%;object-fit:cover;box-sizing:border-box}
+.workspace-background-custom:has([aria-pressed=true]) {border-color:var(--workspace-accent)}
+.settings-studio .workspace-background-delete {font-size:10px;min-height:26px;padding:4px}
