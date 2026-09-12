@@ -1,0 +1,66 @@
+/* Shared density and safe scrolling across every primary destination. */
+.settings-studio .settings-body {padding:10px 12px;min-width:0}
+.settings-studio .settings-studio-toolbar {padding:4px 10px;min-height:40px}
+.settings-studio .settings-center__header {padding-block:0 8px;margin-bottom:10px;gap:10px}
+.settings-studio .settings-center__header p {margin-top:2px;font-size:11px}
+.settings-studio .settings-center__section-title {margin-bottom:10px}
+.settings-studio .settings-center__section-title h2 {font-size:17px}
+.settings-studio .settings-center__section-title p {margin:3px 0;font-size:12px}
+.settings-studio .provider-display-page__hero {padding:10px 12px}
+.settings-studio .provider-display-page__hero h2 {font-size:20px}
+.settings-studio * {scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--text-muted) 45%,transparent) transparent}
+.settings-studio ::-webkit-scrollbar {width:8px;height:8px}
+.settings-studio ::-webkit-scrollbar-track,.settings-studio ::-webkit-scrollbar-corner {background:transparent}
+.settings-studio ::-webkit-scrollbar-thumb {background:color-mix(in srgb,var(--text-muted) 45%,transparent);border:2px solid transparent;background-clip:padding-box;border-radius:8px}
+.settings-studio ::-webkit-scrollbar-thumb:hover {background-color:var(--workspace-accent)}
+.settings-studio ::-webkit-scrollbar-button {display:none;width:0;height:0}
+.workspace-sidebar-resizer::before {width:1px}
+
+/* The thumb's position, rather than a checkmark, conveys the state. */
+.settings-studio input[type=checkbox] {appearance:none;position:relative;box-sizing:border-box;display:inline-block;vertical-align:middle;width:36px;height:20px;min-width:36px;flex:0 0 36px;padding:0;border:1px solid color-mix(in srgb,#bac4d0 38%,transparent);border-radius:20px;background:color-mix(in srgb,#8492a1 14%,transparent);cursor:pointer;box-shadow:none}
+.settings-studio input[type=checkbox]::after {display:none!important;content:none!important}
+.settings-studio input[type=checkbox]::before {content:"";position:absolute;inset:3px auto auto 3px;width:12px;height:12px;border:0;border-radius:50%;background:#a7b1bd;transform:none;transition:transform 120ms ease}
+.settings-studio input[type=checkbox]:checked {background:var(--workspace-control-accent);border-color:color-mix(in srgb,var(--workspace-control-accent) 65%,#fff)}
+.settings-studio input[type=checkbox]:checked::before {transform:translateX(16px);background:#f0f5f7}
+.settings-studio input[type=checkbox]:focus-visible {outline:2px solid var(--workspace-accent);outline-offset:3px}
+.settings-studio input[type=checkbox]:disabled {opacity:.45;cursor:not-allowed}
+[dir=rtl] .settings-studio input[type=checkbox]::before {inset-inline-start:3px;left:auto}
+[dir=rtl] .settings-studio input[type=checkbox]:checked::before {transform:translateX(-16px)}
+
+.settings-studio .provider-workspace {gap:8px;overflow:hidden}
+.settings-studio .provider-workspace__header {padding:0 0 6px;gap:10px;align-items:center}
+.settings-studio .provider-workspace__header h2 {font-size:19px;margin:0 0 2px}
+.settings-studio .provider-workspace__header p {font-size:11px;line-height:1.4;margin:0;max-width:none}
+.settings-studio .provider-workspace__toolbar {padding:6px;gap:6px;flex-wrap:wrap;border-radius:10px}
+.settings-studio .provider-workspace__toolbar button {min-height:30px;padding:5px 9px;font-size:11px}
+.settings-studio .provider-analytics-link {flex-shrink:0;font-size:11px;padding:5px 8px;min-height:30px}
+.settings-studio .provider-workspace>.provider-split {display:grid;grid-template-columns:var(--provider-pane-width,256px) 10px minmax(0,1fr);gap:0;min-height:0;overflow:hidden}
+.settings-studio .provider-pane-resizer {grid-area:auto;justify-self:center;margin:0;width:10px;z-index:3}
+.settings-studio .providers-sidebar-shell {min-width:0;min-height:0;overflow:hidden;padding:4px;box-sizing:border-box}
+.settings-studio .providers-sidebar-search {padding:6px}
+.settings-studio .providers-sidebar-search__input {min-height:32px;padding:7px 9px}
+.settings-studio .providers-sidebar {scrollbar-gutter:stable;overscroll-behavior:contain;padding:0 2px 6px}
+.settings-studio .providers-sidebar__row {min-height:64px;margin:3px 2px;padding:8px;gap:7px;box-sizing:border-box}
+.settings-studio .providers-sidebar__text {min-width:0}
+.settings-studio .providers-sidebar__name {font-size:12px}
+.settings-studio .providers-sidebar__subtitle {font-size:10px}
+.settings-studio .providers-sidebar__handle {display:none}
+.settings-studio .providers-sidebar__reorder-controls {gap:2px}
+.settings-studio .providers-sidebar__reorder-button {min-height:22px;width:22px;padding:0;font-size:11px}
+.settings-studio .provider-detail {padding:12px;scrollbar-gutter:stable;overflow:auto;box-sizing:border-box;isolation:isolate;scroll-padding-block:12px}
+.settings-studio .provider-detail-header-block {padding:4px 0 12px}
+.settings-studio .provider-detail-header {flex-wrap:wrap}
+.settings-studio .provider-detail-section {padding:12px;min-width:0;overflow-wrap:anywhere}
+.settings-studio .provider-detail-composition__tabs {top:0;gap:4px;padding:6px 0;flex-wrap:wrap}
+.settings-studio .provider-detail-composition__tabs button {min-width:0;flex:1 1 110px;padding:7px;font-size:11px}
+.settings-studio .provider-workspace>.provider-split[data-narrow=true] {display:flex;flex-direction:column;overflow:auto;gap:10px}
+.settings-studio .provider-split[data-narrow=true]>.providers-sidebar-shell {flex:0 0 220px}
+.settings-studio .provider-split[data-narrow=true]>.provider-pane-resizer {display:none}
+.settings-studio .provider-split[data-narrow=true]>.provider-detail {flex:0 0 auto;overflow:visible}
+.settings-studio .about-section {max-width:1000px;width:100%;margin-inline:auto;box-sizing:border-box;padding:20px;border:1px solid var(--workspace-edge);border-radius:16px;background:var(--workspace-surface)}
+.settings-studio .about-header {padding:12px 0 22px;border-bottom:1px solid var(--workspace-edge);gap:24px}
+.settings-studio .about-title {font-size:30px;letter-spacing:-.03em}
+.settings-studio .about-update-controls {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding:16px;border:1px solid var(--workspace-edge);border-radius:12px}
+.settings-studio .about-links,.settings-studio .about-actions {display:flex;gap:8px;flex-wrap:wrap;margin-block:14px}
+@media(max-width:720px) {.settings-studio .provider-workspace__header {flex-wrap:wrap}.settings-studio .about-update-controls {grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce) {.settings-studio input[type=checkbox]::before {transition:none}}

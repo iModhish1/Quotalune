@@ -52,9 +52,9 @@ export function SidebarToggle({collapsed, onToggle, disabled}: {
   </button>;
 }
 
-export function SidebarResizeHandle({width, maxWidth = SIDEBAR_MAX, onPreview, onCommit, disabled}: {
+export function SidebarResizeHandle({width, maxWidth = SIDEBAR_MAX, onPreview, onCommit, disabled, className = "", controls = "product-navigation"}: {
   width: number; onPreview: (width: number | null) => void;
-  onCommit: (width: number) => void; disabled?: boolean; maxWidth?: number;
+  onCommit: (width: number) => void; disabled?: boolean; maxWidth?: number; className?: string; controls?: string;
 }) {
   const {t} = useLocale();
   const drag = useRef<{id: number; x: number; start: number; width: number; sign: number} | null>(null);
@@ -69,9 +69,9 @@ export function SidebarResizeHandle({width, maxWidth = SIDEBAR_MAX, onPreview, o
     if (active.width !== active.start) onCommit(active.width);
     else onPreview(null);
   };
-  return <div className="workspace-sidebar-resizer" data-dragging={dragging} role="separator" tabIndex={disabled ? -1 : 0}
+  return <div className={`workspace-sidebar-resizer ${className}`} data-dragging={dragging} role="separator" tabIndex={disabled ? -1 : 0}
     aria-label={t("WorkspaceResizeSidebar")} title={t("WorkspaceResizeSidebarHelp")}
-    aria-controls="product-navigation" aria-orientation="vertical" aria-valuemin={SIDEBAR_MIN}
+    aria-controls={controls} aria-orientation="vertical" aria-valuemin={SIDEBAR_MIN}
     aria-valuemax={maxWidth} aria-valuenow={width} aria-disabled={disabled || undefined}
     onPointerDown={event => {
       if (disabled || event.button !== 0 || drag.current) return;

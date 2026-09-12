@@ -4,8 +4,8 @@ import {TAB_META} from "./settingsTabs";
 
 describe("Settings Center route contract", () => {
   it("groups related monitoring under Dashboard and maps every legacy route exactly once", () => {
-    expect(PRIMARY_DESTINATIONS.map(item => item.id)).toEqual(["dashboard", "providers", "workspace", "settings"]);
-    expect(primaryDestination("usageSpend")).toBe("dashboard");
+    expect(PRIMARY_DESTINATIONS.map(item => item.id)).toEqual(["dashboard", "analytics", "usageSpend", "providers", "profiles", "collections", "settings", "about"]);
+    expect(primaryDestination("usageSpend")).toBe("usageSpend");
     expect(categoryForTab("resetDisplay")?.id).toBe("appearance");
     expect(categoryForTab("analyticsSources")?.id).toBe("dashboard");
     expect(categoryForTab("notifications")?.id).toBe("general");
@@ -19,7 +19,7 @@ describe("Settings Center route contract", () => {
     expect(categoryForTab("providerDisplay")?.id).toBe("appearance");
     expect(categoryForTab("dashboardStudio")?.id).toBe("dashboard");
     expect(categoryForTab("menu")?.id).toBe("surfaces");
-    expect(primaryDestination("collections")).toBe("workspace");
+    expect(primaryDestination("collections")).toBe("collections");
   });
   it("searches declared keywords and translated labels without any remote request", () => {
     const labels = new Map(TAB_META.map(tab => [tab.id, tab.labelKey]));

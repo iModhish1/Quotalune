@@ -1116,3 +1116,10 @@ Candidate 8a925f5e; evidence and limitations: docs/validation/WORKSPACE_SHELL_CO
 
 Candidate a42f1ab6; evidence, measurements and limits:
 docs/validation/WORKSPACE_BACKGROUNDS_NAVIGATION.md. Owner visual acceptance remains separate.
+
+## SHELL-03
+- [ ] Compact provider/page layouts, safe gutters, shared resize and scroll behavior.
+- [ ] Logo-aligned switches, truthful enabled/unconnected provider visibility.
+- [ ] Eight primary pages and standalone About upgrade.
+- [ ] Categorized background batches, local import/persist/delete and motion guards.
+- [ ] Full source gates and native Dev functional/visual/performance evidence.

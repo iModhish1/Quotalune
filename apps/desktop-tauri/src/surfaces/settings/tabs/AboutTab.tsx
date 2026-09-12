@@ -25,9 +25,12 @@ export default function AboutTab({ settings, set, saving }: TabProps) {
     useUpdateState();
   const [hasChecked, setHasChecked] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
+  const [infoError, setInfoError] = useState(false);
 
   useEffect(() => {
-    void getAppInfo().then(setAppInfo);
+    let active = true;
+    void getAppInfo().then(info => {if(active)setAppInfo(info);}).catch(()=>{if(active)setInfoError(true);});
+    return ()=>{active=false;};
   }, []);
 
   const handleCheck = () => {
@@ -45,7 +48,7 @@ export default function AboutTab({ settings, set, saving }: TabProps) {
   if (!appInfo) {
     return (
       <section className="settings-section">
-        <p className="settings-section__hint">{t("AboutLoading")}</p>
+        <p className="settings-section__hint" role={infoError ? "alert" : "status"}>{t(infoError ? "WorkspaceAboutUnavailable" : "AboutLoading")}</p>
       </section>
     );
   }

@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {SidebarResizeHandle, clampSidebarWidth} from "../SidebarControls";
 import type {
   ProviderCatalogEntry,
   ProviderUsageSnapshot,
@@ -38,6 +39,18 @@ export default function ProvidersTab({
   const { t } = useLocale();
   const { providers: snapshots, provenance } = useEffectiveProviders(settings, providers);
   const isDemo = provenance === "demo";
+  const splitRef = useRef<HTMLDivElement>(null);
+  const [panePreview, setPanePreview] = useState<number|null>(null);
+  const [splitWidth, setSplitWidth] = useState(900);
+  useEffect(() => {
+    const element = splitRef.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => setSplitWidth(entry.contentRect.width));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const paneMax = Math.max(184, Math.min(360, splitWidth - 380));
+  const paneWidth = clampSidebarWidth(panePreview ?? settings.workspacePreferences?.providerSidebarWidth ?? 256, paneMax);
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(
     initialProvider ?? providers.find(p => settings.enabledProviders.includes(p.id))?.id ?? providers[0]?.id ?? null,
@@ -124,6 +137,7 @@ export default function ProvidersTab({
   return (
     <div className="provider-workspace">
       <header className="provider-workspace__header"><div><h2>{t("TabProviders")}</h2><p>{t("ProviderWorkspaceHelp")}</p></div>
+        {resolvedSelectedId && onAnalytics && <button type="button" className="provider-analytics-link" onClick={()=>onAnalytics(resolvedSelectedId)}>{t("V3ViewAnalytics")} → <bdi>{selectedEntry?.displayName}</bdi></button>}
       </header>
       {isDemo && <DemoIndicator providerCount={snapshots.length} onExit={() => set({demoModeEnabled: false})} />}
       <div className="provider-workspace__toolbar" role="group" aria-label={t("ProviderWorkspaceFilter")}>
@@ -133,8 +147,7 @@ export default function ProvidersTab({
           {id:"disabled",label:"ProviderDisabled",count:rows.filter(p=>!p.enabled).length}] as const).map(filter =>
           <button key={filter.id} type="button" aria-pressed={statusFilter === filter.id} onClick={()=>setStatusFilter(filter.id)}>{t(filter.label)} <strong>{filter.count}</strong></button>)}
       </div>
-      {resolvedSelectedId && onAnalytics && <button type="button" className="provider-analytics-link" onClick={()=>onAnalytics(resolvedSelectedId)}>{t("V3ViewAnalytics")} → <bdi>{selectedEntry?.displayName}</bdi></button>}
-      <div className="provider-split">
+      <div className="provider-split" ref={splitRef} data-narrow={splitWidth < 620} style={{"--provider-pane-width": `${paneWidth}px`} as CSSProperties}>
       <ProvidersSidebar
         providers={visibleRows}
         selectedId={resolvedSelectedId}
@@ -145,6 +158,11 @@ export default function ProvidersTab({
         onToggleEnabled={toggle}
         disabled={saving || isDemo}
       />
+      <SidebarResizeHandle className="provider-pane-resizer" controls="provider-navigation" width={paneWidth} maxWidth={paneMax}
+        disabled={saving} onPreview={setPanePreview} onCommit={width => {
+          set({workspacePreferences: {density:"comfortable",navigation:"side",...settings.workspacePreferences,providerSidebarWidth:width}});
+          setPanePreview(null);
+        }}/>
       {isDemo ? <div className="provider-detail"><p role="note">{t("ProviderDemoReadOnly")}</p><CurrentLimits providers={snapshots.filter(p => p.providerId === resolvedSelectedId)} settings={settings} /></div> : <ProviderDetailPane
         onAnalytics={onAnalytics} providerId={resolvedSelectedId}
         cookieDomain={selectedEntry?.cookieDomain ?? null}
@@ -191,6 +209,9 @@ function providerSidebarSubtitle(
   }
   if (!snap) {
     return t("WaitingForUsage");
+  }
+  if (snap.errorState === "needsAuthentication" && /\boauth\b/i.test(snap.sourceLabel ?? "")) {
+    return t("ProviderNoOAuthYet");
   }
   const source = snap.sourceLabel || providerSourceHintShort(providerId, t);
   return source;

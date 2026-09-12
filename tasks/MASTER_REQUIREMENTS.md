@@ -305,3 +305,14 @@ Dev-only implementation and QA; Personal stays frozen.
 
 SHELL-02 implemented and verified at a42f1ab6. Architecture, exact checks, native
 captures and performance qualifications: docs/validation/WORKSPACE_BACKGROUNDS_NAVIGATION.md.
+
+## SHELL-03 — Compact provider workspace, identity controls and background library (2026-09-12)
+Owner requests tighter page headers, safe provider-panel gutters, a draggable provider
+list divider, hover/focus-only resize handles and unified thin scrollbars. Replace
+provider enabled checkboxes and toggle checkmarks with theme/brand-colored switches;
+keep enabled distinct from authenticated and show enabled unconnected providers.
+Expand primary navigation to at least eight useful existing pages, including standalone
+About. Upgrade About. Add All/Static/Animated/My backgrounds filters, multiple batches
+of original lightweight backgrounds and device import/persist/delete for custom images.
+Preserve original logos, truthful status and prior reduced-motion/low-CPU/visibility
+budgets. Work in Dev; no Personal deployment or credential mutations for QA.

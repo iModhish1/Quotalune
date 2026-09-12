@@ -372,3 +372,9 @@ visuals/performance and full source gates.
 Completed at a42f1ab6: four primary destinations, five settings groups, four shared
 backgrounds, live motion guards, native CUA/RTL/light/narrow proof and 1,116 frontend
 tests. Evidence: docs/validation/WORKSPACE_BACKGROUNDS_NAVIGATION.md.
+
+## SHELL-03
+1. Freeze eight-page IA, provider split/enable semantics and owned image-storage contract.
+2. Compact layouts; reusable divider, themed switches and scrollbar treatment; About.
+3. Catalog/filters, local import/delete, bounded animation and exact persistence.
+4. Native Dev wide/narrow/RTL/interaction/import/performance proof; source gates/docs.

@@ -2,17 +2,15 @@ import type {LocaleKey} from "../../i18n/keys";
 import type {SettingsTabId} from "../../types/bridge";
 import {CUSTOMIZATION_REGISTRY} from "../../lib/customizationRegistry";
 
-export type PrimaryDestination = "dashboard" | "providers" | "workspace" | "settings";
+export type PrimaryDestination = "dashboard" | "analytics" | "usageSpend" | "providers" | "profiles" | "collections" | "settings" | "about";
 export const PRIMARY_GROUPS: {labelKey: LocaleKey; tabs: {id: PrimaryDestination; target: SettingsTabId; labelKey: LocaleKey}[]}[] = [
-  {labelKey: "NavMonitor", tabs: [{id: "dashboard", target: "dashboard", labelKey: "TabDashboard"}]},
-  {labelKey: "NavManage", tabs: [{id: "providers", target: "providers", labelKey: "TabProviders"}, {id: "workspace", target: "profiles", labelKey: "V2Workspace"}]},
-  {labelKey: "V2Settings", tabs: [{id: "settings", target: "general", labelKey: "V2Settings"}]},
+  {labelKey: "NavMonitor", tabs: [{id: "dashboard", target: "dashboard", labelKey: "TabDashboard"}, {id:"analytics",target:"analytics",labelKey:"V3Analytics"}, {id:"usageSpend",target:"usageSpend",labelKey:"TabUsageSpend"}]},
+  {labelKey: "NavManage", tabs: [{id: "providers", target: "providers", labelKey: "TabProviders"}, {id: "profiles", target: "profiles", labelKey: "TabProfiles"}, {id:"collections",target:"collections",labelKey:"TabCollections"}]},
+  {labelKey: "V2Settings", tabs: [{id: "settings", target: "general", labelKey: "V2Settings"}, {id:"about",target:"about",labelKey:"TabAbout"}]},
 ];
 export const PRIMARY_DESTINATIONS = PRIMARY_GROUPS.flatMap(group => group.tabs);
 export function primaryDestination(tab: SettingsTabId): PrimaryDestination {
-  if (tab === "analytics" || tab === "usageSpend") return "dashboard";
-  if (tab === "dashboard" || tab === "providers") return tab;
-  return tab === "profiles" || tab === "collections" ? "workspace" : "settings";
+  return PRIMARY_DESTINATIONS.find(item=>item.target===tab)?.id ?? "settings";
 }
 export interface SettingsCategory {
   id: string; labelKey: LocaleKey; descriptionKey: LocaleKey;
@@ -23,7 +21,7 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
   {id: "appearance", labelKey: "V2Appearance", descriptionKey: "WorkspaceAppearanceHelp", tabs: ["themes", "providerDisplay", "resetDisplay"], keywords: ["theme", "background", "identity", "density", "effects", "ثيم", "خلفية", "كثافة", "هوية", "reset", "time", "region", "remaining", "إعادة", "متبقي", "وقت"]},
   {id: "dashboard", labelKey: "WorkspaceAnalyticsData", descriptionKey: "WorkspaceAnalyticsDataHelp", tabs: ["dashboardStudio", "analyticsSources"], keywords: ["layout", "charts", "demo", "preview", "range", "تجريبي", "مخططات", "tokens", "sessions", "codex", "claude", "privacy", "local activity", "بيانات", "خصوصية"]},
   {id: "surfaces", labelKey: "V2NavigationSurfaces", descriptionKey: "V2SurfacesHelp", tabs: ["menuBar", "menu", "surfaces"], keywords: ["menu bar", "navigation", "window", "floating", "قائمة", "نافذة", "تنقل"]},
-  {id: "advanced", labelKey: "TabAdvanced", descriptionKey: "V2AdvancedHelp", tabs: ["advanced", "about"], keywords: ["diagnostics", "data", "version", "تشخيص", "بيانات", "إصدار"]},
+  {id: "advanced", labelKey: "TabAdvanced", descriptionKey: "V2AdvancedHelp", tabs: ["advanced"], keywords: ["diagnostics", "data", "تشخيص", "بيانات"]},
 ];
 export function categoryForTab(tab: SettingsTabId): SettingsCategory | undefined {
   return SETTINGS_CATEGORIES.find(category => category.tabs.includes(tab));

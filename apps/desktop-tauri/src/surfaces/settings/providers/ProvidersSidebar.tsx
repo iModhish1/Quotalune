@@ -166,6 +166,7 @@ export function ProvidersSidebar({
   };
 
   const handleKey = (row: ProviderSidebarRow) => (e: ReactKeyboardEvent<HTMLLIElement>) => {
+    if (e.target !== e.currentTarget) return;
     if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
       e.preventDefault();
       moveId(row.id, e.key === "ArrowUp" ? -1 : 1);
@@ -190,7 +191,7 @@ export function ProvidersSidebar({
   };
 
   return (
-    <div className="providers-sidebar-shell">
+    <div className="providers-sidebar-shell" id="provider-navigation">
       <div className="providers-sidebar-search">
         <input
           className="providers-sidebar-search__input"
@@ -328,7 +329,8 @@ export function ProvidersSidebar({
               </span>
               <input
                 type="checkbox"
-                className="providers-sidebar__checkbox"
+                role="switch"
+                className="toggle providers-sidebar__switch"
                 checked={p.enabled}
                 disabled={disabled}
                 onClick={(e) => e.stopPropagation()}

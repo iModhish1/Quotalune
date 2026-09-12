@@ -35,17 +35,18 @@ import "./settings/SettingsStudio.css";
 import SettingsWindowActions from "./settings/SettingsWindowActions";
 import SettingsShellHeader from "./settings/SettingsShellHeader";
 import ProductNavigation from "./settings/ProductNavigation";
-import SettingsShell, {WorkspaceShell} from "./settings/SettingsShell";
+import SettingsShell from "./settings/SettingsShell";
 import {PRIMARY_DESTINATIONS, primaryDestination} from "./settings/settingsCenterRegistry";
 import {SidebarResizeHandle, SidebarToggle, useSidebarLayout} from "./settings/SidebarControls";
 import "./settings/WorkspaceLayout.css";
 import WorkspaceBackdrop from "../design-system/WorkspaceBackdrop";
 import WorkspaceBackgroundControl from "./settings/WorkspaceBackgroundControl";
+import "./settings/WorkspaceRefinements.css";
 
 function ContentShell({tab, navigate, children}: {tab: SettingsTabId; navigate: (tab: SettingsTabId) => void; children: ReactNode}) {
   const destination = primaryDestination(tab);
   return destination === "settings" ? <SettingsShell activeTab={tab} onNavigate={navigate}>{children}</SettingsShell>
-    : destination === "workspace" ? <WorkspaceShell activeTab={tab} onNavigate={navigate}>{children}</WorkspaceShell> : <>{children}</>;
+    : <>{children}</>;
 }
 
 // Inline monochrome SVG icons stand in for the upstream macOS SF Symbols
