@@ -20,6 +20,8 @@ use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
+mod branding;
+
 /// The Tauri shell resolves the packaged brand asset during startup. Keeping
 /// the image path here lets the shared notification engine produce a branded
 /// toast without knowing Tauri's platform-specific resource directory.
@@ -42,6 +44,35 @@ fn toast_icon_path() -> Option<PathBuf> {
         let source_asset = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../assets/brand/icons/quotaarc-icon-128.png");
         source_asset.is_file().then_some(source_asset)
+    })
+}
+
+#[derive(Debug, Clone)]
+struct ToastIcon {
+    path: PathBuf,
+    alternate_text: String,
+}
+
+fn branded_toast_icon(provider: Option<ProviderId>) -> Option<ToastIcon> {
+    if let Some(root) = crate::logging::config_root() {
+        match branding::materialize_icon(&root, provider) {
+            Ok(icon) => {
+                return Some(ToastIcon {
+                    path: icon.path,
+                    alternate_text: icon.alternate_text,
+                });
+            }
+            Err(error) => tracing::warn!(
+                ?provider,
+                %error,
+                "failed to materialize notification brand icon"
+            ),
+        }
+    }
+
+    toast_icon_path().map(|path| ToastIcon {
+        path,
+        alternate_text: PUBLIC_APP_NAME.to_string(),
     })
 }
 
@@ -143,16 +174,21 @@ pub fn parse_notification_uri(value: &str) -> Option<NotificationDestination> {
 /// Build the complete ToastGeneric payload. An explicit local app-logo image
 /// makes the notification recognizable even while Windows refreshes its AUMID
 /// cache after an upgrade.
+///
+/// Windows' toast schema defines `appLogoOverride` as the left-side app image
+/// and explicitly permits `file:///` sources for desktop apps:
+/// https://learn.microsoft.com/en-us/uwp/schemas/tiles/toastschema/element-image
 fn toast_template(
     title: &str,
     body: &str,
-    icon: Option<&Path>,
+    icon: Option<&ToastIcon>,
     destination: NotificationDestination,
 ) -> String {
-    let logo = icon.map_or_else(String::new, |path| {
+    let logo = icon.map_or_else(String::new, |icon| {
         format!(
-            "<image placement=\"appLogoOverride\" src=\"{}\" alt=\"{PUBLIC_APP_NAME}\"/>",
-            xml_escape(&file_uri(path))
+            "<image placement=\"appLogoOverride\" src=\"{}\" alt=\"{}\"/>",
+            xml_escape(&file_uri(&icon.path)),
+            xml_escape(&icon.alternate_text),
         )
     });
     format!(
@@ -600,6 +636,7 @@ impl NotificationManager {
             "DeepSeek pricing schedule",
             &format!("DeepSeek is currently in {label} hours."),
             NotificationDestination::Provider(ProviderId::DeepSeek),
+            Some(ProviderId::DeepSeek),
         );
     }
 
@@ -718,7 +755,12 @@ impl NotificationManager {
             LocaleKey::PredictivePaceWarningBody,
             &[&eta],
         );
-        self.show_toast(&title, &body, NotificationDestination::Provider(provider));
+        self.show_toast(
+            &title,
+            &body,
+            NotificationDestination::Provider(provider),
+            Some(provider),
+        );
         Self::play_notification_sound(NotificationSoundEvent::PredictiveWarning, settings);
     }
 
@@ -1027,7 +1069,12 @@ impl NotificationManager {
                 NotificationType::SessionDepleted,
             );
             if self.mark_sent(depleted_key) && !Self::quiet_hours_active(settings) {
-                self.show_toast(&title, &body, NotificationDestination::Provider(provider));
+                self.show_toast(
+                    &title,
+                    &body,
+                    NotificationDestination::Provider(provider),
+                    Some(provider),
+                );
                 Self::play_notification_sound(NotificationSoundEvent::SessionDepleted, settings);
             }
         }
@@ -1055,7 +1102,12 @@ impl NotificationManager {
                         NotificationType::SessionRestored,
                         settings.ui_language,
                     );
-                    self.show_toast(&title, &body, NotificationDestination::Provider(provider));
+                    self.show_toast(
+                        &title,
+                        &body,
+                        NotificationDestination::Provider(provider),
+                        Some(provider),
+                    );
                     Self::play_notification_sound(
                         NotificationSoundEvent::SessionRestored,
                         settings,
@@ -1094,6 +1146,7 @@ impl NotificationManager {
             &title,
             &body,
             Self::notification_destination(provider, notif_type),
+            Some(provider),
         );
         Self::play_notification_sound(Self::sound_event_for(notif_type), settings);
     }
@@ -1255,12 +1308,23 @@ impl NotificationManager {
             LocaleKey::NotificationToastStatusBody,
             &[provider.display_name(), description],
         );
-        self.show_toast(&title, &body, NotificationDestination::Providers(provider));
+        self.show_toast(
+            &title,
+            &body,
+            NotificationDestination::Providers(provider),
+            Some(provider),
+        );
         Self::play_notification_sound(NotificationSoundEvent::StatusIssue, settings);
     }
 
     #[cfg(all(target_os = "windows", not(test)))]
-    fn show_toast(&self, title: &str, body: &str, destination: NotificationDestination) {
+    fn show_toast(
+        &self,
+        title: &str,
+        body: &str,
+        destination: NotificationDestination,
+        provider: Option<ProviderId>,
+    ) {
         use std::os::windows::process::CommandExt;
         use std::process::Command;
         use std::sync::Once;
@@ -1271,7 +1335,8 @@ impl NotificationManager {
         static AUMID_INIT: Once = Once::new();
         AUMID_INIT.call_once(ensure_aumid_registered);
 
-        let template = toast_template(title, body, toast_icon_path().as_deref(), destination);
+        let icon = branded_toast_icon(provider);
+        let template = toast_template(title, body, icon.as_ref(), destination);
 
         // Uses ToastGeneric (Win 10+) and wraps in try/catch so PowerShell exits
         // with code 1 on failure rather than swallowing the error silently.
@@ -1315,13 +1380,25 @@ impl NotificationManager {
     }
 
     #[cfg(all(target_os = "windows", test))]
-    fn show_toast(&self, _title: &str, _body: &str, _destination: NotificationDestination) {
+    fn show_toast(
+        &self,
+        _title: &str,
+        _body: &str,
+        _destination: NotificationDestination,
+        _provider: Option<ProviderId>,
+    ) {
         // Core unit tests exercise notification state transitions. They must
         // never write AUMID/protocol registry keys or show native toasts.
     }
 
     #[cfg(not(target_os = "windows"))]
-    fn show_toast(&self, title: &str, body: &str, _destination: NotificationDestination) {
+    fn show_toast(
+        &self,
+        title: &str,
+        body: &str,
+        _destination: NotificationDestination,
+        _provider: Option<ProviderId>,
+    ) {
         use std::process::Command;
 
         // Try notify-send first (works on most Linux distros including WSL with WSLg)
@@ -1394,7 +1471,7 @@ fn ensure_aumid_registered() {
         r"SOFTWARE\Classes\AppUserModelId\{}",
         crate::paths::TOAST_AUMID
     );
-    let icon_path = toast_icon_path();
+    let icon_path = branded_toast_icon(None).map(|icon| icon.path);
     let aumid_result = hkcu.create_subkey(aumid_key).and_then(|(key, _)| {
         key.set_value("DisplayName", &PUBLIC_APP_NAME)?;
         key.set_value("IconBackgroundColor", &"FF10141C")?;
@@ -1448,7 +1525,25 @@ pub fn show_notification(title: &str, body: &str) {
 /// Show a one-off notification with an explicit, typed activation target.
 pub fn show_notification_to(title: &str, body: &str, destination: NotificationDestination) {
     let manager = NotificationManager::new();
-    manager.show_toast(title, body, destination);
+    let provider = match destination {
+        NotificationDestination::Provider(provider)
+        | NotificationDestination::Providers(provider) => Some(provider),
+        NotificationDestination::Dashboard => None,
+    };
+    manager.show_toast(title, body, destination, provider);
+}
+
+/// Show a provider-authored notification while retaining an independent
+/// activation destination. Reset events, for example, open the Dashboard but
+/// still carry the provider's mark in the notification body.
+pub fn show_provider_notification_to(
+    title: &str,
+    body: &str,
+    provider: ProviderId,
+    destination: NotificationDestination,
+) {
+    let manager = NotificationManager::new();
+    manager.show_toast(title, body, destination, Some(provider));
 }
 
 #[cfg(test)]
@@ -1456,18 +1551,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn toast_payload_uses_quotalis_identity_icon_and_typed_activation() {
+    fn provider_toast_payload_uses_provider_logo_and_typed_activation() {
         let xml = toast_template(
             "Usage < alert",
             "Claude & OpenAI",
-            Some(Path::new(r"C:\Program Files\A&B\quotaarc-icon-128.png")),
+            Some(&ToastIcon {
+                path: PathBuf::from(r"C:\Program Files\A&B\quotaarc-icon-128.png"),
+                alternate_text: "Claude".to_string(),
+            }),
             NotificationDestination::Provider(ProviderId::Claude),
         );
 
         assert!(xml.contains("Usage &lt; alert"));
         assert!(xml.contains("Claude &amp; OpenAI"));
         assert!(xml.contains("placement=\"appLogoOverride\""));
-        assert!(xml.contains("alt=\"Quotalis\""));
+        assert!(xml.contains("alt=\"Claude\""));
         assert!(xml.contains("activationType=\"protocol\""));
         assert!(xml.contains(&format!(
             "launch=\"{}://provider/claude\"",
@@ -1477,6 +1575,26 @@ mod tests {
         assert!(!xml.contains("alt=\"QuotaArc\""));
         assert!(!xml.contains("alt=\"CodexBar\""));
         assert!(!xml.contains("hint-crop"));
+    }
+
+    #[test]
+    fn general_toast_payload_uses_quotalis_logo() {
+        let xml = toast_template(
+            "Quotalis update",
+            "The application is ready.",
+            Some(&ToastIcon {
+                path: PathBuf::from(r"C:\Users\User\Quotalis\notification-assets\quotalis.png"),
+                alternate_text: PUBLIC_APP_NAME.to_string(),
+            }),
+            NotificationDestination::Dashboard,
+        );
+
+        assert!(xml.contains("placement=\"appLogoOverride\""));
+        assert!(xml.contains("alt=\"Quotalis\""));
+        assert!(xml.contains(&format!(
+            "launch=\"{}://dashboard\"",
+            notification_protocol_scheme()
+        )));
     }
 
     #[test]

@@ -93,11 +93,20 @@ pub fn show_notification_proof(
         .ok_or_else(|| "unknown provider for notification proof".to_string())?;
     let payload = notification_proof_payload(&kind, provider)
         .ok_or_else(|| "unsupported notification proof kind".to_string())?;
-    quotalis_core::notifications::show_notification_to(
-        &payload.title,
-        &payload.body,
-        payload.destination,
-    );
+    if kind == "reset" {
+        quotalis_core::notifications::show_provider_notification_to(
+            &payload.title,
+            &payload.body,
+            provider,
+            payload.destination,
+        );
+    } else {
+        quotalis_core::notifications::show_notification_to(
+            &payload.title,
+            &payload.body,
+            payload.destination,
+        );
+    }
     Ok(())
 }
 
