@@ -321,3 +321,23 @@ SHELL-03 implemented and verified at code candidate d0bb0165: eight primary page
 compact resizable provider workspace, logo-aligned switches, 28 bundled background
 choices and managed local imports. Exact source gates, native proof and limitations:
 docs/validation/WORKSPACE_LIBRARY_PROVIDER_LAYOUT.md.
+
+## SHELL-04 — interaction recovery, cinematic backgrounds and monitoring studio (2026-09-12)
+Owner rejects gradient-only backgrounds and reports a displaced settings select.
+Fix shared control positioning and audit interactive controls with explicit tested,
+blocked and unavailable coverage. Provide detailed galaxy/planet/space imagery,
+real bounded interactive animated scenes and an app-wide backdrop. Preserve logos.
+Repair Windows notification app branding and provider-specific imagery where the
+platform permits. Add configurable per-provider tray icons selecting one real limit,
+used/remaining display, multiple professional icon designs and up to three tooltip
+limits; configurable name/plan/token range with honest availability and coverage.
+Move floating surfaces/bar customization out of Settings into a main studio;
+consolidate related Appearance/provider/reset editors instead of redundant pages.
+Keep general Settings focused. Verify native Dev behavior, restore QA changes,
+and open the updated Dev app for the owner. No Personal changes or fabricated data.
+
+Implementation/evidence through 45fbeab6:
+docs/validation/SHELL04_MONITORING_AND_SPACE_WORKSPACE.md. Normal Dev relaunched
+with QA settings restored. Remaining acceptance: actual Windows toast-header and
+tray hover/click pixels (desktop access unavailable); live credential workflows
+were not submitted. Full source tests and bounded native control coverage passed.

@@ -382,3 +382,16 @@ tests. Evidence: docs/validation/WORKSPACE_BACKGROUNDS_NAVIGATION.md.
 Completed at code candidate d0bb0165. Native review repaired header overlap,
 large-image rendering and outside-handle drag completion. Final checks and bounded
 performance measurements: docs/validation/WORKSPACE_LIBRARY_PROVIDER_LAYOUT.md.
+
+## SHELL-04
+1. Audit shared controls, background composition, notification identity and tray data contracts.
+2. Fix control lifecycle/placement; consolidate Appearance and independent Surface/Tray studios.
+3. Replace gallery filler with space imagery and bounded interactive scene layers.
+4. Implement real-limit tray selection/tooltip contracts and notification imagery.
+5. Execute control/feature coverage matrix, native Dev proof, full gates and launch updated Dev.
+
+SHELL-04 implemented through 45fbeab6; full source gates, 44 primary route cases,
+five nested studio routes and native persisted-control/background proof recorded.
+Updated ordinary Dev launch completed. Native desktop capture/foreground access
+blocks toast-header and OS tray hover/click visual acceptance; no false PASS.
+See docs/validation/SHELL04_MONITORING_AND_SPACE_WORKSPACE.md for exact coverage.

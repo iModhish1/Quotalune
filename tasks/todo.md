@@ -1126,3 +1126,19 @@ docs/validation/WORKSPACE_BACKGROUNDS_NAVIGATION.md. Owner visual acceptance rem
 
 Code candidate d0bb0165; 1,132 frontend tests, 32 native route checks, Cua and
 WebView2 interaction proof: docs/validation/WORKSPACE_LIBRARY_PROVIDER_LAYOUT.md.
+
+## SHELL-04
+- [x] Shared select/control defect and related lifecycle/layout recovery.
+- [x] Consolidated Appearance plus main Surface and Tray studios.
+- [x] Cinematic full-workspace static/interactive backgrounds.
+- [ ] Notification app/provider branding with native Windows proof.
+- [x] Per-provider tray icon, selected real limit, tooltip and token coverage controls.
+- [x] Explicit feature/control coverage, source gates, native proof and updated Dev launch.
+
+Candidate 45fbeab6: 1,141 frontend tests; desktop 481/core 1,724/CLI 1 Rust tests;
+44 native primary-route cases, five final nested routes and persisted control tests.
+Notification branding is implemented and four correct WinRT history receipts are
+verified. Native toast/header pixels and OS tray hover/click remain unverified:
+Cua desktop capture fails with 0x80070006 and foreground HWND is 0x0. No blanket
+all-features/credential-workflows PASS. Final normal Dev PID 14992 is open.
+Evidence: docs/validation/SHELL04_MONITORING_AND_SPACE_WORKSPACE.md.
