@@ -12,7 +12,17 @@ export interface ChartContext {theme:QuotalisChartTheme; range:AnalyticsRange; d
 const escape=(s:string)=>s.replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]!));
 function base(ctx:ChartContext,label:string):ChartOption {
  const {theme}=ctx;
- return {animation:false,backgroundColor:"transparent",textStyle:{fontFamily:theme.font,color:theme.text,fontSize:11},aria:{enabled:true,label:{description:label}},
+ // `aria:{enabled:false}` is deliberate (owner Phase 3N accessibility
+ // closure): a native CDP audit found ECharts' own AriaComponent
+ // narration engine overwrites the surface's real `role="img"
+ // aria-label={spec.label}` (set in EChartsSurface.tsx) with a verbose,
+ // per-data-point narration ("This is a chart with type Bar chart...
+ // the data for 2026-08-14 is 0, 2155839271, ...") -- the exact
+ // point-by-point narration the spec explicitly rules out, and it wins
+ // over the clean, already-composed `label` this file builds. Disabling
+ // ECharts' own generator leaves that one clean label as the chart's
+ // sole accessible description.
+ return {animation:false,backgroundColor:"transparent",textStyle:{fontFamily:theme.font,color:theme.text,fontSize:11},aria:{enabled:false},
  grid:{left:48,right:22,top:22,bottom:42,containLabel:false},
  tooltip:{trigger:"axis",confine:true,backgroundColor:theme.background,borderColor:theme.edge,borderWidth:1,padding:12,textStyle:{color:theme.text,fontFamily:theme.font,fontSize:12},axisPointer:{type:"cross",lineStyle:{color:theme.muted,width:1},crossStyle:{color:theme.muted}},extraCssText:`box-shadow:0 8px 24px #0003;border-radius:4px;max-width:360px;direction:${ctx.rtl?"rtl":"ltr"};text-align:start;`},
  xAxis:{type:"time",min:ctx.range.since*1000,max:ctx.range.until*1000,splitNumber:4,axisLabel:{color:theme.muted,fontSize:10,hideOverlap:true,formatter:(value:number)=>ctx.date(value)},axisLine:{lineStyle:{color:theme.edge}},axisTick:{show:true},splitLine:{show:false}},
@@ -97,7 +107,11 @@ export function createCoverageHeatmapSpec(rows:readonly QuotaSeries[],title:(r:Q
  const data:number[][]=[];let max=1;
  valid.forEach((row,y)=>{const cells=new Map<number,number>();for(const point of row.current){const x=Math.floor((point.observedAt-first)/step);if(x>=0&&x<count)cells.set(x,(cells.get(x)??0)+point.sampleCount);}for(const [x,n]of cells){data.push([x,y,n]);max=Math.max(max,n);}});
  const label=ctx.labels.samples;
- const option:ChartOption={animation:false,aria:{enabled:true,label:{description:label+" · "+ctx.labels.missing}},textStyle:{fontFamily:ctx.theme.font,color:ctx.theme.text},
+ // See the `base()` helper above for why `aria.enabled` stays false --
+ // the container's own `role="img"` aria-label already carries this
+ // heatmap's clean description; ECharts' own narration would overwrite
+ // it with an unusable per-cell data dump.
+ const option:ChartOption={animation:false,aria:{enabled:false},textStyle:{fontFamily:ctx.theme.font,color:ctx.theme.text},
  grid:{left:10,right:10,top:10,bottom:60,containLabel:true},
  xAxis:{type:"category",data:Array.from({length:count},(_,i)=>ctx.date((first+i*step)*1000)),axisLabel:{color:ctx.theme.muted,fontSize:10,hideOverlap:true},axisLine:{show:false},axisTick:{show:false},splitArea:{show:true,areaStyle:{color:[ctx.theme.background]}}},
  yAxis:{type:"category",data:valid.map(title),axisLabel:{color:ctx.theme.text,fontSize:10,width:170,overflow:"truncate"},axisLine:{show:false},axisTick:{show:false}},

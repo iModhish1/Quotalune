@@ -120,7 +120,16 @@ export default function TokenAnalytics({ settings, providerId, isDemo }: { setti
       empty: !buckets.length,
       option: {
         animation: false,
-        aria: { enabled: true },
+        // `aria.enabled: false` is deliberate (owner Phase 3N accessibility
+        // closure): with no custom `aria.label.description`, ECharts' own
+        // AriaComponent generated a verbose per-bar narration ("This is a
+        // chart with type Bar chart named Codex. The first 10 items are:
+        // the data for 2026-08-14 is 0, 2155839271, ...") that overwrote
+        // this surface's real `role="img" aria-label={spec.label}`
+        // (EChartsSurface.tsx) -- found via a native CDP accessibility
+        // audit. `label` above (e.g. "Codex · Token trend") is already the
+        // clean summary; disabling ECharts' own generator lets it stand.
+        aria: { enabled: false },
         grid: { left: 60, right: 20, top: 20, bottom: 50 },
         tooltip: {
           trigger: 'axis',

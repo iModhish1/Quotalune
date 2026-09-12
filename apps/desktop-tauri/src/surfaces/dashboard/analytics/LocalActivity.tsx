@@ -90,7 +90,16 @@ export default function LocalActivity({settings,isDemo,providerId}:{settings:Set
  },[isDemo,source]);
  const buckets=useMemo(()=>activityBuckets(activity?.daily??[],mode),[activity,mode]);
  const text=theme.material?.text??'#f0f4f8',muted=theme.material?.muted??'#aeb9c5';
- const spec:ChartSpec={label:t('V3LocalTokens'),height:320,points:buckets.length,empty:!buckets.length,option:{animation:false,aria:{enabled:true},grid:{left:65,right:24,top:25,bottom:60},tooltip:{trigger:'axis',confine:true,backgroundColor:theme.core,borderColor:theme.coreEdge,textStyle:{color:text},valueFormatter:value=>formatExactTokens(Number(value))},xAxis:{type:'category',data:buckets.map(p=>p.day),axisLabel:{color:muted,hideOverlap:true}},yAxis:{type:'value',min:0,axisLabel:{color:muted,formatter:(v:number)=>formatCompactTokens(v)},splitLine:{lineStyle:{color:theme.hairline}}},series:[{type:'bar',name:t('V3LocalTokens'),data:buckets.map(p=>p.tokens),itemStyle:{color:theme.accent,borderRadius:[4,4,0,0]},barMaxWidth:32}]}};
+ // `aria:{enabled:false}` is deliberate (owner Phase 3N accessibility
+ // closure, same root cause as chartSpec.ts's `base()`): with no custom
+ // `aria.label.description` set here, ECharts' own AriaComponent was
+ // generating a verbose per-bar narration ("This is a chart with type
+ // Bar chart named ... the data for 2026-08-14 is 0, 2155839271, ...")
+ // and writing it directly over this surface's real `role="img"
+ // aria-label={spec.label}` (EChartsSurface.tsx) -- found via a native
+ // CDP accessibility audit. The `label` above is already the clean,
+ // human summary; disabling ECharts' own generator lets it stand alone.
+ const spec:ChartSpec={label:t('V3LocalTokens'),height:320,points:buckets.length,empty:!buckets.length,option:{animation:false,aria:{enabled:false},grid:{left:65,right:24,top:25,bottom:60},tooltip:{trigger:'axis',confine:true,backgroundColor:theme.core,borderColor:theme.coreEdge,textStyle:{color:text},valueFormatter:value=>formatExactTokens(Number(value))},xAxis:{type:'category',data:buckets.map(p=>p.day),axisLabel:{color:muted,hideOverlap:true}},yAxis:{type:'value',min:0,axisLabel:{color:muted,formatter:(v:number)=>formatCompactTokens(v)},splitLine:{lineStyle:{color:theme.hairline}}},series:[{type:'bar',name:t('V3LocalTokens'),data:buckets.map(p=>p.tokens),itemStyle:{color:theme.accent,borderRadius:[4,4,0,0]},barMaxWidth:32}]}};
  const sourceLabel=source==='claude'?'Claude':source==='all'?t('V3ActivityAll'):'Codex';
 
  // Calendar heatmap (owner: "build a professional contribution/calendar-
@@ -100,8 +109,9 @@ export default function LocalActivity({settings,isDemo,providerId}:{settings:Set
  const daily=activity?.daily??[];
  const maxDaily=daily.reduce((m,p)=>Math.max(m,p.totalTokens),0);
  const calendarRange:[string,string]|null=daily.length?[daily[0].day,daily[daily.length-1].day]:null;
+ // See the token-bar `spec` above for why `aria.enabled` is false here too.
  const heatmapSpec:ChartSpec|null=calendarRange?{label:t('V3ActivityHeatmapHeading'),height:180,points:daily.length,empty:!daily.length,option:{
-  animation:false,aria:{enabled:true},
+  animation:false,aria:{enabled:false},
   tooltip:{confine:true,backgroundColor:theme.core,borderColor:theme.coreEdge,textStyle:{color:text},formatter:(params:unknown)=>{
    const p=params as {value?:[string,number]};
    if(!p.value)return '';
