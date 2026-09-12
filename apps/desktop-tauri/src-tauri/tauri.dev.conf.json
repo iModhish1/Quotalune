@@ -3,14 +3,6 @@
   "productName": "Quotalis Dev",
   "mainBinaryName": "QuotalisDev",
   "identifier": "app.quotalis.desktop.dev",
-  "app": {
-    "windows": [
-      {
-        "label": "main",
-        "title": "Quotalis Dev"
-      }
-    ]
-  },
   "build": {
     "features": [
       "dev-channel"

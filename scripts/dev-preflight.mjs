@@ -22,6 +22,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { devIdentityError } from "./dev-identity.mjs";
 
 const target = process.argv[2];
 
@@ -60,29 +61,9 @@ if (result.status !== 0) {
   );
 }
 
-const lines = Object.fromEntries(
-  result.stdout
-    .split(/\r?\n/)
-    .filter((l) => l.includes("="))
-    .map((l) => {
-      const idx = l.indexOf("=");
-      return [l.slice(0, idx), l.slice(idx + 1)];
-    }),
-);
-
-if (lines.channel !== "dev") {
-  fail(`binary reports channel="${lines.channel}", not "dev" -- this binary is NOT isolated from Personal.`);
-}
-if (lines.exe !== "QuotalisDev.exe") {
-  fail(`binary reports its own exe name as "${lines.exe}", expected "QuotalisDev.exe".`);
-}
-if (lines.app_dir_name !== "QuotaArc-Dev") {
-  fail(
-    `binary reports app_dir_name="${lines.app_dir_name}", expected "QuotaArc-Dev" -- ` +
-      "its data/config/cache roots would not be isolated from Personal's.",
-  );
-}
+const identityError = devIdentityError(result.stdout);
+if (identityError) fail(`${identityError}. Rebuild with BOTH dev-channel and tauri.dev.conf.json.`);
 
 console.log(`[dev-preflight] PASS: ${target}`);
-console.log(`  channel=dev  exe=QuotalisDev.exe  app_dir_name=QuotaArc-Dev`);
+console.log(`  channel=dev  exe=QuotalisDev.exe  app_dir_name=QuotaArc-Dev  tauri_identifier=app.quotalis.desktop.dev`);
 process.exit(0);

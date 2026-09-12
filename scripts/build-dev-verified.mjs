@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Quotalis verified Dev-channel QA build.
 //
-// Why this exists: Phase 3I discovered that `tauri build --features
-// dev-channel` always produces `target/debug/Quotalis.exe` -- the
+// Historical failure: building with ONLY `--features dev-channel`
+// produced `target/debug/Quotalis.exe` -- the
 // `[[bin]] name` in apps/desktop-tauri/src-tauri/Cargo.toml is fixed
 // regardless of feature flags -- while `scripts/dev-preflight.mjs`
 // (correctly) refuses to preflight anything not literally named
@@ -15,23 +15,29 @@
 // current tree -- caught only by manually diffing the served JS bundle
 // against dist/ over the running app's own CDP connection.
 //
-// This script is the fix: one command that builds, copies, and PROVES
-// the copy is byte-identical to what was just built, then runs the
-// existing preflight on top. No more manual copy step, anywhere.
+// Post-release correction: the Dev Tauri config is also mandatory; Cargo's
+// feature alone leaves Personal's single-instance/WebView identity in place.
+// Tauri now produces QuotalisDev.exe itself. Verify the reported output path,
+// retain a byte-identical proof copy, then verify all runtime channel fields.
 //
 // Usage: node scripts/build-dev-verified.mjs
 // Exit 0 only if every step below succeeded. Exit 1 otherwise, with the
 // specific failing step named -- never a silent partial success.
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, readFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { reportedDevBuildMatches } from "./dev-identity.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const APP_DIR = path.join(REPO_ROOT, "apps", "desktop-tauri");
-const SOURCE_EXE = path.join(REPO_ROOT, "target", "debug", "Quotalis.exe");
-const DEV_EXE = path.join(REPO_ROOT, "target", "debug", "QuotalisDev.exe");
+// The canonical Dev config makes Tauri rename Cargo's output itself.
+// Keep a byte-identical evidence copy, but launch the original output beside
+// Tauri's resource files. Never take a stale Quotalis.exe as the build result.
+const SOURCE_EXE = path.join(REPO_ROOT, "target", "debug", "QuotalisDev.exe");
+const PROOF_COPY = path.join(REPO_ROOT, "target", "dev-verified", "QuotalisDev.exe");
+const DEV_EXE = SOURCE_EXE;
 
 function step(label) {
   console.log(`\n[build-dev-verified] ${label}`);
@@ -44,13 +50,17 @@ function fail(reason) {
 
 function run(command, args, opts = {}) {
   const result = spawnSync(command, args, {
-    stdio: "inherit",
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
     windowsHide: true,
     shell: process.platform === "win32",
     ...opts,
   });
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
   if (result.error) fail(`could not run "${command} ${args.join(" ")}": ${result.error.message}`);
   if (result.status !== 0) fail(`"${command} ${args.join(" ")}" exited with status ${result.status}`);
+  return `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
 }
 
 function runCaptured(command, args, opts = {}) {
@@ -87,28 +97,32 @@ function parseLines(stdout) {
 // binary, in one real `tauri build` invocation -- never plain `cargo
 // build`, which loads the Vite dev-server URL instead of the embedded
 // frontendDist and would pass every check below while being wrong.
-step("1-2/7 pnpm exec tauri build --debug --no-bundle --features dev-channel");
+step("1-2/7 build with BOTH dev-channel and tauri.dev.conf.json");
 const pnpmCmd = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-run(pnpmCmd, ["exec", "tauri", "build", "--debug", "--no-bundle", "--features", "dev-channel"], {
+const buildOutput = run(pnpmCmd, ["exec", "tauri", "build", "--debug", "--no-bundle", "--features", "dev-channel", "--config", "src-tauri/tauri.dev.conf.json"], {
   cwd: APP_DIR,
 });
+// Cargo configuration/env target overrides must never certify an old same-HEAD
+// file at our default path. Fail closed if Tauri reports any other artifact.
+if (!reportedDevBuildMatches(buildOutput, SOURCE_EXE)) {
+  fail("Tauri did not report the canonical target/debug/QuotalisDev.exe output. Check Cargo target overrides.");
+}
 
-// 3: locate the freshly-produced Quotalis.exe.
-step("3/7 locate freshly-built Quotalis.exe");
+// 3: locate the freshly-produced, canonically named Dev output.
+step("3/7 locate freshly-built QuotalisDev.exe");
 if (!existsSync(SOURCE_EXE)) fail(`expected build output missing: ${SOURCE_EXE}`);
 const sourceHash = sha256(SOURCE_EXE);
 console.log(`  source: ${SOURCE_EXE}`);
 console.log(`  sha256: ${sourceHash}`);
 
-// 4: copy/replace QuotalisDev.exe. A locked handle from a still-running
-// Dev instance must fail loudly here, not silently leave the old file in
-// place for preflight to then wrongly pass.
-step("4/7 copy Quotalis.exe -> QuotalisDev.exe");
+// 4: retain a byte-identical proof copy; no manual executable renaming.
+step("4/7 copy built Dev output to target/dev-verified");
 try {
-  copyFileSync(SOURCE_EXE, DEV_EXE);
+  mkdirSync(path.dirname(PROOF_COPY), { recursive: true });
+  copyFileSync(SOURCE_EXE, PROOF_COPY);
 } catch (err) {
   fail(
-    `could not replace ${DEV_EXE}: ${err.message} -- if QuotalisDev.exe is currently running, ` +
+    `could not replace ${PROOF_COPY}: ${err.message} -- if QuotalisDev.exe is currently running, ` +
       "close it first (Windows cannot overwrite a locked executable).",
   );
 }
@@ -116,8 +130,8 @@ try {
 // 5: verify source and copy are byte-identical -- the actual freshness
 // proof. Timestamps are never trusted (see header comment).
 step("5/7 verify source/copy hash equality");
-const devHash = sha256(DEV_EXE);
-console.log(`  QuotalisDev.exe sha256: ${devHash}`);
+const devHash = sha256(PROOF_COPY);
+console.log(`  proof copy sha256: ${devHash}`);
 if (devHash !== sourceHash) {
   fail(`hash mismatch after copy -- source=${sourceHash} copy=${devHash}. The copy is corrupt or was raced.`);
 }
@@ -125,8 +139,7 @@ if (devHash !== sourceHash) {
 // 6: run the existing preflight, unchanged -- this script adds freshness
 // proof, it does not replace the channel-isolation proof.
 step("6/7 scripts/dev-preflight.mjs");
-runCaptured(process.execPath, [path.join(REPO_ROOT, "scripts", "dev-preflight.mjs"), DEV_EXE]);
-console.log("  (preflight output above)");
+console.log(runCaptured(process.execPath, [path.join(REPO_ROOT, "scripts", "dev-preflight.mjs"), DEV_EXE]).trim());
 
 // Bonus freshness proof: the binary's own --print-build-info must report
 // the git HEAD this script is running against. A mismatch means either
@@ -145,6 +158,7 @@ console.log(`  source exe:              ${SOURCE_EXE}`);
 console.log(`  source sha256:           ${sourceHash}`);
 console.log(`  QuotalisDev.exe sha256:  ${devHash}`);
 console.log(`  channel:                 ${buildInfo.channel}`);
+console.log(`  tauri identifier:        ${buildInfo.tauri_identifier}`);
 console.log(`  app_dir_name:            QuotaArc-Dev`);
 
 if (buildInfo.git_head !== realHead) {

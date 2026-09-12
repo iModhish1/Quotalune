@@ -249,7 +249,25 @@ fn channel_launch_is_safe(dev_channel: bool, proof_requested: bool, exe_name: &s
     dev_channel || (!proof_requested && !exe_name.eq_ignore_ascii_case("QuotalisDev.exe"))
 }
 
+fn channel_identity_is_safe(identifier: &str, expected: &str) -> bool {
+    !identifier.is_empty() && identifier == expected
+}
+
 fn main() {
+    // One embedded context is used for diagnostics, the pre-side-effect guard,
+    // and the actual app. Cargo's dev-channel feature alone does not change
+    // Tauri's single-instance mutex or WebView data identity.
+    let mut context = tauri::generate_context!();
+    if quotalis_core::paths::is_dev_channel() {
+        // A partial app.windows override replaces the entire base array in
+        // Tauri's JSON merge. Change only the title, retaining hidden/dark and
+        // all other native window settings from the canonical base config.
+        for window in &mut context.config_mut().app.windows {
+            if window.label == "main" {
+                window.title = "Quotalis Dev".to_string();
+            }
+        }
+    }
     // `--print-channel`: a pure, side-effect-free diagnostic exit -- no
     // logging init, no settings load, no registry/notification
     // registration, no window. Lets an external preflight script (see
@@ -272,6 +290,7 @@ fn main() {
         );
         println!("exe={exe_name}");
         println!("app_dir_name={}", quotalis_core::paths::APP_DIR_NAME);
+        println!("tauri_identifier={}", context.config().identifier);
         std::process::exit(0);
     }
     // `--print-build-info`: a second pure diagnostic, same shape and
@@ -289,7 +308,15 @@ fn main() {
         println!("git_dirty={}", build_info::DIRTY);
         println!("version={}", env!("CARGO_PKG_VERSION"));
         println!("exe={exe_name}");
+        println!("tauri_identifier={}", context.config().identifier);
         std::process::exit(0);
+    }
+    if !channel_identity_is_safe(
+        &context.config().identifier,
+        quotalis_core::paths::TOAST_AUMID,
+    ) {
+        eprintln!("Refusing mixed channel/Tauri identity. Use the verified Dev build workflow.");
+        std::process::exit(2);
     }
     // Fail before logs, settings, registry registration or migrations can touch
     // Personal. A Dev filename/config alone is not a Rust channel boundary.
@@ -313,7 +340,8 @@ fn main() {
     }
     // Per-process log file names: the shell writes codexbar-desktop.log so
     // its cached handle never blocks the CLI's rotation on Windows.
-    // SAFETY: runs before any thread spawns; no concurrent env access exists.
+    // SAFETY: the context helper thread has joined; application threads have
+    // not started, so no concurrent application env access exists.
     unsafe { std::env::set_var("CODEXBAR_PROCESS", "desktop") };
     quotalis_core::logging::install_panic_hook();
     quotalis_core::logging::init(false, false).expect("failed to initialize logging");
@@ -706,12 +734,28 @@ fn main() {
                 _ => {}
             }
         })
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("failed to run CodexBar desktop shell");
 }
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn channel_identity_rejects_mixed_and_missing_config() {
+        let dev = "app.quotalis.desktop.dev";
+        let personal = "app.quotaarc.desktop";
+        assert!(super::channel_identity_is_safe(dev, dev));
+        assert!(super::channel_identity_is_safe(personal, personal));
+        assert!(!super::channel_identity_is_safe(personal, dev));
+        assert!(!super::channel_identity_is_safe(dev, personal));
+        assert!(!super::channel_identity_is_safe("", dev));
+        assert!(!super::channel_identity_is_safe("", ""));
+        assert!(!super::channel_identity_is_safe(
+            "app.quotaarc.desktop.dev",
+            dev
+        ));
+    }
+
     #[test]
     fn development_launch_cannot_access_personal_channel() {
         assert!(!super::channel_launch_is_safe(
