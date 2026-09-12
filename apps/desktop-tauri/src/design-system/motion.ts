@@ -11,12 +11,28 @@
  */
 import {
   motion,
-  useReducedMotion,
   type Transition,
   type HTMLMotionProps,
 } from "motion/react";
+import {useSyncExternalStore} from "react";
 
-export { motion, useReducedMotion };
+export { motion };
+
+const reducedMotionQuery = "(prefers-reduced-motion: reduce)";
+function subscribeReducedMotion(onChange: () => void) {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return () => {};
+  const media = window.matchMedia(reducedMotionQuery);
+  media.addEventListener("change", onChange);
+  return () => media.removeEventListener("change", onChange);
+}
+function readReducedMotion(): boolean | null {
+  return typeof window === "undefined" || typeof window.matchMedia !== "function"
+    ? null : window.matchMedia(reducedMotionQuery).matches;
+}
+/** React to OS changes while mounted; motion/react 13.1.1 only captures mount state. */
+export function useReducedMotion(): boolean | null {
+  return useSyncExternalStore(subscribeReducedMotion, readReducedMotion, () => null);
+}
 
 export type MotionLevel = "full" | "reduced" | "off";
 
