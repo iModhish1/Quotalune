@@ -1731,3 +1731,31 @@ fn workspace_preferences_roundtrip_and_invalid_field_isolation() {
     );
     assert_eq!(invalid.refresh_interval_secs, 123);
 }
+
+#[test]
+fn workspace_sidebar_migration_bounds_and_roundtrip() {
+    for (fields, width, collapsed) in [
+        (r#"{}"#, 232, false),
+        (r#"{"sidebarWidth":312,"sidebarCollapsed":true}"#, 312, true),
+        (r#"{"sidebarWidth":0}"#, 184, false),
+        (r#"{"sidebarWidth":999999}"#, 360, false),
+        (
+            r#"{"sidebarWidth":"bad","sidebarCollapsed":"true"}"#,
+            232,
+            false,
+        ),
+    ] {
+        let json = format!(r#"{{"workspace_preferences":{fields},"refresh_interval_secs":123}}"#);
+        let settings: Settings = serde_json::from_str(&json).unwrap();
+        let prefs = settings.workspace_preferences.as_ref().unwrap();
+        assert_eq!(prefs.sidebar_width, width);
+        assert_eq!(prefs.sidebar_collapsed, collapsed);
+        assert_eq!(settings.refresh_interval_secs, 123);
+        let restored: Settings =
+            serde_json::from_str(&serde_json::to_string(&settings).unwrap()).unwrap();
+        assert_eq!(
+            restored.workspace_preferences,
+            settings.workspace_preferences
+        );
+    }
+}

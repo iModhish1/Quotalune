@@ -234,7 +234,12 @@ export interface AnalyticsPreferences {
   providerFilterScope: "history" | "all";
 }
 
-export interface WorkspacePreferences { density: "comfortable" | "compact" | "dense"; navigation: "side" | "top" | "bottom"; }
+export interface WorkspacePreferences {
+  density: "comfortable" | "compact" | "dense";
+  navigation: "side" | "top" | "bottom";
+  sidebarWidth?: number;
+  sidebarCollapsed?: boolean;
+}
 
 export interface SettingsSnapshot {
   /** Effective native scheduler cadence, including adaptive/low-power policy.

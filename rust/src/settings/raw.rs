@@ -82,6 +82,15 @@ fn deserialize_workspace_preferences<'de, D: serde::Deserializer<'de>>(
                 .and_then(|v| v.as_str())
                 .unwrap_or("side")
                 .into(),
+            sidebar_width: object
+                .get("sidebarWidth")
+                .and_then(|v| v.as_u64())
+                .map(|v| v.clamp(184, 360) as u16)
+                .unwrap_or(232),
+            sidebar_collapsed: object
+                .get("sidebarCollapsed")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
         }
         .normalized()
     }))

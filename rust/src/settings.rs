@@ -698,12 +698,16 @@ impl DashboardPerformancePreset {
 pub struct WorkspacePreferences {
     pub density: String,
     pub navigation: String,
+    pub sidebar_width: u16,
+    pub sidebar_collapsed: bool,
 }
 impl Default for WorkspacePreferences {
     fn default() -> Self {
         Self {
             density: "comfortable".into(),
             navigation: "side".into(),
+            sidebar_width: 232,
+            sidebar_collapsed: false,
         }
     }
 }
@@ -715,6 +719,7 @@ impl WorkspacePreferences {
         if !matches!(self.navigation.as_str(), "side" | "top" | "bottom") {
             self.navigation = "side".into();
         }
+        self.sidebar_width = self.sidebar_width.clamp(184, 360);
         self
     }
 }
