@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import type { DashboardRangeKind } from "../../../types/bridge";
 import { useLocale } from "../../../hooks/useLocale";
 import QuotalisSelect from "../../../components/analytics/QuotalisSelect";
@@ -55,6 +56,28 @@ export default function DashboardHeader({
   historyChip,
 }: DashboardHeaderProps) {
   const { t } = useLocale();
+  const quickRanges = SELECTABLE_RANGES.slice(0, 4);
+  const radioRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  /** WAI-ARIA radiogroup pattern (owner Phase 3N accessibility closure):
+   *  arrow keys move BOTH focus and selection with wraparound, and only
+   *  the checked option is a Tab stop (roving tabindex below) -- a native
+   *  CDP keyboard walkthrough found every option independently tabbable
+   *  with arrow keys doing nothing, which is not what `role="radio"`
+   *  promises assistive tech. */
+  function onRadioKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, index: number) {
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") nextIndex = (index + 1) % quickRanges.length;
+    else if (event.key === "ArrowLeft" || event.key === "ArrowUp") nextIndex = (index - 1 + quickRanges.length) % quickRanges.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = quickRanges.length - 1;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    const nextRange = quickRanges[nextIndex];
+    onRangeChange(nextRange);
+    radioRefs.current[nextRange]?.focus();
+  }
+
   return (
     <header className="dashboard-analytics__header">
       <div
@@ -62,14 +85,21 @@ export default function DashboardHeader({
         role="radiogroup"
         aria-label={t("DashboardSubtitle")}
       >
-        {SELECTABLE_RANGES.slice(0,4).map((r) => (
+        {quickRanges.map((r, index) => (
           <button
             key={r}
             type="button"
+            ref={(el) => { radioRefs.current[r] = el; }}
             role="radio"
             aria-checked={range === r}
+            // Roving tabindex: the checked option is the group's one Tab
+            // stop. When the active range is a "More" option outside this
+            // quick row, none of these four is checked -- fall back to the
+            // first so the group never becomes entirely untabbable.
+            tabIndex={range === r || (!quickRanges.includes(range) && index === 0) ? 0 : -1}
             className={`dashboard-analytics__range-btn${range === r ? " dashboard-analytics__range-btn--active" : ""}`}
             onClick={() => onRangeChange(r)}
+            onKeyDown={(event) => onRadioKeyDown(event, index)}
           >
             {t(RANGE_KEYS[r])}
           </button>
