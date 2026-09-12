@@ -66,6 +66,42 @@ describe("workspace sidebar", () => {
     expect(commit).not.toHaveBeenCalled();
   });
 
+  it.each(["ltr", "rtl"])("finishes outside the handle when native pointer capture is ineffective (%s)", direction => {
+    vi.stubGlobal("PointerEvent", MouseEvent);
+    const preview = vi.fn(), commit = vi.fn();
+    render(<SidebarResizeHandle width={256} onPreview={preview} onCommit={commit}/>);
+    const handle = screen.getByRole("separator");
+    handle.style.direction = direction;
+    handle.setPointerCapture = vi.fn();
+    fireEvent.pointerDown(handle, {button:0, clientX:300});
+    fireEvent.pointerMove(document.body, {clientX:340});
+    fireEvent.pointerUp(document.body, {clientX:350});
+    expect(commit).toHaveBeenCalledExactlyOnceWith(direction === "rtl" ? 206 : 306);
+    expect(handle).toHaveAttribute("data-dragging", "false");
+    preview.mockClear();
+    fireEvent.pointerMove(document.body, {clientX:380});
+    fireEvent.pointerUp(document.body, {clientX:380});
+    expect(preview).not.toHaveBeenCalled();
+    expect(commit).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["blur", "unmount"])("removes global drag listeners on %s without saving", exit => {
+    vi.stubGlobal("PointerEvent", MouseEvent);
+    const preview = vi.fn(), commit = vi.fn();
+    const {unmount} = render(<SidebarResizeHandle width={232} onPreview={preview} onCommit={commit}/>);
+    const handle = screen.getByRole("separator");
+    handle.setPointerCapture = vi.fn();
+    fireEvent.pointerDown(handle, {button:0, clientX:232});
+    fireEvent.pointerMove(document.body, {clientX:280});
+    if (exit === "blur") fireEvent.blur(window);
+    else unmount();
+    preview.mockClear();
+    fireEvent.pointerMove(document.body, {clientX:320});
+    fireEvent.pointerUp(document.body, {clientX:320});
+    expect(preview).not.toHaveBeenCalled();
+    expect(commit).not.toHaveBeenCalled();
+  });
+
   it("preserves density/navigation and stored width when toggling; syncs external preferences", async () => {
     const update = vi.fn().mockResolvedValue(undefined);
     const prefs = {density:"dense" as const, navigation:"side" as const, sidebarWidth:288, sidebarCollapsed:false};

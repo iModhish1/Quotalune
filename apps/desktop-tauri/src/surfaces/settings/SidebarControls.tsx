@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState, type PointerEvent} from "react";
+import {useEffect, useRef, useState} from "react";
 import {useLocale} from "../../hooks/useLocale";
 import type {SettingsUpdate, WorkspacePreferences} from "../../types/bridge";
 
@@ -57,18 +57,21 @@ export function SidebarResizeHandle({width, maxWidth = SIDEBAR_MAX, onPreview, o
   onCommit: (width: number) => void; disabled?: boolean; maxWidth?: number; className?: string; controls?: string;
 }) {
   const {t} = useLocale();
-  const drag = useRef<{id: number; x: number; start: number; width: number; sign: number} | null>(null);
+  const drag = useRef<{id: number; x: number; start: number; width: number; sign: number; cleanup: () => void} | null>(null);
   const [dragging, setDragging] = useState(false);
-  const cancel = () => { drag.current = null; setDragging(false); onPreview(null); };
-  const finish = (event: PointerEvent<HTMLDivElement>) => {
+  const cancel = () => {
     const active = drag.current;
-    if (!active || active.id !== event.pointerId) return;
+    if (!active) return;
     drag.current = null;
+    active.cleanup();
     setDragging(false);
-    event.currentTarget.releasePointerCapture(event.pointerId);
-    if (active.width !== active.start) onCommit(active.width);
-    else onPreview(null);
+    onPreview(null);
   };
+  useEffect(() => () => {
+    const active = drag.current;
+    drag.current = null;
+    active?.cleanup();
+  }, []);
   return <div className={`workspace-sidebar-resizer ${className}`} data-dragging={dragging} role="separator" tabIndex={disabled ? -1 : 0}
     aria-label={t("WorkspaceResizeSidebar")} title={t("WorkspaceResizeSidebarHelp")}
     aria-controls={controls} aria-orientation="vertical" aria-valuemin={SIDEBAR_MIN}
@@ -76,26 +79,52 @@ export function SidebarResizeHandle({width, maxWidth = SIDEBAR_MAX, onPreview, o
     onPointerDown={event => {
       if (disabled || event.button !== 0 || drag.current) return;
       event.preventDefault();
-      event.currentTarget.focus();
-      event.currentTarget.setPointerCapture(event.pointerId);
+      const handle = event.currentTarget;
+      handle.focus();
+      // WebView2 can deliver moves outside this narrow handle even after capture.
+      // Window listeners keep the gesture intact and are removed on every exit.
+      const move = (next: globalThis.PointerEvent) => {
+        const active = drag.current;
+        if (!active || active.id !== next.pointerId) return;
+        active.width = clampSidebarWidth(active.start + (next.clientX - active.x) * active.sign, maxWidth);
+        onPreview(active.width);
+      };
+      const finish = (next: globalThis.PointerEvent) => {
+        const active = drag.current;
+        if (!active || active.id !== next.pointerId) return;
+        move(next);
+        drag.current = null;
+        active.cleanup();
+        setDragging(false);
+        if (active.width !== active.start) onCommit(active.width);
+        else onPreview(null);
+      };
+      const pointerCancel = (next: globalThis.PointerEvent) => {
+        if (drag.current?.id === next.pointerId) cancel();
+      };
+      const pointerId = event.pointerId;
+      const cleanup = () => {
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", finish);
+        window.removeEventListener("pointercancel", pointerCancel);
+        window.removeEventListener("blur", cancel);
+        if (handle.hasPointerCapture?.(pointerId)) handle.releasePointerCapture(pointerId);
+      };
       drag.current = {id: event.pointerId, x: event.clientX, start: width, width,
-        sign: getComputedStyle(event.currentTarget).direction === "rtl" ? -1 : 1};
+        sign: getComputedStyle(handle).direction === "rtl" ? -1 : 1, cleanup};
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", finish);
+      window.addEventListener("pointercancel", pointerCancel);
+      window.addEventListener("blur", cancel);
+      handle.setPointerCapture(pointerId);
       setDragging(true);
     }}
-    onPointerMove={event => {
-      const active = drag.current;
-      if (!active || active.id !== event.pointerId) return;
-      active.width = clampSidebarWidth(active.start + (event.clientX - active.x) * active.sign, maxWidth);
-      onPreview(active.width);
-    }} onPointerUp={finish} onPointerCancel={cancel}
     onLostPointerCapture={() => { if (drag.current) cancel(); }}
     onDoubleClick={() => { if (!disabled) onCommit(clampSidebarWidth(SIDEBAR_DEFAULT, maxWidth)); }}
     onKeyDown={event => {
       if (event.key === "Escape" && drag.current) {
         event.preventDefault();
-        const id = drag.current.id;
         cancel();
-        event.currentTarget.releasePointerCapture(id);
         return;
       }
       if (disabled || drag.current || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
