@@ -69,3 +69,7 @@
 .settings-studio .about-section>.about-link {align-self:flex-start}
 @media(max-width:720px) {.settings-studio .provider-workspace__header {flex-wrap:wrap}.settings-studio .about-update-controls {grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce) {.settings-studio input[type=checkbox]::before {transition:none}}
+
+.studio-sections { display:flex; flex-wrap:wrap; gap:8px; padding:4px 0 14px; position:sticky; top:0; z-index:3; background:color-mix(in srgb,var(--workspace-bg, #09111c) 94%,transparent); }
+.studio-sections button { padding:9px 18px; border-radius:12px; border:1px solid var(--qa-hairline-strong); background:transparent; color:var(--qa-ink-secondary); }
+.studio-sections button[aria-current="page"] { color:var(--qa-accent); background:color-mix(in srgb,var(--qa-accent) 12%,transparent); border-color:var(--qa-accent); }

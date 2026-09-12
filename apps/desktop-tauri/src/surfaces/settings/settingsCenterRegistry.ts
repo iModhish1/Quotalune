@@ -2,29 +2,33 @@ import type {LocaleKey} from "../../i18n/keys";
 import type {SettingsTabId} from "../../types/bridge";
 import {CUSTOMIZATION_REGISTRY} from "../../lib/customizationRegistry";
 
-export type PrimaryDestination = "dashboard" | "analytics" | "usageSpend" | "providers" | "profiles" | "collections" | "settings" | "about";
+export type PrimaryDestination = "dashboard" | "analytics" | "usageSpend" | "providers" | "profiles" | "collections" | "appearance" | "surfaceStudio" | "trayStudio" | "settings" | "about";
 export const PRIMARY_GROUPS: {labelKey: LocaleKey; tabs: {id: PrimaryDestination; target: SettingsTabId; labelKey: LocaleKey}[]}[] = [
   {labelKey: "NavMonitor", tabs: [{id: "dashboard", target: "dashboard", labelKey: "TabDashboard"}, {id:"analytics",target:"analytics",labelKey:"V3Analytics"}, {id:"usageSpend",target:"usageSpend",labelKey:"TabUsageSpend"}]},
   {labelKey: "NavManage", tabs: [{id: "providers", target: "providers", labelKey: "TabProviders"}, {id: "profiles", target: "profiles", labelKey: "TabProfiles"}, {id:"collections",target:"collections",labelKey:"TabCollections"}]},
+  {labelKey: "V2Appearance", tabs: [{id:"appearance",target:"themes",labelKey:"V2Appearance"},{id:"surfaceStudio",target:"surfaces",labelKey:"TabSurfaces"},{id:"trayStudio",target:"menuBar",labelKey:"TabMenuBar"}]},
   {labelKey: "V2Settings", tabs: [{id: "settings", target: "general", labelKey: "V2Settings"}, {id:"about",target:"about",labelKey:"TabAbout"}]},
 ];
 export const PRIMARY_DESTINATIONS = PRIMARY_GROUPS.flatMap(group => group.tabs);
 export function primaryDestination(tab: SettingsTabId): PrimaryDestination {
+  if (["themes","providerDisplay","resetDisplay"].includes(tab)) return "appearance";
+  if (["surfaces","menu"].includes(tab)) return "surfaceStudio";
   return PRIMARY_DESTINATIONS.find(item=>item.target===tab)?.id ?? "settings";
 }
 export interface SettingsCategory {
   id: string; labelKey: LocaleKey; descriptionKey: LocaleKey;
   tabs: SettingsTabId[]; keywords: string[];
 }
-export const SETTINGS_CATEGORIES: SettingsCategory[] = [
+export const ALL_EDITOR_CATEGORIES: SettingsCategory[] = [
   {id: "general", labelKey: "WorkspaceGeneralAlerts", descriptionKey: "WorkspaceGeneralAlertsHelp", tabs: ["general", "notifications"], keywords: ["startup", "language", "updates", "refresh", "alerts", "threshold", "sound", "تنبيهات", "صوت", "لغة", "تشغيل"]},
   {id: "appearance", labelKey: "V2Appearance", descriptionKey: "WorkspaceAppearanceHelp", tabs: ["themes", "providerDisplay", "resetDisplay"], keywords: ["theme", "background", "identity", "density", "effects", "ثيم", "خلفية", "كثافة", "هوية", "reset", "time", "region", "remaining", "إعادة", "متبقي", "وقت"]},
   {id: "dashboard", labelKey: "WorkspaceAnalyticsData", descriptionKey: "WorkspaceAnalyticsDataHelp", tabs: ["dashboardStudio", "analyticsSources"], keywords: ["layout", "charts", "demo", "preview", "range", "تجريبي", "مخططات", "tokens", "sessions", "codex", "claude", "privacy", "local activity", "بيانات", "خصوصية"]},
   {id: "surfaces", labelKey: "V2NavigationSurfaces", descriptionKey: "V2SurfacesHelp", tabs: ["menuBar", "menu", "surfaces"], keywords: ["menu bar", "navigation", "window", "floating", "قائمة", "نافذة", "تنقل"]},
   {id: "advanced", labelKey: "TabAdvanced", descriptionKey: "V2AdvancedHelp", tabs: ["advanced"], keywords: ["diagnostics", "data", "تشخيص", "بيانات"]},
 ];
+export const SETTINGS_CATEGORIES = ALL_EDITOR_CATEGORIES.filter(group=>!["appearance","surfaces"].includes(group.id));
 export function categoryForTab(tab: SettingsTabId): SettingsCategory | undefined {
-  return SETTINGS_CATEGORIES.find(category => category.tabs.includes(tab));
+  return ALL_EDITOR_CATEGORIES.find(category => category.tabs.includes(tab));
 }
 // Search must land on the matching editor, not merely the first sibling in its group.
 const EDITOR_SEARCH_TERMS: Partial<Record<SettingsTabId, readonly string[]>> = {
@@ -39,7 +43,7 @@ const EDITOR_SEARCH_TERMS: Partial<Record<SettingsTabId, readonly string[]>> = {
 };
 export function searchSettings(query: string, translate: (key: LocaleKey) => string, labels: ReadonlyMap<SettingsTabId, LocaleKey>): SettingsCategory[] {
   const words = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
-  return SETTINGS_CATEGORIES.filter(category => {
+  return ALL_EDITOR_CATEGORIES.filter(category => {
     const haystack = [translate(category.labelKey), translate(category.descriptionKey), ...category.keywords,
       ...CUSTOMIZATION_REGISTRY.filter(entry => entry.category === category.id).flatMap(entry => [translate(entry.labelKey), ...entry.keywords]),
       ...category.tabs.flatMap(tab => [translate(labels.get(tab)!), ...(EDITOR_SEARCH_TERMS[tab] ?? [])])].join(" ").toLocaleLowerCase();

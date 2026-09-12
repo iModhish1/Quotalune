@@ -43,6 +43,12 @@ export type DemoScenario =
 
 // ── Narrowed string-literal unions (persisted settings enums) ─────────
 
+export interface ProviderTrayConfig {
+  enabled:boolean; limitId:string; style:"ring"|"arc"|"bar"|"badge"; showAsUsed:boolean;
+  tooltipLimitIds:string[]; showName:boolean; showPlan:boolean;
+  tokenRange:"none"|"today"|"week"|"month"|"year"|"lifetime";
+  precision:number; color:"provider"|"identity"|"silver"; stroke:number;
+}
 export type TrayIconMode = "single" | "perProvider";
 
 export type NotificationSoundTheme = "windows" | "codexBar";
@@ -289,6 +295,7 @@ export interface SettingsSnapshot {
   predictivePaceWarningEnabled: boolean;
   showPace?: boolean;
   trayIconMode: TrayIconMode;
+  providerTrayConfigs?: Record<string,ProviderTrayConfig>;
   switcherShowsIcons: boolean;
   menuBarShowsHighestUsage: boolean;
   menuBarShowsPercent: boolean;
@@ -416,6 +423,7 @@ export interface SettingsUpdate {
   predictivePaceWarningEnabled?: boolean;
   showPace?: boolean;
   trayIconMode?: TrayIconMode;
+  providerTrayConfigs?: Record<string,ProviderTrayConfig>;
   switcherShowsIcons?: boolean;
   menuBarShowsHighestUsage?: boolean;
   menuBarShowsPercent?: boolean;

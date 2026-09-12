@@ -46,6 +46,8 @@ pub struct SettingsUpdate {
     pub predictive_pace_warning_enabled: Option<bool>,
     pub show_pace: Option<bool>,
     pub tray_icon_mode: Option<String>,
+    pub provider_tray_configs:
+        Option<std::collections::HashMap<String, quotalis_core::settings::ProviderTrayConfig>>,
     pub switcher_shows_icons: Option<bool>,
     pub menu_bar_shows_highest_usage: Option<bool>,
     pub menu_bar_shows_percent: Option<bool>,
@@ -134,7 +136,8 @@ impl SettingsUpdate {
     }
 
     fn refreshes_tray_presentation(&self) -> bool {
-        self.tray_icon_mode.is_some()
+        self.provider_tray_configs.is_some()
+            || self.tray_icon_mode.is_some()
             || self.switcher_shows_icons.is_some()
             || self.menu_bar_shows_highest_usage.is_some()
             || self.menu_bar_shows_percent.is_some()
@@ -243,6 +246,10 @@ impl SettingsUpdate {
         if let Some(value) = self.demo_history_days {
             settings.demo_history_days =
                 quotalis_core::settings::normalize_demo_history_days(value);
+        }
+        if let Some(ref configs) = self.provider_tray_configs {
+            settings.provider_tray_configs =
+                quotalis_core::settings::normalize_provider_tray(configs.clone());
         }
         if let Some(ref s) = self.tray_icon_mode
             && let Some(mode) = parse_tray_icon_mode(s)

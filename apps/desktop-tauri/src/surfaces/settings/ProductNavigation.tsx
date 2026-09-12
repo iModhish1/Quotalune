@@ -5,7 +5,7 @@ import {PRIMARY_GROUPS, SETTINGS_CATEGORIES, primaryDestination} from "./setting
 import {TAB_META} from "./settingsTabs";
 const labels = new Map(TAB_META.map(tab => [tab.id, tab.labelKey]));
 
-/** Eight direct destinations, with one expandable Settings editor hierarchy. */
+/** Task workspaces with a compact, expandable general Settings hierarchy. */
 export default function ProductNavigation({activeTab,onNavigate,icons,hidden=false}: {
   activeTab:SettingsTabId;onNavigate:(tab:SettingsTabId)=>void;
   icons:Partial<Record<SettingsTabId,ReactNode>>;hidden?:boolean;

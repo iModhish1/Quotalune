@@ -534,6 +534,7 @@ pub fn update_tray_icon_and_tooltip(
     // ── Icon ─────────────────────────────────────────────────────────────
     let settings = Settings::load();
     let snapshots = presentation_snapshots(snapshots, settings.codex_spark_usage_visible());
+    crate::provider_tray::update(app, &settings, &snapshots);
     let ordered_snapshots = ordered_snapshot_refs(&settings, &snapshots);
     let ok_snapshots: Vec<_> = ordered_snapshots
         .iter()

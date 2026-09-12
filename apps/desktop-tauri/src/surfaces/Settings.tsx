@@ -15,6 +15,7 @@ import { useLocale } from "../hooks/useLocale";
 import { setSurfaceMode } from "../lib/tauri";
 import { isSettingsTab } from "./settings/settingsTabs";
 import GeneralTab from "./settings/tabs/GeneralTab";
+import TrayStudioTab from "./settings/tabs/TrayStudioTab";
 import DisplayTab from "./settings/tabs/DisplayTab";
 import AdvancedTab from "./settings/tabs/AdvancedTab";
 import AboutTab from "./settings/tabs/AboutTab";
@@ -318,11 +319,19 @@ export default function Settings({ state, initialTab: propTab, navigationRevisio
       {/* tab panels */}
       <div ref={panelRef} id="settings-active-panel" role="tabpanel" aria-labelledby={`settings-tab-${primary}`} tabIndex={0} data-tab={activeTab} className={`settings-body${activeTab === "providers" ? " settings-body--providers" : ""}`}>
         <ContentShell tab={activeTab} navigate={handleTabClick}>
+        {primary === "appearance" && <nav className="studio-sections" aria-label={t("V2Appearance")}>
+          {(["themes","providerDisplay","resetDisplay"] as const).map((id,i)=><button type="button" key={id} aria-current={activeTab===id?"page":undefined} onClick={()=>handleTabClick(id)}>{t((["TabThemes","TabProviderDisplay","TabResetDisplay"] as const)[i])}</button>)}
+        </nav>}
+        {primary === "surfaceStudio" && <nav className="studio-sections" aria-label={t("TabSurfaces")}>
+          {(["surfaces","menu"] as const).map(id=><button type="button" key={id} aria-current={activeTab===id?"page":undefined} onClick={()=>handleTabClick(id)}>{t(id==="surfaces"?"TabSurfaces":"TabMenu")}</button>)}
+        </nav>}
         {(activeTab === "dashboard" || activeTab === "analytics") && (
           <DashboardTab key={activeTab} state={state} view={activeTab === "analytics" ? "analytics" : "overview"} initialProvider={focusedProvider} onAnalytics={id=>{setFocusedProvider(id??null);handleTabClick("analytics");}} onOpenProviders={id=>{setFocusedProvider(id??null);handleTabClick("providers");}} />
         )}
         {activeTab === "general" && (
-          <GeneralTab mode="general" settings={settings} set={set} saving={saving} />
+          <><NavigationPreference value={navigation} error={!!error} onChange={next=>{
+            void update({workspacePreferences: {...settings.workspacePreferences, density: settings.workspacePreferences?.density ?? "comfortable", navigation: next}});
+          }}/><GeneralTab mode="general" settings={settings} set={set} saving={saving} /></>
         )}
         {activeTab === "providers" && (
           <ProvidersTab key={`${focusedProvider??"all"}:${providerFocusRevision}`} initialProvider={focusedProvider} onAnalytics={id=>{setFocusedProvider(id);handleTabClick("analytics");}}
@@ -361,9 +370,7 @@ export default function Settings({ state, initialTab: propTab, navigationRevisio
           />
         )}
         {activeTab === "menuBar" && (
-          <><NavigationPreference value={navigation} error={!!error} onChange={next=>{
-            void update({workspacePreferences: {...settings.workspacePreferences, density: settings.workspacePreferences?.density ?? "comfortable", navigation: next}});
-          }}/><DisplayTab mode="menuBar" settings={settings} set={set} saving={saving} /></>
+          <><TrayStudioTab catalog={state.providers} settings={settings} set={set} saving={saving}/><details><summary>{t("MenuBar")}</summary><DisplayTab mode="menuBar" settings={settings} set={set} saving={saving} /></details></>
         )}
         {activeTab === "menu" && (
           <DisplayTab mode="menu" settings={settings} set={set} saving={saving} />

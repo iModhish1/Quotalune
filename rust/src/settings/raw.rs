@@ -185,6 +185,8 @@ pub(super) struct RawSettings {
     provider_usage_thresholds: HashMap<String, UsageThresholdOverride>,
     merge_tray_icons: bool,
     tray_icon_mode: TrayIconMode,
+    #[serde(default)]
+    provider_tray_configs: HashMap<String, ProviderTrayConfig>,
     #[serde(default = "default_true")]
     switcher_shows_icons: bool,
     menu_bar_shows_highest_usage: bool,
@@ -441,6 +443,7 @@ impl Default for RawSettings {
             provider_usage_thresholds: HashMap::new(),
             merge_tray_icons: s.merge_tray_icons,
             tray_icon_mode: s.tray_icon_mode,
+            provider_tray_configs: s.provider_tray_configs.clone(),
             switcher_shows_icons: s.switcher_shows_icons,
             menu_bar_shows_highest_usage: s.menu_bar_shows_highest_usage,
             menu_bar_shows_percent: s.menu_bar_shows_percent,
@@ -830,6 +833,7 @@ impl From<RawSettings> for Settings {
             ),
             merge_tray_icons: raw.merge_tray_icons,
             tray_icon_mode: raw.tray_icon_mode,
+            provider_tray_configs: normalize_provider_tray(raw.provider_tray_configs),
             switcher_shows_icons: raw.switcher_shows_icons,
             menu_bar_shows_highest_usage: raw.menu_bar_shows_highest_usage,
             menu_bar_shows_percent: raw.menu_bar_shows_percent,

@@ -13,6 +13,8 @@ mod geometry_store;
 mod history_recorder;
 mod powertoys;
 mod proof_harness;
+mod provider_tray;
+mod provider_tray_tokens;
 mod shell;
 mod shortcut_bridge;
 mod state;
