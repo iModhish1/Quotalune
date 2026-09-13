@@ -126,7 +126,7 @@ describe("AboutTab", () => {
     fireEvent.click(screen.getByRole("button", { name: "AboutContactWhatsApp" }));
     fireEvent.click(screen.getByRole("button", { name: "CodexBar" }));
 
-    expect(screen.getByText("Mohammed Modhish")).toBeInTheDocument();
+    expect(screen.getByText("Mohammed Modhish", { exact: false })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "SubmitIssue" })).not.toBeInTheDocument();
     expect(tauriMocks.openExternalUrl).toHaveBeenNthCalledWith(
       1,
@@ -154,18 +154,36 @@ describe("AboutTab", () => {
     });
   });
 
-  it("presents the original mark, owner contribution and runtime roles with upstream credit", async () => {
+  it("puts product and updates first, with the creator and contact group in the final footer", async () => {
     render(<AboutTab settings={settings} set={vi.fn()} saving={false} />);
     expect(await screen.findByRole("heading", { name: "Quotalis" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "AppName" })).toHaveAttribute("data-quotaarc-mark", "official");
     expect(screen.getByText("0.30.3")).toBeInTheDocument();
-    expect(screen.getByText("AboutOwnerRole")).toBeInTheDocument();
-    expect(screen.getByText("AboutDirectionBody")).toBeInTheDocument();
+    const creator = screen.getByText("AboutMadeBy").closest("footer")!;
+    expect(creator).toBe(creator.parentElement!.lastElementChild);
+    expect(screen.getByText("AboutUpdatesHeading").compareDocumentPosition(screen.getByText("AboutTechCore")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Mohammed Modhish" })).toHaveAttribute("src", expect.not.stringMatching(/^https?:/));
+    expect(screen.getByText("(iModhish1)")).toBeInTheDocument();
     expect(screen.getByText("AboutTechCore")).toBeInTheDocument();
     expect(screen.getByText("AboutLicenseBody")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "codexcontrol" }));
     expect(tauriMocks.openExternalUrl).toHaveBeenCalledWith("https://github.com/ademisler/codexcontrol");
     expect(screen.getByText("WorkflowGuideTitle").closest("details")).not.toHaveAttribute("open");
+  });
+
+  it("routes all creator links to their exact destinations and honors disabled animations", async () => {
+    render(<AboutTab settings={{ ...settings, enableAnimations: false }} set={vi.fn()} saving={false} />);
+    const cases = [
+      ["AboutContactTelegram", "https://t.me/iModhish_1"],
+      ["AboutGitHubProject", "https://github.com/iModhish1/Quotalis"],
+      ["AboutCreatorProfile", "https://github.com/iModhish1"],
+      ["TAWAJUD AI", "https://tawajud.net"],
+    ];
+    for (const [label, url] of cases) {
+      fireEvent.click(await screen.findByRole("button", { name: label }));
+      expect(tauriMocks.openExternalUrl).toHaveBeenLastCalledWith(url);
+    }
+    expect(screen.getByText("AboutMadeBy").closest("footer")).toHaveAttribute("data-motion", "off");
   });
 
   it("shows the local channel and prevents a false up-to-date result without checking", async () => {

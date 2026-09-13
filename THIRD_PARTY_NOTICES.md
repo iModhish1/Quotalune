@@ -44,3 +44,12 @@ described below. This file must be updated whenever a new material dependency is
 Brand assets under `assets/brand/` are original QuotaArc artwork. Provider names and marks
 referenced by integrations belong to their respective owners; QuotaArc embeds no provider
 artwork in its own brand.
+
+## About creator assets
+
+The owner's GitHub profile image is bundled from the iModhish1 account (GitHub
+user 66481531) at the owner's request. The unmodified TAWAJUD AI mark comes from
+https://tawajud.net/assets/logo-mark-256.png and accompanies the owner's employer
+link. These identity assets and trademarks retain their respective owners'
+rights; the application's MIT license does not relicense them. They are stored
+locally so opening About does not make requests to these external services.

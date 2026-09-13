@@ -1726,6 +1726,12 @@ CollectionsMoveAction = Move selected to { "{}" }
 CollectionsArrangeHelp = Select a provider, detach it or move it to another collection. Gather all keeps your current order.
 
 AboutIdentityEyebrow = YOUR AI WORKSPACE, IN VIEW
+AboutMadeBy = Made by
+AboutWorksAt = Works at
+AboutContactUs = Contact us
+AboutContactTelegram = Telegram
+AboutGitHubProject = GitHub project
+AboutCreatorProfile = Creator’s GitHub profile
 AboutProductPromise = One place for your providers, limits and next reset.
 AboutOwnerRole = Creator of Quotalis · Product & design
 AboutDirectionTitle = Product direction

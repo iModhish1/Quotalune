@@ -972,6 +972,12 @@ CollectionsMoveAction = نقل المحدد إلى { "{}" }
 CollectionsArrangeHelp = اختر مزوّداً ثم افصله أو انقله إلى مجموعة أخرى. يحافظ «جمع الكل» على ترتيبك الحالي.
 
 AboutIdentityEyebrow = مساحة عملك مع الذكاء الاصطناعي
+AboutMadeBy = صُنع بواسطة
+AboutWorksAt = يعمل لدى
+AboutContactUs = تواصل معنا
+AboutContactTelegram = تيليجرام
+AboutGitHubProject = المشروع على GitHub
+AboutCreatorProfile = حساب المطوّر على GitHub
 AboutProductPromise = مكان واحد لمزوديك وحصصك ومواعيد إعادة التعيين.
 AboutOwnerRole = صانع Quotalis · المنتج والتصميم
 AboutDirectionTitle = رؤية المنتج

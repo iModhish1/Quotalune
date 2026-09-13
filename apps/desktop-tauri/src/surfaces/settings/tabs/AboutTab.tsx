@@ -5,7 +5,8 @@ import { getAppInfo, openExternalUrl } from "../../../lib/tauri";
 import { Field, Select, Toggle } from "../../../components/FormControls";
 import type { AppInfoBridge, UpdateChannel } from "../../../types/bridge";
 import type { TabProps } from "../settingsTabs";
-import AboutProductIdentity from "./AboutProductIdentity";
+import AboutProductIdentity, { AboutEngineering } from "./AboutProductIdentity";
+import AboutCreatorFooter from "./AboutCreatorFooter";
 
 import "./AboutTab.css";
 import WorkflowGuide from "../WorkflowGuide";
@@ -53,9 +54,8 @@ export default function AboutTab({ settings, set, saving }: TabProps) {
 
   return (
     <section className="settings-section about-section about-product">
-      <AboutProductIdentity appInfo={appInfo} openLink={openAboutLink} />
+      <AboutProductIdentity appInfo={appInfo} />
       {linkError && <p className="about-update-msg" role="alert">{t("ErrorPrefix")} {linkError}</p>}
-      <WorkflowGuide />
       <h3 className="about-product__updates-title">{t("AboutUpdatesHeading")}</h3>
       {localUpdates && <p className="about-channel-description" role="status">{t("AboutLocalUpdatesBody")}</p>}
 
@@ -165,6 +165,9 @@ export default function AboutTab({ settings, set, saving }: TabProps) {
         )}
       </div>
 
+      <AboutEngineering openLink={openAboutLink} />
+      <WorkflowGuide />
+      <AboutCreatorFooter openLink={openAboutLink} enableAnimations={settings.enableAnimations} />
     </section>
   );
 }

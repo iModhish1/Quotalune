@@ -16,15 +16,8 @@ const TECHNOLOGIES = [
   { name: "Apache ECharts · Motion", key: "AboutTechVisuals" },
 ] as const;
 
-const CONTRIBUTIONS = [
-  { title: "AboutDirectionTitle", body: "AboutDirectionBody" },
-  { title: "AboutDesignTitle", body: "AboutDesignBody" },
-  { title: "AboutWorkflowsTitle", body: "AboutWorkflowsBody" },
-] as const;
-
-export default function AboutProductIdentity({ appInfo, openLink }: {
+export default function AboutProductIdentity({ appInfo }: {
   appInfo: AppInfoBridge;
-  openLink: (url: string) => void;
 }) {
   const { t } = useLocale();
   return <>
@@ -45,29 +38,12 @@ export default function AboutProductIdentity({ appInfo, openLink }: {
       </div>
     </header>
 
-    <section className="about-product__author" aria-labelledby="about-owner">
-      <div className="about-product__author-name">
-        <p className="about-product__eyebrow">{t("AboutProductDevelopment")}</p>
-        <h3 id="about-owner"><bdi>Mohammed Modhish</bdi></h3>
-        <p>{t("AboutOwnerRole")}</p>
-        <button type="button" className="about-link about-product__contact" onClick={() => openLink("https://wa.me/966570966094")}>
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
-            <path d="M21 11.5a9 9 0 0 1-13.5 7.8L3 21l1.6-4.7A9 9 0 1 1 21 11.5Z" />
-            <path d="M8 7.5c-.8 1.2.4 3.8 2 5.3s4 2.7 5.3 1.8l.7-1.7-2.2-1-1 1c-1.5-.6-2.6-1.7-3.2-3.1l.9-1-1-2.1Z" />
-          </svg>
-          {t("AboutContactWhatsApp")}
-        </button>
-      </div>
-      <div className="about-product__author-story">
-        <p>{t("AboutOwnerContribution")}</p>
-        <ul className="about-product__contributions">
-          {CONTRIBUTIONS.map(item => <li key={item.title}>
-            <strong>{t(item.title)}</strong><span>{t(item.body)}</span>
-          </li>)}
-        </ul>
-      </div>
-    </section>
+  </>;
+}
 
+export function AboutEngineering({ openLink }: { openLink: (url: string) => void }) {
+  const { t } = useLocale();
+  return <>
     <div className="about-product__engineering">
       <section aria-labelledby="about-tools">
         <h3 id="about-tools">{t("AboutBuiltWith")}</h3>

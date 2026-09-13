@@ -11,15 +11,6 @@
 .about-product .about-product__promise { color: var(--text-secondary); margin-block-end: 0; font-size: 15px; }
 .about-product__build { display: flex; gap: 8px; flex-wrap: wrap; max-width: 100%; font-size: 12px; color: var(--text-secondary); }
 .about-product__build span { padding: 6px 10px; border: 1px solid var(--workspace-edge); border-radius: 6px; overflow-wrap: anywhere; }
-.about-product__author { display: grid; grid-template-columns: minmax(220px, .85fr) minmax(0, 1.5fr); gap: 24px; padding: 24px; background: color-mix(in srgb, var(--accent) 5%, var(--workspace-surface)); border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--workspace-edge)); border-radius: 12px; }
-.about-product__author-name { display: flex; flex-direction: column; align-items: flex-start; }
-.about-product__author-name h3 { font-size: 25px; line-height: 1.3; overflow-wrap: anywhere; }
-.about-product__author-name p { color: var(--text-secondary); font-size: 13px; }
-.about-product__author-story > p { margin-block-start: 0; font-size: 14px; }
-.about-product__contributions { display: grid; gap: 12px; list-style: none; padding: 0; margin: 16px 0 0; }
-.about-product__contributions li { display: grid; gap: 3px; padding-inline-start: 12px; border-inline-start: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); }
-.about-product__contributions strong { font-size: 13px; }
-.about-product__contributions span { color: var(--text-secondary); font-size: 13px; line-height: 1.5; }
 .about-product__engineering { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; }
 .about-product__engineering > section > p { color: var(--text-secondary); font-size: 13px; }
 .about-product__technology-list { margin: 0; }
@@ -32,8 +23,6 @@
 .about-product .about-link { min-height: 40px; gap: 8px; padding: 8px 12px; color: var(--accent); background: var(--workspace-surface); border-color: var(--workspace-edge); font-size: 13px; }
 .about-product .about-link:hover { background: color-mix(in srgb, var(--accent) 10%, var(--workspace-surface)); border-color: var(--accent); }
 .about-product .about-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-.about-product .about-product__contact { margin-block-start: 12px; text-align: start; }
-.about-product__contact svg { flex-shrink: 0; }
 .about-product .about-product__license { margin: 0; font-size: 12px; color: var(--text-secondary); }
 .about-product .about-actions { margin-block: 0; }
 .about-product .about-channel-description { max-width: none; text-align: start; margin: 0; }
@@ -46,11 +35,71 @@
 .about-product__card { padding: 16px; min-width: 0; border: 1px solid var(--workspace-edge); border-radius: 8px; background: var(--workspace-surface); }
 .about-product__card p { color: var(--text-secondary); font-size: 13px; }
 @media (max-width: 900px) {
-  .about-product__author, .about-product__engineering { grid-template-columns: 1fr; gap: 20px; }
+  .about-product__engineering { grid-template-columns: 1fr; gap: 20px; }
 }
 @media (max-width: 600px) {
   .settings-studio .about-section.about-product { padding: 16px; gap: 20px; }
   .about-product__brand { flex-direction: column; align-items: flex-start; gap: 16px; }
-  .about-product__author { padding: 16px; }
   .about-product__overview { grid-template-columns: 1fr; }
+}
+
+/* Creator credit has its own contrast plate in every Structure Theme. TAWAJUD
+   blue/violet stops follow tawajud.net's --g1, --g4 and --g7 brand tokens. */
+.about-creator {
+  --creator-ink: #eddcff;
+  --creator-muted: #c5b9d8;
+  --creator-violet: #b775ff;
+  --company-blue: #0060f0;
+  --company-violet: #6030f0;
+  --company-magenta: #a830f0;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 24px; padding: 24px; border: 1px solid #674788; border-radius: 12px;
+  background: radial-gradient(ellipse at 12% 110%, #412066 0%, transparent 55%), #140e20;
+  color: var(--creator-ink); isolation: isolate;
+}
+.about-creator__signature { display: flex; align-items: center; gap: 24px; min-width: 0; flex: 1 1 400px; }
+.about-creator__credit { min-width: 0; }
+.about-creator .about-creator__label { margin: 0 0 8px; font-size: 12px; color: var(--creator-muted); }
+.about-creator__name { position: relative; display: block; font-size: clamp(18px, 1.7vw, 24px); font-weight: 750; line-height: 1.5; color: var(--creator-ink); text-shadow: 0 0 12px #b775ff90, 0 0 28px #a830f060; }
+.about-creator__name span { display: inline-block; font-size: .7em; font-weight: 600; color: #d5b3fa; }
+.about-creator__name::before { filter: blur(5px); }
+.about-creator__name::before { content: ""; position: absolute; z-index: -1; inset: 4px -4px -4px; opacity: .3; background: radial-gradient(ellipse at 20% 100%, #a830f0 0, transparent 40%), radial-gradient(ellipse at 60% 100%, #6030f0 0, transparent 45%), radial-gradient(ellipse at 90% 100%, #b775ff 0, transparent 30%); border-radius: 50%; pointer-events: none; }
+.settings-studio .about-product .about-creator__avatar { position: relative; display: grid; place-items: center; flex: 0 0 88px; width: 88px; min-width: 88px; height: 88px; padding: 4px; border: 0; border-radius: 50%; background: #241336; cursor: pointer; isolation: isolate; }
+.about-creator__avatar img { position: relative; display: block; width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 1px solid #dab8ff; }
+.about-creator__flame { position: absolute; z-index: -1; inset: -8px; border-radius: 44% 56% 47% 53%; background: conic-gradient(from 30deg, #6030f0, #d3a3ff 14%, #a830f0 24%, #301449 38%, #b775ff 52%, #6030f0 68%, #dfbbff 82%, #6030f0); box-shadow: 0 -6px 20px #a830f066; opacity: .65; pointer-events: none; }
+.about-creator__employer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-block-start: 8px; font-size: 11px; color: var(--creator-muted); }
+.settings-studio .about-product .about-creator__company { display: inline-flex; direction: ltr; align-items: center; gap: 8px; padding: 4px 8px; min-height: 40px; background: transparent; border: 1px solid transparent; border-radius: 8px; cursor: pointer; color: #dbbeff; font-weight: 750; letter-spacing: .06em; text-shadow: 0 0 16px var(--company-violet); }
+.about-creator__company img { object-fit: contain; }
+.settings-studio .about-product .about-creator__company:hover { background: #29183e; border-color: var(--company-magenta); }
+.about-creator__links { display: flex; flex-wrap: wrap; gap: 8px; }
+.about-product .about-creator .about-link { display: inline-flex; align-items: center; background: #21172f; border: 1px solid #65477e; color: var(--creator-ink); }
+.about-creator .about-link svg { flex: 0 0 auto; }
+.about-product .about-creator .about-link:hover { background: #392250; border-color: var(--creator-violet); }
+.about-creator button:focus-visible { outline: 2px solid #ddbeff; outline-offset: 4px; }
+.about-creator button:active { box-shadow: inset 0 0 0 2px #b775ff; }
+/* Event-driven, finite animation: no timers, WebGL, RAF or permanent idle loop. */
+.about-creator[data-motion="on"] .about-creator__signature:is(:hover, :focus-within) .about-creator__flame { animation: creator-flame 3.6s ease-in-out; }
+.about-creator[data-motion="on"] .about-creator__signature:is(:hover, :focus-within) .about-creator__name::before { animation: creator-embers 3.6s ease-in-out; }
+.about-creator[data-motion="on"] .about-creator__avatar:active .about-creator__flame { transform: scale(1.1); opacity: 1; }
+@keyframes creator-flame {
+  0%, 100% { transform: rotate(0deg) scale(1); opacity: .65; }
+  20% { transform: rotate(12deg) scale(1.06, 1.12); opacity: .9; }
+  45% { transform: rotate(-8deg) scale(.98, 1.06); opacity: .7; }
+  70% { transform: rotate(16deg) scale(1.08, 1.12); opacity: 1; }
+}
+@keyframes creator-embers {
+  0%, 100% { transform: translateY(0) scaleY(1); opacity: .3; }
+  30%, 70% { transform: translateY(-6px) scaleY(1.6); opacity: .65; }
+  50% { transform: translateY(-2px) scaleY(1.2); opacity: .4; }
+}
+[data-qa-motion="off"] .about-creator *, [data-qa-motion="reduced"] .about-creator *,
+[data-qa-motion="off"] .about-creator *::before, [data-qa-motion="reduced"] .about-creator *::before { animation: none !important; transform: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .about-creator *, .about-creator *::before { animation: none !important; transform: none !important; }
+}
+@media (max-width: 600px) {
+  .about-creator { padding: 20px 16px; }
+  .about-creator__signature { flex-wrap: wrap; gap: 20px; }
+  .about-creator__links { flex-direction: column; align-items: stretch; }
+  .about-creator__contacts { flex: 1 1 100%; }
 }
