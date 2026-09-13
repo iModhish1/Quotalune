@@ -114,3 +114,17 @@ function ConvertTo-JsonString {
 
     return ($Value | ConvertTo-Json -Depth 8)
 }
+
+function Assert-QuotalisGitHubOwner {
+    param([Parameter(Mandatory)][AllowEmptyString()][string]$Login)
+    if ($Login -ine 'iModhish1') {
+        throw 'Authenticated GitHub account is not the confirmed Quotalis owner.'
+    }
+}
+
+function Assert-QuotalisReleaseOrigin {
+    param([Parameter(Mandatory)][AllowEmptyString()][string]$Origin)
+    if ([string]::IsNullOrWhiteSpace($Origin) -or (Normalize-GitHubRepository $Origin) -ne 'imodhish1/quotalis') {
+        throw 'Release checkout origin is not iModhish1/Quotalis; existing checkout is preserved.'
+    }
+}

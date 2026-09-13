@@ -10,7 +10,7 @@ param(
     [Parameter(Mandatory)][string]$Sha = $env:CIRCLE_SHA1,
     [string]$RepoRoot = '',
     [string]$OutputDir = '',
-    [string]$Repository = 'https://github.com/nesszer/Win-CodexBar.git'
+    [string]$Repository = 'https://github.com/iModhish1/Quotalis.git'
 )
 
 Set-StrictMode -Version Latest
@@ -76,7 +76,7 @@ function Clear-DirectoryContents {
 
 if (-not (Test-CanonicalReleaseTag $Tag)) { throw "Invalid canonical release tag '$Tag'." }
 if ($Sha -notmatch '^[0-9a-fA-F]{40}$') { throw "Invalid immutable SHA '$Sha'." }
-if ((Normalize-GitHubRepository $Repository) -ne 'nesszer/win-codexbar') { throw 'Repository must be canonical nesszer/Win-CodexBar.' }
+if ((Normalize-GitHubRepository $Repository) -ne 'imodhish1/quotalis') { throw 'Repository must be canonical iModhish1/Quotalis.' }
 if (-not (Test-Path -LiteralPath $RepoRoot -PathType Container)) { throw "Missing repository root: $RepoRoot" }
 
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null

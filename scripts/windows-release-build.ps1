@@ -53,8 +53,8 @@
 
 param(
     [string]$Ref = "HEAD",
-    [string]$RepoUrl = "https://github.com/nesszer/Win-CodexBar.git",
-    [string]$WorkRoot = "C:\code\Win-CodexBar-release",
+    [string]$RepoUrl = "https://github.com/iModhish1/Quotalis.git",
+    [string]$WorkRoot = "C:\code\Quotalis-release",
     [switch]$RefreshInstallerDependencies,
     [switch]$WarmCacheOnly,
     [switch]$SmokeInstall,
@@ -65,6 +65,8 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot 'release-pipeline-common.ps1')
+Assert-QuotalisReleaseOrigin $RepoUrl
 $env:CARGO_TERM_COLOR = "never"
 $env:CARGO_TERM_PROGRESS_WHEN = "never"
 $env:NO_COLOR = "1"
@@ -306,6 +308,10 @@ if (-not (Test-Path (Join-Path $SourceDir ".git"))) {
 
 Push-Location $SourceDir
 try {
+    # Validate reused caches before fetch or any destructive checkout/reset/clean.
+    $cachedOrigin = & $git.Source remote get-url origin
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect release checkout origin; checkout preserved.' }
+    Assert-QuotalisReleaseOrigin ([string]$cachedOrigin)
     Invoke-Native $git.Source @("fetch", "--quiet", "--tags", "--prune", "origin")
     Invoke-Native $git.Source @("-c", "advice.detachedHead=false", "checkout", "--quiet", "--force", $Ref)
     Invoke-Native $git.Source @("reset", "--quiet", "--hard", "HEAD")

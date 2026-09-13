@@ -28,6 +28,16 @@ function Assert-Throws {
     try { & $Block } catch { $thrown = $true }
     Assert-True $thrown $Message
 }
+Assert-QuotalisReleaseOrigin 'https://github.com/iModhish1/Quotalis.git'
+Assert-QuotalisReleaseOrigin 'git@github.com:iModhish1/Quotalis.git'
+Assert-Throws { Assert-QuotalisReleaseOrigin 'https://github.com/nesszer/Win-CodexBar.git' } 'cached upstream checkout is rejected'
+Assert-Throws { Assert-QuotalisReleaseOrigin '' } 'missing cached origin is rejected'
+
+Assert-QuotalisGitHubOwner 'iModhish1'
+Assert-QuotalisGitHubOwner 'imodhish1'
+Assert-Throws { Assert-QuotalisGitHubOwner 'another-user' } 'foreign authenticated owner rejected'
+Assert-Throws { Assert-QuotalisGitHubOwner '' } 'missing authenticated owner rejected'
+
 Assert-Equal (Get-NodeMajor 'v24.18.0') 24 'Node 24 major parsing'
 Assert-Equal (Assert-NodeMajor 'v24.18.0' 24) 24 'Node 24 requirement'
 Assert-Throws { Assert-NodeMajor 'v23.11.0' 24 } 'non-24 Node major rejected by release prerequisite'
@@ -36,8 +46,8 @@ $prerequisiteText = Get-Content -Raw -LiteralPath (Join-Path $scriptRoot 'instal
 Assert-True ($prerequisiteText -match '\$requiredNodeMajor\s*=\s*24') 'release prerequisite pins Node major 24'
 Assert-True ($prerequisiteText -match '11\\.24\\.0') 'release prerequisite keeps pnpm 11.24.0 pinned'
 
-Assert-Equal (Normalize-GitHubRepository 'https://github.com/nesszer/Win-CodexBar.git') 'nesszer/win-codexbar' 'HTTPS canonical URL'
-Assert-Equal (Normalize-GitHubRepository 'git@github.com:nesszer/Win-CodexBar.git') 'nesszer/win-codexbar' 'SSH canonical URL'
+Assert-Equal (Normalize-GitHubRepository 'https://github.com/iModhish1/Quotalis.git') 'imodhish1/quotalis' 'HTTPS canonical URL'
+Assert-Equal (Normalize-GitHubRepository 'git@github.com:iModhish1/Quotalis.git') 'imodhish1/quotalis' 'SSH canonical URL'
 Assert-True (Test-CanonicalReleaseTag 'v1.2.3') 'canonical release tag accepted'
 Assert-True (-not (Test-CanonicalReleaseTag 'v1.2.3-rc.1')) 'prerelease tag rejected'
 Assert-True (-not (Test-CanonicalReleaseTag 'v01.2.3')) 'leading-zero tag rejected'
@@ -67,6 +77,10 @@ try {
 }
 
 $builderText = Get-Content -Raw -LiteralPath (Join-Path $scriptRoot 'windows-release-build.ps1')
+$originGuardPosition = $builderText.IndexOf('Assert-QuotalisReleaseOrigin ([string]$cachedOrigin)')
+$fetchPosition = $builderText.IndexOf('@("fetch",')
+Assert-True ($originGuardPosition -ge 0 -and $fetchPosition -ge 0) 'cached origin guard and fetch both exist'
+Assert-True ($originGuardPosition -lt $fetchPosition) 'cached origin checked before fetch/reset/clean'
 $legacySwitch = 'Upload' + 'Release'
 $clobberFlag = '--' + 'clobber'
 Assert-True ($builderText -notmatch $legacySwitch) 'legacy upload parameter removed'

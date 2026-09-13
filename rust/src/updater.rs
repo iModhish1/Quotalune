@@ -7,8 +7,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::watch;
 
-/// Canonical repository enforced by the release preflight and publisher.
-const GITHUB_REPO: &str = "nesszer/Win-CodexBar";
+/// Quotalis publishing target confirmed by the owner. No upstream update fallback.
+const GITHUB_REPO: &str = "iModhish1/Quotalis";
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// State of the update download process
@@ -176,6 +176,9 @@ fn select_release_target_for_family(
     release: &GitHubRelease,
     installed_family: WindowsPackageFamily,
 ) -> Option<UpdateInfo> {
+    if release.draft || !is_owner_release_url(&release.html_url, &release.tag_name, "tag") {
+        return None;
+    }
     let compatible_kind = installed_family.compatible_installer_kind();
 
     // A release may contain several packaging technologies. Crossing from one
@@ -187,7 +190,9 @@ fn select_release_target_for_family(
         .iter()
         .filter_map(|asset| {
             let kind = installer_kind_from_name(&asset.name)?;
-            if Some(kind) != compatible_kind {
+            if Some(kind) != compatible_kind
+                || !is_owner_release_url(&asset.browser_download_url, &release.tag_name, "download")
+            {
                 return None;
             }
             Some((installer_asset_preference(&asset.name, kind), asset))
@@ -217,6 +222,35 @@ fn select_release_target_for_family(
         release_notes: release.body.clone().unwrap_or_default(),
         delivery,
     })
+}
+
+/// API metadata must stay within this product's repository and release tag.
+/// A GitHub lookalike host, credentials, query or another owner's asset is rejected.
+fn is_owner_release_url(value: &str, tag: &str, kind: &str) -> bool {
+    let Ok(url) = reqwest::Url::parse(value) else {
+        return false;
+    };
+    if url.scheme() != "https"
+        || url.host_str() != Some("github.com")
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || url.port().is_some()
+        || url.query().is_some()
+        || url.fragment().is_some()
+        || tag.is_empty()
+        || tag.contains(['/', '\\', '?', '#', '%'])
+    {
+        return false;
+    }
+    let expected = format!("/{GITHUB_REPO}/releases/{kind}/{tag}");
+    match kind {
+        "tag" => url.path() == expected,
+        "download" => url
+            .path()
+            .strip_prefix(&format!("{expected}/"))
+            .is_some_and(|asset| !asset.is_empty() && !asset.contains(['/', '%', '\\'])),
+        _ => false,
+    }
 }
 
 fn is_installer_asset_name(name: &str) -> bool {
@@ -1087,12 +1121,50 @@ mod tests {
     fn release_urls_use_canonical_publisher_repository() {
         assert_eq!(
             release_url(UpdateChannel::Stable),
-            "https://api.github.com/repos/nesszer/Win-CodexBar/releases/latest"
+            "https://api.github.com/repos/iModhish1/Quotalis/releases/latest"
         );
         assert_eq!(
             release_url(UpdateChannel::Beta),
-            "https://api.github.com/repos/nesszer/Win-CodexBar/releases"
+            "https://api.github.com/repos/iModhish1/Quotalis/releases"
         );
+    }
+
+    #[test]
+    fn release_links_reject_other_owners_lookalikes_and_tags() {
+        assert!(is_owner_release_url(
+            "https://github.com/iModhish1/Quotalis/releases/tag/v1.2.6",
+            "v1.2.6",
+            "tag"
+        ));
+        for value in [
+            "https://github.com/nesszer/Win-CodexBar/releases/tag/v1.2.6",
+            "https://github.com.evil.invalid/iModhish1/Quotalis/releases/tag/v1.2.6",
+            "https://github.com/iModhish1/Quotalis/releases/tag/v1.2.7",
+            "https://user@github.com/iModhish1/Quotalis/releases/tag/v1.2.6",
+            "http://github.com/iModhish1/Quotalis/releases/tag/v1.2.6",
+        ] {
+            assert!(!is_owner_release_url(value, "v1.2.6", "tag"), "{value}");
+        }
+    }
+
+    #[test]
+    fn foreign_installer_never_becomes_automatic_update() {
+        let mut release = GitHubRelease {
+            tag_name: "v1.2.6".into(),
+            html_url: "https://github.com/iModhish1/Quotalis/releases/tag/v1.2.6".into(),
+            body: None, draft: false, prerelease: false,
+            assets: vec![GitHubAsset {
+                name: "Quotalis-1.2.6-Setup.exe".into(),
+                browser_download_url: "https://github.com/another/Quotalis/releases/download/v1.2.6/Quotalis-1.2.6-Setup.exe".into(),
+                digest: Some(format!("sha256:{}", "a".repeat(64))),
+            }],
+        };
+        let selected =
+            select_release_target_for_family(&release, WindowsPackageFamily::Inno).unwrap();
+        assert_eq!(selected.delivery, UpdateDelivery::Manual);
+        assert!(!selected.supports_auto_download());
+        release.html_url = "https://github.com/nesszer/Win-CodexBar/releases/tag/v1.2.6".into();
+        assert!(select_release_target_for_family(&release, WindowsPackageFamily::Inno).is_none());
     }
 
     #[test]
@@ -1109,17 +1181,17 @@ mod tests {
     fn prefers_installer_asset_for_auto_update() {
         let release = GitHubRelease {
             tag_name: "v1.2.6".to_string(),
-            html_url: "https://github.com/nesszer/Win-CodexBar/releases/tag/v1.2.6".to_string(),
+            html_url: "https://github.com/iModhish1/Quotalis/releases/tag/v1.2.6".to_string(),
             body: None,
             assets: vec![
                 GitHubAsset {
                     name: "codexbar.exe".to_string(),
-                    browser_download_url: "https://example.com/codexbar.exe".to_string(),
+                    browser_download_url: "https://github.com/iModhish1/Quotalis/releases/download/v1.2.6/codexbar.exe".to_string(),
                     digest: None,
                 },
                 GitHubAsset {
                     name: "Quotalis-1.2.6-Setup.exe".to_string(),
-                    browser_download_url: "https://example.com/Quotalis-1.2.6-Setup.exe"
+                    browser_download_url: "https://github.com/iModhish1/Quotalis/releases/download/v1.2.6/Quotalis-1.2.6-Setup.exe"
                         .to_string(),
                     digest: Some(
                         "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -1136,7 +1208,7 @@ mod tests {
 
         assert_eq!(
             update.download_url,
-            "https://example.com/Quotalis-1.2.6-Setup.exe"
+            "https://github.com/iModhish1/Quotalis/releases/download/v1.2.6/Quotalis-1.2.6-Setup.exe"
         );
         assert!(update.supports_auto_apply());
         assert!(update.supports_auto_download());
@@ -1146,12 +1218,14 @@ mod tests {
     fn installer_selection_is_deterministic_and_matches_installed_family() {
         let asset = |name: &str| GitHubAsset {
             name: name.to_string(),
-            browser_download_url: format!("https://example.com/{name}"),
+            browser_download_url: format!(
+                "https://github.com/iModhish1/Quotalis/releases/download/v1.2.6/{name}"
+            ),
             digest: Some(format!("sha256:{}", "a".repeat(64))),
         };
         let release_with = |assets| GitHubRelease {
             tag_name: "v1.2.6".to_string(),
-            html_url: "https://github.com/nesszer/Win-CodexBar/releases/tag/v1.2.6".to_string(),
+            html_url: "https://github.com/iModhish1/Quotalis/releases/tag/v1.2.6".to_string(),
             body: None,
             assets,
             draft: false,
@@ -1171,21 +1245,21 @@ mod tests {
                 .expect("Inno target");
             assert_eq!(
                 selected.download_url,
-                "https://example.com/Quotalis-1.2.6-Setup.exe"
+                "https://github.com/iModhish1/Quotalis/releases/download/v1.2.6/Quotalis-1.2.6-Setup.exe"
             );
 
             let selected = select_release_target_for_family(release, WindowsPackageFamily::Nsis)
                 .expect("NSIS target");
             assert_eq!(
                 selected.download_url,
-                "https://example.com/Quotalis_1.2.6_x64-setup.exe"
+                "https://github.com/iModhish1/Quotalis/releases/download/v1.2.6/Quotalis_1.2.6_x64-setup.exe"
             );
 
             let selected = select_release_target_for_family(release, WindowsPackageFamily::Msi)
                 .expect("MSI target");
             assert_eq!(
                 selected.download_url,
-                "https://example.com/Quotalis_1.2.6_x64_en-US.msi"
+                "https://github.com/iModhish1/Quotalis/releases/download/v1.2.6/Quotalis_1.2.6_x64_en-US.msi"
             );
         }
     }
@@ -1194,11 +1268,13 @@ mod tests {
     fn installer_selection_fails_closed_for_mismatch_unknown_and_portable() {
         let release = GitHubRelease {
             tag_name: "v1.2.6".to_string(),
-            html_url: "https://github.com/nesszer/Win-CodexBar/releases/tag/v1.2.6".to_string(),
+            html_url: "https://github.com/iModhish1/Quotalis/releases/tag/v1.2.6".to_string(),
             body: None,
             assets: vec![GitHubAsset {
                 name: "Quotalis_1.2.6_x64-setup.exe".to_string(),
-                browser_download_url: "https://example.com/nsis.exe".to_string(),
+                browser_download_url:
+                    "https://github.com/iModhish1/Quotalis/releases/download/v1.2.6/nsis.exe"
+                        .to_string(),
                 digest: Some(format!("sha256:{}", "a".repeat(64))),
             }],
             draft: false,
@@ -1243,17 +1319,21 @@ mod tests {
     fn msi_fallback_prefers_en_us_independent_of_asset_order() {
         let release = GitHubRelease {
             tag_name: "v1.2.6".to_string(),
-            html_url: "https://github.com/nesszer/Win-CodexBar/releases/tag/v1.2.6".to_string(),
+            html_url: "https://github.com/iModhish1/Quotalis/releases/tag/v1.2.6".to_string(),
             body: None,
             assets: vec![
                 GitHubAsset {
                     name: "Quotalis_1.2.6_x64_tr-TR.msi".to_string(),
-                    browser_download_url: "https://example.com/tr.msi".to_string(),
+                    browser_download_url:
+                        "https://github.com/iModhish1/Quotalis/releases/download/v1.2.6/tr.msi"
+                            .to_string(),
                     digest: None,
                 },
                 GitHubAsset {
                     name: "Quotalis_1.2.6_x64_en-US.msi".to_string(),
-                    browser_download_url: "https://example.com/en.msi".to_string(),
+                    browser_download_url:
+                        "https://github.com/iModhish1/Quotalis/releases/download/v1.2.6/en.msi"
+                            .to_string(),
                     digest: None,
                 },
             ],
@@ -1263,18 +1343,23 @@ mod tests {
 
         let selected = select_release_target_for_family(&release, WindowsPackageFamily::Msi)
             .expect("update target");
-        assert_eq!(selected.download_url, "https://example.com/en.msi");
+        assert_eq!(
+            selected.download_url,
+            "https://github.com/iModhish1/Quotalis/releases/download/v1.2.6/en.msi"
+        );
     }
 
     #[test]
     fn falls_back_to_manual_release_when_only_portable_exe_exists() {
         let release = GitHubRelease {
             tag_name: "v1.2.6".to_string(),
-            html_url: "https://github.com/nesszer/Win-CodexBar/releases/tag/v1.2.6".to_string(),
+            html_url: "https://github.com/iModhish1/Quotalis/releases/tag/v1.2.6".to_string(),
             body: None,
             assets: vec![GitHubAsset {
                 name: "codexbar.exe".to_string(),
-                browser_download_url: "https://example.com/codexbar.exe".to_string(),
+                browser_download_url:
+                    "https://github.com/iModhish1/Quotalis/releases/download/v1.2.6/codexbar.exe"
+                        .to_string(),
                 digest: None,
             }],
             draft: false,
@@ -1287,7 +1372,7 @@ mod tests {
 
         assert_eq!(
             update.download_url,
-            "https://github.com/nesszer/Win-CodexBar/releases/tag/v1.2.6"
+            "https://github.com/iModhish1/Quotalis/releases/tag/v1.2.6"
         );
         assert!(!update.supports_auto_apply());
     }
