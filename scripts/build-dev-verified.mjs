@@ -36,7 +36,7 @@ const APP_DIR = path.join(REPO_ROOT, "apps", "desktop-tauri");
 // Keep a byte-identical evidence copy, but launch the original output beside
 // Tauri's resource files. Never take a stale Quotalis.exe as the build result.
 const SOURCE_EXE = path.join(REPO_ROOT, "target", "debug", "QuotalisDev.exe");
-const PROOF_COPY = path.join(REPO_ROOT, "target", "dev-verified", "QuotalisDev.exe");
+const PROOF_ROOT = path.join(REPO_ROOT, "target", "dev-verified");
 const DEV_EXE = SOURCE_EXE;
 
 function step(label) {
@@ -112,6 +112,8 @@ if (!reportedDevBuildMatches(buildOutput, SOURCE_EXE)) {
 step("3/7 locate freshly-built QuotalisDev.exe");
 if (!existsSync(SOURCE_EXE)) fail(`expected build output missing: ${SOURCE_EXE}`);
 const sourceHash = sha256(SOURCE_EXE);
+// Preserve running evidence builds: each byte-identical artifact owns its path.
+const PROOF_COPY = path.join(PROOF_ROOT, sourceHash, "QuotalisDev.exe");
 console.log(`  source: ${SOURCE_EXE}`);
 console.log(`  sha256: ${sourceHash}`);
 
@@ -119,11 +121,12 @@ console.log(`  sha256: ${sourceHash}`);
 step("4/7 copy built Dev output to target/dev-verified");
 try {
   mkdirSync(path.dirname(PROOF_COPY), { recursive: true });
-  copyFileSync(SOURCE_EXE, PROOF_COPY);
+  if (!existsSync(PROOF_COPY) || sha256(PROOF_COPY) !== sourceHash) {
+    copyFileSync(SOURCE_EXE, PROOF_COPY);
+  }
 } catch (err) {
   fail(
-    `could not replace ${PROOF_COPY}: ${err.message} -- if QuotalisDev.exe is currently running, ` +
-      "close it first (Windows cannot overwrite a locked executable).",
+    `could not retain verified artifact ${PROOF_COPY}: ${err.message}; existing running artifacts were not removed.`,
   );
 }
 
