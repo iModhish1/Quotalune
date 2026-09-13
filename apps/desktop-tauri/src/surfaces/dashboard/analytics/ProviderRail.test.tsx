@@ -96,3 +96,16 @@ it('offers eight physical positions and reverses left/right reorder indices in R
  expect(save).toHaveBeenCalledWith({resetPosition:'middle-right'});
  }finally{document.documentElement.dir='';}
 });
+
+it('maps legacy start/end positions to the same physical badge and picker location',()=>{
+ document.documentElement.dir='rtl';
+ try {
+ const view=render(<ProviderRail providers={[provider('codex')]} settings={settings} isDemo onOpenProviders={()=>{}} onAnalytics={()=>{}}
+  presentation={{order:[],badgePosition:'end',resetPosition:'start',showAccountNumbers:true}} onPresentationChange={vi.fn().mockResolvedValue(undefined)}/>);
+ expect(view.container.querySelector('.provider-instance-mark')).toHaveAttribute('data-badge-position','top-left');
+ expect(view.container.querySelector('.provider-reset-position')).toHaveAttribute('data-position','top-right');
+ fireEvent.click(within(screen.getByRole('toolbar')).getByRole('button'));
+ expect(screen.getByRole('button',{name:'InstanceBadgePosition: BadgeTopLeft'})).toHaveAttribute('aria-pressed','true');
+ expect(screen.getByRole('button',{name:'ResetBadgePosition: BadgeTopRight'})).toHaveAttribute('aria-pressed','true');
+ } finally {document.documentElement.dir='';}
+});

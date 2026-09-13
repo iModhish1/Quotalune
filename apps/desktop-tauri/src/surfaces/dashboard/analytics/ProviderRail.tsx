@@ -62,6 +62,7 @@ export default function ProviderRail({providers,settings,isDemo,onOpenProviders,
  const focus=(next:number)=>{const id=cards[next]?.instanceId;if(!id)return;setFocusedId(id);void onPresentationChange?.({anchorId:id});};
  const rtl=document.documentElement.dir==='rtl';
  const badgePosition=presentation.badgePosition==='start'?(rtl?'top-right':'top-left'):presentation.badgePosition==='end'?(rtl?'top-left':'top-right'):presentation.badgePosition;
+ const resetPosition=presentation.resetPosition==='start'?(rtl?'top-right':'top-left'):presentation.resetPosition==='end'?(rtl?'top-left':'top-right'):presentation.resetPosition??'bottom-center';
  const models=cards.map(card=>card.snapshot?currentProviderModel([card.snapshot],settings,Date.now())[0]:null);
  const chosenInstance=cards.find(card=>card.instanceId===selected);
  const chosen=chosenInstance?.snapshot;
@@ -95,7 +96,7 @@ export default function ProviderRail({providers,settings,isDemo,onOpenProviders,
       <span className="provider-instance-mark" data-badge-position={badgePosition}>
       <ProviderPlanet providerId={card.providerId} used={window?.usedPercent??null} color={chartProviderColor(theme,settings,card.providerId,document.documentElement)}/>
       {presentation.showAccountNumbers&&card.accountOrdinal&&<span className="provider-instance-badge" aria-hidden="true">{card.accountOrdinal}</span>}
-      {presentation.showResetBadge!==false&&<span className="provider-reset-position" data-position={presentation.resetPosition??'bottom-center'}><ProviderResetBadge facts={card.resetFacts??provider?.resetFacts}/></span>}</span>
+      {presentation.showResetBadge!==false&&<span className="provider-reset-position" data-position={resetPosition}><ProviderResetBadge facts={card.resetFacts??provider?.resetFacts}/></span>}</span>
       <strong><bdi>{providerInstanceName(card)}</bdi></strong>{card.accountLabel&&!settings.hidePersonalInfo&&<small><bdi>{card.accountLabel}</bdi></small>}<ProviderPlanBadge plan={provider?.planName??null}/>
       {window?<span className="provider-rail__quota"><bdi>{window.remainingPercent.toFixed(0)}%</bdi> {t('FloatBarRemainingSuffix')}<small><bdi>{window.usedPercent.toFixed(0)}%</bdi> {t('PanelUsedSuffix')}</small></span>:<span className="provider-rail__attention">{t(!provider?'CodexAccountsUsageUnavailable':model?.ready?'DashboardValueUnavailable':'DashboardNeedsAttention')}</span>}
       <small>{reset(model?.nextReset??null)}</small>
@@ -117,7 +118,7 @@ export default function ProviderRail({providers,settings,isDemo,onOpenProviders,
         <button type="button" disabled={rtl?selectedIndex<=0:selectedIndex>=cards.length-1} onClick={()=>rearrange(rtl?-1:1)}>{t('InstanceMoveRight')}</button>
       </div>
       <BadgePositionPicker label={t('InstanceBadgePosition')} value={badgePosition} onChange={value=>void onPresentationChange({badgePosition:value})}/>
-      <BadgePositionPicker label={t('ResetBadgePosition')} value={presentation.resetPosition??'bottom-center'} onChange={value=>void onPresentationChange({resetPosition:value})}/>
+      <BadgePositionPicker label={t('ResetBadgePosition')} value={resetPosition} onChange={value=>void onPresentationChange({resetPosition:value})}/>
       <button type="button" role="switch" aria-checked={presentation.showResetBadge!==false} onClick={()=>void onPresentationChange({showResetBadge:presentation.showResetBadge===false})}>{t('ResetShowBadge')}</button>
       <div className="provider-instance-count"><span>{t('InstanceVisibleCount')}</span><QuotalisSelect label={t('InstanceVisibleCount')} value={String(presentation.visibleCount??4)} options={[{value:'3',label:'3'},{value:'4',label:'4'}]} onChange={value=>void onPresentationChange({visibleCount:value==='3'?3:4})}/></div>
       <button type="button" role="switch" aria-checked={presentation.showAccountNumbers} onClick={()=>void onPresentationChange({showAccountNumbers:!presentation.showAccountNumbers})}>{t('InstanceShowNumbers')}</button>
