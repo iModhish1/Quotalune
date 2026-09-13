@@ -1153,3 +1153,11 @@ QA05 checkpoint: native primary-page and selected nested/filters/Demo proof,
 layout/logo/control/security repairs, full source gates and 112-image atlas are
 recorded in docs/validation/QA05_NATIVE_VISUAL_REVIEW.md. Checkboxes above remain
 open because exhaustive control and installer/native OS acceptance is incomplete.
+
+## PRODUCT-06
+- [ ] P06-01/02: provider contrast, compact related layouts and Menu Bar section.
+- [ ] P06-03/04: independent accounts and all supported connection methods.
+- [ ] P06-05/06/07: native brand finish, truthful motion catalog and multi-icon tray.
+- [ ] P06-08/09: Profiles/Collections capabilities and complete workflow help.
+- [ ] P06-10/11: owner About, release artifacts and verified owner GitHub account.
+- [ ] P06-12: native/source/security/installer requirement-level acceptance.

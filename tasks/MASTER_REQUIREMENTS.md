@@ -364,3 +364,44 @@ Environment discovery found no Windows Sandbox executable and Hyper-V VM
 inventory was denied to the execution account. All reported native QA ran on
 Dev on this host, not on a claimed independent machine. No installer execution
 or universal Windows-version claim is authorized by evidence alone.
+
+## PRODUCT-06 — owner identity, accounts and release completion (2026-09-13)
+
+Owner goal and nine annotated images in attachment a1b9a0ea-572d-4b97-b18b-f545775e34b7
+extend QA-05. Full acceptance remains open:
+
+- P06-01: legible original provider logos including Alibaba across backgrounds and tray.
+- P06-02: remove annotated layout voids in General, Notifications and Appearance;
+  make Menu Bar a complete bounded section with bottom clearance; compact Profiles.
+- P06-03: repair missing Codex command during additional-account sign-in; show each
+  account as its own reorderable provider instance with customizable ordinal badge.
+- P06-04: verify supported API, manual cookie and browser import flows; discover
+  supported browsers and their profiles accurately, without leaking credentials.
+- P06-05: original app logo and selected finish propagate to notifications, native
+  windows/taskbar and other identity surfaces; prove platform behavior.
+- P06-06: add new structure/theme/background batches; remove falsely animated
+  static duplicates and prove actual motion for every animated category.
+- P06-07: more legible tray designs, multiple independent provider/account icons,
+  and per-icon enable/disable controls with native proof.
+- P06-08: richer Profiles and Collections customization and verified workflows.
+- P06-09: in-product/workflow documentation for every main area, especially design,
+  customization, themes, profiles, collections and account distinctions.
+- P06-10: redesign About; credit Mohammed Modhish's Quotalis work accurately while
+  retaining upstream attribution; list only tools actually integrated. Include an
+  accessible WhatsApp icon link to https://wa.me/966570966094 as expressly requested.
+- P06-11: professional GitHub repository/release/download artifacts and installer
+  validation. Before publishing, verify the authenticated GitHub account owns
+  mmimodhish@gmail.com; never publish to a different or unverified account.
+- P06-12: current source gates, native screenshot comparisons, security review and
+  requirement-by-requirement evidence; no broad PASS based on partial coverage.
+
+Image mapping: 1 General grid void; 2 Notifications void; 3 Menu Bar disclosure;
+4 vertical logo-finish controls; 5 Profiles alignment; 6 Codex command-not-found;
+7 notification header icon; 8 About attribution/layout; 9 native tray legibility.
+
+P06-11 owner clarification (2026-09-13): the owner explicitly confirmed the
+GitHub account shown in their screenshot is iModhish1, matching the authenticated
+CLI account. This resolves the intended publishing-account ambiguity by direct
+owner confirmation. The private email was not technically verified; do not claim
+otherwise. Bind eventual repository writes to iModhish1 and recheck authenticated
+identity immediately before publishing. Release readiness gates remain required.

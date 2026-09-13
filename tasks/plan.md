@@ -425,3 +425,18 @@ shared layout/control/logo repairs rebuilt and compared, 1,145 frontend tests,
 Security and installer safety fixes are committed; full native option coverage,
 OS tray/toast and disposable installer lifecycle acceptance remain open.
 Evidence: docs/validation/QA05_NATIVE_VISUAL_REVIEW.md.
+
+## PRODUCT-06 execution
+Native follow-up: inspect fresh 7ea33671 captures, compact Navigation Layout
+cards and stacked description margins, rebuild and compare General/Notifications.
+Capture labels are not coverage: the last Settings invocation toggled navigation
+while About stayed open; that image must not count as a Settings page capture.
+1. Repair screenshot-backed shared layout and original-logo contrast (P06-01/02).
+2. Trace additional-account command resolution, then implement provider/account
+   instance identity, ordering and badge settings end-to-end (P06-03/04/07).
+3. Reconcile app/native identity, background motion taxonomy and design batches
+   (P06-05/06); expand and verify Profiles/Collections (P06-08).
+4. Add complete workflow help and owner-focused About with accurate upstream/tool
+   credit (P06-09/10). Prepare release files and installer evidence (P06-11).
+5. Verify source, native visuals, credentials boundaries and exact GitHub identity;
+   publish only after the specified owner account is verified (P06-12).
