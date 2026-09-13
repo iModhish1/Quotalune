@@ -506,3 +506,10 @@ features-focused GitHub project and release pages. Keep defect inventories,
 unfinished-work lists and QA reports internal. Public copy should describe
 verified features, product imagery, downloads and essential runtime requirements;
 never claim unsupported capabilities or turn internal validation into marketing.
+
+P06-17 publication result (2026-09-14): public source and stable v0.11.0 released
+at https://github.com/iModhish1/Quotalis with features-first README/release notes,
+native Demo screenshot, Windows installer, portable ZIP, separate CLI ZIP and
+SHA256 manifest. Published links return HTTP 200 and asset digests match the
+verified build. Internal evidence: docs/validation/QUOTALIS_0_11_0_PUBLICATION.md.
+This closes publication/public-presentation only, not remaining product QA rows.
