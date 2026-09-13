@@ -270,19 +270,20 @@ export default function ProfilesTab() {
 
             <section className="profiles-page__field">
               <label>{t("ThemeLabel")}</label>
-              <Select
-                ariaLabel={t("ThemeLabel")}
-                value={selected.theme ?? ""}
-                options={[{value:"",label:t("ProfilesInheritTheme")},{value:"auto",label:t("ThemeAutoOption")},{value:"light",label:t("ThemeLightOption")},{value:"dark",label:t("ThemeDarkOption")}]}
-                onChange={(value) =>
-                  run(() =>
-                    updateProfile({
-                      profileId: selected.id,
-                      theme: value === "" ? null : (value as "auto" | "light" | "dark"),
-                    }),
-                  )
-                }
-              />
+              <div className="profiles-page__theme-choices" role="group" aria-label={t("ThemeLabel")}>
+                {([
+                  {value:null,label:t("ProfilesInheritTheme")},
+                  {value:"auto",label:t("ThemeAutoOption")},
+                  {value:"light",label:t("ThemeLightOption")},
+                  {value:"dark",label:t("ThemeDarkOption")},
+                ] as const).map(option => <button
+                  key={option.value ?? "inherit"}
+                  type="button"
+                  aria-pressed={(selected.theme ?? null) === option.value}
+                  disabled={busy}
+                  onClick={() => run(() => updateProfile({profileId:selected.id,theme:option.value}))}
+                >{option.label}</button>)}
+              </div>
             </section>
 
             <section className="profiles-page__field">

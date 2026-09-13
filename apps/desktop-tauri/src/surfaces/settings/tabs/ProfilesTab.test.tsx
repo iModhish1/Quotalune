@@ -12,7 +12,7 @@ vi.mock("../../../hooks/useLocale", () => ({
   useOptionalLocale: () => locale,
 }));
 
-/** Theme / Structure Theme are QuotalisSelects (trigger button + portal
+/** Structure Theme uses QuotalisSelect (trigger button + portal
  *  option list), not native <select>s -- open the trigger, then click the
  *  matching option. */
 async function chooseQuotalisOption(triggerLabel: string, optionName: string) {
@@ -76,6 +76,16 @@ beforeEach(() => {
 });
 
 describe("ProfilesTab", () => {
+  it("exposes all appearance choices and clears only the selected profile override", async () => {
+    profileStoreState.current = storeWith([profile({theme:"light"})],"p1");
+    render(<ProfilesTab/>);
+    const choices = await screen.findByRole("group", {name:"Theme"});
+    expect(within(choices).getAllByRole("button")).toHaveLength(4);
+    expect(within(choices).getByRole("button",{name:"Light"})).toHaveAttribute("aria-pressed","true");
+    fireEvent.click(within(choices).getByRole("button",{name:"Inherit global theme"}));
+    expect(bridge.updateProfile).toHaveBeenCalledWith({profileId:"p1",theme:null});
+    expect(bridge.switchProfile).not.toHaveBeenCalled();
+  });
   it("reorders by stable ids without activating a different profile", async()=>{
     profileStoreState.current=storeWith([profile(),profile({id:'p2',name:'Work'})],'p1');
     render(<ProfilesTab/>);
@@ -194,7 +204,7 @@ describe("ProfilesTab", () => {
     profileStoreState.current = storeWith([profile({ id: "p1", name: "Default" })], "p1");
     render(<ProfilesTab />);
     await screen.findAllByText("Default").then(nodes=>nodes[0]);
-    await chooseQuotalisOption("Theme", "Dark");
+    fireEvent.click(await screen.findByRole("button", {name:"Dark"}));
     expect(bridge.updateProfile).toHaveBeenCalledWith({ profileId: "p1", theme: "dark" });
 
     await chooseQuotalisOption("Structure Theme", "Obsidian Orbit");
@@ -229,7 +239,7 @@ describe("ProfilesTab", () => {
     profileStoreState.current = storeWith([profile({ id: "p1", name: "Default" })], "p1");
     bridge.updateProfile.mockRejectedValueOnce(new Error("boom"));
     render(<ProfilesTab />);
-    await chooseQuotalisOption("Theme", "Dark");
+    fireEvent.click(await screen.findByRole("button", {name:"Dark"}));
     expect(await screen.findByRole("alert")).toHaveTextContent("boom");
   });
 });
