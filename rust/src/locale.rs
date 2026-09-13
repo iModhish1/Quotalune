@@ -579,6 +579,13 @@ locale_keys! {
 
     // Notification settings (Preferences)
     ShowNotifications,
+    NotificationTestTitle,
+    NotificationTestBody,
+    NotificationTestHelp,
+    NotificationTestSource,
+    NotificationTestSend,
+    NotificationTestRequested,
+    NotificationTestFailed,
     SoundEnabled,
     NotificationSoundTheme,
     NotificationSoundThemeHelper,

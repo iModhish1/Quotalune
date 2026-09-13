@@ -40,6 +40,8 @@ mod credentials;
 mod dashboard;
 mod diagnostics;
 mod locale_cmd;
+mod notification_test;
+pub use notification_test::*;
 mod provider_detail;
 mod provider_settings;
 mod providers;

@@ -509,6 +509,7 @@ fn main() {
             commands::unregister_global_shortcut,
             commands::get_work_area_rect,
             commands::play_notification_sound,
+            commands::send_test_notification,
             commands::open_external_url,
             commands::reanchor_tray_panel,
             commands::quit_app,

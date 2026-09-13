@@ -19,6 +19,7 @@ import type {
 import type { LocaleKey } from "../../../i18n/keys";
 import type { TabProps } from "../settingsTabs";
 import NotificationPreview from "../NotificationPreview";
+import NotificationTestControl from "../NotificationTestControl";
 import QuotaArcMark from "../../../components/QuotaArcMark";
 import {
   LOGO_SIZES,
@@ -380,7 +381,7 @@ export default function GeneralTab({
 
   return (
     <>
-      {mode==="notifications" && <NotificationPreview high={settings.highUsageThreshold} critical={settings.criticalUsageThreshold} enabled={settings.showNotifications}/>}
+      {mode==="notifications" && <><NotificationPreview high={settings.highUsageThreshold} critical={settings.criticalUsageThreshold} enabled={settings.showNotifications}/><NotificationTestControl catalog={providerCatalog}/></>}
       {mode === "general" && <section className="settings-section general-settings-card general-settings-card--language">
         <h3 className="settings-section__title">{t("SectionLanguage")}</h3>
         <div className="settings-section__group">
