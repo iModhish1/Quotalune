@@ -5,7 +5,7 @@ import type { DataProvenance } from "../../../hooks/useEffectiveProviders";
 import { useDashboardStructureTheme } from "./useDashboardStructureTheme";
 import { availableHistoryDays } from "./dashboardSelectors";
 import DashboardHeader from "./DashboardHeader";
-import ProviderRail from "./ProviderRail";
+import ProviderRail from "./ProviderInstancesRail";
 import {ProviderIcon} from "../../../components/providers/ProviderIcon";
 import {ProviderPlanBadge} from "../../../components/providers/ProviderPlanBadge";
 import LocalActivity from "./LocalActivity";

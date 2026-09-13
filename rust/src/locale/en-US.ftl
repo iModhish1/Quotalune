@@ -1652,3 +1652,13 @@ WorkflowTray = Select a provider and an observed limit for its tray icon. Choose
 WorkflowSettings = Configure startup, language, refresh and alerts. Dashboard Studio contains Demo controls; Data Sources controls supported local activity. Advanced contains diagnostics.
 WorkflowAbout = Check the app version, development credits, contact details and update controls here. Only install releases from the Quotalis project owner.
 WorkflowGuideTitle = How to use Quotalis
+
+InstanceLoadUnavailable = Additional accounts could not be loaded. Primary provider monitoring remains available.
+InstanceSaveFailed = Could not save the account arrangement. Try again.
+InstanceRefreshFailed = Could not refresh this account. Check its connection in Providers.
+InstanceHistoryUnavailable = These are this account’s last reported limits. Account-specific history is not available yet.
+InstanceArrangement = Order and account badges
+InstanceBadgePosition = Account badge position
+InstanceBadgeStart = Upper start corner
+InstanceBadgeEnd = Upper end corner
+InstanceShowNumbers = Show account numbers

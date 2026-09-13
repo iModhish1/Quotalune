@@ -4,7 +4,7 @@ import ProviderRail from './ProviderRail';
 import {railWindow} from './railModel';
 import type {ProviderUsageSnapshot,SettingsSnapshot} from '../../../types/bridge';
 vi.mock('../../../hooks/useLocale',()=>({useLocale:()=>({t:(key:string)=>key,language:'english'}),useOptionalLocale:()=>null}));
-vi.mock('../../../lib/tauri',()=>({refreshProviders:vi.fn()}));
+vi.mock('../../../lib/tauri',()=>({refreshProviders:vi.fn(),codexAccountFetch:vi.fn().mockResolvedValue({})}));
 const settings={showAsUsed:true,providerMetrics:{},providerAccentColors:{}} as SettingsSnapshot;
 const provider=(id:string):ProviderUsageSnapshot=>({providerId:id,displayName:id,planName:id==='codex'?'ChatGPT Pro':null,primary:{usedPercent:62,remainingPercent:38,resetsAt:null,resetDescription:null,windowMinutes:null,isExhausted:false,reservePercent:null,reserveDescription:null},secondary:null,tertiary:null,modelSpecific:null,selectedMetric:{usedPercent:62,remainingPercent:38,resetsAt:null,resetDescription:null,windowMinutes:null,isExhausted:false,reservePercent:null,reserveDescription:null},extraRateWindows:[],cost:null,errorState:'ready',error:null,accountEmail:null,accountOrganization:null,pace:null,trayStatusLabel:null,updatedAt:'2026-09-10T00:00:00Z',sourceLabel:'test'});
 it.each([1,6,12,24,40,70])('bounds mounted controls while all %i providers remain keyboard reachable',count=>{
@@ -39,4 +39,29 @@ it('a drag without a trailing click does not swallow the next deliberate click',
   act(()=>vi.runOnlyPendingTimers());fireEvent.click(within(screen.getByRole('toolbar')).getByRole('button',{name:/claude,/}));
   expect(screen.getByRole('dialog')).toBeInTheDocument();
  }finally{vi.useRealTimers();vi.unstubAllGlobals();}
+});
+
+
+it('selects the second account by identity and never shows ambient history or quota',async()=>{
+ const {codexAccountFetch}=await import('../../../lib/tauri');
+ const ambient=provider('codex');
+ const second={instanceId:'codex:two',providerId:'codex',accountId:'two',accountOrdinal:2,accountLabel:'Work',snapshot:{...provider('codex'),primary:{...ambient.primary,usedPercent:17,remainingPercent:83},selectedMetric:{...ambient.primary,usedPercent:17,remainingPercent:83}}};
+ const save=vi.fn().mockResolvedValue(undefined);
+ render(<ProviderRail providers={[ambient]} instances={[{...second,instanceId:'codex',accountId:null,accountOrdinal:1,snapshot:ambient},second]} settings={settings} isDemo={false} onOpenProviders={()=>{}} onAnalytics={()=>{}} onPresentationChange={save}/>);
+ fireEvent.click(within(screen.getByRole('toolbar')).getByRole('button',{name:/codex · 2,/}));
+ const panel=screen.getByRole('dialog');
+ expect(within(panel).getByText('17%')).toBeInTheDocument();
+ expect(within(panel).queryByText('62%')).toBeNull();
+ expect(within(panel).queryByRole('button',{name:'V3ViewAnalytics'})).toBeNull();
+ fireEvent.click(within(panel).getByRole('button',{name:'ProviderSidebarMoveUp'}));
+ expect(save).toHaveBeenCalledWith(expect.objectContaining({order:['codex:two','codex']}));
+ await act(async()=>fireEvent.click(within(panel).getByRole('button',{name:'ActionRefresh'})));
+ expect(codexAccountFetch).toHaveBeenCalledWith('two');
+});
+
+it('a missing account keeps a distinct selectable card with no ambient fallback',()=>{
+ render(<ProviderRail providers={[provider('codex')]} instances={[{instanceId:'codex:two',providerId:'codex',accountId:'two',accountOrdinal:2,accountLabel:null,snapshot:null}]} settings={settings} isDemo={false} onOpenProviders={()=>{}} onAnalytics={()=>{}}/>);
+ fireEvent.click(within(screen.getByRole('toolbar')).getByRole('button'));
+ expect(within(screen.getByRole('dialog')).getByText('CodexAccountsUsageUnavailable')).toBeInTheDocument();
+ expect(within(screen.getByRole('dialog')).queryByText('62%')).toBeNull();
 });

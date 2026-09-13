@@ -46,6 +46,8 @@ pub struct SettingsUpdate {
     pub predictive_pace_warning_enabled: Option<bool>,
     pub show_pace: Option<bool>,
     pub tray_icon_mode: Option<String>,
+    pub provider_instance_presentation:
+        Option<quotalis_core::settings::ProviderInstancePresentation>,
     pub provider_tray_configs:
         Option<std::collections::HashMap<String, quotalis_core::settings::ProviderTrayConfig>>,
     pub switcher_shows_icons: Option<bool>,
@@ -246,6 +248,9 @@ impl SettingsUpdate {
         if let Some(value) = self.demo_history_days {
             settings.demo_history_days =
                 quotalis_core::settings::normalize_demo_history_days(value);
+        }
+        if let Some(ref presentation) = self.provider_instance_presentation {
+            settings.provider_instance_presentation = presentation.clone().normalized();
         }
         if let Some(ref configs) = self.provider_tray_configs {
             settings.provider_tray_configs =
@@ -623,6 +628,33 @@ pub async fn update_settings(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn account_arrangement_patch_preserves_provider_identity_and_does_not_refresh_auth() {
+        let mut settings = Settings::default();
+        let original_order = settings.provider_order.clone();
+        let patch: SettingsUpdate = serde_json::from_value(serde_json::json!({
+            "providerInstancePresentation": {
+                "order": ["codex:550e8400-e29b-41d4-a716-446655440000", "claude", "bad:identity"],
+                "badgePosition": "start",
+                "showAccountNumbers": false
+            }
+        }))
+        .unwrap();
+        assert!(!patch.refreshes_provider_data());
+        patch.apply_provider_settings(&mut settings);
+        assert_eq!(settings.provider_order, original_order);
+        assert_eq!(settings.provider_instance_presentation.order.len(), 2);
+        assert_eq!(
+            settings.provider_instance_presentation.badge_position,
+            "start"
+        );
+        let snapshot = serde_json::to_value(SettingsSnapshot::from(settings)).unwrap();
+        assert_eq!(
+            snapshot["providerInstancePresentation"]["showAccountNumbers"],
+            false
+        );
+    }
 
     #[test]
     fn only_data_affecting_settings_refresh_providers() {

@@ -449,6 +449,7 @@ fn main() {
             commands::refresh_providers,
             commands::refresh_providers_if_stale,
             commands::get_cached_providers,
+            commands::get_provider_instances,
             commands::get_deepseek_pricing_status,
             commands::codex_accounts_list,
             commands::codex_account_add,

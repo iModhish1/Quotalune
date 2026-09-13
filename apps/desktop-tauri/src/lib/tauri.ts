@@ -18,6 +18,7 @@ import type {
   ProviderLocalUsageSummary,
   ProviderSummary,
   ProviderUsageSnapshot,
+  ProviderInstanceSnapshot,
   ProviderTokenAccountsBridge,
   TokenAccountSupportBridge,
   SettingsSnapshot,
@@ -194,6 +195,10 @@ export function refreshProviders(): Promise<void> {
 
 export function refreshProvidersIfStale(): Promise<void> {
   return invoke<void>("refresh_providers_if_stale");
+}
+
+export function getProviderInstances(): Promise<ProviderInstanceSnapshot[]> {
+  return invoke<ProviderInstanceSnapshot[]>("get_provider_instances");
 }
 
 export function getCachedProviders(): Promise<ProviderUsageSnapshot[]> {

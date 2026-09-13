@@ -296,6 +296,7 @@ export interface SettingsSnapshot {
   showPace?: boolean;
   trayIconMode: TrayIconMode;
   providerTrayConfigs?: Record<string,ProviderTrayConfig>;
+  providerInstancePresentation?: ProviderInstancePresentation;
   switcherShowsIcons: boolean;
   menuBarShowsHighestUsage: boolean;
   menuBarShowsPercent: boolean;
@@ -424,6 +425,7 @@ export interface SettingsUpdate {
   showPace?: boolean;
   trayIconMode?: TrayIconMode;
   providerTrayConfigs?: Record<string,ProviderTrayConfig>;
+  providerInstancePresentation?: ProviderInstancePresentation;
   switcherShowsIcons?: boolean;
   menuBarShowsHighestUsage?: boolean;
   menuBarShowsPercent?: boolean;
@@ -737,6 +739,21 @@ export type ProviderStateKind =
   | "expiredSession"
   | "localRuntimeOffline"
   | "unknown";
+
+export interface ProviderInstancePresentation {
+  order: string[];
+  badgePosition: "start" | "end";
+  showAccountNumbers: boolean;
+}
+
+export interface ProviderInstanceSnapshot {
+  instanceId: string;
+  providerId: string;
+  accountId: string | null;
+  accountOrdinal: number | null;
+  accountLabel: string | null;
+  snapshot: ProviderUsageSnapshot | null;
+}
 
 export interface ProviderUsageSnapshot {
   providerId: string;

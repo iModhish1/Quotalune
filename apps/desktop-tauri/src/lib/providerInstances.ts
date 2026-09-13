@@ -1,0 +1,45 @@
+import type {ProviderInstancePresentation, ProviderInstanceSnapshot, ProviderUsageSnapshot} from "../types/bridge";
+
+export const DEFAULT_INSTANCE_PRESENTATION: ProviderInstancePresentation = {
+  order: [], badgePosition: "end", showAccountNumbers: true,
+};
+
+/** Display-only composition. Account observations never enter provider-wide history. */
+export function composeProviderInstances(
+  providers: readonly ProviderUsageSnapshot[],
+  instances: readonly ProviderInstanceSnapshot[],
+  enabledIds: readonly string[],
+  presentation = DEFAULT_INSTANCE_PRESENTATION,
+): ProviderInstanceSnapshot[] {
+  const enabled = new Set(enabledIds);
+  const metadata = new Map(instances.filter(i => i.instanceId === i.providerId).map(i => [i.providerId, i]));
+  const result: ProviderInstanceSnapshot[] = providers.map(snapshot => ({
+    instanceId: snapshot.providerId, providerId: snapshot.providerId,
+    accountId: null, accountOrdinal: snapshot.providerId === "codex" ? 1 : null,
+    accountLabel: null, ...metadata.get(snapshot.providerId), snapshot,
+  }));
+  const seen = new Set(result.map(i => i.instanceId));
+  for (const instance of instances) {
+    if (!enabled.has(instance.providerId) || seen.has(instance.instanceId)) continue;
+    // Only the backend's explicitly supported Codex account namespace is admitted.
+    if (instance.providerId !== "codex" || !instance.accountId || instance.instanceId !== `codex:${instance.accountId}`) continue;
+    seen.add(instance.instanceId);
+    result.push({...instance, snapshot: instance.snapshot?.providerId === instance.providerId ? instance.snapshot : null});
+  }
+  const ranks = new Map(presentation.order.map((id, index) => [id, index]));
+  return result.sort((a, b) => (ranks.get(a.instanceId) ?? Infinity) - (ranks.get(b.instanceId) ?? Infinity));
+}
+
+export function moveProviderInstance(ids: readonly string[], id: string, delta: number): string[] {
+  const result = [...ids];
+  const from = result.indexOf(id);
+  if (from < 0) return result;
+  const to = Math.max(0, Math.min(result.length - 1, from + delta));
+  result.splice(to, 0, ...result.splice(from, 1));
+  return result;
+}
+
+export function providerInstanceName(instance: ProviderInstanceSnapshot): string {
+  const name = instance.snapshot?.displayName ?? (instance.providerId === "codex" ? "Codex" : instance.providerId);
+  return instance.accountOrdinal ? `${name} · ${instance.accountOrdinal}` : name;
+}

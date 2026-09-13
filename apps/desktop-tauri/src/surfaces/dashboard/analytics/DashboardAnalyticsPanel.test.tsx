@@ -2,6 +2,8 @@ import { fireEvent, within, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const tauriMocks = vi.hoisted(() => ({
+  getSettingsSnapshot: vi.fn().mockRejectedValue(new Error("Use the supplied settings fixture")),
+  getProviderInstances: vi.fn().mockResolvedValue([]),
   getLocaleStrings: vi.fn(),
   setUiLanguage: vi.fn(),
   getDashboardSnapshot: vi.fn(),

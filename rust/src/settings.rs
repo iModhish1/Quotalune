@@ -17,6 +17,8 @@ use std::path::PathBuf;
 
 use crate::core::ProviderId;
 
+mod provider_instances;
+pub use provider_instances::{ProviderInstancePresentation, valid_provider_instance_id};
 mod provider_tray;
 pub use provider_tray::{ProviderTrayConfig, normalize_provider_tray};
 mod analytics_preferences;
@@ -1164,6 +1166,8 @@ pub struct Settings {
     #[serde(default)]
     pub tray_icon_mode: TrayIconMode,
     #[serde(default)]
+    pub provider_instance_presentation: ProviderInstancePresentation,
+    #[serde(default)]
     pub provider_tray_configs: HashMap<String, ProviderTrayConfig>,
 
     /// Show provider icons in the merged switcher UI
@@ -1961,6 +1965,7 @@ impl Default for Settings {
             usage_step_notification_percent: None,
             provider_usage_thresholds: HashMap::new(),
             merge_tray_icons: false, // Show single provider by default
+            provider_instance_presentation: ProviderInstancePresentation::default(),
             provider_tray_configs: HashMap::new(),
             tray_icon_mode: TrayIconMode::default(), // Single icon by default
             switcher_shows_icons: true,

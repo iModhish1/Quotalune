@@ -710,6 +710,7 @@ pub struct SettingsSnapshot {
     predictive_pace_warning_enabled: bool,
     show_pace: bool,
     tray_icon_mode: &'static str,
+    provider_instance_presentation: quotalis_core::settings::ProviderInstancePresentation,
     provider_tray_configs:
         std::collections::HashMap<String, quotalis_core::settings::ProviderTrayConfig>,
     switcher_shows_icons: bool,
@@ -859,6 +860,7 @@ impl From<Settings> for SettingsSnapshot {
             predictive_pace_warning_enabled: settings.predictive_pace_warning_enabled,
             show_pace: settings.show_pace,
             tray_icon_mode: tray_icon_mode_label(settings.tray_icon_mode),
+            provider_instance_presentation: settings.provider_instance_presentation.clone(),
             provider_tray_configs: settings.provider_tray_configs.clone(),
             switcher_shows_icons: settings.switcher_shows_icons,
             menu_bar_shows_highest_usage: settings.menu_bar_shows_highest_usage,
