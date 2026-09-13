@@ -29,3 +29,18 @@
 .collections-targets{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
 .collections-targets button{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .collections-help{margin:0;font-size:12px;line-height:1.5}
+/* The full-page editor uses the available width, keeping Save near its controls
+   instead of beneath a long sidebar opposite an almost empty preview. */
+.collections-page .collections-studio{grid-template-columns:minmax(0,1fr)}
+.collections-page .collections-editor{margin:0;gap:10px;padding:12px;min-width:0}
+.collections-page .collections-editor>label{min-width:0}
+.collections-page .collections-editor select{width:100%;min-width:0}
+.collections-page .collections-editor fieldset{min-width:0;margin:0}
+.collections-page .collections-preview>h2{margin:0 0 8px}
+.collections-page .collections-canvas{height:clamp(220px,30dvh,360px);background:radial-gradient(circle,var(--workspace-edge) 1px,transparent 1px) 0 0/20px 20px,var(--workspace-surface);border-color:var(--workspace-edge)}
+.collections-page .collections-placement>output{color:var(--qa-ink-2)}
+@media(min-width:900px){
+  .collections-page .collections-editor{grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}
+  .collections-page .collections-editor>:is(.collections-views,.collections-actions,.collections-targets,.collections-help,[role="alert"]){grid-column:1/-1}
+  .collections-page .collections-editor>small{grid-column:2/-1;align-self:center}
+}
