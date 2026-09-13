@@ -95,17 +95,76 @@ pub async fn get_usage_spend_summary(
     .map_err(|e| format!("usage spend worker failed: {e}"))?
 }
 
-#[tauri::command]
-pub fn write_usage_spend_export(path: String, payload: String) -> Result<(), String> {
+fn validate_export_request(window_label: &str, payload: &str) -> Result<(), String> {
     const MAX_EXPORT_BYTES: usize = 8 * 1024 * 1024;
-    let path = path.trim();
-    if path.is_empty() {
-        return Err("Export path must not be empty".to_string());
+    if window_label != "settings" {
+        return Err("Export is only available from the Settings window".to_string());
     }
     if payload.len() > MAX_EXPORT_BYTES {
         return Err("Usage & Spend export exceeds 8 MiB".to_string());
     }
-    std::fs::write(path, payload.as_bytes()).map_err(|error| error.to_string())
+    serde_json::from_str::<serde_json::Value>(payload)
+        .map_err(|_| "Export must contain valid JSON".to_string())?;
+    Ok(())
+}
+
+/// The renderer supplies data, never a destination. Native selection is the
+/// authority for this single write, including the OS overwrite confirmation.
+#[tauri::command]
+pub async fn write_usage_spend_export(
+    window: tauri::WebviewWindow,
+    payload: String,
+) -> Result<bool, String> {
+    use tauri_plugin_dialog::DialogExt;
+    validate_export_request(window.label(), &payload)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let stamp = chrono::Local::now().format("%Y-%m-%d");
+        let selected = window
+            .dialog()
+            .file()
+            .set_parent(&window)
+            .set_file_name(format!("quotalis-usage-spend-{stamp}.json"))
+            .add_filter("JSON", &["json"])
+            .blocking_save_file();
+        let Some(selected) = selected else {
+            return Ok(false);
+        };
+        let path = selected
+            .into_path()
+            .map_err(|_| "Invalid export destination".to_string())?;
+        if !path.is_absolute()
+            || !path
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
+        {
+            return Err("Choose an absolute JSON file destination".to_string());
+        }
+        write_selected_export(&path, payload.as_bytes())?;
+        Ok(true)
+    })
+    .await
+    .map_err(|_| "Export worker failed".to_string())?
+}
+
+fn write_selected_export(path: &std::path::Path, payload: &[u8]) -> Result<(), String> {
+    use std::io::Write;
+    let parent = path.parent().ok_or("Invalid export directory")?;
+    let temporary = parent.join(format!(".quotalis-export-{}.tmp", uuid::Uuid::new_v4()));
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&temporary)
+        .map_err(|_| "Cannot create export in this directory".to_string())?;
+    let result = (|| -> std::io::Result<()> {
+        file.write_all(payload)?;
+        file.sync_all()?;
+        drop(file);
+        std::fs::rename(&temporary, path)
+    })();
+    if result.is_err() {
+        let _ = std::fs::remove_file(&temporary);
+    }
+    result.map_err(|_| "Cannot save export; the existing file was preserved".to_string())
 }
 
 fn build_usage_spend_summary_cached(
@@ -505,5 +564,39 @@ fn cached_spend(snapshot: Option<&ProviderUsageSnapshot>) -> SpendValues {
         },
         refreshing: false,
         stale_updated_at: None,
+    }
+}
+
+#[cfg(test)]
+mod export_tests {
+    use super::*;
+
+    #[test]
+    fn export_rejects_other_windows_and_invalid_or_oversized_payloads() {
+        for label in ["main", "flyout", "floatbar", "", "Settings"] {
+            assert!(validate_export_request(label, "{}").is_err());
+        }
+        assert!(validate_export_request("settings", "not json").is_err());
+        assert!(validate_export_request("settings", &" ".repeat(8 * 1024 * 1024 + 1)).is_err());
+        assert!(validate_export_request("settings", r#"{"rows":[]}"#).is_ok());
+    }
+
+    #[test]
+    fn export_replaces_complete_file_and_preserves_target_on_failure() {
+        let dir =
+            std::env::temp_dir().join(format!("quotalis-export-test-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir(&dir).unwrap();
+        let target = dir.join("report.json");
+        std::fs::write(&target, b"previous").unwrap();
+        write_selected_export(&target, b"{\"rows\":[]}").unwrap();
+        assert_eq!(std::fs::read(&target).unwrap(), b"{\"rows\":[]}");
+        let blocked = dir.join("directory.json");
+        std::fs::create_dir(&blocked).unwrap();
+        assert!(write_selected_export(&blocked, b"{}").is_err());
+        assert!(blocked.is_dir());
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 2);
+        std::fs::remove_file(target).unwrap();
+        std::fs::remove_dir(blocked).unwrap();
+        std::fs::remove_dir(dir).unwrap();
     }
 }

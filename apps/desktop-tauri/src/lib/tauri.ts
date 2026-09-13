@@ -345,8 +345,8 @@ export function getUsageSpendSummary(options?: { historyDays?: number; forceRefr
   });
 }
 
-export function writeUsageSpendExport(path: string, payload: string): Promise<void> {
-  return invoke<void>("write_usage_spend_export", { path, payload });
+export function writeUsageSpendExport(payload: string): Promise<boolean> {
+  return invoke<boolean>("write_usage_spend_export", { payload });
 }
 
 export function getSpendContract(

@@ -92,7 +92,7 @@ pub fn read_string(path: &Path) -> io::Result<String> {
     }
 }
 
-/// Write a UTF-8 file, protecting it with Windows DPAPI when available.
+/// Write a UTF-8 file, protecting it with user-scoped Windows DPAPI when available.
 pub fn write_string(path: &Path, contents: &str) -> io::Result<()> {
     let bytes = protected_file_bytes(contents)?;
     std::fs::write(path, bytes)?;
@@ -148,23 +148,15 @@ fn protected_file_bytes(contents: &str) -> io::Result<Vec<u8>> {
 
 #[cfg(windows)]
 fn protect(plain: &[u8]) -> io::Result<(&'static str, Vec<u8>)> {
-    use windows::Win32::Security::Cryptography::{
-        CRYPTPROTECT_LOCAL_MACHINE, CRYPTPROTECT_UI_FORBIDDEN,
-    };
+    use windows::Win32::Security::Cryptography::CRYPTPROTECT_UI_FORBIDDEN;
 
-    match protect_with_flags(plain, CRYPTPROTECT_UI_FORBIDDEN) {
-        Ok(encrypted) => Ok((WINDOWS_DPAPI_USER, encrypted)),
-        Err(user_error) => protect_with_flags(
-            plain,
-            CRYPTPROTECT_UI_FORBIDDEN | CRYPTPROTECT_LOCAL_MACHINE,
-        )
-        .map(|encrypted| (WINDOWS_DPAPI_MACHINE, encrypted))
-        .map_err(|machine_error| {
-            io::Error::other(format!(
-                "CryptProtectData failed with user scope ({user_error}) and machine scope ({machine_error})"
-            ))
-        }),
-    }
+    // Credential-bearing stores must remain bound to the current Windows
+    // user. Machine-scoped DPAPI lets another account on the same machine
+    // decrypt a blob if it can read the file, so a failed user-scope write
+    // is an error rather than a reason to silently weaken protection.
+    protect_with_flags(plain, CRYPTPROTECT_UI_FORBIDDEN)
+        .map(|encrypted| (WINDOWS_DPAPI_USER, encrypted))
+        .map_err(|error| io::Error::other(format!("user-scoped DPAPI protection failed: {error}")))
 }
 
 #[cfg(windows)]
@@ -371,10 +363,7 @@ mod tests {
 
         assert_eq!(file.format, FORMAT);
         assert_eq!(file.version, VERSION);
-        assert!(matches!(
-            file.protection.as_str(),
-            WINDOWS_DPAPI_USER | WINDOWS_DPAPI_MACHINE
-        ));
+        assert_eq!(file.protection, WINDOWS_DPAPI_USER);
         assert!(
             !raw.contains("secret") && !raw.contains("value"),
             "protected Windows file must not contain plaintext JSON"
@@ -421,5 +410,45 @@ mod tests {
             status(&path),
             SecureFileStatus::Protected(protection.to_string())
         );
+    }
+
+    /// Compatibility is intentionally asymmetric: new files are always
+    /// user-scoped, while an existing machine-scoped envelope can still be
+    /// opened and rewritten safely. This fixture uses the real Windows DPAPI
+    /// APIs in a temp directory and contains no Personal data.
+    #[cfg(windows)]
+    #[test]
+    fn existing_machine_scoped_file_remains_readable_but_rewrites_as_user_scoped() {
+        use windows::Win32::Security::Cryptography::{
+            CRYPTPROTECT_LOCAL_MACHINE, CRYPTPROTECT_UI_FORBIDDEN,
+        };
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("legacy-machine-scope.json");
+        let plaintext = r#"{"secret":"synthetic-fixture"}"#;
+        let encrypted = protect_with_flags(
+            plaintext.as_bytes(),
+            CRYPTPROTECT_UI_FORBIDDEN | CRYPTPROTECT_LOCAL_MACHINE,
+        )
+        .unwrap();
+        let legacy_fixture = ProtectedFile {
+            format: FORMAT.to_string(),
+            version: VERSION,
+            protection: WINDOWS_DPAPI_MACHINE.to_string(),
+            payload: base64::engine::general_purpose::STANDARD.encode(encrypted),
+        };
+        std::fs::write(&path, serde_json::to_vec(&legacy_fixture).unwrap()).unwrap();
+
+        assert_eq!(read_string(&path).unwrap(), plaintext);
+        assert_eq!(
+            status(&path),
+            SecureFileStatus::Protected(WINDOWS_DPAPI_MACHINE.to_string())
+        );
+
+        write_string_atomic(&path, plaintext).unwrap();
+        let rewritten: ProtectedFile =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(rewritten.protection, WINDOWS_DPAPI_USER);
+        assert_eq!(read_string(&path).unwrap(), plaintext);
     }
 }

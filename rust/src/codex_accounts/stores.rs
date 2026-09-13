@@ -1,8 +1,7 @@
 //! JSON persistence for Codex accounts and usage snapshots.
 //!
-//! Mirrors `windows/.../stores.py` (MIT), using `secure_file` for the
-//! secret-bearing accounts file (DPAPI on Windows) and plain JSON for the
-//! non-secret snapshot cache.
+//! Mirrors `windows/.../stores.py` (MIT), using `secure_file` for account
+//! metadata and the snapshot cache because both can contain account identity.
 
 use std::collections::HashMap;
 use std::io;
@@ -15,6 +14,16 @@ use crate::secure_file;
 
 use super::file_locations::{accounts_file, snapshots_file};
 use super::models::{CodexAccount, RemovedAccountIdentity};
+
+fn ensure_parent_directory(path: &std::path::Path) -> io::Result<()> {
+    let parent = path.parent().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("store path has no parent directory: {}", path.display()),
+        )
+    })?;
+    std::fs::create_dir_all(parent)
+}
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct AccountsFile {
@@ -73,7 +82,7 @@ impl AccountStore {
         accounts: &[CodexAccount],
         removed_accounts: Option<&[RemovedAccountIdentity]>,
     ) -> io::Result<()> {
-        super::file_locations::ensure_directories()?;
+        ensure_parent_directory(&self.file_path)?;
         let removed = match removed_accounts {
             Some(r) => r.to_vec(),
             None => self.load()?.1,
@@ -137,7 +146,9 @@ impl SnapshotStore {
         if !self.file_path.exists() {
             return Ok(HashMap::new());
         }
-        let data = std::fs::read_to_string(&self.file_path)?;
+        // secure_file deliberately accepts legacy plaintext JSON, so existing
+        // snapshot caches remain readable and are upgraded on the next save.
+        let data = secure_file::read_string(&self.file_path)?;
         let file: serde_json::Value = serde_json::from_str(&data)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
         let snapshots = file.get("snapshots");
@@ -163,7 +174,7 @@ impl SnapshotStore {
         &self,
         snapshots: &HashMap<Uuid, super::models::AccountUsageSnapshot>,
     ) -> io::Result<()> {
-        super::file_locations::ensure_directories()?;
+        ensure_parent_directory(&self.file_path)?;
         let mut object = serde_json::Map::new();
         for (id, snapshot) in snapshots {
             object.insert(
@@ -173,7 +184,8 @@ impl SnapshotStore {
         }
         let file = serde_json::json!({ "snapshots": object });
         let data = serde_json::to_vec_pretty(&file).map_err(io::Error::other)?;
-        std::fs::write(&self.file_path, data)
+        let data = String::from_utf8(data).map_err(io::Error::other)?;
+        secure_file::write_string_atomic(&self.file_path, &data)
     }
 }
 
@@ -252,6 +264,90 @@ mod tests {
         assert_eq!(loaded.len(), 1);
         assert_eq!(loaded[&id].plan.as_deref().unwrap(), "pro");
         crate::codex_accounts::file_locations::clear_app_support_directory_override();
+    }
+
+    #[test]
+    fn snapshot_store_reads_legacy_plaintext_json() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("snapshots.json");
+        let id = Uuid::parse_str("22222222-2222-2222-2222-222222222222").unwrap();
+        let provider_account_id = "acct-legacy-private-id";
+        let email = "legacy-person@example.com";
+        let snapshot = crate::codex_accounts::models::AccountUsageSnapshot {
+            email: Some(email.to_string()),
+            provider_account_id: Some(provider_account_id.to_string()),
+            plan: Some("team".to_string()),
+            allowed: Some(true),
+            limit_reached: None,
+            primary_window: None,
+            secondary_window: None,
+            credits: None,
+            updated_at: utc_now(),
+        };
+        let legacy = serde_json::json!({
+            "snapshots": {
+                id.to_string(): snapshot,
+            }
+        });
+        std::fs::write(&path, serde_json::to_vec_pretty(&legacy).unwrap()).unwrap();
+
+        let loaded = SnapshotStore::with_path(path).load().unwrap();
+        assert_eq!(loaded[&id].email.as_deref(), Some(email));
+        assert_eq!(
+            loaded[&id].provider_account_id.as_deref(),
+            Some(provider_account_id)
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn snapshot_store_protects_account_identity_on_new_writes() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("snapshots.json");
+        let store = SnapshotStore::with_path(path.clone());
+        let id = Uuid::parse_str("33333333-3333-3333-3333-333333333333").unwrap();
+        let provider_account_id = "acct-private-provider-id";
+        let email = "private-person@example.com";
+        let snapshot = crate::codex_accounts::models::AccountUsageSnapshot {
+            email: Some(email.to_string()),
+            provider_account_id: Some(provider_account_id.to_string()),
+            plan: Some("pro".to_string()),
+            allowed: Some(true),
+            limit_reached: None,
+            primary_window: Some(crate::codex_accounts::models::UsageWindowSnapshot::new(
+                34.0, None, 18_000,
+            )),
+            secondary_window: None,
+            credits: None,
+            updated_at: utc_now(),
+        };
+        let mut snapshots = HashMap::new();
+        snapshots.insert(id, snapshot);
+
+        store.save(&snapshots).unwrap();
+
+        let raw = std::fs::read(&path).unwrap();
+        assert!(
+            !raw.windows(email.len())
+                .any(|window| window == email.as_bytes()),
+            "email must not be stored as plaintext"
+        );
+        assert!(
+            !raw.windows(provider_account_id.len())
+                .any(|window| window == provider_account_id.as_bytes()),
+            "provider account id must not be stored as plaintext"
+        );
+        assert_eq!(
+            secure_file::status(&path),
+            secure_file::SecureFileStatus::Protected("windows-dpapi-user".to_string())
+        );
+
+        let loaded = store.load().unwrap();
+        assert_eq!(loaded[&id].email.as_deref(), Some(email));
+        assert_eq!(
+            loaded[&id].provider_account_id.as_deref(),
+            Some(provider_account_id)
+        );
     }
 
     #[test]
