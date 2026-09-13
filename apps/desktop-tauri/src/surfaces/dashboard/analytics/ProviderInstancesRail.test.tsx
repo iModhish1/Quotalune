@@ -7,8 +7,8 @@ vi.mock('../../../hooks/useSettings',()=>({useSettings:(settings:SettingsSnapsho
 vi.mock('../../../hooks/useProviderInstances',()=>({useProviderInstances:()=>({instances:[],error:null})}));
 it('restores independent anchors when switching Demo and real in both directions',()=>{
  localStorage.removeItem('quotalis.demo.providerRail.v1');
- const providers=['codex','claude','gemini'].map(providerId=>({providerId,displayName:providerId,errorState:'ready',primary:{usedPercent:20,remainingPercent:80,resetsAt:null},extraRateWindows:[],updatedAt:'2026-09-13T00:00:00Z'})) as ProviderUsageSnapshot[];
- const settings={enabledProviders:['codex','claude','gemini'],providerInstancePresentation:{order:[],badgePosition:'end',showAccountNumbers:true,anchorId:'gemini'}} as SettingsSnapshot;
+ const providers=['codex','claude','gemini'].map(providerId=>({providerId,displayName:providerId,errorState:'ready',primary:{usedPercent:20,remainingPercent:80,resetsAt:null},extraRateWindows:[],updatedAt:'2026-09-13T00:00:00Z'})) as unknown as ProviderUsageSnapshot[];
+ const settings={enabledProviders:['codex','claude','gemini'],providerInstancePresentation:{order:[],badgePosition:'end',showAccountNumbers:true,anchorId:'gemini'}} as unknown as SettingsSnapshot;
  const props={providers,settings,onOpenProviders:()=>{},onAnalytics:()=>{}};
  const active=()=>within(screen.getByRole('toolbar')).getAllByRole('button').find(b=>b.getAttribute('aria-current')==='true')!;
  const {rerender}=render(<ProviderInstancesRail {...props} isDemo={false}/>);
