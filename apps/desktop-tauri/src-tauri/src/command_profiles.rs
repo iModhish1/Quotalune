@@ -146,22 +146,36 @@ pub fn duplicate_profile(
     Ok(copy)
 }
 
-#[tauri::command]
-pub fn delete_profile(app: AppHandle, profile_id: String) -> Result<(), String> {
-    let mut store = ProfileStore::load();
+fn remove_profile_from_store(
+    store: &mut ProfileStore,
+    settings: &mut Settings,
+    profile_id: &str,
+) -> Result<bool, String> {
     if store.profiles.len() <= 1 {
         return Err("The last profile cannot be deleted".to_string());
     }
     if !store.profiles.iter().any(|p| p.id == profile_id) {
         return Err("Profile not found".to_string());
     }
+    let active_removed = store.active_profile_id == profile_id;
     store.profiles.retain(|p| p.id != profile_id);
     store.normalize();
+    if active_removed {
+        apply_active_profile_to_settings(store, settings);
+    }
+    Ok(active_removed)
+}
+
+#[tauri::command]
+pub fn delete_profile(app: AppHandle, profile_id: String) -> Result<(), String> {
+    let mut store = ProfileStore::load();
     let mut settings = Settings::load();
-    apply_active_profile_to_settings(&store, &mut settings);
+    let active_removed = remove_profile_from_store(&mut store, &mut settings, &profile_id)?;
     store.save()?;
-    save_settings(&settings)?;
-    crate::surfaces::reconcile_persisted_state_async(app.clone());
+    if active_removed {
+        save_settings(&settings)?;
+        crate::surfaces::reconcile_persisted_state_async(app.clone());
+    }
     crate::tray_bridge::rebuild_tray_menu(&app);
     emit_changed(&app);
     Ok(())
@@ -841,6 +855,34 @@ mod tests {
     use super::*;
 
     #[test]
+    fn deleting_inactive_profile_preserves_all_current_settings_and_accounts() {
+        let mut settings = Settings {
+            theme: ThemePreference::Dark,
+            top_arc_enabled: true,
+            ..Settings::default()
+        };
+        let (mut store, active, removed, _) = store_with_second_profile_and_account();
+        store.profiles[0].theme = Some(ThemePreference::Light);
+        let before = serde_json::to_value(&settings).unwrap();
+        let accounts = serde_json::to_value(&store.accounts).unwrap();
+        assert!(!remove_profile_from_store(&mut store, &mut settings, &removed).unwrap());
+        assert_eq!(serde_json::to_value(&settings).unwrap(), before);
+        assert_eq!(serde_json::to_value(&store.accounts).unwrap(), accounts);
+        assert_eq!(store.active_profile_id, active);
+    }
+
+    #[test]
+    fn profile_removal_rejects_missing_and_last_without_mutation() {
+        let mut settings = Settings::default();
+        let mut store = ProfileStore::default();
+        let before = serde_json::to_value(&store).unwrap();
+        let id = store.active_profile_id.clone();
+        assert!(remove_profile_from_store(&mut store, &mut settings, &id).is_err());
+        assert!(remove_profile_from_store(&mut store, &mut settings, "missing").is_err());
+        assert_eq!(serde_json::to_value(&store).unwrap(), before);
+    }
+
+    #[test]
     fn usage_settings_accept_all_three_global_modes() {
         let overrides = std::collections::HashMap::new();
         for mode in ["remaining", "used", "hybrid"] {
@@ -991,9 +1033,7 @@ mod tests {
             Some("01-obsidian-orbit"),
         );
 
-        store.profiles.retain(|profile| profile.id != second.id);
-        store.normalize();
-        apply_active_profile_to_settings(&store, &mut settings);
+        assert!(remove_profile_from_store(&mut store, &mut settings, &second.id).unwrap());
         assert!(settings.active_profile_catalog_theme.is_none());
     }
 
