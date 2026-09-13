@@ -22,6 +22,18 @@ import {railDestination,circularRailIndices} from "./railModel";
 import {useDashboardStructureTheme} from "./useDashboardStructureTheme";
 import {chartProviderColor} from "../../../components/analytics/charts/chartTheme";
 
+function BadgePositionPicker({label,value,onChange}: {label:string;value:ProviderBadgePosition;onChange:(value:ProviderBadgePosition)=>void}) {
+ const {t}=useLocale();
+ return <fieldset className="provider-position-picker"><legend>{label}</legend>
+  <div className="provider-position-picker__grid" dir="ltr">
+   {badgeOptions.map(([position,key],index)=><button type="button" key={position}
+    style={{gridArea:`${Math.floor((index<4?index:index+1)/3)+1} / ${(index<4?index:index+1)%3+1}`}}
+    aria-label={`${label}: ${t(key)}`} aria-pressed={value===position} onClick={()=>onChange(position)}>{t(key)}</button>)}
+   <span className="provider-position-picker__center" aria-hidden="true">◉</span>
+  </div>
+ </fieldset>;
+}
+
 export default function ProviderRail({providers,settings,isDemo,onOpenProviders,onAnalytics,instances,presentation=DEFAULT_INSTANCE_PRESENTATION,onPresentationChange,savingPresentation=false}: {
  providers:ProviderUsageSnapshot[];settings:SettingsSnapshot;isDemo:boolean;
  onOpenProviders:(id?:string)=>void;onAnalytics:(id?:string)=>void;
@@ -104,10 +116,10 @@ export default function ProviderRail({providers,settings,isDemo,onOpenProviders,
         <button type="button" disabled={rtl?selectedIndex>=cards.length-1:selectedIndex<=0} onClick={()=>rearrange(rtl?1:-1)}>{t('InstanceMoveLeft')}</button>
         <button type="button" disabled={rtl?selectedIndex<=0:selectedIndex>=cards.length-1} onClick={()=>rearrange(rtl?-1:1)}>{t('InstanceMoveRight')}</button>
       </div>
-      <QuotalisSelect label={t('InstanceBadgePosition')} value={badgePosition} options={badgeOptions.map(([value,key])=>({value,label:t(key)}))} onChange={value=>void onPresentationChange({badgePosition:value as ProviderBadgePosition})}/>
-      <QuotalisSelect label={t('ResetBadgePosition')} value={presentation.resetPosition??'bottom-center'} options={badgeOptions.map(([value,key])=>({value,label:t(key)}))} onChange={value=>void onPresentationChange({resetPosition:value as ProviderBadgePosition})}/>
+      <BadgePositionPicker label={t('InstanceBadgePosition')} value={badgePosition} onChange={value=>void onPresentationChange({badgePosition:value})}/>
+      <BadgePositionPicker label={t('ResetBadgePosition')} value={presentation.resetPosition??'bottom-center'} onChange={value=>void onPresentationChange({resetPosition:value})}/>
       <button type="button" role="switch" aria-checked={presentation.showResetBadge!==false} onClick={()=>void onPresentationChange({showResetBadge:presentation.showResetBadge===false})}>{t('ResetShowBadge')}</button>
-      <QuotalisSelect label={t('InstanceVisibleCount')} value={String(presentation.visibleCount??4)} options={[{value:'3',label:'3'},{value:'4',label:'4'}]} onChange={value=>void onPresentationChange({visibleCount:value==='3'?3:4})}/>
+      <div className="provider-instance-count"><span>{t('InstanceVisibleCount')}</span><QuotalisSelect label={t('InstanceVisibleCount')} value={String(presentation.visibleCount??4)} options={[{value:'3',label:'3'},{value:'4',label:'4'}]} onChange={value=>void onPresentationChange({visibleCount:value==='3'?3:4})}/></div>
       <button type="button" role="switch" aria-checked={presentation.showAccountNumbers} onClick={()=>void onPresentationChange({showAccountNumbers:!presentation.showAccountNumbers})}>{t('InstanceShowNumbers')}</button>
     </fieldset>}
     <div className="provider-quick-panel__actions">

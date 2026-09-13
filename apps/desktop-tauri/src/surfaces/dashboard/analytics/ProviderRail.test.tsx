@@ -85,9 +85,14 @@ it('offers eight physical positions and reverses left/right reorder indices in R
  fireEvent.click(within(screen.getByRole('toolbar')).getByRole('button',{name:/codex,/}));
  fireEvent.click(screen.getByRole('button',{name:'InstanceMoveLeft'}));
  expect(save).toHaveBeenCalledWith(expect.objectContaining({order:['claude','codex']}));
- fireEvent.click(screen.getByRole('button',{name:/InstanceBadgePosition/}));
- expect(screen.getAllByRole('option')).toHaveLength(8);
- fireEvent.click(screen.getByRole('option',{name:'BadgeBottomLeft'}));
+ const account=screen.getByRole('group',{name:'InstanceBadgePosition'});
+ const resets=screen.getByRole('group',{name:'ResetBadgePosition'});
+ expect(within(account).getAllByRole('button')).toHaveLength(8);
+ expect(within(resets).getAllByRole('button')).toHaveLength(8);
+ expect(account.querySelector('[dir=ltr]')).not.toBeNull();
+ fireEvent.click(within(account).getByRole('button',{name:'InstanceBadgePosition: BadgeBottomLeft'}));
  expect(save).toHaveBeenCalledWith({badgePosition:'bottom-left'});
+ fireEvent.click(within(resets).getByRole('button',{name:'ResetBadgePosition: BadgeMiddleRight'}));
+ expect(save).toHaveBeenCalledWith({resetPosition:'middle-right'});
  }finally{document.documentElement.dir='';}
 });
