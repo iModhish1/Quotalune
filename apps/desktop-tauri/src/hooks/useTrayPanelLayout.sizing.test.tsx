@@ -28,8 +28,8 @@ const windowMocks = vi.hoisted(() => ({
   setSize: vi.fn().mockResolvedValue(undefined),
   innerSize: vi.fn().mockResolvedValue({ width: 328, height: 420 }),
   getCurrentWindow: vi.fn(),
-  LogicalSize: vi.fn((width: number, height: number) => ({ width, height })),
-  PhysicalSize: vi.fn((width: number, height: number) => ({ width, height })),
+  LogicalSize: vi.fn(function (width: number, height: number) { return { width, height }; }),
+  PhysicalSize: vi.fn(function (width: number, height: number) { return { width, height }; }),
 }));
 
 vi.mock("../lib/tauri", () => tauriMocks);
