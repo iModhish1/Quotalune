@@ -39,7 +39,7 @@ foreach ($path in $expectedPaths) {
     }
 }
 Assert-AssetMatchesSidecar (Join-Path $AssetsDir "Quotalis-$version-Setup.exe")
-Assert-AssetMatchesSidecar (Join-Path $AssetsDir "Quotalis-$version-portable.exe")
+Assert-AssetMatchesSidecar (Join-Path $AssetsDir "Quotalis-$version-portable.zip")
 Assert-AssetMatchesSidecar (Join-Path $AssetsDir "QuotalisCLI-v$version-windows-x64.zip")
 
 # Copy only the six publishable assets and the build logs into the persisted bundle.

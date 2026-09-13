@@ -30,9 +30,9 @@ AppName={#MyAppName}
 AppVersion={#AppVersion}
 AppVerName={#MyAppName} {#AppVersion}
 AppPublisher=Quotalis
-AppPublisherURL=https://github.com/quotaarc/quotaarc
-AppSupportURL=https://github.com/quotaarc/quotaarc/issues
-AppUpdatesURL=https://github.com/quotaarc/quotaarc/releases
+AppPublisherURL=https://github.com/iModhish1/Quotalis
+AppSupportURL=https://github.com/iModhish1/Quotalis/issues
+AppUpdatesURL=https://github.com/iModhish1/Quotalis/releases
 DefaultDirName={localappdata}\Programs\Quotalis
 DefaultGroupName=Quotalis
 DisableProgramGroupPage=yes
@@ -58,6 +58,10 @@ Source: "{#TargetBinDir}\Quotalis.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TargetBinDir}\quotalis-cli.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TargetBinDir}\quotalis-desktop.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\icons\icon.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\assets\brand\icons\quotaarc-icon-128.png"; DestDir: "{app}"; DestName: "quotalis-icon-128.png"; Flags: ignoreversion
+Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\NOTICE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#VCRedistPath}"; Flags: dontcopy
 Source: "{#WebView2BootstrapperPath}"; Flags: dontcopy
 

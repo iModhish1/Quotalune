@@ -145,7 +145,7 @@ if ((Test-Path $changelogPath) -and (Select-String -Path $changelogPath -Pattern
 
 if (Test-Path $AssetsDir) {
     Test-AssetHash (Join-Path $AssetsDir "Quotalis-$Version-Setup.exe")
-    Test-AssetHash (Join-Path $AssetsDir "Quotalis-$Version-portable.exe")
+    Test-AssetHash (Join-Path $AssetsDir "Quotalis-$Version-portable.zip")
     Test-AssetHash (Join-Path $AssetsDir "QuotalisCLI-v$Version-windows-x64.zip")
 } else {
     Write-Warn "local assets directory not found: $AssetsDir"
@@ -169,8 +169,8 @@ if (-not $SkipGitHub) {
                 foreach ($name in @(
                     "Quotalis-$Version-Setup.exe",
                     "Quotalis-$Version-Setup.exe.sha256",
-                    "Quotalis-$Version-portable.exe",
-                    "Quotalis-$Version-portable.exe.sha256",
+                    "Quotalis-$Version-portable.zip",
+                    "Quotalis-$Version-portable.zip.sha256",
                     "QuotalisCLI-v$Version-windows-x64.zip",
                     "QuotalisCLI-v$Version-windows-x64.zip.sha256"
                 )) {

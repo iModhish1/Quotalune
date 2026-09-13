@@ -57,7 +57,7 @@ Assert-Throws { Get-ReleaseVersionFromTag 'v0.48.0+build' } 'invalid version ext
 $assetNames = Get-RequiredReleaseAssets '0.48.0'
 Assert-Equal $assetNames.Count 6 'exactly six release asset names including sidecars'
 Assert-Equal $assetNames[0] 'Quotalis-0.48.0-Setup.exe' 'installer name'
-Assert-Equal $assetNames[3] 'Quotalis-0.48.0-portable.exe.sha256' 'portable sidecar name'
+Assert-Equal $assetNames[3] 'Quotalis-0.48.0-portable.zip.sha256' 'portable sidecar name'
 Assert-Equal $assetNames[4] 'QuotalisCLI-v0.48.0-windows-x64.zip' 'CLI archive name'
 Assert-Equal $assetNames[5] 'QuotalisCLI-v0.48.0-windows-x64.zip.sha256' 'CLI sidecar name'
 

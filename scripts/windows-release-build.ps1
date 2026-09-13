@@ -510,7 +510,7 @@ try {
     }
 
     $installer = Join-Path $installerOut "Quotalis-$version-Setup.exe"
-    $portableExe = Join-Path $AssetsDir "Quotalis-$version-portable.exe"
+    $portableZip = Join-Path $AssetsDir "Quotalis-$version-portable.zip"
     $installerAsset = Join-Path $AssetsDir "Quotalis-$version-Setup.exe"
     $cliZip = Join-Path $AssetsDir "QuotalisCLI-v$version-windows-x64.zip"
 
@@ -520,7 +520,8 @@ try {
         }
     }
 
-    Copy-Item $desktopExe $portableExe -Force
+    . (Join-Path $SourceDir 'scripts/windows-portable.ps1')
+    New-QuotalisPortableArchive -Destination $portableZip -DesktopExe $desktopExe -RepoRoot $SourceDir
     Copy-Item $installer $installerAsset -Force
     Compress-Archive -Path $releaseExe -DestinationPath $cliZip -Force
 
@@ -530,7 +531,7 @@ try {
     if (-not (Test-Path -LiteralPath $extractedCli -PathType Leaf)) { throw "CLI zip missing quotalis-cli.exe entry: $cliZip" }
     if ((Get-FileHash -LiteralPath $extractedCli -Algorithm SHA256).Hash -cne (Get-FileHash -LiteralPath $releaseExe -Algorithm SHA256).Hash) { throw "CLI zip entry hash mismatch: $cliZip" }
 
-    foreach ($asset in @($installerAsset, $portableExe, $cliZip)) {
+    foreach ($asset in @($installerAsset, $portableZip, $cliZip)) {
         $fileName = Split-Path $asset -Leaf
         $hash = (Get-FileHash -Algorithm SHA256 $asset).Hash.ToLower()
         "$hash  $fileName" | Set-Content -Encoding ascii "$asset.sha256"

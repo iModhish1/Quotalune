@@ -61,8 +61,8 @@ function Get-RequiredReleaseAssets {
     return @(
         "Quotalis-$Version-Setup.exe",
         "Quotalis-$Version-Setup.exe.sha256",
-        "Quotalis-$Version-portable.exe",
-        "Quotalis-$Version-portable.exe.sha256",
+        "Quotalis-$Version-portable.zip",
+        "Quotalis-$Version-portable.zip.sha256",
         "QuotalisCLI-v$Version-windows-x64.zip",
         "QuotalisCLI-v$Version-windows-x64.zip.sha256"
     )

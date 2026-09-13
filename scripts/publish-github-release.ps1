@@ -204,7 +204,7 @@ function Assert-ManifestAndAssets {
         }
     }
     Assert-AssetMatchesSidecar (Join-Path $AssetsDir "Quotalis-$ExpectedVersion-Setup.exe")
-    Assert-AssetMatchesSidecar (Join-Path $AssetsDir "Quotalis-$ExpectedVersion-portable.exe")
+    Assert-AssetMatchesSidecar (Join-Path $AssetsDir "Quotalis-$ExpectedVersion-portable.zip")
     Assert-AssetMatchesSidecar (Join-Path $AssetsDir "QuotalisCLI-v$ExpectedVersion-windows-x64.zip")
     Write-Host '[ok] manifest, exact six asset names, SHA-256 values, and sidecars verified before API access'
 }
