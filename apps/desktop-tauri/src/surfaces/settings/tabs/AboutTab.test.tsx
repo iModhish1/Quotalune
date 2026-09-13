@@ -122,17 +122,19 @@ describe("AboutTab", () => {
   it("opens about links through the Tauri URL bridge", async () => {
     render(<AboutTab settings={settings} set={vi.fn()} saving={false} />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "AboutLinkGitHub" }));
-    fireEvent.click(screen.getByRole("button", { name: "SubmitIssue" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Win-CodexBar" }));
+    fireEvent.click(screen.getByRole("button", { name: "AboutContactWhatsApp" }));
     fireEvent.click(screen.getByRole("button", { name: "CodexBar" }));
 
+    expect(screen.getByText("Mohammed Modhish")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "SubmitIssue" })).not.toBeInTheDocument();
     expect(tauriMocks.openExternalUrl).toHaveBeenNthCalledWith(
       1,
       "https://github.com/nesszer/Win-CodexBar",
     );
     expect(tauriMocks.openExternalUrl).toHaveBeenNthCalledWith(
       2,
-      "https://github.com/nesszer/Win-CodexBar/issues/new?labels=bug&template=bug_report.yml",
+      "https://wa.me/966570966094",
     );
     expect(tauriMocks.openExternalUrl).toHaveBeenNthCalledWith(
       3,
@@ -145,7 +147,7 @@ describe("AboutTab", () => {
 
     render(<AboutTab settings={settings} set={vi.fn()} saving={false} />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "AboutLinkGitHub" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Win-CodexBar" }));
 
     await waitFor(() => {
       expect(screen.getByText("ErrorPrefix no browser")).toBeInTheDocument();

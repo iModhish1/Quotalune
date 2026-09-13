@@ -1625,3 +1625,30 @@ NotificationTestSource = Notification identity
 NotificationTestSend = Send test notification
 NotificationTestRequested = Requested from Windows. Check the notification or Notification Center; Windows may suppress banners.
 NotificationTestFailed = Could not request the test. Wait a few seconds and try again.
+
+# Product ownership and open-source foundations
+AboutProductDevelopment = Product development
+AboutOwnerContribution = Quotalis product direction, interface design and ongoing development by Mohammed Modhish.
+AboutContactWhatsApp = Contact Mohammed on WhatsApp
+AboutBuiltWith = Built with
+AboutBuiltWithBody = The technologies used in the desktop application and its visual interface.
+AboutOpenSourceCredits = Open-source foundations
+AboutLicenseBody = Quotalis is MIT-licensed. Original project credits and license notices are retained. Provider names and logos belong to their respective owners.
+AboutWindowsFoundation = Windows foundation by NessZerra: provider integrations and desktop infrastructure.
+AboutOriginalFoundation = Original project by Peter Steinberger (steipete), whose monitoring concepts underpin the Windows port.
+AboutAccountsFoundation = Codex account-management code by Adem Isler, adapted to Rust.
+AboutUpdatesHeading = Application updates
+
+# Workspace workflow guide
+WorkflowDashboard = See current provider limits, usage and reset times. Select a provider for its available details; a missing reading stays unavailable.
+WorkflowAnalytics = Choose a provider, period and limit window to inspect history. Comparisons require compatible observations; quota percentages are not added across providers.
+WorkflowUsageSpend = Review supported local usage and reported spending. Token counts and money are separate; unknown billing or pricing does not become an estimated charge.
+WorkflowProviders = Enable monitoring, then choose a supported connection method for each provider. Enabled does not mean signed in. Complete sign-in before expecting live readings.
+WorkflowProfiles = Create or duplicate a workspace profile, set its theme and surfaces, and choose account membership. Selecting a profile is separate from signing in to a provider.
+WorkflowCollections = Organize related providers into named groups and adjust group membership. Collections organize the workspace without merging provider quotas or credentials.
+WorkflowAppearance = Choose the Structure Theme, app logo finish and background. Provider presentation and reset formatting have their own controls. Imported backgrounds can be removed from My backgrounds.
+WorkflowSurfaces = Choose a floating surface, configure its content and position, then enable it. Click-through and visibility settings affect how that surface behaves on the desktop.
+WorkflowTray = Select a provider and an observed limit for its tray icon. Choose used or remaining, enable the icon and configure up to three hover limits. Token ranges depend on available history.
+WorkflowSettings = Configure startup, language, refresh and alerts. Dashboard Studio contains Demo controls; Data Sources controls supported local activity. Advanced contains diagnostics.
+WorkflowAbout = Check the app version, development credits, contact details and update controls here. Only install releases from the Quotalis project owner.
+WorkflowGuideTitle = How to use Quotalis
