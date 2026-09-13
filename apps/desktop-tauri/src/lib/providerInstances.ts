@@ -41,6 +41,16 @@ export function moveProviderInstance(ids: readonly string[], id: string, delta: 
   return result;
 }
 
+/** Swap adjacent physical slots, including the seam of the circular dashboard. */
+export function moveCircularProviderInstance(ids: readonly string[], id: string, delta: number): string[] {
+  const result = [...ids];
+  const from = result.indexOf(id);
+  if (from < 0 || result.length < 2 || delta === 0) return result;
+  const to = (from + Math.sign(delta) + result.length) % result.length;
+  [result[from], result[to]] = [result[to], result[from]];
+  return result;
+}
+
 export function providerInstanceName(instance: ProviderInstanceSnapshot): string {
   const name = instance.snapshot?.displayName ?? (instance.providerId === "codex" ? "Codex" : instance.providerId);
   return instance.accountOrdinal ? `${name} · ${instance.accountOrdinal}` : name;

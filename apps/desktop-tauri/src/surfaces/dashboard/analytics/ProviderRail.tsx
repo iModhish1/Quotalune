@@ -9,7 +9,8 @@ import {ProviderPlanBadge} from "../../../components/providers/ProviderPlanBadge
 import {ProviderIcon} from "../../../components/providers/ProviderIcon";
 import QuotalisSelect from "../../../components/analytics/QuotalisSelect";
 import {refreshProviders,codexAccountFetch,getProviderDetail,openProviderDashboard,openProviderStatusPage} from "../../../lib/tauri";
-import {DEFAULT_INSTANCE_PRESENTATION,moveProviderInstance,providerInstanceName} from "../../../lib/providerInstances";
+import {DEFAULT_INSTANCE_PRESENTATION,moveCircularProviderInstance,providerInstanceName} from "../../../lib/providerInstances";
+import {useReducedMotion} from "../../../design-system/motion";
 import type {LocaleKey} from "../../../i18n/keys";
 const badgeOptions: [ProviderBadgePosition, LocaleKey][] = [
  ['top-left','BadgeTopLeft'],['top-center','BadgeTopCenter'],['top-right','BadgeTopRight'],
@@ -41,6 +42,8 @@ export default function ProviderRail({providers,settings,isDemo,onOpenProviders,
  onPresentationChange?:(value:Partial<ProviderInstancePresentation>)=>Promise<void>;savingPresentation?:boolean;
 }) {
  const {t}=useLocale(),{theme}=useDashboardStructureTheme(settings);
+ const systemReducedMotion=useReducedMotion();
+ const animateMovement=settings.enableAnimations!==false&&!systemReducedMotion;
  const resetOptions=useResetStageOptions(settings,"dashboard");
  const [focusedId,setFocusedId]=useState<string|null>(null),[selected,setSelected]=useState<string|null>(null),[capacity,setCapacity]=useState(4),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null);
  const [detail,setDetail]=useState<ProviderDetail|null>(null);
@@ -55,7 +58,7 @@ export default function ProviderRail({providers,settings,isDemo,onOpenProviders,
   rail.current?.querySelectorAll<HTMLElement>('[data-instance-id]').forEach(node=>{
    const id=node.dataset.instanceId!,left=node.offsetLeft;
    const previous=positions.current.get(id);next.set(id,left);
-   if(previous!==undefined&&previous!==left&&!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
+   if(previous!==undefined&&previous!==left&&animateMovement&&!rail.current?.closest('[data-qa-motion="off"], [data-qa-motion="reduced"]'))
     node.animate?.([{transform:`translateX(${previous-left}px)`},{transform:'translateX(0)'}],{duration:180,easing:'ease-out'});
   });positions.current=next;
  });
@@ -67,10 +70,9 @@ export default function ProviderRail({providers,settings,isDemo,onOpenProviders,
  const chosenInstance=cards.find(card=>card.instanceId===selected);
  const chosen=chosenInstance?.snapshot;
  const managed=Boolean(chosenInstance?.accountId&&chosenInstance.instanceId!==chosenInstance.providerId);
- const selectedIndex=cards.findIndex(card=>card.instanceId===selected);
  const rearrange=(delta:number)=>{
   if(!chosenInstance||!onPresentationChange)return;
-  const order=moveProviderInstance(cards.map(c=>c.instanceId),chosenInstance.instanceId,delta);
+  const order=moveCircularProviderInstance(cards.map(c=>c.instanceId),chosenInstance.instanceId,delta);
   const anchorId=order[index]??null;setFocusedId(anchorId);
   void onPresentationChange({order,anchorId});
  };
@@ -87,7 +89,7 @@ export default function ProviderRail({providers,settings,isDemo,onOpenProviders,
  const external=async(action:()=>Promise<void>)=>{setError(null);try{await action();}catch(cause){setError(String(cause));}};
  const close=()=>{setSelected(null);dialog.current?.close();origin.current?.focus();};
  const reset=(time:number|null)=>time?formatResetPresentation({...resetOptions,locale:resetOptions.locale??'en-US',resetAt:new Date(time).toISOString()}).fullAriaLabel:t('DashboardValueUnavailable');
- return <section className="provider-rail" aria-label={t('V3Browse')}>
+ return <section className="provider-rail" data-motion={animateMovement?'full':'off'} aria-label={t('V3Browse')}>
   <header className="provider-rail__header"><div><h2>{t('DashboardLimitsNow')}</h2><p>{t('V3RailHelp')}</p></div><QuotalisSelect label={t('V3Browse')} value={cards[index]?.instanceId??''} searchable options={cards.map(p=>({value:p.instanceId,label:providerInstanceName(p),providerId:p.providerId}))} onChange={id=>focus(cards.findIndex(p=>p.instanceId===id))}/></header>
   <div className="provider-rail__viewport" ref={rail} onPointerDown={e=>{if(e.button===0){drag.current=e.clientX;suppressClick.current=false;}}} onPointerUp={e=>{if(drag.current!==null&&Math.abs(e.clientX-drag.current)>40){suppressClick.current=true;setTimeout(()=>{suppressClick.current=false;},0);move((e.clientX<drag.current?1:-1)*(document.documentElement.dir==='rtl'?-1:1));drag.current=null;e.preventDefault();}else drag.current=null;}} onPointerCancel={()=>drag.current=null}>
    <div className="provider-rail__track" role="toolbar" aria-label={t('V3Browse')} onKeyDown={e=>{const rtl=document.documentElement.dir==='rtl';const delta=e.key==='Home'?-cards.length:e.key==='End'?cards.length:e.key==='PageDown'?capacity:e.key==='PageUp'?-capacity:e.key===(rtl?'ArrowLeft':'ArrowRight')?1:e.key===(rtl?'ArrowRight':'ArrowLeft')?-1:0;
@@ -115,8 +117,8 @@ export default function ProviderRail({providers,settings,isDemo,onOpenProviders,
     {onPresentationChange&&<fieldset className="provider-instance-preferences" disabled={savingPresentation}>
       <legend>{t('InstanceArrangement')}</legend>
       <div className="provider-quick-panel__actions">
-        <button type="button" disabled={rtl?selectedIndex>=cards.length-1:selectedIndex<=0} onClick={()=>rearrange(rtl?1:-1)}>{t('InstanceMoveLeft')}</button>
-        <button type="button" disabled={rtl?selectedIndex<=0:selectedIndex>=cards.length-1} onClick={()=>rearrange(rtl?-1:1)}>{t('InstanceMoveRight')}</button>
+        <button type="button" disabled={cards.length<2} onClick={()=>rearrange(rtl?1:-1)}>{t('InstanceMoveLeft')}</button>
+        <button type="button" disabled={cards.length<2} onClick={()=>rearrange(rtl?-1:1)}>{t('InstanceMoveRight')}</button>
       </div>
       <BadgePositionPicker label={t('InstanceBadgePosition')} value={badgePosition} onChange={value=>void onPresentationChange({badgePosition:value})}/>
       <BadgePositionPicker label={t('ResetBadgePosition')} value={resetPosition} onChange={value=>void onPresentationChange({resetPosition:value})}/>

@@ -1,11 +1,20 @@
 import {describe, expect, it} from "vitest";
-import {composeProviderInstances, moveProviderInstance, DEFAULT_INSTANCE_PRESENTATION} from "./providerInstances";
+import {composeProviderInstances, moveProviderInstance, moveCircularProviderInstance, DEFAULT_INSTANCE_PRESENTATION} from "./providerInstances";
 import type {ProviderInstanceSnapshot, ProviderUsageSnapshot} from "../types/bridge";
 
 const snapshot = {providerId: "codex", primary: {usedPercent: 62}, cost: {amount: 900}} as unknown as ProviderUsageSnapshot;
 const second: ProviderInstanceSnapshot = {instanceId: "codex:account-two", providerId: "codex", accountId: "account-two", accountOrdinal: 2, accountLabel: "Work", snapshot: null};
 
 describe("account instance composition", () => {
+  it('reorders across the circular seam without changing other slots or identities', () => {
+    const ids = ['codex', second.instanceId, 'claude', 'gemini'];
+    const left = moveCircularProviderInstance(ids, 'codex', -1);
+    expect(left).toEqual(['gemini', second.instanceId, 'claude', 'codex']);
+    expect(moveCircularProviderInstance(left, 'codex', 1)).toEqual(ids);
+    expect(moveCircularProviderInstance(ids, second.instanceId, 1)).toEqual(['codex', 'claude', second.instanceId, 'gemini']);
+    expect(moveCircularProviderInstance(ids, 'absent', 1)).toEqual(ids);
+    expect(moveCircularProviderInstance(['codex'], 'codex', -1)).toEqual(['codex']);
+  });
   it("retains a missing account observation without borrowing ambient quota or money", () => {
     const result = composeProviderInstances([snapshot], [second], ["codex"]);
     expect(result).toHaveLength(2);

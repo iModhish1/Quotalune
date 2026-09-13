@@ -426,6 +426,12 @@ narrow screens), wheel/keyboard controls, and persisted instance order and last
 visible anchor across page/app restarts. Preserve brand marks, account isolation,
 Demo separation and reduced-motion behavior; no continuously running animation.
 
+P06-14 follow-up: retain all eight existing physical positions and persisted
+three/four-card circular foreground. Close the circular reorder seam (first/last
+items must remain movable left/right), and apply the app animation preference as
+well as OS reduced motion. Verify these changes against the current Dev build;
+existing implementation and test counts alone are not native acceptance.
+
 P06-15 owner priority update (2026-09-13): accelerate completion and publishing
 to the confirmed owner's GitHub. Deliver more than one suitable download format
 and evaluate OS/architecture support honestly; package only combinations actually

@@ -7,6 +7,18 @@ import type {ProviderUsageSnapshot,SettingsSnapshot} from '../../../types/bridge
 vi.mock('../../../hooks/useLocale',()=>({useLocale:()=>({t:(key:string)=>key,language:'english'}),useOptionalLocale:()=>null}));
 vi.mock('../../../lib/tauri',()=>({refreshProviders:vi.fn(),codexAccountFetch:vi.fn().mockResolvedValue({})}));
 const settings={showAsUsed:true,providerMetrics:{},providerAccentColors:{}} as SettingsSnapshot;
+it('permits physical reordering across the circle seam and respects disabled animations',()=>{
+ HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
+ HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};
+ const save=vi.fn().mockResolvedValue(undefined);
+ render(<ProviderRail providers={['codex','claude','gemini','cursor'].map(provider)} settings={{...settings,enableAnimations:false}} isDemo onOpenProviders={()=>{}} onAnalytics={()=>{}} onPresentationChange={save}/>);
+ const toolbar=screen.getByRole('toolbar');
+ expect(toolbar.closest('.provider-rail')).toHaveAttribute('data-motion','off');
+ fireEvent.click(within(toolbar).getByRole('button',{name:/codex,/}));
+ const left=screen.getByRole('button',{name:'InstanceMoveLeft'});
+ expect(left).toBeEnabled();fireEvent.click(left);
+ expect(save).toHaveBeenLastCalledWith({order:['cursor','claude','gemini','codex'],anchorId:'cursor'});
+});
 const provider=(id:string):ProviderUsageSnapshot=>({providerId:id,displayName:id,planName:id==='codex'?'ChatGPT Pro':null,primary:{usedPercent:62,remainingPercent:38,resetsAt:null,resetDescription:null,windowMinutes:null,isExhausted:false,reservePercent:null,reserveDescription:null},secondary:null,tertiary:null,modelSpecific:null,selectedMetric:{usedPercent:62,remainingPercent:38,resetsAt:null,resetDescription:null,windowMinutes:null,isExhausted:false,reservePercent:null,reserveDescription:null},extraRateWindows:[],cost:null,errorState:'ready',error:null,accountEmail:null,accountOrganization:null,pace:null,trayStatusLabel:null,updatedAt:'2026-09-10T00:00:00Z',sourceLabel:'test'});
 it('offers directly accessible three/four choices without losing the circular anchor',()=>{
  HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
