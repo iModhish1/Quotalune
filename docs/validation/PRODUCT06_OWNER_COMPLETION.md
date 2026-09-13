@@ -722,3 +722,58 @@ Native Structure Theme catalog assignment/clear, global preference edits while
 overridden, RTL/narrow and other surface permutations remain explicit coverage
 gaps. This packet is accepted for the demonstrated appearance contract and visual
 repair only; whole-product and release acceptance remain unfinished.
+
+## P06-14 — native carousel count and restart verification
+
+Source `eef86d21` replaces the three/four count popup with two directly accessible,
+pressed-state buttons. The existing independent eight-position account/reset
+grids, physical left/right reordering, saved stable instance order and anchor are
+retained. Original logo assets and the reset-data contract are unchanged.
+
+The previous native list item exposed InvokePattern but choosing `3` failed with
+COMError -2147220991. A successful popup expansion was not counted as selection.
+The replacement exposes TogglePattern with checked readback and no popup.
+
+Validation: 16 focused rail tests, **1185 frontend tests / 200 files**, TypeScript,
+production frontend build and verified Dev build passed. Current-tree secret scan
+was clean across **3076 files**; this is not a full-history security audit. No Rust
+source changed, so the earlier workspace Rust and Clippy results remain the
+backend evidence. Logs are `.local/qa05/product06-rail-count-{green,frontend,
+secrets,dev-build}.log`. The initial new test needed the existing jsdom dialog
+shim before its assertions could exercise the open modal; the native failure
+above is the control-defect reproduction.
+
+Verified Dev SHA256:
+`834c4efd7e031f30fa91b38eb4b49f14c934ac7fac7b6ae03e0d95785e605094`.
+Embedded source `eef86d211a60`; the dirty marker covers pre-existing backlog docs.
+
+Native results on six explicitly simulated providers:
+
+- Choosing `3` read back selected and displayed three cards. Moving Codex right
+  produced Claude, Codex, Gemini. Next produced Codex, Gemini, Perplexity.
+- Choosing `4` read back selected. Moving Codex left restored the original order;
+  the first group was Codex, Claude, Gemini, Perplexity.
+- Next produced Claude, Gemini, Perplexity, DeepSeek. Exiting through the owned
+  app's `Quit Ctrl+Q` control and relaunching restored that exact four-card group.
+- The original first group was restored and the visible Exit Demo action returned
+  to live data. No account credentials, Personal data or original logo files were
+  changed. Every adapter batch released in finally; no physical input was used.
+
+One **remaining limitation** is recorded rather than hidden: a prior three-card
+trial released the adapter job abruptly, and the following launch recovered an
+older Demo anchor while retaining the count and order. The cause is not proven;
+Demo uses browser localStorage. Normal-exit four-card restoration passed as above.
+Abrupt-termination durability and native physical-wheel/70-provider coverage are
+not claimed. Wheel and 70-provider circular boundaries have source-test coverage.
+
+Screenshots under `C:/Users/imodhish/AI-Tools/Desktop-Visual-QA/screenshots/`:
+
+| Evidence | File |
+| --- | --- |
+| Eight-position grids and selected three-count button | `window-3935358-ee987aab48c04d08b1b36236e492083a.png` |
+| Three foreground providers after reorder/navigation | `window-3935358-645f8a044df643c0a18fb7e8da00254f.png` |
+| Four-provider group restored after normal exit/relaunch | `window-4852674-aa477d937cb641af8bc046dfbeea10bc.png` |
+
+All three listed captures were visually inspected. They demonstrate readable
+controls, intact provider artwork, separate reset badges and bounded foreground
+counts. This is scoped P06-14 evidence, not a whole-product or release PASS.
