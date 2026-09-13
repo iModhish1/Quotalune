@@ -341,3 +341,26 @@ docs/validation/SHELL04_MONITORING_AND_SPACE_WORKSPACE.md. Normal Dev relaunched
 with QA settings restored. Remaining acceptance: actual Windows toast-header and
 tray hover/click pixels (desktop access unavailable); live credential workflows
 were not submitted. Full source tests and bounded native control coverage passed.
+## QA-05 — comprehensive feature, visual, security and installer audit (2026-09-13)
+2026-09-13 owner clarification: explicitly authorizes repairing the global QA
+adapter's restrictions to support this application; prioritize real native app
+testing, not isolated browser-only proof. Repair multi-process WebView ownership
+and semantic UIA patterns while preserving unrelated-window, physical-input,
+Pause/Resume and expected-value protections. Original adapter backed up before edits.
+Owner requests a full control/feature inventory and human-style visual testing
+through the installed guarded Desktop Visual QA stack, with Demo data for safe
+scenario coverage. Inspect layouts/themes/colors/tray, all settings and feature
+states, software/data-security boundaries and installer/upgrade readiness. Find
+and repair reproducible defects; report inactive/unsupported features, changes,
+coverage and remaining gaps honestly. Preserve Personal and real credentials.
+Latest input boundary supersedes previous Cua/CDP automation permission: no
+physical mouse; no standing keyboard permission; no direct engine/connector
+bypass. Use inspected HWND/PID/unique UIA selector for native changes, preserve
+observed user values, stop adapter in finally. Other Windows versions/architectures
+require actual compatible test environments; do not claim universal compatibility.
+
+QA05 additional owner request: use an independent Windows sandbox if available.
+Environment discovery found no Windows Sandbox executable and Hyper-V VM
+inventory was denied to the execution account. All reported native QA ran on
+Dev on this host, not on a claimed independent machine. No installer execution
+or universal Windows-version claim is authorized by evidence alone.

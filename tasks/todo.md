@@ -1142,3 +1142,14 @@ verified. Native toast/header pixels and OS tray hover/click remain unverified:
 Cua desktop capture fails with 0x80070006 and foreground HWND is 0x0. No blanket
 all-features/credential-workflows PASS. Final normal Dev PID 14992 is open.
 Evidence: docs/validation/SHELL04_MONITORING_AND_SPACE_WORKSPACE.md.
+## QA-05
+- [ ] Feature/control inventory and explicit coverage matrix.
+- [ ] Guarded native/isolated visual Demo scenario and settings tests.
+- [ ] Security/secret-leakage and Demo isolation review; reproduce and fix defects.
+- [ ] Dev installer build, compatibility and lifecycle verification.
+- [ ] Full gates, visual regression evidence, restored QA state and final report.
+
+QA05 checkpoint: native primary-page and selected nested/filters/Demo proof,
+layout/logo/control/security repairs, full source gates and 112-image atlas are
+recorded in docs/validation/QA05_NATIVE_VISUAL_REVIEW.md. Checkboxes above remain
+open because exhaustive control and installer/native OS acceptance is incomplete.

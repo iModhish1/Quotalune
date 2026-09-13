@@ -395,3 +395,33 @@ five nested studio routes and native persisted-control/background proof recorded
 Updated ordinary Dev launch completed. Native desktop capture/foreground access
 blocks toast-header and OS tray hover/click visual acceptance; no false PASS.
 See docs/validation/SHELL04_MONITORING_AND_SPACE_WORKSPACE.md for exact coverage.
+## QA-05 execution plan
+Latest steering (2026-09-13): prioritize native visual evidence and layout repair.
+1. Capture every primary destination and nested section in the actual Dev app,
+   including lower scroll content and open menus; index captures by route/state.
+2. Inspect each image, record whitespace, clipping, alignment, logo contrast and
+   hierarchy defects with image evidence. Navigation alone is not feature PASS.
+3. Repair shared spacing/layout causes first, then page-specific defects while
+   preserving logo assets, data semantics and the user's saved settings.
+4. Rebuild verified Dev, repeat affected native views and compare before/after.
+   Report coverage gaps explicitly; retain security/installer work below.
+
+Original full QA scope (still required):
+1. Inventory all 18 editor routes, controls, actions, Demo scenarios and native
+   surfaces; map every action to safe reversible / external-auth / destructive.
+2. Inspect current Dev through guarded Desktop Visual QA. Exercise safe controls
+   and Demo scenarios via background UIA or adapter-owned isolated browser DOM.
+   Record visual evidence, expected/actual values and unsupported input paths.
+3. Audit secret boundaries, Demo isolation, capabilities and installer lifecycle;
+   repair evidence-backed defects, with regression tests.
+4. Build Dev installer, inspect install/upgrade/uninstall behavior in an isolated
+   compatible environment if available. Preserve Personal and user data.
+5. Run full source gates and security scans; repeat affected native cases, restore
+   only QA-owned changes and publish an explicit coverage/defect/compatibility report.
+
+QA05 verified repair checkpoint (2026-09-13): 112 native screenshots indexed,
+shared layout/control/logo repairs rebuilt and compared, 1,145 frontend tests,
+483 desktop / 1,736 core / 1 CLI Rust tests passed (1 intentional desktop ignore).
+Security and installer safety fixes are committed; full native option coverage,
+OS tray/toast and disposable installer lifecycle acceptance remain open.
+Evidence: docs/validation/QA05_NATIVE_VISUAL_REVIEW.md.
