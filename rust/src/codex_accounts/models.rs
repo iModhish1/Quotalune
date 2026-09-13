@@ -9,6 +9,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::core::ProviderResetFacts;
+
 /// `parse_from_rfc3339` requires an offset; append `Z` only when none is present.
 pub fn parse_datetime(value: &str) -> Option<DateTime<Utc>> {
     let text = value.trim();
@@ -413,6 +415,10 @@ pub struct AccountUsageSnapshot {
     pub primary_window: Option<UsageWindowSnapshot>,
     pub secondary_window: Option<UsageWindowSnapshot>,
     pub credits: Option<CreditsBalanceSnapshot>,
+    /// Typed reset inventory and reset-event evidence for this account.
+    /// Missing on snapshots persisted before reset facts were introduced.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reset_facts: Option<ProviderResetFacts>,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -588,6 +594,7 @@ mod tests {
             primary_window: Some(UsageWindowSnapshot::new(10.0, None, 18_000)),
             secondary_window: None,
             credits: None,
+            reset_facts: None,
             updated_at: utc_now(),
         };
         assert!(snapshot.is_quota_blocked());

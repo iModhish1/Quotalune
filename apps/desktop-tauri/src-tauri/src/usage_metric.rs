@@ -151,6 +151,7 @@ fn extra_usage_window(snapshot: &ProviderUsageSnapshot) -> Option<RateWindowSnap
         snapshot
             .extra_rate_windows
             .iter()
+            .filter(|extra| !extra.window.is_informational && extra.id != "reset-credits")
             .map(|extra| &extra.window),
     )
     .cloned()
@@ -207,6 +208,7 @@ mod tests {
             tertiary: None,
             tertiary_label: None,
             extra_rate_windows: Vec::new(),
+            reset_facts: None,
             cost: None,
             plan_name: None,
             account_email: None,

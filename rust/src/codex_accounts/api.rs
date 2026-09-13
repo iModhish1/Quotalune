@@ -8,18 +8,23 @@ use std::path::Path;
 
 use base64::Engine;
 use chrono::{DateTime, Utc};
+use serde::Deserialize;
 use thiserror::Error;
 
 use super::models::{
     AccountUsageSnapshot, CreditsBalanceSnapshot, UsageWindowSnapshot, WindowRole,
 };
-use crate::core::credentialed_http_client_builder;
+use crate::core::{
+    BankedResetCard, BankedResetInventory, ProviderResetFacts, ResetDatum, ResetUnavailableReason,
+    ScheduledReset, credentialed_http_client_builder,
+};
 
 pub const REFRESH_ENDPOINT: &str = "https://auth.openai.com/oauth/token";
 pub const USAGE_DEFAULT_BASE: &str = "https://chatgpt.com/backend-api";
 pub const REFRESH_CLIENT_ID: &str = "app_EMoamEEZ73f0CkXaXp7hrann";
 const REQUEST_TIMEOUT_SECONDS: u64 = 30;
 const UNAUTHORIZED_MESSAGE: &str = "The Codex usage API request returned unauthorized.";
+const RESET_CREDITS_PATH: &str = "/wham/rate-limit-reset-credits";
 
 /// Friendly error surfaced to callers.
 #[derive(Debug, Error)]
@@ -378,6 +383,21 @@ impl CodexAccountApi {
             .and_then(|v| v.as_object())
             .map(make_credits);
 
+        let observed_at = Utc::now();
+        let banked_reset_cards = self
+            .fetch_reset_inventory(
+                codex_home_path,
+                &credentials.access_token,
+                credentials.account_id.as_deref(),
+            )
+            .await;
+        let reset_facts = Some(managed_reset_facts(
+            primary_window.as_ref(),
+            secondary_window.as_ref(),
+            observed_at,
+            banked_reset_cards,
+        ));
+
         Ok(AccountUsageSnapshot {
             email: identity.email.or_else(|| normalize_string(fallback_email)),
             provider_account_id: identity
@@ -394,8 +414,49 @@ impl CodexAccountApi {
             primary_window,
             secondary_window,
             credits,
-            updated_at: Utc::now(),
+            reset_facts,
+            updated_at: observed_at,
         })
+    }
+
+    async fn fetch_reset_inventory(
+        &self,
+        codex_home_path: &Path,
+        access_token: &str,
+        account_id: Option<&str>,
+    ) -> ResetDatum<BankedResetInventory> {
+        let Some(url) = resolve_reset_credits_url(codex_home_path) else {
+            return ResetDatum::Unsupported;
+        };
+        let mut request = self
+            .client
+            .get(url)
+            .header("Authorization", format!("Bearer {access_token}"))
+            .header("User-Agent", "codex-cli")
+            .header("Accept", "application/json")
+            .header("Cache-Control", "no-cache, no-store, max-age=0")
+            .header("Pragma", "no-cache");
+        if let Some(account_id) = account_id {
+            request = request.header("ChatGPT-Account-Id", account_id);
+        }
+
+        let response = match request.send().await {
+            Ok(response) => response,
+            Err(_) => {
+                return ResetDatum::unavailable(ResetUnavailableReason::FetchFailed);
+            }
+        };
+        if !response.status().is_success() {
+            return ResetDatum::unavailable(ResetUnavailableReason::FetchFailed);
+        }
+        let bytes = match response.bytes().await {
+            Ok(bytes) => bytes,
+            Err(_) => return ResetDatum::unavailable(ResetUnavailableReason::FetchFailed),
+        };
+        match decode_reset_credits(&bytes) {
+            Ok(reset) => reset_credits_inventory(reset),
+            Err(reason) => ResetDatum::unavailable(reason),
+        }
     }
 
     async fn fetch_usage(
@@ -557,6 +618,32 @@ pub fn resolve_usage_url(codex_home_path: &Path) -> String {
     format!("{base}{path}")
 }
 
+/// Resolve reset inventory only for the authenticated ChatGPT `wham` API.
+/// Custom Codex-compatible backends do not establish support for this endpoint.
+pub fn resolve_reset_credits_url(codex_home_path: &Path) -> Option<String> {
+    let usage = resolve_usage_url(codex_home_path);
+    let url = reqwest::Url::parse(&usage).ok()?;
+    let supported = url.scheme() == "https"
+        && matches!(url.host_str(), Some("chatgpt.com" | "chat.openai.com"))
+        && url.port_or_known_default() == Some(443)
+        && url.username().is_empty()
+        && url.password().is_none();
+    // Unit tests exercise the actual authenticated request against a local
+    // mock server. No loopback exception exists in production builds.
+    #[cfg(test)]
+    let supported = supported || (url.scheme() == "http" && url.host_str() == Some("127.0.0.1"));
+    if !supported
+        || url.path() != "/backend-api/wham/usage"
+        || url.query().is_some()
+        || url.fragment().is_some()
+    {
+        return None;
+    }
+    usage
+        .strip_suffix("/wham/usage")
+        .map(|base| format!("{base}{RESET_CREDITS_PATH}"))
+}
+
 /// Extract `chatgpt_base_url` from a Codex `config.toml`.
 pub fn parse_chatgpt_base_url(contents: &str) -> Option<String> {
     for raw_line in contents.lines() {
@@ -675,6 +762,77 @@ fn make_credits(credits: &serde_json::Map<String, serde_json::Value>) -> Credits
     }
 }
 
+#[derive(Debug, Deserialize)]
+struct ResetCreditResponse {
+    #[serde(default)]
+    id: Option<String>,
+    #[serde(default)]
+    status: Option<String>,
+    #[serde(default)]
+    expires_at: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ResetCreditsResponse {
+    #[serde(default)]
+    credits: Vec<ResetCreditResponse>,
+    available_count: Option<u32>,
+}
+
+fn decode_reset_credits(data: &[u8]) -> Result<ResetCreditsResponse, ResetUnavailableReason> {
+    serde_json::from_slice(data).map_err(|_| ResetUnavailableReason::Malformed)
+}
+
+fn reset_credits_inventory(reset: ResetCreditsResponse) -> ResetDatum<BankedResetInventory> {
+    let Some(available_count) = reset.available_count else {
+        return ResetDatum::unavailable(ResetUnavailableReason::NotReported);
+    };
+    let cards = reset
+        .credits
+        .into_iter()
+        .map(|credit| {
+            BankedResetCard::from_reported(
+                credit.id,
+                credit.status.as_deref(),
+                credit.expires_at.as_deref(),
+            )
+        })
+        .collect();
+    ResetDatum::known(BankedResetInventory::from_reported(available_count, cards))
+}
+
+fn managed_reset_facts(
+    primary: Option<&UsageWindowSnapshot>,
+    secondary: Option<&UsageWindowSnapshot>,
+    observed_at: DateTime<Utc>,
+    banked_reset_cards: ResetDatum<BankedResetInventory>,
+) -> ProviderResetFacts {
+    let next_weekly_reset = [("primary", primary), ("secondary", secondary)]
+        .into_iter()
+        .filter_map(|(window_key, window)| {
+            let window = window?;
+            (window.role() == WindowRole::Weekly)
+                .then_some(window.reset_at)
+                .flatten()
+                .filter(|resets_at| *resets_at > observed_at)
+                .map(|resets_at| ScheduledReset {
+                    window_key: window_key.to_string(),
+                    resets_at,
+                })
+        })
+        .min_by_key(|scheduled| scheduled.resets_at)
+        .map(ResetDatum::known)
+        .unwrap_or_else(|| ResetDatum::unavailable(ResetUnavailableReason::NotReported));
+
+    ProviderResetFacts {
+        observed_at,
+        provider_issued_resets: ResetDatum::unavailable(ResetUnavailableReason::NotReported),
+        last_actual_reset: ResetDatum::unavailable(ResetUnavailableReason::NotObserved),
+        next_weekly_reset,
+        banked_reset_cards,
+    }
+}
+
 fn extract_error_code(payload: &str) -> String {
     let Ok(parsed) = serde_json::from_str::<serde_json::Value>(payload) else {
         return String::new();
@@ -777,6 +935,33 @@ mod tests {
     }
 
     #[test]
+    fn reset_inventory_rejects_custom_backend_api_origins() {
+        let dir = tempfile::tempdir().unwrap();
+        for base in [
+            "https://custom.example/backend-api",
+            "https://chatgpt.com.evil.example/backend-api",
+            "https://chatgpt.com:444/backend-api",
+            "http://chatgpt.com/backend-api",
+        ] {
+            std::fs::write(
+                dir.path().join("config.toml"),
+                format!("chatgpt_base_url = \"{base}\"\n"),
+            )
+            .unwrap();
+            assert_eq!(resolve_reset_credits_url(dir.path()), None, "{base}");
+        }
+        std::fs::write(
+            dir.path().join("config.toml"),
+            "chatgpt_base_url = \"https://chatgpt.com/backend-api\"\n",
+        )
+        .unwrap();
+        assert_eq!(
+            resolve_reset_credits_url(dir.path()).as_deref(),
+            Some("https://chatgpt.com/backend-api/wham/rate-limit-reset-credits")
+        );
+    }
+
+    #[test]
     fn jwt_payload_decodes() {
         let payload =
             base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(br#"{"email":"a@b.c"}"#);
@@ -814,6 +999,143 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let url = resolve_usage_url(dir.path());
         assert_eq!(url, "https://chatgpt.com/backend-api/wham/usage");
+        assert_eq!(
+            resolve_reset_credits_url(dir.path()).as_deref(),
+            Some("https://chatgpt.com/backend-api/wham/rate-limit-reset-credits")
+        );
+    }
+
+    #[test]
+    fn reset_inventory_decoder_preserves_zero_multiple_and_unknown() {
+        let zero = decode_reset_credits(br#"{"available_count":0,"credits":[]}"#).unwrap();
+        let ResetDatum::Known { value: zero } = reset_credits_inventory(zero) else {
+            panic!("explicit zero must remain known");
+        };
+        assert_eq!(zero.reported_available_count, 0);
+        assert!(zero.details_complete);
+
+        let multiple = decode_reset_credits(
+            br#"{"available_count":1,"credits":[
+                {"id":"a","status":"available","expires_at":"2026-10-01T00:00:00Z"},
+                {"id":"b","status":"future-status","expires_at":"bad"}
+            ]}"#,
+        )
+        .unwrap();
+        let ResetDatum::Known { value: multiple } = reset_credits_inventory(multiple) else {
+            panic!("reported count must remain known");
+        };
+        assert_eq!(multiple.cards.len(), 2);
+        assert_eq!(multiple.cards[0].opaque_id.as_deref(), Some("a"));
+        assert_eq!(
+            multiple.cards[0].status,
+            crate::core::ResetCardStatus::Available
+        );
+        assert_eq!(
+            multiple.cards[1].status,
+            crate::core::ResetCardStatus::Unknown
+        );
+        assert_eq!(
+            multiple.cards[1].expires_at,
+            ResetDatum::unavailable(ResetUnavailableReason::Malformed)
+        );
+        assert!(!multiple.details_complete);
+    }
+
+    #[test]
+    fn reset_inventory_missing_count_is_unavailable() {
+        let missing = decode_reset_credits(br#"{"credits":[]}"#).unwrap();
+        assert_eq!(
+            reset_credits_inventory(missing),
+            ResetDatum::unavailable(ResetUnavailableReason::NotReported)
+        );
+        assert!(matches!(
+            decode_reset_credits(br#"{"available_count":false}"#),
+            Err(ResetUnavailableReason::Malformed)
+        ));
+    }
+
+    #[test]
+    fn managed_reset_facts_require_future_weekly_evidence() {
+        let observed_at = DateTime::parse_from_rfc3339("2026-09-13T00:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let reset_at = observed_at + chrono::Duration::days(4);
+        let weekly = UsageWindowSnapshot::new(25.0, Some(reset_at), 604_800);
+        let facts = managed_reset_facts(
+            None,
+            Some(&weekly),
+            observed_at,
+            ResetDatum::known(BankedResetInventory::from_reported(0, vec![])),
+        );
+        assert_eq!(
+            facts.next_weekly_reset,
+            ResetDatum::known(ScheduledReset {
+                window_key: "secondary".into(),
+                resets_at: reset_at,
+            })
+        );
+        assert_eq!(
+            facts.provider_issued_resets,
+            ResetDatum::unavailable(ResetUnavailableReason::NotReported)
+        );
+    }
+
+    #[tokio::test]
+    async fn managed_fetch_attaches_reset_inventory_to_the_requested_account() {
+        let mut server = mockito::Server::new_async().await;
+        let usage_mock = server
+            .mock("GET", "/backend-api/wham/usage")
+            .match_header("authorization", "Bearer managed-token")
+            .match_header("chatgpt-account-id", "managed-account")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{"plan_type":"plus","rate_limit":{"primary_window":{"used_percent":10,"limit_window_seconds":18000}}}"#,
+            )
+            .create_async()
+            .await;
+        let reset_mock = server
+            .mock("GET", "/backend-api/wham/rate-limit-reset-credits")
+            .match_header("authorization", "Bearer managed-token")
+            .match_header("chatgpt-account-id", "managed-account")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{"available_count":1,"credits":[{"id":"managed-card","status":"available","expires_at":"2026-12-01T00:00:00Z"}]}"#,
+            )
+            .create_async()
+            .await;
+        let home = tempfile::tempdir().unwrap();
+        std::fs::write(
+            home.path().join("config.toml"),
+            format!("chatgpt_base_url = \"{}/backend-api\"", server.url()),
+        )
+        .unwrap();
+        let credentials = AuthCredentials {
+            access_token: "managed-token".into(),
+            refresh_token: String::new(),
+            id_token: None,
+            account_id: Some("managed-account".into()),
+            last_refresh: None,
+        };
+
+        let snapshot = CodexAccountApi::new()
+            .fetch_single(home.path(), &credentials, None)
+            .await
+            .unwrap();
+
+        usage_mock.assert_async().await;
+        reset_mock.assert_async().await;
+        assert_eq!(
+            snapshot.provider_account_id.as_deref(),
+            Some("managed-account")
+        );
+        let facts = snapshot.reset_facts.expect("typed reset facts");
+        let ResetDatum::Known { value } = facts.banked_reset_cards else {
+            panic!("inventory must remain known");
+        };
+        assert_eq!(value.reported_available_count, 1);
+        assert_eq!(value.cards[0].opaque_id.as_deref(), Some("managed-card"));
     }
 
     #[test]
@@ -836,9 +1158,21 @@ mod tests {
             primary_window: Some(UsageWindowSnapshot::new(12.0, Some(Utc::now()), 18_000)),
             secondary_window: None,
             credits: None,
+            reset_facts: None,
             updated_at: Utc::now(),
         };
         assert!(is_equivalent(&mk(), &mk()));
+        let mut inventory_changed = mk();
+        inventory_changed.reset_facts = Some(managed_reset_facts(
+            None,
+            None,
+            Utc::now(),
+            ResetDatum::known(BankedResetInventory::from_reported(3, vec![])),
+        ));
+        assert!(
+            is_equivalent(&mk(), &inventory_changed),
+            "optional inventory changes must not invalidate verified quota"
+        );
         let mut different = mk();
         different.plan = Some("plus".to_string());
         assert!(!is_equivalent(&mk(), &different));

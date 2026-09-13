@@ -31,6 +31,7 @@ pub struct ProviderInstanceSnapshot {
     pub account_id: Option<String>,
     pub account_ordinal: Option<u32>,
     pub account_label: Option<String>,
+    pub reset_facts: Option<quotalis_core::core::ProviderResetFacts>,
     pub snapshot: Option<ProviderUsagePresentationSnapshot>,
 }
 
@@ -92,6 +93,7 @@ pub(crate) fn build_provider_instances(
                 account_id: None,
                 account_ordinal: is_codex.then_some(1),
                 account_label: None,
+                reset_facts: snapshot.reset_facts.clone(),
                 snapshot: Some(ProviderUsagePresentationSnapshot::new(snapshot, settings)),
             }
         })
@@ -115,6 +117,10 @@ pub(crate) fn build_provider_instances(
             account_id: Some(account.id.to_string()),
             account_ordinal: Some(ordinal),
             account_label: safe_account_label(account, account_snapshots, settings),
+            reset_facts: account_snapshots
+                .get(&account.id)
+                .filter(|snapshot| !provider_account_ids_conflict(account, snapshot))
+                .and_then(|snapshot| snapshot.reset_facts.clone()),
             snapshot: account_snapshots
                 .get(&account.id)
                 .and_then(|snapshot| account_usage_presentation(account, snapshot, settings)),
@@ -236,6 +242,7 @@ fn account_usage_presentation(
             tertiary: None,
             tertiary_label: None,
             extra_rate_windows: Vec::new(),
+            reset_facts: usage.reset_facts.clone(),
             cost: None,
             plan_name: usage.plan.clone(),
             account_email: None,
@@ -326,6 +333,7 @@ mod tests {
 
     fn account_usage(provider_account_id: &str, used_percent: f64) -> AccountUsageSnapshot {
         AccountUsageSnapshot {
+            reset_facts: None,
             email: Some(format!("{provider_account_id}@example.com")),
             provider_account_id: Some(provider_account_id.to_string()),
             plan: Some("pro".to_string()),
@@ -374,6 +382,7 @@ mod tests {
             tertiary: None,
             tertiary_label: None,
             extra_rate_windows: Vec::new(),
+            reset_facts: None,
             cost: None,
             plan_name: None,
             account_email: None,
@@ -654,6 +663,7 @@ mod tests {
             account_id: Some("11111111-1111-1111-1111-111111111111".to_string()),
             account_ordinal: Some(2),
             account_label: Some("Work".to_string()),
+            reset_facts: None,
             snapshot: None,
         };
 

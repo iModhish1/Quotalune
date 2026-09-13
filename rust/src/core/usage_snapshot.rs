@@ -3,7 +3,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::RateWindow;
+use super::{ProviderResetFacts, RateWindow};
 
 /// Provider-specific operational data reported by a Wayfinder gateway.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -92,6 +92,15 @@ pub struct UsageSnapshot {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub extra_rate_windows: Vec<NamedRateWindow>,
 
+    /// Typed reset inventory and event evidence for this provider/account.
+    /// Missing on snapshots written before reset facts were introduced.
+    #[serde(
+        default,
+        rename = "resetFacts",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub reset_facts: Option<ProviderResetFacts>,
+
     /// When this snapshot was captured
     pub updated_at: DateTime<Utc>,
 
@@ -117,6 +126,7 @@ impl UsageSnapshot {
             model_specific: None,
             tertiary: None,
             extra_rate_windows: Vec::new(),
+            reset_facts: None,
             updated_at: Utc::now(),
             account_email: None,
             account_organization: None,

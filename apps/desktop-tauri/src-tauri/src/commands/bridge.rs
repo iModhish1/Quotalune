@@ -182,6 +182,8 @@ pub struct ProviderUsageSnapshot {
     #[serde(default)]
     pub extra_rate_windows: Vec<NamedRateWindowSnapshot>,
     #[serde(default)]
+    pub reset_facts: Option<quotalis_core::core::ProviderResetFacts>,
+    #[serde(default)]
     pub cost: Option<CostSnapshotBridge>,
     #[serde(default)]
     pub plan_name: Option<String>,
@@ -353,6 +355,7 @@ impl ProviderUsageSnapshot {
                     other => other.to_string(),
                 }
             }),
+            reset_facts: usage.reset_facts.clone(),
             extra_rate_windows: usage
                 .extra_rate_windows
                 .iter()
@@ -428,6 +431,7 @@ impl ProviderUsageSnapshot {
             tertiary: None,
             tertiary_label: None,
             extra_rate_windows: Vec::new(),
+            reset_facts: None,
             cost: None,
             plan_name: None,
             account_email: None,

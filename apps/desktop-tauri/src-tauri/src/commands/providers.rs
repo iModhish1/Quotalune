@@ -794,19 +794,12 @@ fn notify_usage_thresholds(
                         settings,
                     );
                 }
-                if provider == ProviderId::Codex {
-                    let available_count = snapshot
-                        .extra_rate_windows
-                        .iter()
-                        .find(|named| named.id == "reset-credits")
-                        .and_then(|named| reset_credit_count(&named.window))
-                        .unwrap_or(0);
-                    guard.notification_manager.check_banked_reset_credits(
-                        provider,
-                        &account,
-                        available_count,
-                        settings,
-                    );
+                if provider == ProviderId::Codex
+                    && let Some(count) = banked_reset_count(snapshot)
+                {
+                    guard
+                        .notification_manager
+                        .check_banked_reset_credits(provider, &account, count, settings);
                 }
                 for (index, named) in snapshot.extra_rate_windows.iter().enumerate() {
                     if named.id == "reset-credits" {
@@ -892,13 +885,11 @@ fn named_notification_window_key(id: &str, index: usize) -> String {
     }
 }
 
-fn reset_credit_count(window: &RateWindowSnapshot) -> Option<u32> {
-    let description = window.reset_description.as_deref()?.trim();
-    let normalized = description.to_ascii_lowercase();
-    if !normalized.contains("reset credit") || !normalized.ends_with("available") {
-        return None;
+fn banked_reset_count(snapshot: &ProviderUsageSnapshot) -> Option<u32> {
+    match &snapshot.reset_facts.as_ref()?.banked_reset_cards {
+        quotalis_core::core::ResetDatum::Known { value } => Some(value.reported_available_count),
+        _ => None,
     }
-    description.split_whitespace().next()?.parse().ok()
 }
 
 fn dispatch_quota_hooks(
@@ -1240,15 +1231,33 @@ mod predictive_warning_tests {
     }
 
     #[test]
-    fn reset_credit_count_accepts_only_the_structured_codex_description() {
-        let mut window = empty_snapshot().primary;
-        window.reset_description = Some("2 reset credits available".to_string());
-        assert_eq!(reset_credit_count(&window), Some(2));
-
-        window.reset_description = Some("credits may be available".to_string());
-        assert_eq!(reset_credit_count(&window), None);
-        window.reset_description = Some("many reset credits available".to_string());
-        assert_eq!(reset_credit_count(&window), None);
+    fn absent_inventory_cannot_rearm_banked_notifications_as_zero() {
+        use quotalis_core::core::{
+            BankedResetInventory, ProviderResetFacts, ResetDatum, ResetUnavailableReason,
+        };
+        let mut snapshot = empty_snapshot();
+        snapshot.primary.reset_description = Some("9 reset credits available".into());
+        assert_eq!(banked_reset_count(&snapshot), None);
+        snapshot.reset_facts = Some(ProviderResetFacts {
+            observed_at: chrono::Utc::now(),
+            provider_issued_resets: ResetDatum::Unsupported,
+            last_actual_reset: ResetDatum::Unsupported,
+            next_weekly_reset: ResetDatum::Unsupported,
+            banked_reset_cards: ResetDatum::Unavailable {
+                reason: ResetUnavailableReason::FetchFailed,
+            },
+        });
+        assert_eq!(banked_reset_count(&snapshot), None);
+        for count in [0, 1, 3] {
+            snapshot.reset_facts.as_mut().unwrap().banked_reset_cards = ResetDatum::Known {
+                value: BankedResetInventory {
+                    reported_available_count: count,
+                    cards: vec![],
+                    details_complete: false,
+                },
+            };
+            assert_eq!(banked_reset_count(&snapshot), Some(count));
+        }
     }
 
     /// The forecast scope key and the notification identity must never disagree.
@@ -1318,6 +1327,7 @@ mod reset_backfill_tests {
             tertiary: None,
             tertiary_label: None,
             extra_rate_windows: Vec::new(),
+            reset_facts: None,
             cost: None,
             plan_name: None,
             account_email: None,

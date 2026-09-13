@@ -38,6 +38,8 @@ pub struct ProviderDetail {
     pub model_specific: Option<RateWindowSnapshot>,
     pub tertiary: Option<RateWindowSnapshot>,
     pub extra_rate_windows: Vec<NamedRateWindowSnapshot>,
+    #[serde(default)]
+    pub reset_facts: Option<quotalis_core::core::ProviderResetFacts>,
 
     // Cost / pace.
     pub cost: Option<CostSnapshotBridge>,
@@ -110,6 +112,7 @@ pub(crate) fn build_provider_detail(provider_id: &str) -> Result<ProviderDetail,
         model_specific: None,
         tertiary: None,
         extra_rate_windows: Vec::new(),
+        reset_facts: None,
         cost: None,
         pace: None,
         last_error: None,
@@ -191,6 +194,7 @@ pub fn get_provider_detail(
             &mut snapshot,
             Settings::load().codex_spark_usage_visible(),
         );
+        detail.reset_facts = snapshot.reset_facts.clone();
         detail.email = snapshot.account_email.clone();
         detail.plan = snapshot.plan_name.clone();
         detail.organization = snapshot.account_organization.clone();

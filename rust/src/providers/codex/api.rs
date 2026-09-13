@@ -4,7 +4,9 @@
 
 use super::pat;
 use crate::core::{
-    CostSnapshot, NamedRateWindow, ProviderError, RateWindow, RateWindowCadence, UsageSnapshot,
+    BankedResetCard, BankedResetInventory, CostSnapshot, NamedRateWindow, ProviderError,
+    ProviderResetFacts, RateWindow, RateWindowCadence, ResetDatum, ResetUnavailableReason,
+    ScheduledReset, UsageSnapshot,
 };
 use chrono::{DateTime, TimeZone, Utc};
 use serde::Deserialize;
@@ -86,6 +88,12 @@ impl CodexApi {
         {
             usage = usage.with_login_method(format_plan_type(&plan_type));
         }
+        let observed_at = Utc::now();
+        usage.reset_facts = Some(codex_reset_facts(
+            &usage,
+            observed_at,
+            ResetDatum::Unsupported,
+        ));
         Ok((usage, cost))
     }
 
@@ -136,12 +144,19 @@ impl CodexApi {
             .map_err(|e| ProviderError::Parse(e.to_string()))?;
 
         let (mut usage, cost) = self.build_result_from_json(&json)?;
-        if let Ok(reset_credits) = self.fetch_rate_limit_reset_credits(&creds, &base_url).await
-            && reset_credits.available_count > 0
+        let observed_at = Utc::now();
+        let reset_credits = self.fetch_rate_limit_reset_credits(&creds, &base_url).await;
+        if let Ok(reset_credits) = &reset_credits
+            && reset_credits.available_count.is_some_and(|count| count > 0)
         {
-            let window = reset_credits_rate_window(&reset_credits, Utc::now());
+            let window = reset_credits_rate_window(reset_credits, observed_at);
             usage = usage.with_extra_rate_window("reset-credits", "Reset credits", window);
         }
+        let banked_reset_cards = match reset_credits {
+            Ok(reset_credits) => reset_credits_inventory(reset_credits),
+            Err(reason) => ResetDatum::unavailable(reason),
+        };
+        usage.reset_facts = Some(codex_reset_facts(&usage, observed_at, banked_reset_cards));
         Ok((usage, cost))
     }
 
@@ -149,7 +164,7 @@ impl CodexApi {
         &self,
         creds: &CodexCredentials,
         base_url: &str,
-    ) -> Result<ResetCredits, ProviderError> {
+    ) -> Result<ResetCredits, ResetUnavailableReason> {
         let mut request = self
             .client
             .get(format!("{}{}", base_url, RESET_CREDITS_PATH))
@@ -161,14 +176,18 @@ impl CodexApi {
         {
             request = request.header("ChatGPT-Account-Id", account_id);
         }
-        let response = request.send().await?;
+        let response = request
+            .send()
+            .await
+            .map_err(|_| ResetUnavailableReason::FetchFailed)?;
         if !response.status().is_success() {
-            return Err(ProviderError::Other(format!(
-                "Codex reset credits returned {}",
-                response.status()
-            )));
+            return Err(ResetUnavailableReason::FetchFailed);
         }
-        decode_reset_credits(&response.bytes().await?)
+        let bytes = response
+            .bytes()
+            .await
+            .map_err(|_| ResetUnavailableReason::FetchFailed)?;
+        decode_reset_credits(&bytes)
     }
 
     fn load_credentials(&self) -> Result<CodexCredentials, ProviderError> {
@@ -879,6 +898,8 @@ struct SpendControlLimitSnapshot {
 #[derive(Debug, Clone, Deserialize)]
 struct ResetCredit {
     #[serde(default)]
+    id: Option<String>,
+    #[serde(default)]
     status: Option<String>,
     #[serde(default)]
     expires_at: Option<String>,
@@ -888,13 +909,84 @@ struct ResetCredit {
 struct ResetCredits {
     #[serde(default)]
     credits: Vec<ResetCredit>,
-    #[serde(default)]
-    available_count: u32,
+    available_count: Option<u32>,
 }
 
-fn decode_reset_credits(data: &[u8]) -> Result<ResetCredits, ProviderError> {
-    serde_json::from_slice(data)
-        .map_err(|e| ProviderError::Parse(format!("Failed to parse Codex reset credits: {e}")))
+fn decode_reset_credits(data: &[u8]) -> Result<ResetCredits, ResetUnavailableReason> {
+    serde_json::from_slice(data).map_err(|_| ResetUnavailableReason::Malformed)
+}
+
+fn reset_credits_inventory(reset: ResetCredits) -> ResetDatum<BankedResetInventory> {
+    let Some(available_count) = reset.available_count else {
+        return ResetDatum::unavailable(ResetUnavailableReason::NotReported);
+    };
+    let cards = reset
+        .credits
+        .into_iter()
+        .map(|credit| {
+            BankedResetCard::from_reported(
+                credit.id,
+                credit.status.as_deref(),
+                credit.expires_at.as_deref(),
+            )
+        })
+        .collect();
+    ResetDatum::known(BankedResetInventory::from_reported(available_count, cards))
+}
+
+fn codex_reset_facts(
+    usage: &UsageSnapshot,
+    observed_at: DateTime<Utc>,
+    banked_reset_cards: ResetDatum<BankedResetInventory>,
+) -> ProviderResetFacts {
+    ProviderResetFacts {
+        observed_at,
+        provider_issued_resets: ResetDatum::unavailable(ResetUnavailableReason::NotReported),
+        last_actual_reset: ResetDatum::unavailable(ResetUnavailableReason::NotObserved),
+        next_weekly_reset: next_weekly_reset(usage, observed_at),
+        banked_reset_cards,
+    }
+}
+
+fn next_weekly_reset(
+    usage: &UsageSnapshot,
+    observed_at: DateTime<Utc>,
+) -> ResetDatum<ScheduledReset> {
+    let mut candidates = Vec::new();
+    let mut add = |window_key: &str, window: &RateWindow| {
+        if !window.is_informational
+            && window.window_minutes.is_some_and(|minutes| {
+                RateWindowCadence::from_minutes(minutes) == RateWindowCadence::Weekly
+            })
+            && let Some(resets_at) = window.resets_at
+            && resets_at > observed_at
+        {
+            candidates.push(ScheduledReset {
+                window_key: window_key.to_string(),
+                resets_at,
+            });
+        }
+    };
+
+    add("primary", &usage.primary);
+    if let Some(window) = &usage.secondary {
+        add("secondary", window);
+    }
+    if let Some(window) = &usage.model_specific {
+        add("modelSpecific", window);
+    }
+    if let Some(window) = &usage.tertiary {
+        add("tertiary", window);
+    }
+    for extra in &usage.extra_rate_windows {
+        add(&format!("extra:{}", extra.id), &extra.window);
+    }
+
+    candidates
+        .into_iter()
+        .min_by_key(|candidate| candidate.resets_at)
+        .map(ResetDatum::known)
+        .unwrap_or_else(|| ResetDatum::unavailable(ResetUnavailableReason::NotReported))
 }
 
 fn parse_credit_expiry(raw: &str) -> Option<DateTime<Utc>> {
@@ -905,8 +997,8 @@ fn parse_credit_expiry(raw: &str) -> Option<DateTime<Utc>> {
 
 fn is_available_credit(credit: &ResetCredit) -> bool {
     match credit.status.as_deref() {
-        None | Some("") => true,
         Some(status) => status.eq_ignore_ascii_case("available"),
+        None => false,
     }
 }
 
@@ -925,8 +1017,12 @@ fn next_available_reset_credit_expiry(
 fn reset_credits_rate_window(reset: &ResetCredits, now: DateTime<Utc>) -> RateWindow {
     let description = format!(
         "{} reset credit{} available",
-        reset.available_count,
-        if reset.available_count == 1 { "" } else { "s" }
+        reset.available_count.unwrap_or(0),
+        if reset.available_count == Some(1) {
+            ""
+        } else {
+            "s"
+        }
     );
     let mut window = RateWindow::informational(description);
     window.resets_at = next_available_reset_credit_expiry(&reset.credits, now);
@@ -1202,12 +1298,99 @@ mod tests {
             br#"{"available_count":2,"credits":[{"id":"a","status":"available","expires_at":"2026-08-01T12:00:00Z"}]}"#,
         )
         .expect("reset credits");
-        assert_eq!(credits.available_count, 2);
+        assert_eq!(credits.available_count, Some(2));
         assert_eq!(credits.credits.len(), 1);
         assert_eq!(credits.credits[0].status.as_deref(), Some("available"));
         assert_eq!(
             credits.credits[0].expires_at.as_deref(),
             Some("2026-08-01T12:00:00Z")
+        );
+    }
+
+    #[test]
+    fn reset_inventory_preserves_confirmed_zero() {
+        let decoded = decode_reset_credits(br#"{"available_count":0,"credits":[]}"#).unwrap();
+        let ResetDatum::Known { value } = reset_credits_inventory(decoded) else {
+            panic!("explicit zero must remain known");
+        };
+        assert_eq!(value.reported_available_count, 0);
+        assert!(value.cards.is_empty());
+        assert!(value.details_complete);
+    }
+
+    #[test]
+    fn reset_inventory_preserves_every_card_and_unknown_fields() {
+        let decoded = decode_reset_credits(
+            br#"{"available_count":2,"credits":[
+                {"id":"available-a","status":"available","expires_at":"2026-10-01T00:00:00Z"},
+                {"id":"expired-b","status":"expired","expires_at":"2026-09-01T00:00:00Z"},
+                {"id":"unknown-c","status":"new_status","expires_at":"not-a-date"},
+                {"id":"unknown-d"}
+            ]}"#,
+        )
+        .unwrap();
+        let ResetDatum::Known { value } = reset_credits_inventory(decoded) else {
+            panic!("reported count must produce known inventory");
+        };
+
+        assert_eq!(value.reported_available_count, 2);
+        assert_eq!(value.cards.len(), 4);
+        assert_eq!(value.cards[0].opaque_id.as_deref(), Some("available-a"));
+        assert_eq!(
+            value.cards[0].status,
+            crate::core::ResetCardStatus::Available
+        );
+        assert_eq!(value.cards[1].status, crate::core::ResetCardStatus::Expired);
+        assert_eq!(value.cards[2].status, crate::core::ResetCardStatus::Unknown);
+        assert_eq!(
+            value.cards[2].expires_at,
+            ResetDatum::unavailable(ResetUnavailableReason::Malformed)
+        );
+        assert_eq!(
+            value.cards[3].expires_at,
+            ResetDatum::unavailable(ResetUnavailableReason::NotReported)
+        );
+        assert!(!value.details_complete);
+    }
+
+    #[test]
+    fn reset_inventory_missing_count_is_unavailable_not_zero() {
+        let decoded = decode_reset_credits(br#"{"credits":[]}"#).unwrap();
+        assert_eq!(
+            reset_credits_inventory(decoded),
+            ResetDatum::unavailable(ResetUnavailableReason::NotReported)
+        );
+        assert!(matches!(
+            decode_reset_credits(br#"{"available_count":"two"}"#),
+            Err(ResetUnavailableReason::Malformed)
+        ));
+    }
+
+    #[test]
+    fn reset_facts_accept_only_future_weekly_window_evidence() {
+        let observed_at = DateTime::parse_from_rfc3339("2026-09-13T00:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let weekly_reset = observed_at + chrono::Duration::days(2);
+        let usage = UsageSnapshot::new(RateWindow::new(5.0)).with_secondary(
+            RateWindow::with_details(20.0, Some(10_080), Some(weekly_reset), None),
+        );
+        let facts = codex_reset_facts(
+            &usage,
+            observed_at,
+            ResetDatum::known(BankedResetInventory::from_reported(0, vec![])),
+        );
+
+        assert_eq!(
+            facts.next_weekly_reset,
+            ResetDatum::known(ScheduledReset {
+                window_key: "secondary".into(),
+                resets_at: weekly_reset,
+            })
+        );
+        assert_eq!(
+            facts.last_actual_reset,
+            ResetDatum::unavailable(ResetUnavailableReason::NotObserved)
         );
     }
 
@@ -1218,14 +1401,17 @@ mod tests {
             .with_timezone(&Utc);
         let credits = vec![
             ResetCredit {
+                id: None,
                 status: Some("available".into()),
                 expires_at: Some("2026-07-10T00:00:00Z".into()),
             },
             ResetCredit {
+                id: None,
                 status: Some("available".into()),
                 expires_at: Some("2026-07-05T00:00:00Z".into()),
             },
             ResetCredit {
+                id: None,
                 status: Some("available".into()),
                 expires_at: Some("2026-07-20T00:00:00Z".into()),
             },
@@ -1246,18 +1432,22 @@ mod tests {
             .with_timezone(&Utc);
         let credits = vec![
             ResetCredit {
+                id: None,
                 status: Some("available".into()),
                 expires_at: Some("2026-06-01T00:00:00Z".into()),
             },
             ResetCredit {
+                id: None,
                 status: Some("used".into()),
                 expires_at: Some("2026-07-03T00:00:00Z".into()),
             },
             ResetCredit {
+                id: None,
                 status: Some("AVAILABLE".into()),
                 expires_at: Some("2026-07-08T00:00:00Z".into()),
             },
             ResetCredit {
+                id: None,
                 status: None,
                 expires_at: Some("2026-07-09T00:00:00Z".into()),
             },
@@ -1277,13 +1467,15 @@ mod tests {
             .unwrap()
             .with_timezone(&Utc);
         let reset = ResetCredits {
-            available_count: 2,
+            available_count: Some(2),
             credits: vec![
                 ResetCredit {
+                    id: None,
                     status: Some("available".into()),
                     expires_at: Some("2026-07-15T12:00:00Z".into()),
                 },
                 ResetCredit {
+                    id: None,
                     status: Some("available".into()),
                     expires_at: Some("2026-07-10T12:00:00Z".into()),
                 },
@@ -1311,7 +1503,7 @@ mod tests {
             .unwrap()
             .with_timezone(&Utc);
         let reset = ResetCredits {
-            available_count: 1,
+            available_count: Some(1),
             credits: vec![],
         };
         let window = reset_credits_rate_window(&reset, now);
@@ -1430,6 +1622,11 @@ mod tests {
                 .all(|w| w.id != "reset-credits"),
             "available_count=0 must not attach reset-credits"
         );
+        let facts = usage.reset_facts.expect("typed reset facts");
+        let ResetDatum::Known { value } = facts.banked_reset_cards else {
+            panic!("explicit zero must remain known");
+        };
+        assert_eq!(value.reported_available_count, 0);
     }
 
     #[test]

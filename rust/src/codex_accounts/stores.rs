@@ -199,6 +199,10 @@ impl Default for SnapshotStore {
 mod tests {
     use super::*;
     use crate::codex_accounts::models::{CodexAccountSource, utc_now};
+    use crate::core::{
+        BankedResetCard, BankedResetInventory, ProviderResetFacts, ResetDatum,
+        ResetUnavailableReason,
+    };
 
     fn store_dir() -> tempfile::TempDir {
         let dir = tempfile::tempdir().unwrap();
@@ -255,6 +259,7 @@ mod tests {
             )),
             secondary_window: None,
             credits: None,
+            reset_facts: None,
             updated_at: utc_now(),
         };
         let mut map = HashMap::new();
@@ -264,6 +269,70 @@ mod tests {
         assert_eq!(loaded.len(), 1);
         assert_eq!(loaded[&id].plan.as_deref().unwrap(), "pro");
         crate::codex_accounts::file_locations::clear_app_support_directory_override();
+    }
+
+    #[test]
+    fn snapshot_store_preserves_distinct_reset_inventory_per_account() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = SnapshotStore::with_path(dir.path().join("snapshots.json"));
+        let first_id = Uuid::parse_str("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").unwrap();
+        let second_id = Uuid::parse_str("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb").unwrap();
+        let make_snapshot = |email: &str, count: u32, card_id: &str| {
+            let observed_at = utc_now();
+            let card = BankedResetCard::from_reported(
+                Some(card_id.to_string()),
+                Some("available"),
+                Some("2026-12-01T00:00:00Z"),
+            );
+            crate::codex_accounts::models::AccountUsageSnapshot {
+                email: Some(email.to_string()),
+                provider_account_id: None,
+                plan: Some("pro".to_string()),
+                allowed: Some(true),
+                limit_reached: None,
+                primary_window: None,
+                secondary_window: None,
+                credits: None,
+                reset_facts: Some(ProviderResetFacts {
+                    observed_at,
+                    provider_issued_resets: ResetDatum::unavailable(
+                        ResetUnavailableReason::NotReported,
+                    ),
+                    last_actual_reset: ResetDatum::unavailable(ResetUnavailableReason::NotObserved),
+                    next_weekly_reset: ResetDatum::unavailable(ResetUnavailableReason::NotReported),
+                    banked_reset_cards: ResetDatum::known(BankedResetInventory::from_reported(
+                        count,
+                        vec![card],
+                    )),
+                }),
+                updated_at: observed_at,
+            }
+        };
+        let mut snapshots = HashMap::new();
+        snapshots.insert(
+            first_id,
+            make_snapshot("first@example.com", 1, "first-card"),
+        );
+        snapshots.insert(
+            second_id,
+            make_snapshot("second@example.com", 2, "second-card"),
+        );
+
+        store.save(&snapshots).unwrap();
+        let loaded = store.load().unwrap();
+
+        let reset_inventory = |id: Uuid| {
+            let facts = loaded[&id].reset_facts.as_ref().unwrap();
+            let ResetDatum::Known { value } = &facts.banked_reset_cards else {
+                panic!("reset inventory must remain known");
+            };
+            (
+                value.reported_available_count,
+                value.cards[0].opaque_id.clone(),
+            )
+        };
+        assert_eq!(reset_inventory(first_id), (1, Some("first-card".into())));
+        assert_eq!(reset_inventory(second_id), (2, Some("second-card".into())));
     }
 
     #[test]
@@ -282,6 +351,7 @@ mod tests {
             primary_window: None,
             secondary_window: None,
             credits: None,
+            reset_facts: None,
             updated_at: utc_now(),
         };
         let legacy = serde_json::json!({
@@ -293,6 +363,7 @@ mod tests {
 
         let loaded = SnapshotStore::with_path(path).load().unwrap();
         assert_eq!(loaded[&id].email.as_deref(), Some(email));
+        assert!(loaded[&id].reset_facts.is_none());
         assert_eq!(
             loaded[&id].provider_account_id.as_deref(),
             Some(provider_account_id)
@@ -319,6 +390,7 @@ mod tests {
             )),
             secondary_window: None,
             credits: None,
+            reset_facts: None,
             updated_at: utc_now(),
         };
         let mut snapshots = HashMap::new();
