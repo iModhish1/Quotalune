@@ -3,7 +3,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 test_root="$(mktemp -d)"
-trap 'rm -rf "$test_root"' EXIT
+trap '[[ "$(dirname "$(realpath "$test_root")")" == "$(realpath /tmp)" ]] && rm -rf -- "$test_root"' EXIT
 mkdir -p "$test_root/bin"
 log="$test_root/gh.log"
 
@@ -24,6 +24,8 @@ elif [[ "${1:-}" == pr && "${2:-}" == view ]]; then
   printf '%s\n' 'https://github.com/iModhish1/Quotalis/pull/361'
 elif [[ "${1:-}" == issue && "${2:-}" == view ]]; then
   printf '%s\n' 'https://github.com/iModhish1/Quotalis/issues/123'
+elif [[ "${1:-}" == release && "${2:-}" == view ]]; then
+  printf '%s\n' "${FAKE_RELEASE:-v1.2.3|https://github.com/iModhish1/Quotalis/releases/tag/v1.2.3|false}"
 elif [[ "${1:-}" == api ]]; then
   printf '%s\n' 'https://github.com/iModhish1/Quotalis/releases/tag/v1.2.3'
 fi
@@ -31,6 +33,9 @@ EOF
 chmod +x "$test_root/bin/gh"
 export PATH="$test_root/bin:$PATH"
 export GH_SAFE_TEST_LOG="$log"
+export GH_SAFE_TEST_MOCK="$test_root/bin/gh"
+gh() { "$BASH" "$GH_SAFE_TEST_MOCK" "$@"; }
+export -f gh
 
 expect_fail() {
   if "$@" >/dev/null 2>&1; then
@@ -118,3 +123,13 @@ bash "$repo_root/scripts/gh-safe.sh" \
   release upload v1.2.3 dist/app.zip >/dev/null
 
 echo 'GitHub write-safety shell tests passed.'
+
+FAKE_RELEASE='v1.2.3|https://github.com/iModhish1/Quotalis/releases/tag/untagged-test|true' bash "$repo_root/scripts/gh-safe.sh" \
+  --repo iModhish1/Quotalis --verify-kind release --target v1.2.3 --what-if -- release edit v1.2.3 --draft=false >/dev/null
+FAKE_RELEASE='v9.9.9|https://github.com/iModhish1/Quotalis/releases/tag/untagged-test|true' expect_fail bash "$repo_root/scripts/gh-safe.sh" \
+  --repo iModhish1/Quotalis --verify-kind release --target v1.2.3 --what-if -- release edit v1.2.3 --draft=false
+FAKE_RELEASE='v1.2.3|https://github.com/other/repo/releases/tag/untagged-test|true' expect_fail bash "$repo_root/scripts/gh-safe.sh" \
+  --repo iModhish1/Quotalis --verify-kind release --target v1.2.3 --what-if -- release edit v1.2.3 --draft=false
+FAKE_RELEASE='v1.2.3|https://github.com/iModhish1/Quotalis/releases/tag/untagged-test|false' expect_fail bash "$repo_root/scripts/gh-safe.sh" \
+  --repo iModhish1/Quotalis --verify-kind release --target v1.2.3 --what-if -- release edit v1.2.3 --draft=false
+echo 'Draft release tag and owner verification tests passed.'

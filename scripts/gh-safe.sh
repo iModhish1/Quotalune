@@ -92,7 +92,13 @@ case "$verify_kind" in
     ;;
   pr) verified_url="$(gh pr view "$target" --repo "$repo" --json url --jq .url)" ;;
   issue) verified_url="$(gh issue view "$target" --repo "$repo" --json url --jq .url)" ;;
-  release) verified_url="$(gh api "repos/$repo/releases/tags/$target" --jq .html_url)" ;;
+  release)
+    # GitHub draft releases have an untagged URL even when their target tag
+    # already exists. Bind the returned tag explicitly before accepting that URL.
+    release_readback="$(gh release view "$target" --repo "$repo" --json tagName,url,isDraft --jq '[.tagName,.url,(.isDraft|tostring)] | join("|")')"
+    IFS='|' read -r returned_tag verified_url release_draft <<< "$release_readback"
+    [[ "$returned_tag" == "$target" ]] || { echo 'Release read-back tag mismatch.' >&2; exit 4; }
+    ;;
 esac
 
 expected_prefix="https://github.com/$repo/"
@@ -101,7 +107,12 @@ shopt -s nocasematch
 case "$verify_kind" in
   pr) [[ "$verified_url" == *"/pull/$target" ]] || { echo "GitHub target mismatch: '$verified_url' does not end with '/pull/$target'." >&2; exit 4; } ;;
   issue) [[ "$verified_url" == *"/issues/$target" ]] || { echo "GitHub target mismatch: '$verified_url' does not end with '/issues/$target'." >&2; exit 4; } ;;
-  release) [[ "$verified_url" == *"/releases/tag/$target" ]] || { echo "GitHub target mismatch: '$verified_url' does not end with '/releases/tag/$target'." >&2; exit 4; } ;;
+  release)
+    [[ "$verified_url" == "${expected_prefix}releases/tag/$target" ||
+       ( "$release_draft" == true && "$verified_url" == "${expected_prefix}releases/tag/untagged-"* ) ]] || {
+      echo 'Release URL does not identify the verified published or draft release.' >&2; exit 4;
+    }
+    ;;
 esac
 shopt -u nocasematch
 
