@@ -56,8 +56,8 @@
 .product-nav__leaf-icon svg{width:14px;height:14px}
 .settings-center__editor>.settings-section{min-width:0}
 @media(min-width:1100px){
- .settings-body:is([data-tab=general],[data-tab=notifications],[data-tab=advanced]) .settings-center__editor{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
- .settings-center__editor>.settings-section{margin:0}
+ .settings-body[data-tab=advanced] .settings-center__editor{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+ .settings-body[data-tab=advanced] .settings-center__editor>.settings-section{margin:0}
  .settings-center__editor>.general-settings-card--language{grid-column:1;grid-row:1}
  .settings-center__editor>.general-settings-card--theme{grid-column:2;grid-row:1}
  .settings-center__editor>.general-settings-card--identity{grid-row:2}

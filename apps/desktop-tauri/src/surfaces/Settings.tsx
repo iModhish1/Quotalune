@@ -370,7 +370,7 @@ export default function Settings({ state, initialTab: propTab, navigationRevisio
           />
         )}
         {activeTab === "menuBar" && (
-          <><TrayStudioTab catalog={state.providers} settings={settings} set={set} saving={saving}/><details><summary>{t("MenuBar")}</summary><DisplayTab mode="menuBar" settings={settings} set={set} saving={saving} /></details></>
+          <><TrayStudioTab catalog={state.providers} settings={settings} set={set} saving={saving}/><details className="tray-studio__menu-settings"><summary>{t("MenuBar")}</summary><div className="tray-studio__menu-content"><DisplayTab mode="menuBar" settings={settings} set={set} saving={saving} /></div></details></>
         )}
         {activeTab === "menu" && (
           <DisplayTab mode="menu" settings={settings} set={set} saving={saving} />

@@ -46,6 +46,7 @@ export function ProviderIcon({
       style={{
         ...dims,
         ["--provider-brand" as string]: entry.brandColor,
+        ["--provider-icon-plate" as string]: entry.contrastPlate,
       }}
       title={title}
       aria-hidden={title ? undefined : true}

@@ -6,6 +6,9 @@
 .logo-appearance__choice span:last-child{font-size:12px;line-height:1.2;text-align:center}
 .logo-appearance__sizes{display:flex;flex-wrap:wrap;gap:8px}
 .logo-appearance__sizes button{min-width:92px}
+.settings-studio .general-settings-card--identity .settings-field{grid-template-columns:minmax(0,1fr);align-items:start;gap:12px}
+.settings-studio .general-settings-card--identity .settings-field__control{width:100%;justify-content:flex-start;min-width:0}
+.settings-studio .logo-appearance__choices{grid-template-columns:repeat(auto-fill,minmax(116px,1fr));max-width:760px}
 [data-theme="light"] .logo-appearance__choice{--settings-control:#f5f8fb;--settings-control-hover:#edf3f8;border-color:#b9c5d2}
 [data-theme="light"] .logo-appearance__choice[aria-pressed="true"]{border-color:#51667d;box-shadow:inset 0 0 0 1px #8fa2b6,0 0 0 2px #d9e4ee}
 @media(max-width:560px){.logo-appearance__choices{grid-template-columns:repeat(2,minmax(0,1fr))}}

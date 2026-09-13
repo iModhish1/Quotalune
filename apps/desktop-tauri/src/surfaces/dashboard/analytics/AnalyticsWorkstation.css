@@ -62,7 +62,7 @@
 .dashboard-analytics .analytics-status-rail {display:flex;flex-wrap:wrap;gap:0;margin:0;padding:0;border-block:1px solid var(--qa-analytics-hairline)}
 .dashboard-analytics .attention-queue li {flex:1;min-width:220px;display:flex;align-items:center;gap:8px;padding:8px 10px!important;background:transparent;border-inline-start:2px solid var(--qa-analytics-accent);font-size:10px}
 .dashboard-analytics .attention-queue li[data-attention=critical],.dashboard-analytics .attention-queue li[data-attention=auth] {border-inline-start-color:var(--qa-status-critical,#d28478)}
-.dashboard-analytics .attention-queue li>.provider-icon {width:20px!important;min-width:20px!important;flex:0 0 20px!important;background:transparent!important;border:0!important}
+.dashboard-analytics .attention-queue li>.provider-icon {width:20px!important;min-width:20px!important;flex:0 0 20px!important;background:var(--provider-icon-plate,transparent)!important;border:0!important}
 .dashboard-analytics .attention-queue button {font-size:9px!important;padding:3px 6px!important;min-height:24px!important}
 .dashboard-analytics .reset-horizon__timeline {padding:6px 14px 0;background:var(--qa-analytics-surface-primary);border-block:1px solid var(--qa-analytics-hairline)}
 .dashboard-analytics .reset-horizon__ticks {font-size:9px;height:24px;border-bottom:1px solid var(--qa-analytics-hairline-strong);background:repeating-linear-gradient(90deg,transparent 0,transparent calc(12.5% - 1px),var(--qa-analytics-hairline) calc(12.5% - 1px),var(--qa-analytics-hairline) 12.5%)}
