@@ -30,7 +30,7 @@
 .provider-planet__orbit {position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);fill:none;stroke-width:3}
 .provider-planet__track {stroke:color-mix(in srgb,var(--planet-color) 25%,transparent)}
 .provider-planet__arc {stroke:color-mix(in srgb,var(--planet-color) 70%,white);filter:drop-shadow(0 0 3px var(--planet-color));stroke-linecap:round}
-.provider-planet>.provider-icon {position:relative;z-index:1;background:none!important;border:0!important;filter:drop-shadow(0 2px 4px #000);color:var(--provider-brand)}
+.provider-planet>.provider-icon {position:relative;z-index:1;background:var(--provider-icon-plate,transparent)!important;border:0!important;filter:drop-shadow(0 2px 4px #000);color:var(--provider-brand)}
 .provider-planet[data-provider=codex]>.provider-icon,.provider-planet[data-provider=grok]>.provider-icon {--provider-brand:#f4f8ff!important;color:#f4f8ff}
 .provider-planet--small {width:64px;height:64px}
 .provider-planet--small .provider-planet__surface {inset:4px}
@@ -188,7 +188,7 @@
 .cosmic-reset-bands>div:last-child {border:0}
 .cosmic-reset-bands__label {display:block;white-space:nowrap;text-align:center;font-size:9px;padding:7px 2px;border-bottom:1px solid var(--cosmic-line)}
 .cosmic-reset-provider {display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:10px 2px;font-size:9px;overflow-wrap:anywhere}
-.cosmic-reset-provider .provider-icon {background:none!important;border:0!important}
+.cosmic-reset-provider .provider-icon {background:var(--provider-icon-plate,transparent)!important;border:0!important}
 .cosmic-reset-provider time {color:var(--qa-analytics-text-primary);font-size:11px;font-weight:600}
 .cosmic-trend-answer {display:flex;gap:8px;align-items:stretch}
 .cosmic-trend-plot {flex:1;min-width:0}

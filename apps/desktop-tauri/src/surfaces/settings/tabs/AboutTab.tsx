@@ -8,7 +8,8 @@ import type { LocaleKey } from "../../../i18n/keys";
 import type { TabProps } from "../settingsTabs";
 import QuotaArcMark from "../../../components/QuotaArcMark";
 
-const REPO_URL = "https://github.com/quotaarc/quotaarc";
+const REPO_URL = "https://github.com/nesszer/Win-CodexBar";
+const UPSTREAM_URL = "https://github.com/steipete/CodexBar";
 const SUBMIT_ISSUE_URL = `${REPO_URL}/issues/new?labels=bug&template=bug_report.yml`;
 
 const ABOUT_LINKS: ReadonlyArray<{ labelKey: LocaleKey; url: string }> = [
@@ -213,9 +214,9 @@ export default function AboutTab({ settings, set, saving }: TabProps) {
         <button
           type="button"
           className="about-link about-link--inline"
-          onClick={() => openAboutLink(REPO_URL)}
+          onClick={() => openAboutLink(UPSTREAM_URL)}
         >
-          {t("AppName")}
+          CodexBar
         </button>
         {" "}{copyrightAfter}
       </p>

@@ -10,7 +10,7 @@
 .provider-rail__track{display:flex;justify-content:center;position:relative;isolation:isolate;gap:8px;min-height:234px}
 .provider-rail__track:before{content:"";position:absolute;inset:60px 0 auto;height:1px;background:var(--cosmic-line);z-index:-1}
 .provider-rail__node{flex:1;max-width:210px;min-width:0;display:flex;align-items:center;flex-direction:column;gap:8px;padding:12px 6px;border:1px solid transparent;border-radius:12px;background:transparent;transition:background 130ms,border-color 130ms}
-.provider-rail__node[aria-selected=true]{background:color-mix(in srgb,var(--qa-analytics-accent) 7%,var(--cosmic-panel));border-color:var(--qa-analytics-accent)}
+.provider-rail__node[aria-current=true]{background:color-mix(in srgb,var(--qa-analytics-accent) 7%,var(--cosmic-panel));border-color:var(--qa-analytics-accent)}
 .provider-rail__node:hover{background:color-mix(in srgb,var(--qa-analytics-accent) 10%,var(--cosmic-panel))}.provider-rail__node:focus-visible{outline:2px solid var(--qa-analytics-accent);outline-offset:-3px}
 .provider-rail__node .provider-planet{width:88px;height:88px;box-shadow:0 0 12px color-mix(in srgb,var(--planet-color) 15%,transparent)}
 .provider-rail__node strong{font-size:13px;margin-top:5px}.provider-rail__node>small{font-size:10px;color:var(--qa-analytics-text-secondary);max-width:100%;overflow-wrap:anywhere}
@@ -41,7 +41,7 @@
 @media(max-width:850px){.v3-overview-modules{grid-template-columns:minmax(0,1fr)}}
 
 .product-v3 .v3-overview-modules>[data-analytics-section]{grid-column:auto}.product-v3 .v3-overview-modules>[data-analytics-section=limits],.product-v3 .v3-overview-modules>[data-analytics-section=overview]{grid-column:1/-1}
-.settings-studio .settings-body .product-v3 .provider-rail__node{background:transparent;border-color:transparent;padding:12px 6px}.settings-studio .settings-body .product-v3 .provider-rail__node[aria-selected=true]{background:color-mix(in srgb,var(--qa-analytics-accent) 8%,var(--cosmic-panel));border-color:var(--qa-analytics-accent)}
+.settings-studio .settings-body .product-v3 .provider-rail__node{background:transparent;border-color:transparent;padding:12px 6px}.settings-studio .settings-body .product-v3 .provider-rail__node[aria-current=true]{background:color-mix(in srgb,var(--qa-analytics-accent) 8%,var(--cosmic-panel));border-color:var(--qa-analytics-accent)}
 .settings-studio .settings-body .product-v3 .provider-rail__node:hover{background:color-mix(in srgb,var(--qa-analytics-accent) 12%,var(--cosmic-panel))}
 .product-v3.dashboard-cosmic .dashboard-analytics__kpis{padding-inline:0!important}.product-v3.dashboard-cosmic .dashboard-analytics__kpis-primary{max-width:none;width:100%}
 

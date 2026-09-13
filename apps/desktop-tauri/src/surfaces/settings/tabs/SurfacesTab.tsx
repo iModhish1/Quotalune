@@ -128,7 +128,7 @@ export default function SurfacesTab() {
           </p>
         </div>
         <div className="surface-settings__preview" data-form={config.topArcForm} aria-label={`${config.topArcForm} structure preview`}>
-          <StructurePreview form={config.topArcForm} catalog={catalog}/>
+          <StructurePreview form={config.topArcForm} catalog={catalog} maxWidth={144} maxHeight={80}/>
         </div>
       </header>
 

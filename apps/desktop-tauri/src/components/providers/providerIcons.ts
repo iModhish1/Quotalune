@@ -81,6 +81,8 @@ export interface ProviderIcon {
   fallbackLetter: string;
   /** Raw SVG markup when the provider ships a brand asset. */
   svgPath?: string;
+  /** Preserve dark artwork on a light plate, independently of the surface theme. */
+  contrastPlate?: string;
 }
 
 const RAW: Record<string, string> = {
@@ -112,7 +114,9 @@ const RAW: Record<string, string> = {
   elevenlabs: tint(elevenlabs),
   factory: tint(factory),
   gemini: tint(gemini),
-  grok: tint(grok),
+  // This asset includes a dark backing plate and a white foreground. Tinting
+  // the foreground to the dark brand color erases the mark.
+  grok,
   groq: tint(groq),
   jetbrains: tint(jetbrains),
   kilo: tint(kilo),
@@ -148,8 +152,8 @@ const RAW: Record<string, string> = {
  * letters from `rust/src/native_ui/theme.rs::{provider_color, provider_icon}`.
  */
 export const PROVIDER_ICON_REGISTRY: Record<string, ProviderIcon> = {
-  alibaba:     { id: "alibaba",     brandColor: "#ff6a00", fallbackLetter: "阿", svgPath: RAW.alibaba },
-  alibabatokenplan: { id: "alibabatokenplan", brandColor: "#ff6a00", fallbackLetter: "阿", svgPath: RAW.alibaba },
+  alibaba:     { id: "alibaba",     brandColor: "#ff6a00", fallbackLetter: "阿", svgPath: RAW.alibaba, contrastPlate: "#f2f4f7" },
+  alibabatokenplan: { id: "alibabatokenplan", brandColor: "#ff6a00", fallbackLetter: "阿", svgPath: RAW.alibaba, contrastPlate: "#f2f4f7" },
   amp:         { id: "amp",         brandColor: "#dc2626", fallbackLetter: "⚡", svgPath: RAW.amp },
   antigravity: { id: "antigravity", brandColor: "#60ba7e", fallbackLetter: "◉", svgPath: RAW.antigravity },
   augment:     { id: "augment",     brandColor: "#6366f1", fallbackLetter: "A", svgPath: RAW.augment },

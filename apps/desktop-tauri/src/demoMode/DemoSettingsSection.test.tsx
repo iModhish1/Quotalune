@@ -45,11 +45,11 @@ describe("DemoSettingsSection", () => {
 
   it("provider count stepper persists the incremented/decremented count", () => {
     const update = vi.fn();
-    render(<DemoSettingsSection settings={settings({ demoModeEnabled: true, demoProviderCount: 6 })} catalog={CATALOG} update={update} />);
+    render(<DemoSettingsSection settings={settings({ demoModeEnabled: true, demoProviderCount: 2 })} catalog={CATALOG} update={update} />);
     fireEvent.click(screen.getByRole("button", { name: "Increase simulated provider count" }));
-    expect(update).toHaveBeenCalledWith({ demoProviderCount: 7 });
+    expect(update).toHaveBeenCalledWith({ demoProviderCount: 3 });
     fireEvent.click(screen.getByRole("button", { name: "Decrease simulated provider count" }));
-    expect(update).toHaveBeenCalledWith({ demoProviderCount: 5 });
+    expect(update).toHaveBeenCalledWith({ demoProviderCount: 1 });
   });
 
   it("provider count stepper clamps at the 1-70 bounds (never 0)", () => {
@@ -146,8 +146,17 @@ describe("DemoSettingsSection", () => {
     );
     const summary = within(screen.getByText("Current configuration").closest("div")!);
     expect(summary.getByText("On")).toBeInTheDocument();
-    expect(summary.getByText("12 providers")).toBeInTheDocument();
+    expect(summary.getByText("3 providers")).toBeInTheDocument();
     expect(summary.getByText("High Usage")).toBeInTheDocument();
     expect(summary.getByText("30 days")).toBeInTheDocument();
+  });
+  it("caps a stored larger request at the actual catalog without silently rewriting settings", () => {
+    const update = vi.fn();
+    render(<DemoSettingsSection settings={settings({demoModeEnabled:true,demoProviderCount:70})} catalog={CATALOG} update={update}/>);
+    expect(screen.getByRole("status")).toHaveTextContent("3");
+    expect(screen.getByRole("button", {name:"Increase simulated provider count"})).toBeDisabled();
+    expect(update).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", {name:"Decrease simulated provider count"}));
+    expect(update).toHaveBeenCalledWith({demoProviderCount:2});
   });
 });

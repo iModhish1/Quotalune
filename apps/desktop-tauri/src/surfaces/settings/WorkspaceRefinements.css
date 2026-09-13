@@ -73,3 +73,42 @@
 .studio-sections { display:flex; flex-wrap:wrap; gap:8px; padding:4px 0 14px; position:relative; }
 .studio-sections button { padding:9px 18px; border-radius:12px; border:1px solid var(--qa-hairline-strong); background:transparent; color:var(--qa-ink-secondary); }
 .studio-sections button[aria-current="page"] { color:var(--qa-accent); background:color-mix(in srgb,var(--qa-accent) 12%,transparent); border-color:var(--qa-accent); }
+
+/* Native QA: compact editor chrome without scaling text or widget artwork. */
+.settings-studio .surface-settings__hero {padding:10px 12px;gap:12px;grid-template-columns:minmax(0,1fr) 152px;border-radius:12px}
+.settings-studio .surface-settings__hero .settings-section__description {max-width:78ch;font-size:12px}
+.settings-studio .surface-settings__hero .surface-settings__preview {width:152px;height:96px;margin:0}
+.settings-studio .surface-settings__hero .structure-preview {height:96px}
+.settings-studio .surface-settings__intro-controls {align-items:start}
+.settings-studio .collections-page .collections-studio {padding:0;gap:12px;background:transparent;color:var(--text-primary)}
+.settings-studio .collections-page .collections-editor {padding:12px;gap:10px;background:var(--workspace-surface);border-color:var(--workspace-edge)}
+.settings-studio .collections-preview>h2 {margin:0 0 10px}
+.settings-studio .provider-detail--demo>p {margin:0 0 12px;font-size:12px;line-height:1.5}
+.settings-studio .provider-detail--demo .dashboard-limits__grid {display:block;max-inline-size:680px}
+.settings-studio .provider-detail--demo .dashboard-limits__instrument {display:grid;grid-template-columns:100px minmax(0,1fr);gap:8px 16px;align-items:center}
+.settings-studio .provider-detail--demo .provider-planet {grid-row:1/4;width:96px;height:96px;margin:0;--planet-size:96px}
+.settings-studio .provider-detail--demo .dashboard-limits__instrument>header {flex-wrap:wrap}
+.settings-studio .provider-detail--demo .dashboard-limits__details {grid-column:1/-1;margin-top:4px}
+.settings-studio .provider-detail--demo .quota-gauge {max-width:340px;width:100%;margin-block:8px}
+.settings-studio .provider-detail--demo .quota-gauge__values {justify-content:flex-start;gap:28px}
+.settings-studio .tray-studio header {margin-bottom:12px}
+.settings-studio .tray-studio header p {margin:4px 0 0}
+.settings-studio .tray-studio__layout {grid-template-columns:minmax(210px,260px) minmax(0,1fr);gap:14px}
+.settings-studio .tray-studio__preview {padding:14px;gap:8px;border-radius:14px}
+.settings-studio .tray-studio__emblem {width:100px;height:100px;margin:6px 0}
+.settings-studio .tray-studio__preview p {font-size:11px;margin:4px 0;line-height:1.5}
+.settings-studio .tray-studio__templates {gap:8px;margin-bottom:12px}
+.settings-studio .tray-studio__templates button {min-height:76px;gap:6px}
+@media(max-width:900px) {.settings-studio .tray-studio__layout {grid-template-columns:1fr}}
+@media(min-width:1100px) {
+  /* Advanced cards have very different lengths. Column flow avoids a blank
+     half-page beside Proxy while preserving top-to-bottom reading order. */
+  .settings-studio .settings-body[data-tab=advanced] .settings-center__editor {display:block;columns:2;column-gap:16px}
+  .settings-studio .settings-body[data-tab=advanced] .settings-center__editor>.settings-section {display:inline-block;box-sizing:border-box;width:100%;break-inside:avoid;margin:0 0 14px;vertical-align:top}
+}
+@media(max-width:600px) {
+  .settings-studio .surface-settings__hero {grid-template-columns:minmax(0,1fr)}
+  .settings-studio .surface-settings__hero .surface-settings__preview {justify-self:start}
+  .settings-studio .provider-detail--demo .dashboard-limits__instrument {grid-template-columns:72px minmax(0,1fr);gap:8px}
+  .settings-studio .provider-detail--demo .provider-planet {width:68px;height:68px;--planet-size:68px}
+}

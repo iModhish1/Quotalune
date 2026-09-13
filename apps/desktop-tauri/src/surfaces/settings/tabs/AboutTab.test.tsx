@@ -124,14 +124,19 @@ describe("AboutTab", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "AboutLinkGitHub" }));
     fireEvent.click(screen.getByRole("button", { name: "SubmitIssue" }));
+    fireEvent.click(screen.getByRole("button", { name: "CodexBar" }));
 
     expect(tauriMocks.openExternalUrl).toHaveBeenNthCalledWith(
       1,
-      "https://github.com/quotaarc/quotaarc",
+      "https://github.com/nesszer/Win-CodexBar",
     );
     expect(tauriMocks.openExternalUrl).toHaveBeenNthCalledWith(
       2,
-      "https://github.com/quotaarc/quotaarc/issues/new?labels=bug&template=bug_report.yml",
+      "https://github.com/nesszer/Win-CodexBar/issues/new?labels=bug&template=bug_report.yml",
+    );
+    expect(tauriMocks.openExternalUrl).toHaveBeenNthCalledWith(
+      3,
+      "https://github.com/steipete/CodexBar",
     );
   });
 

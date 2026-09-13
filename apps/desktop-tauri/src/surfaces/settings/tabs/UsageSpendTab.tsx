@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { save } from "@tauri-apps/plugin-dialog";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useLocale } from "../../../hooks/useLocale";
 import { Select } from "../../../components/FormControls";
@@ -247,13 +246,7 @@ export default function UsageSpendTab(_props: TabProps) {
       return;
     }
     try {
-      const stamp = new Date().toISOString().slice(0, 10);
-      const path = await save({
-        defaultPath: `quotaarc-usage-spend-${stamp}.json`,
-        filters: [{ name: "JSON", extensions: ["json"] }],
-      });
-      if (!path) return;
-      await writeUsageSpendExport(path, JSON.stringify(summary, null, 2));
+      await writeUsageSpendExport(JSON.stringify(summary, null, 2));
     } catch (cause: unknown) {
       setShareError(cause instanceof Error ? cause.message : String(cause));
     }

@@ -1,5 +1,8 @@
 import QuotalisSelect from "./analytics/QuotalisSelect";
 import type React from "react";
+import { createContext, useContext, useId } from "react";
+
+const FieldContext = createContext<{label: string; descriptionId?: string} | null>(null);
 
 // ── tiny reusable controls ──────────────────────────────────────────
 
@@ -16,12 +19,14 @@ export function Toggle({
   ariaLabel?: string;
   disabled?: boolean;
 }) {
+  const field = useContext(FieldContext);
   const input = (
     <input
       type="checkbox"
       className="toggle"
       checked={checked}
-      aria-label={ariaLabel}
+      aria-label={ariaLabel ?? label ?? field?.label}
+      aria-describedby={field?.descriptionId}
       disabled={disabled}
       onChange={(e) => onChange(e.target.checked)}
     />
@@ -72,6 +77,7 @@ export function NumberInput({
   disabled?: boolean;
   ariaLabel?: string;
 }) {
+  const field = useContext(FieldContext);
   return (
     <input
       type="number"
@@ -81,7 +87,8 @@ export function NumberInput({
       max={max}
       step={step}
       disabled={disabled}
-      aria-label={ariaLabel}
+      aria-label={ariaLabel ?? field?.label}
+      aria-describedby={field?.descriptionId}
       onChange={(e) => {
         const raw = e.target.value;
         if (raw === "") return;
@@ -105,16 +112,19 @@ export function Field({
   children: React.ReactNode;
   leading?: boolean;
 }) {
+  const descriptionId = useId();
   return (
+    <FieldContext.Provider value={{label, descriptionId: description ? descriptionId : undefined}}>
     <div className={`settings-field${leading ? " settings-field--leading" : ""}`}>
       {leading && <div className="settings-field__control">{children}</div>}
       <div className="settings-field__text">
         <span className="settings-field__label">{label}</span>
         {description && (
-          <span className="settings-field__desc">{description}</span>
+          <span id={descriptionId} className="settings-field__desc">{description}</span>
         )}
       </div>
       {!leading && <div className="settings-field__control">{children}</div>}
     </div>
+    </FieldContext.Provider>
   );
 }

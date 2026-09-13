@@ -48,7 +48,10 @@ export default function DemoSettingsSection({ settings, catalog, update }: DemoS
 
   const enabled = settings.demoModeEnabled ?? false;
   const providerMode: DemoProviderMode = settings.demoProviderMode ?? "curated";
-  const providerCount = settings.demoProviderCount ?? DEFAULT_DEMO_PROVIDER_COUNT;
+  const catalogIds = useMemo(() => new Set(catalog.map((provider) => provider.id)), [catalog]);
+  const maxProviderCount = Math.min(MAX_DEMO_PROVIDER_COUNT, catalogIds.size);
+  const providerCount = Math.min(maxProviderCount, Math.max(MIN_DEMO_PROVIDER_COUNT,
+    settings.demoProviderCount ?? DEFAULT_DEMO_PROVIDER_COUNT));
   const scenario: DemoScenario = settings.demoScenario ?? "connectedShowcase";
   const historyDays = settings.demoHistoryDays ?? 7;
   const customIds = useMemo(() => new Set(settings.demoProviderIds ?? []), [settings.demoProviderIds]);
@@ -57,7 +60,8 @@ export default function DemoSettingsSection({ settings, catalog, update }: DemoS
   const scenarioLabel = SCENARIOS.find((s) => s.id === scenario);
 
   const setCount = (next: number) => {
-    const clamped = Math.min(MAX_DEMO_PROVIDER_COUNT, Math.max(MIN_DEMO_PROVIDER_COUNT, next));
+    if (!maxProviderCount) return;
+    const clamped = Math.min(maxProviderCount, Math.max(MIN_DEMO_PROVIDER_COUNT, next));
     void update({ demoProviderCount: clamped });
   };
 
@@ -141,7 +145,7 @@ export default function DemoSettingsSection({ settings, catalog, update }: DemoS
                 <button
                   type="button"
                   aria-label="Increase simulated provider count"
-                  disabled={providerCount >= MAX_DEMO_PROVIDER_COUNT}
+                  disabled={providerCount >= maxProviderCount}
                   onClick={() => setCount(providerCount + 1)}
                 >
                   +

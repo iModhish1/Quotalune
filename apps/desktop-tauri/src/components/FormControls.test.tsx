@@ -1,6 +1,6 @@
 import {render,screen} from '@testing-library/react';
 import {expect,it,vi} from 'vitest';
-import {Select} from './FormControls';
+import {Field, NumberInput, Select, Toggle} from './FormControls';
 it('reserves room for the longest choice and does not shrink on selection',()=>{
   const options=[{value:'one',label:'Single unified icon'},{value:'all',label:'One icon per enabled provider'}];
   const props={options,onChange:vi.fn(),ariaLabel:'Tray mode'};
@@ -11,4 +11,18 @@ it('reserves room for the longest choice and does not shrink on selection',()=>{
   rerender(<Select {...props} value="one"/>);
   expect(select.parentElement!.style.width).toBe(width);
   expect(select).toHaveTextContent('Single unified icon');
+});
+
+it('exposes names and descriptions for leading settings switches and number fields',()=>{
+  render(<><Field label="Start at Login" description="Open after signing in" leading><Toggle checked={false} onChange={vi.fn()}/></Field>
+    <Field label="Refresh interval"><NumberInput value={5} onChange={vi.fn()}/></Field></>);
+  expect(screen.getByRole('checkbox',{name:'Start at Login'})).toHaveAccessibleDescription('Open after signing in');
+  expect(screen.getByRole('spinbutton',{name:'Refresh interval'})).toHaveValue(5);
+});
+
+it('preserves explicit control labels and resolves the nearest field',()=>{
+  render(<Field label="Outer"><Field label="Inner"><Toggle checked onChange={vi.fn()}/>
+    <Toggle label="Explicit" checked={false} onChange={vi.fn()}/></Field></Field>);
+  expect(screen.getByRole('checkbox',{name:'Inner'})).toBeChecked();
+  expect(screen.getByRole('checkbox',{name:'Explicit'})).not.toBeChecked();
 });

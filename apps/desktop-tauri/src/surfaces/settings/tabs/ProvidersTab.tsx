@@ -163,7 +163,7 @@ export default function ProvidersTab({
           set({workspacePreferences: {density:"comfortable",navigation:"side",...settings.workspacePreferences,providerSidebarWidth:width}});
           setPanePreview(null);
         }}/>
-      {isDemo ? <div className="provider-detail"><p role="note">{t("ProviderDemoReadOnly")}</p><CurrentLimits providers={snapshots.filter(p => p.providerId === resolvedSelectedId)} settings={settings} /></div> : <ProviderDetailPane
+      {isDemo ? <div className="provider-detail provider-detail--demo"><p role="note">{t("ProviderDemoReadOnly")}</p><CurrentLimits providers={snapshots.filter(p => p.providerId === resolvedSelectedId)} settings={settings} expanded /></div> : <ProviderDetailPane
         onAnalytics={onAnalytics} providerId={resolvedSelectedId}
         cookieDomain={selectedEntry?.cookieDomain ?? null}
         resetTimeRelative={settings.resetTimeRelative}
