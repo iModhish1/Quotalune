@@ -36,6 +36,8 @@ import "./settings/SettingsStudio.css";
 import SettingsWindowActions from "./settings/SettingsWindowActions";
 import SettingsShellHeader from "./settings/SettingsShellHeader";
 import ProductNavigation from "./settings/ProductNavigation";
+import NotificationCenter from "./settings/NotificationCenter";
+import {useNotificationHistory} from "../hooks/useNotificationHistory";
 import SettingsShell from "./settings/SettingsShell";
 import {PRIMARY_DESTINATIONS, primaryDestination} from "./settings/settingsCenterRegistry";
 import {SidebarResizeHandle, SidebarToggle, useSidebarLayout} from "./settings/SidebarControls";
@@ -204,6 +206,7 @@ export default function Settings({ state, initialTab: propTab, navigationRevisio
   const [legacyNavigation]=useState(()=>{try{return normalizeSettingsNavigation(localStorage.getItem(SETTINGS_NAVIGATION_KEY));}catch{return normalizeSettingsNavigation(null);}});
 
   const { settings, saving, error, update } = useSettings(state.settings);
+  const notificationHistory=useNotificationHistory(settings.demoModeEnabled??false);
   const navigation = settings.workspacePreferences?.navigation ?? legacyNavigation;
   const sidebar = useSidebarLayout(settings.workspacePreferences, navigation, update);
   const { t } = useLocale();
@@ -303,7 +306,7 @@ export default function Settings({ state, initialTab: propTab, navigationRevisio
         leading={navigation === "side" && <SidebarToggle collapsed={sidebar.collapsed} onToggle={() => void sidebar.toggle()} disabled={saving}/> }>
         <SettingsWindowActions />
       </SettingsShellHeader>
-      <ProductNavigation activeTab={activeTab} onNavigate={handleTabClick} icons={TabIcons} hidden={sidebar.collapsed}/>
+      <ProductNavigation activeTab={activeTab} onNavigate={handleTabClick} icons={TabIcons} hidden={sidebar.collapsed} unreadCount={notificationHistory.page.unreadCount}/>
       {navigation === "side" && !sidebar.collapsed && <SidebarResizeHandle width={sidebar.width} maxWidth={sidebar.maxWidth}
         onPreview={sidebar.preview} onCommit={next => void sidebar.resize(next)} disabled={saving}/>}
 
@@ -361,13 +364,14 @@ export default function Settings({ state, initialTab: propTab, navigationRevisio
           />
         )}
         {activeTab === "notifications" && (
-          <GeneralTab
+          <div className="notification-workspace"><NotificationCenter history={notificationHistory} demo={settings.demoModeEnabled??false} catalog={state.providers}/>
+          <details className="notification-center-preferences"><summary>{t('HistoryPreferences')}</summary><GeneralTab
             mode="notifications"
             settings={settings}
             set={set}
             saving={saving}
             providerCatalog={state.providers}
-          />
+          /></details></div>
         )}
         {activeTab === "menuBar" && (
           <><TrayStudioTab catalog={state.providers} settings={settings} set={set} saving={saving}/><details className="tray-studio__menu-settings"><summary>{t("MenuBar")}</summary><div className="tray-studio__menu-content"><DisplayTab mode="menuBar" settings={settings} set={set} saving={saving} /></div></details></>

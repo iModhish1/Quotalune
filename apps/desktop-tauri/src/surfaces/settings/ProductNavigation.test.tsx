@@ -6,7 +6,7 @@ describe("ProductNavigation", () => {
   it("exposes task workspaces including About and analytics",()=>{
     const navigate=vi.fn();
     render(<ProductNavigation activeTab="usageSpend" onNavigate={navigate} icons={{}}/>);
-    expect(screen.getAllByRole("button")).toHaveLength(11);
+    expect(screen.getAllByRole("button")).toHaveLength(12);
     expect(screen.getByRole("button",{name:"TabUsageSpend"})).toHaveAttribute("aria-current","page");
     fireEvent.click(screen.getByRole("button",{name:"TabAbout"}));
     expect(navigate).toHaveBeenCalledWith("about");

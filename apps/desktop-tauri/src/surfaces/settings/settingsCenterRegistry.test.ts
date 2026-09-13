@@ -4,7 +4,7 @@ import {TAB_META} from "./settingsTabs";
 
 describe("Settings Center route contract", () => {
   it("groups related monitoring under Dashboard and maps every legacy route exactly once", () => {
-    expect(PRIMARY_DESTINATIONS.map(item => item.id)).toEqual(["dashboard", "analytics", "usageSpend", "providers", "profiles", "collections", "appearance", "surfaceStudio", "trayStudio", "settings", "about"]);
+    expect(PRIMARY_DESTINATIONS.map(item => item.id)).toEqual(["dashboard", "analytics", "usageSpend", "notifications", "providers", "profiles", "collections", "appearance", "surfaceStudio", "trayStudio", "settings", "about"]);
     expect(primaryDestination("usageSpend")).toBe("usageSpend");
     expect(categoryForTab("resetDisplay")?.id).toBe("appearance");
     expect(categoryForTab("analyticsSources")?.id).toBe("dashboard");

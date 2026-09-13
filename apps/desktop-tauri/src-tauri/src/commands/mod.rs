@@ -42,6 +42,8 @@ mod diagnostics;
 mod locale_cmd;
 mod notification_test;
 pub use notification_test::*;
+mod notification_history;
+pub use notification_history::*;
 mod provider_detail;
 mod provider_instances;
 mod provider_settings;

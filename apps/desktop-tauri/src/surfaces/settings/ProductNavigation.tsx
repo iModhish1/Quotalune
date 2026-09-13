@@ -3,12 +3,13 @@ import {useLocale} from "../../hooks/useLocale";
 import type {SettingsTabId} from "../../types/bridge";
 import {PRIMARY_GROUPS, SETTINGS_CATEGORIES, primaryDestination} from "./settingsCenterRegistry";
 import {TAB_META} from "./settingsTabs";
+import {unreadBadge} from '../../lib/notificationHistory';
 const labels = new Map(TAB_META.map(tab => [tab.id, tab.labelKey]));
 
 /** Task workspaces with a compact, expandable general Settings hierarchy. */
-export default function ProductNavigation({activeTab,onNavigate,icons,hidden=false}: {
+export default function ProductNavigation({activeTab,onNavigate,icons,hidden=false,unreadCount=0}: {
   activeTab:SettingsTabId;onNavigate:(tab:SettingsTabId)=>void;
-  icons:Partial<Record<SettingsTabId,ReactNode>>;hidden?:boolean;
+  icons:Partial<Record<SettingsTabId,ReactNode>>;hidden?:boolean;unreadCount?:number;
 }) {
   const {t}=useLocale();const primary=primaryDestination(activeTab);
   const [expanded,setExpanded]=useState(primary==='settings');
@@ -29,6 +30,7 @@ export default function ProductNavigation({activeTab,onNavigate,icons,hidden=fal
           className={`settings-tab ${primary===tab.id?'settings-tab--active':''}`}
           onClick={()=>{if(tab.id==='settings'){setExpanded(primary==='settings'?!expanded:true);if(primary!=='settings')onNavigate(tab.target);}else{setExpanded(false);onNavigate(tab.target);}}}>
           <span className="settings-tab__icon" aria-hidden="true">{icons[tab.target]}</span><span className="settings-tab__label">{t(tab.labelKey)}</span>
+          {tab.id==='notifications'&&unreadCount>0&&<span className="notification-unread" aria-label={`${t('HistoryUnread')}: ${unreadCount}`}><bdi>{unreadBadge(unreadCount)}</bdi></span>}
           {tab.id==='settings'&&<span className="product-nav__chevron" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 5 7 7-7 7"/></svg></span>}
         </button>
         {tab.id==='settings'&&<div id="product-nav-settings" className="product-nav__children" hidden={!expanded}>

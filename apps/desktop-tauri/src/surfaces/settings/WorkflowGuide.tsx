@@ -6,6 +6,7 @@ import { PRIMARY_DESTINATIONS, type PrimaryDestination } from "./settingsCenterR
 const WORKFLOWS: Record<PrimaryDestination, LocaleKey> = {
   dashboard: "WorkflowDashboard",
   analytics: "WorkflowAnalytics",
+  notifications: "HistoryWorkflow",
   usageSpend: "WorkflowUsageSpend",
   providers: "WorkflowProviders",
   profiles: "WorkflowProfiles",
