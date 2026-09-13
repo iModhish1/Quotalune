@@ -196,3 +196,75 @@ Final full frontend rerun: **1,145 passed / 192 files**, log
 parity, TypeScript and production frontend bundling. No installer was executed,
 no independent Windows VM was available, and no universal compatibility or
 all-features acceptance is claimed.
+
+### Native notification and tray continuation — 2026-09-13
+
+Added an explicit Settings test-notification action. It sends fixed localized
+test text and an optional catalog provider name, never frontend-supplied account
+data. The backend accepts only the Settings window and known destinations and
+rate-limits requests. The UI acknowledges a request, not guaranteed delivery:
+Windows may suppress a banner. No test runs automatically on mount.
+
+Actual Windows notification evidence (read-only Helix full-desktop capture):
+`C:/Users/imodhish/AI-Tools/Desktop-Visual-QA/screenshots/helix/quotalis-qa06-app-notification.png`.
+Visual inspection confirms Quotalis in the Windows header, the app icon in the
+header, and a larger original app logo beside the fixed test body. This closes
+app-notification pixel proof on this host; it does not certify provider icons or
+other Windows versions. Full-desktop captures remain local because they include
+surrounding desktop content.
+
+Native provider selection remains unverified. Claude exposes InvokePattern and
+SelectionItemPattern, but both calls returned Windows COM error -2147220991.
+The trial selection mutation was removed from the global adapter. Only read-only
+SelectionItem inspection remains added. No input-policy, Pause, ownership, mutex,
+physical-input or launch boundary was weakened. The global ownership and guarded
+launcher tests still pass (20 tests). The error is a native automation limitation
+until reproduced through ordinary app interaction; it is not declared a product
+failure or a successful provider notification.
+
+The shared Select wrapper now inherits its enclosing Field name. Previously its
+accessible name could be only the selected value (such as Off), which changed
+when the value changed. Explicit labels still take precedence. Regression tests
+cover stable names, changed values and explicit overrides; existing language,
+low-power and floating-bar tests now locate the actual field names.
+
+Tray Studio native run exercised Orbit ring, Open arc, Horizon bar and Number
+badge through inspected TogglePattern controls, with a capture after each state.
+The pin switch was tested off-to-on-to-off, and the original Open arc style was
+restored. All four preview states were visually reviewed. Evidence under the
+global `screenshots/` directory:
+
+- `window-983810-d57fdc96968144ec8e6166b2e82e154d.png` — ring.
+- `window-983810-a348e0e369794635936509fdd4f4a856.png` — arc.
+- `window-983810-408b85ba87f545d584b27f88975e11f0.png` — bar.
+- `window-983810-7cdd9831220a4769b274fafb2c04b934.png` — badge.
+
+The full-desktop capture `helix/quotalis-qa06-tray-pinned.png` does not expose a
+recognizable provider icon in the visible taskbar; Windows overflow was not
+opened. Therefore these results prove settings and previews, not final tray
+pixels, hover contents or tray-click routing. The arc preview had a full
+background track despite the native renderer using an 80% open track. Its SVG
+track now uses that same 80% extent and starting angle. No clipping was seen in the
+captured upper Tray Studio area; lower controls are outside these captures.
+
+Source inventory `.local/qa05/control-inventory.json` lists 317 JSX control
+templates across 73 files (109 surface files scanned). This is not a tested
+feature count; dynamic providers/options require separate runtime coverage.
+Frontend final suite: 1,148 passed across 193 files. Workspace Clippy with
+warnings denied and formatting passed. Logs are
+`.local/qa05/continuation-frontend-tests-final.log` and
+`.local/qa05/continuation-clippy.log`. Installer execution, exhaustive option
+coverage and cross-version Windows validation remain open.
+
+The repaired arc was rebuilt and visually verified in native capture
+`window-1048838-3a6228c0472f4630ba34d8f7a39b46b9.png`. The same native run exposed
+the stable `Icon limit` accessible name and confirmed the original Open arc/off
+settings survived restart. Final verified Dev SHA256:
+`d45dbc24431a3f48c051dca8889842c58393ae78d0c2f77a7f865a5e021c6371`.
+Build log `.local/qa05/continuation-build-dev-arc.log` proves TypeScript, locale
+parity, production frontend bundling and Dev identity. It embeds base `68ae01e6`
+plus these working-tree changes. Full Rust workspace results: desktop 484 passed
+and one existing ignored test; core 1,736 passed; CLI one passed; doc tests zero.
+Secret scan was clean across 3,042 files. The full frontend run preceded only the
+one-line SVG track repair; the final build and native screenshot validate that
+repair. No accounts, credentials or original logo assets were modified.
