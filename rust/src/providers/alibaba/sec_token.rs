@@ -159,10 +159,10 @@ mod tests {
 
     #[test]
     fn extract_sec_token_from_html() {
-        let html = r#"var config = { SEC_TOKEN: "AvLZTKds7DW5utd3p5xm48", OTHER: "x" };"#;
+        let html = r#"var config = { SEC_TOKEN: "EXAMPLE_SEC_TOKEN_12345", OTHER: "x" };"#;
         assert_eq!(
             extract_sec_token(html).as_deref(),
-            Some("AvLZTKds7DW5utd3p5xm48")
+            Some("EXAMPLE_SEC_TOKEN_12345")
         );
     }
 
@@ -174,10 +174,10 @@ mod tests {
 
     #[test]
     fn extract_sec_token_handles_single_quotes() {
-        let html = r#"window.SEC_TOKEN = 'AvLZTKds7DW5utd3p5xm48';"#;
+        let html = r#"window.SEC_TOKEN = 'EXAMPLE_SEC_TOKEN_12345';"#;
         assert_eq!(
             extract_sec_token(html).as_deref(),
-            Some("AvLZTKds7DW5utd3p5xm48"),
+            Some("EXAMPLE_SEC_TOKEN_12345"),
         );
     }
 
