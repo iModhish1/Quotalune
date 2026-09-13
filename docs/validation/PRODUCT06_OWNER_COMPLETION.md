@@ -497,3 +497,76 @@ with native readback and an unblurred dashboard capture:
 Both final screenshots were visually inspected. Dev was released by the adapter
 in finally; no owned QA process remains. This increment does not close the broad
 all-feature, installer, live authentication or remaining reset-surface backlog.
+
+## P06-08 — profile workspace increment
+
+Source `4f1dcfd1` prevents an inactive profile deletion from explicitly reapplying
+the active profile to global settings. It preserves provider account records and
+does not call credential removal. Active-profile deletion still selects a valid
+fallback and reconciles its settings/surfaces. Existing load-time migrations and
+the preexisting two-file active-deletion save sequence are not redesigned here.
+
+Source `6705738e` exposes the existing persisted profile ordering command through
+earlier/later buttons, adds account/provider search, original provider icons,
+distinct copy names, explicit rename save/cancel, contextual accessible action
+labels, localized English/Arabic controls and a compact detail heading. The old
+rename input nested inside a button and blur-triggered save are removed. A ref
+lock and disabled workspace block duplicate mutations within this mounted page;
+this is not a cross-window transaction lock. Deletion has a scoped confirmation
+explaining that accounts/credentials remain. Search never changes membership.
+
+Independent read-only Astra review caught a malformed Fluent placeholder, repaired
+with the existing literal-placeable convention. A real English/Arabic locale
+lookup test now covers it. Repair review found no introduced blocker in scope.
+Frontend mocks alone were not accepted as native locale evidence.
+
+- Full frontend: **1178 passed / 199 files**,
+  `.local/qa05/product06-profiles-frontend.log`.
+- Post-review focused frontend: **17 passed** (workspace and pure order/copy logic).
+- Workspace Rust: desktop **498 passed / 1 existing ignored**, core **1764 passed**,
+  CLI **1 passed**, docs 0; `.local/qa05/product06-profiles-workspace.log`.
+- Actual locale placeholder lookup passed in the workspace run. Workspace Clippy
+  all targets with warnings denied passed: `product06-profiles-clippy.log`.
+- TypeScript passed; secret scan **3071 files clean** (`product06-profiles-secrets.log`).
+
+Remaining findings, not disguised as acceptance: profile nullable-theme clearing
+and restoration of the global light/dark preference need backend reconciliation.
+Copy-name uniqueness currently uses the UI snapshot, not a backend uniqueness
+constraint. Collections' detach serial restarts at zero after mount; with a saved
+`solo-1` group its first detach can fail the duplicate-id guard while changing the
+existing group's position. Add a persisted-layout regression and unique group-id
+allocation in the following collection packet. Broader P06-08 remains open.
+
+Native profile workflow on `6705738e`, Dev SHA256
+`328cb42138ff2d3967fb11ecf5ab42d9fd23f5ddf7ca4df6a52e44484b015ee9`:
+created a QA-owned profile, renamed it using ValuePattern and explicit Save,
+duplicated it with a distinct name, and moved the copy earlier. An adapter COM
+subscriber error interrupted the first readback/cleanup; this was not recorded
+as a pass. A fresh guarded launch then read back the saved order (copy before
+original), confirming persistence. Both QA profiles were deleted through their
+uniquely named Delete and Confirm deletion buttons. Final inspection reported
+no QA profiles; Default remained active. No owner account membership or theme
+was changed. All native batches released the adapter in finally.
+
+Visually inspected local captures:
+- Before: `window-1510228-0e7bf3772de043328d0b1ddb7a537e4f.png`.
+- After cleanup: `window-4459298-c931e886feab4bcbaa100c3f7be7a93b.png`.
+
+The captures exposed an unthemed search input; `e0d60928` applies theme surface,
+border, padding and keyboard-focus styling to profile search/name inputs.
+The native accessibility tree needs an initial inspect followed by a fresh
+inspect after WebView initialization; an initial pane-only tree did not mean
+the application was blank (a PrintWindow capture confirmed rendered content).
+Final cargo fmt check and changed-code skip/focus scan passed.
+
+Final verified Dev source **e0d60928be29**, SHA256
+`0a0bb7a9a499eecf72ea9917d434772261352b841f3ff20ef628dfd5c760d05e`;
+builder (including final TypeScript, locale parity and production bundle) passed:
+`.local/qa05/product06-profiles-final-build.log`.
+Native ValuePattern search for Codex returned only its membership row; screenshot
+`window-1641746-32dedf97977b441591af3ab8f688e12e.png` was visually inspected and
+confirms the repaired themed field. The attempt to clear the search hit an adapter
+COM error. Search is component-local, and a fresh launch confirmed both Claude
+and Codex rows, Default active, and zero QA profiles. Final inspected capture:
+`window-4262492-c9e815ceaf824f2d8e01760be24bbd42.png`.
+No claim of complete profile theme/surface or all-application acceptance is made.

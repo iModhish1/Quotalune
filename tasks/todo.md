@@ -1184,3 +1184,11 @@ Original settings and real mode restored. Evidence and final Dev hash are in
 PRODUCT06_OWNER_COMPLETION.md. Three-card/70-provider/wheel/anchor combinations
 are source-tested; remaining native coverage and stage/tray-specific reset layouts
 stay open. Do not mark whole-product PASS.
+
+P06-08 profile increment: explicit rename/save, distinct copies, persisted order,
+membership search and localized original-provider icons are implemented. Native
+Dev proved create/rename/copy, order persistence across relaunch, and confirmed
+deletion of only QA profiles. Default remained active. A capture-backed search
+field style repair is included. Full source gates and exact counts are recorded
+in PRODUCT06_OWNER_COMPLETION.md. Nullable theme inheritance and Collections
+repairs remain open; the broad P06-08 checkbox is intentionally not closed.

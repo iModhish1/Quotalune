@@ -427,6 +427,14 @@ OS tray/toast and disposable installer lifecycle acceptance remain open.
 Evidence: docs/validation/QA05_NATIVE_VISUAL_REVIEW.md.
 
 ## PRODUCT-06 execution
+P06-08 verified increment: persisted profile ordering, explicit rename/save/cancel,
+distinct copy names, membership search, localized controls and themed inputs.
+Native create/rename/copy/reorder persistence/delete/search passed; all QA profiles
+removed, Default retained. Source and screenshots: PRODUCT06_OWNER_COMPLETION.md.
+Next packet: repair Collections detach ID collision after persisted layout reload,
+then reconcile profile theme-clear and global-theme inheritance contracts.
+Separate audit finding: nullable profile theme clearing/global-theme inheritance
+needs backend contract reconciliation; current UI tests alone do not prove it.
 Native follow-up: inspect fresh 7ea33671 captures, compact Navigation Layout
 cards and stacked description margins, rebuild and compare General/Notifications.
 Capture labels are not coverage: the last Settings invocation toggled navigation
