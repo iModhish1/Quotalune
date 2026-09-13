@@ -219,7 +219,10 @@ fn check_descendant_cleanup(scenario: &str, timed_out: bool) {
     let start = Instant::now();
     let result = supervise_login(
         fixture_command(scenario, &pid_path),
-        Duration::from_secs(2),
+        // Match the other subprocess fixtures: the wrapper itself allows up to
+        // three seconds for its descendant to start. A two-second outer limit
+        // could kill it before that handshake under concurrent suite load.
+        SILENT_FIXTURE_TIMEOUT,
         |_| {},
     );
     if timed_out {
@@ -227,13 +230,14 @@ fn check_descendant_cleanup(scenario: &str, timed_out: bool) {
             matches!(result.outcome, LoginOutcome::TimedOut),
             "{result:?}"
         );
+        assert_silent_timeout_elapsed(start.elapsed());
     } else {
         assert!(
             matches!(result.outcome, LoginOutcome::Success),
             "{result:?}"
         );
     }
-    assert!(start.elapsed() < Duration::from_secs(4));
+    assert!(start.elapsed() < SILENT_FIXTURE_TIMEOUT + CLEANUP_AND_SCHEDULING_ALLOWANCE);
     assert_process_stopped(&pid_path);
     assert_process_stopped(&pid_path.with_extension("descendant"));
 }
