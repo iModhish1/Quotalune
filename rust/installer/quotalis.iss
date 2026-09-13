@@ -85,7 +85,8 @@ Name: "{autodesktop}\Quotalis"; Filename: "{app}\Quotalis.exe"; Parameters: "men
 ; glyph. app.quotaarc.desktop preserved unchanged (Option A); the
 ; DisplayName shown in Windows notification settings is the current brand.
 Root: HKCU; Subkey: "Software\Classes\AppUserModelId\app.quotaarc.desktop"; ValueType: string; ValueName: "DisplayName"; ValueData: "Quotalis"; Flags: uninsdeletekey
-Root: HKCU; Subkey: "Software\Classes\AppUserModelId\app.quotaarc.desktop"; ValueType: string; ValueName: "IconUri"; ValueData: "{app}\icon.ico"
+; Toast identity uses the packaged raster artwork, separate from shortcut ICOs.
+Root: HKCU; Subkey: "Software\Classes\AppUserModelId\app.quotaarc.desktop"; ValueType: string; ValueName: "IconUri"; ValueData: "{app}\quotalis-icon-128.png"
 Root: HKCU; Subkey: "Software\Classes\AppUserModelId\app.quotaarc.desktop"; ValueType: string; ValueName: "IconBackgroundColor"; ValueData: "FF10141C"
 
 [Run]
