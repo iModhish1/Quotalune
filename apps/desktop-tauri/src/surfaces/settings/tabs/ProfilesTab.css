@@ -52,4 +52,19 @@
 .profiles-page__account-row>input{grid-row:1/3}
 .profiles-page__account-provider{grid-column:2}
 .profiles-page__row-select{text-align:start}
+.profiles-page__workspace{border:0;padding:0;margin:0;min-width:0}
+.profiles-page__detail-heading{grid-column:1/-1;border-bottom:1px solid var(--workspace-edge);padding-bottom:10px}
+.profiles-page__detail-heading h3{margin:0 0 4px;font-size:16px;color:var(--qa-ink-1)}
+.profiles-page__detail-heading p{margin:0;font-size:12px;color:var(--qa-ink-2)}
+.profiles-page__rename{display:grid;grid-template-columns:1fr auto auto;gap:5px}
+.profiles-page__rename input{width:100%;box-sizing:border-box}
+.profiles-page__order{display:flex;gap:5px;justify-content:flex-end;border-top:1px solid var(--workspace-edge);padding-top:5px}
+.profiles-page__row :is(.profiles-page__row-actions,.profiles-page__order) button,.profiles-page__rename button{min-height:30px;padding:4px 7px;font-size:11px}
+.profiles-page__search{grid-column:1/-1;width:100%;min-width:0;box-sizing:border-box}
+.profiles-page__account-row{grid-template-columns:auto auto minmax(0,1fr)}
+.profiles-page__account-row>input{grid-row:auto}
+.profiles-page__account-identity{display:flex;flex-direction:column;gap:3px;min-width:0}
+.profiles-page__delete{padding:12px;border:1px solid var(--qa-status-critical);border-radius:8px;font-size:12px}
+.profiles-page__delete p{margin-block:8px}
+.profiles-page__delete button{margin-inline-end:6px;min-height:32px;font:inherit}
 @media(min-width:1050px){.profiles-page__detail{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.profiles-page__detail>.profiles-page__field:nth-of-type(n+3),.profiles-page__description{grid-column:1/-1}}

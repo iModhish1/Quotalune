@@ -4,7 +4,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 const { locale } = vi.hoisted(() => ({
   locale: {
     t: (key: string) =>
-      ({ TabProfiles: "Profiles", ProfilesPageHelper: "Manage named contexts." } as Record<string, string>)[key] ?? key,
+      ({ TabProfiles: "Profiles", ProfilesPageHelper: "Manage named contexts.", ProfilesActive: "Active", ProfilesSwitch: "Switch", ProfilesRename: "Rename", ProfilesDuplicate: "Duplicate", ProfilesDelete: "Delete", ProfilesSave: "Save", ProfilesCancel: "Cancel", ProfilesAdd: "Add", ProfilesNew: "New profile", ProfilesName: "Profile name", ProfilesNewName: "New profile name", ProfilesEditName: "New name for {}", ProfilesCopySuffix: "copy", ProfilesOrder: "Profile order", ProfilesMoveEarlier: "Move earlier", ProfilesMoveLater: "Move later", ProfilesDeleteConfirm: "Confirm deletion", ProfilesDeleteHelp: "Removes this profile and its preferences. Provider accounts and credentials are kept.", ProfilesLastProtected: "The last profile cannot be deleted", ProfilesEditingHelp: "Edit this context, then activate it with Switch. Account sign-in stays in Providers.", ProfilesSearchAccounts: "Search accounts or providers", ProfilesNoMatches: "No matching accounts. Clear the search to see all accounts.", ProfilesNoAccounts: "No provider accounts yet.", ProfilesInheritTheme: "Inherit global theme", ProfilesStructureTheme: "Structure Theme", ProfilesSurfaces: "Surfaces active in this profile", ThemeLabel: "Theme", ThemeAutoOption: "Auto (system)", ThemeLightOption: "Light", ThemeDarkOption: "Dark" } as Record<string, string>)[key] ?? key,
   },
 }));
 vi.mock("../../../hooks/useLocale", () => ({
@@ -24,6 +24,7 @@ const bridge = vi.hoisted(() => ({
   createProfile: vi.fn(),
   deleteProfile: vi.fn().mockResolvedValue(undefined),
   duplicateProfile: vi.fn(),
+  reorderProfiles: vi.fn().mockResolvedValue(undefined),
   renameProfile: vi.fn().mockResolvedValue(undefined),
   setAccountProfileMembership: vi.fn().mockResolvedValue(undefined),
   switchProfile: vi.fn().mockResolvedValue(undefined),
@@ -75,6 +76,48 @@ beforeEach(() => {
 });
 
 describe("ProfilesTab", () => {
+  it("reorders by stable ids without activating a different profile", async()=>{
+    profileStoreState.current=storeWith([profile(),profile({id:'p2',name:'Work'})],'p1');
+    render(<ProfilesTab/>);
+    fireEvent.click(await screen.findByRole('button',{name:'Move earlier Work'}));
+    expect(bridge.reorderProfiles).toHaveBeenCalledWith(['p2','p1']);
+    expect(bridge.switchProfile).not.toHaveBeenCalled();
+  });
+
+  it("cancels rename without saving on blur and has no nested input in a button",async()=>{
+    profileStoreState.current=storeWith([profile()],'p1');
+    render(<ProfilesTab/>);
+    fireEvent.click(await screen.findByRole('button',{name:'Rename Default'}));
+    const input=screen.getByLabelText('New name for Default');
+    expect(input.closest('button')).toBeNull();
+    fireEvent.change(input,{target:{value:'Discard me'}});fireEvent.blur(input);
+    expect(bridge.renameProfile).not.toHaveBeenCalled();
+    fireEvent.keyDown(input,{key:'Escape'});
+    expect(screen.queryByLabelText('New name for Default')).toBeNull();
+    expect(bridge.renameProfile).not.toHaveBeenCalled();
+  });
+
+  it("filters membership without changing hidden accounts",async()=>{
+    profileStoreState.current=storeWith([profile()],'p1',[
+      {id:'a1',provider:'claude',displayName:'Work'},{id:'a2',provider:'codex',displayName:'Home'}]);
+    render(<ProfilesTab/>);
+    fireEvent.change(await screen.findByLabelText('Search accounts or providers'),{target:{value:'claude'}});
+    expect(screen.queryByText('Home')).toBeNull();expect(screen.getByText('Work')).toBeInTheDocument();
+    expect(bridge.setAccountProfileMembership).not.toHaveBeenCalled();
+  });
+
+  it("blocks repeated submissions while a create is pending",async()=>{
+    profileStoreState.current=storeWith([profile()],'p1');
+    let finish!:(value:ReturnType<typeof profile>)=>void;
+    bridge.createProfile.mockReturnValueOnce(new Promise(resolve=>{finish=resolve;}));
+    render(<ProfilesTab/>);
+    fireEvent.click(await screen.findByText('+ New profile'));
+    const input=screen.getByLabelText('New profile name');fireEvent.change(input,{target:{value:'Work'}});
+    fireEvent.submit(input.closest('form')!);fireEvent.submit(input.closest('form')!);
+    expect(bridge.createProfile).toHaveBeenCalledTimes(1);
+    finish(profile({id:'p2',name:'Work'}));
+    await waitFor(()=>expect(screen.queryByLabelText('New profile name')).toBeNull());
+  });
   it("shows nothing but the title while the store is loading", () => {
     profileStoreState.current = null;
     render(<ProfilesTab />);
@@ -87,12 +130,12 @@ describe("ProfilesTab", () => {
       "p1",
     );
     render(<ProfilesTab />);
-    expect(await screen.findByText("Default")).toBeTruthy();
+    expect(await screen.findAllByText("Default").then(nodes=>nodes[0])).toBeTruthy();
     expect(screen.getByText("Night")).toBeTruthy();
     expect(screen.getByText("Active")).toBeTruthy();
 
     const nightRow = screen.getByText("Night").closest(".profiles-page__row") as HTMLElement;
-    fireEvent.click(within(nightRow).getByRole("button", { name: "Switch" }));
+    fireEvent.click(within(nightRow).getByRole("button", { name: "Switch Night" }));
     expect(bridge.switchProfile).toHaveBeenCalledWith("p2");
   });
 
@@ -109,11 +152,11 @@ describe("ProfilesTab", () => {
   it("renames a profile inline", async () => {
     profileStoreState.current = storeWith([profile({ id: "p1", name: "Default" })], "p1");
     render(<ProfilesTab />);
-    const row = (await screen.findByText("Default")).closest(".profiles-page__row") as HTMLElement;
+    const row = (await screen.findAllByText("Default").then(nodes=>nodes[0])).closest(".profiles-page__row") as HTMLElement;
     fireEvent.click(within(row).getByRole("button", { name: "Rename Default" }));
     const input = within(row).getByLabelText("New name for Default") as HTMLInputElement;
     fireEvent.change(input, { target: { value: "Coding" } });
-    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.submit(input.closest("form")!);
     await waitFor(() => expect(bridge.renameProfile).toHaveBeenCalledWith("p1", "Coding"));
   });
 
@@ -121,14 +164,14 @@ describe("ProfilesTab", () => {
     profileStoreState.current = storeWith([profile({ id: "p1", name: "Default" })], "p1");
     bridge.duplicateProfile.mockResolvedValue(profile({ id: "p2", name: "Default copy" }));
     render(<ProfilesTab />);
-    fireEvent.click(await screen.findByRole("button", { name: "Duplicate" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Duplicate Default" }));
     expect(bridge.duplicateProfile).toHaveBeenCalledWith("p1", "Default copy");
   });
 
   it("disables delete for the last remaining profile (protects the default)", async () => {
     profileStoreState.current = storeWith([profile({ id: "p1", name: "Default" })], "p1");
     render(<ProfilesTab />);
-    const deleteButton = await screen.findByRole("button", { name: "Delete" });
+    const deleteButton = await screen.findByRole("button", { name: "Delete Default" });
     expect(deleteButton).toBeDisabled();
     fireEvent.click(deleteButton);
     expect(bridge.deleteProfile).not.toHaveBeenCalled();
@@ -141,14 +184,16 @@ describe("ProfilesTab", () => {
     );
     render(<ProfilesTab />);
     const nightRow = (await screen.findByText("Night")).closest(".profiles-page__row") as HTMLElement;
-    fireEvent.click(within(nightRow).getByRole("button", { name: "Delete" }));
+    fireEvent.click(within(nightRow).getByRole("button", { name: "Delete Night" }));
+    expect(bridge.deleteProfile).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", {name:"Confirm deletion"}));
     expect(bridge.deleteProfile).toHaveBeenCalledWith("p2");
   });
 
   it("assigns a theme and catalog theme to the selected profile", async () => {
     profileStoreState.current = storeWith([profile({ id: "p1", name: "Default" })], "p1");
     render(<ProfilesTab />);
-    await screen.findByText("Default");
+    await screen.findAllByText("Default").then(nodes=>nodes[0]);
     await chooseQuotalisOption("Theme", "Dark");
     expect(bridge.updateProfile).toHaveBeenCalledWith({ profileId: "p1", theme: "dark" });
 

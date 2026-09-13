@@ -2,6 +2,25 @@ use super::*;
 use std::collections::HashSet;
 
 #[test]
+fn profile_rename_prompt_preserves_literal_placeholder_in_both_locales() {
+    assert_eq!(
+        get_text(Language::English, LocaleKey::ProfilesEditName),
+        "New name for {}"
+    );
+    assert_eq!(
+        get_text(Language::Arabic, LocaleKey::ProfilesEditName),
+        "اسم جديد لـ {}"
+    );
+    assert_eq!(
+        format_template(
+            &get_text(Language::English, LocaleKey::ProfilesEditName),
+            &["Work"]
+        ),
+        "New name for Work"
+    );
+}
+
+#[test]
 fn test_locale_key_english() {
     assert_eq!(
         get_text(Language::English, LocaleKey::TabGeneral),

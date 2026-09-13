@@ -10,7 +10,7 @@
  * `update_profile`, `set_account_profile_membership`) — no second
  * profile model.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "../../../hooks/useLocale";
 import { useProfileStore } from "../../../components/ProfileSwitcher";
 import {
@@ -18,23 +18,19 @@ import {
   deleteProfile,
   duplicateProfile,
   renameProfile,
+  reorderProfiles,
   setAccountProfileMembership,
   switchProfile,
   updateProfile,
   type ProfileDto,
 } from "../../../lib/profileBridge";
 import { getProviderCatalog } from "../../../lib/tauri";
+import {profileCopyName, reorderedProfileIds} from '../../../lib/profilePresentation';
+import {ProviderIcon} from '../../../components/providers/ProviderIcon';
 import type { ProviderCatalogEntry } from "../../../types/bridge";
 import { THEME_CATALOG } from "../../../design-system/themeCatalog";
 import { Select, Toggle } from "../../../components/FormControls";
 import "./ProfilesTab.css";
-
-const THEME_OPTIONS: { value: "" | "auto" | "light" | "dark"; label: string }[] = [
-  { value: "", label: "Inherit global theme" },
-  { value: "auto", label: "Auto" },
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-];
 
 const SURFACE_TOGGLES: { key: "edgeArc" | "topArc" | "taskbarArc" | "floatBar"; label: string }[] = [
   { key: "edgeArc", label: "Edge Arc" },
@@ -53,6 +49,9 @@ export default function ProfilesTab() {
   const [draftName, setDraftName] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
+  const [busy,setBusy] = useState(false), lock = useRef(false);
+  const [deleteId,setDeleteId] = useState<string|null>(null);
+  const [accountQuery,setAccountQuery] = useState('');
 
   useEffect(() => {
     getProviderCatalog().then(setProviders).catch(() => {});
@@ -73,11 +72,15 @@ export default function ProfilesTab() {
   );
 
   const run = useCallback(async (action: () => Promise<unknown>) => {
+    if(lock.current)return;
+    lock.current=true;setBusy(true);
     setError(null);
     try {
       await action();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      lock.current=false;setBusy(false);
     }
   }, []);
 
@@ -107,17 +110,18 @@ export default function ProfilesTab() {
   const doDuplicate = useCallback(
     (profile: ProfileDto) => {
       void run(async () => {
-        const copy = await duplicateProfile(profile.id, `${profile.name} copy`);
+        const copy = await duplicateProfile(profile.id, profileCopyName(store?.profiles??[], profile.name, t('ProfilesCopySuffix')));
         setSelectedId(copy.id);
       });
     },
-    [run],
+    [run,store,t],
   );
 
   const doDelete = useCallback(
     (profile: ProfileDto) => {
       void run(async () => {
         await deleteProfile(profile.id);
+        setDeleteId(null);
         setSelectedId(null);
       });
     },
@@ -133,17 +137,20 @@ export default function ProfilesTab() {
   }
 
   const canDelete = store.profiles.length > 1;
+  const accounts=store.accounts.filter(a=>`${a.displayName} ${a.provider}`.toLocaleLowerCase().includes(accountQuery.trim().toLocaleLowerCase()));
+  const pendingDelete=store.profiles.find(p=>p.id===deleteId);
 
   return (
-    <div className="profiles-page">
+    <div className="profiles-page" aria-busy={busy}>
       <header className="profiles-page__header">
         <h2>{t("TabProfiles")}</h2>
         <p>{t("ProfilesPageHelper")}</p>
       </header>
       {error && <p className="profiles-page__error" role="alert">{error}</p>}
+      <fieldset className="profiles-page__workspace" disabled={busy}>
       <div className="profiles-page__layout">
         <div className="profiles-page__list" role="list">
-          {store.profiles.map((profile) => (
+          {store.profiles.map((profile,index) => (
             <div
               key={profile.id}
               role="listitem"
@@ -154,58 +161,65 @@ export default function ProfilesTab() {
               <button
                 type="button"
                 className="profiles-page__row-select"
+                aria-pressed={profile.id===selectedId}
                 onClick={() => setSelectedId(profile.id)}
               >
                 <span className="profiles-page__row-mark" aria-hidden="true">
                   {profile.name.slice(0, 1).toUpperCase()}
                 </span>
-                {renamingId === profile.id ? (
+                <span className="profiles-page__row-name">{profile.name}</span>
+                {profile.id === store.activeProfileId && (
+                  <span className="profiles-page__badge">{t('ProfilesActive')}</span>
+                )}
+              </button>
+              {renamingId === profile.id && (
+                <form className="profiles-page__rename" onSubmit={e=>{e.preventDefault();doRename(profile.id);}}>
                   <input
                     autoFocus
                     value={renameDraft}
-                    aria-label={`New name for ${profile.name}`}
+                    aria-label={t('ProfilesEditName').replace('{}',profile.name)}
                     onChange={(e) => setRenameDraft(e.target.value)}
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") doRename(profile.id);
-                      if (e.key === "Escape") setRenamingId(null);
+                      if (e.key === "Escape") {e.preventDefault();setRenamingId(null);}
                     }}
-                    onBlur={() => doRename(profile.id)}
                   />
-                ) : (
-                  <span className="profiles-page__row-name">{profile.name}</span>
-                )}
-                {profile.id === store.activeProfileId && (
-                  <span className="profiles-page__badge">Active</span>
-                )}
-              </button>
+                  <button type="submit" disabled={!renameDraft.trim()}>{t('ProfilesSave')}</button>
+                  <button type="button" onClick={()=>setRenamingId(null)}>{t('ProfilesCancel')}</button>
+                </form>
+              )}
               <div className="profiles-page__row-actions">
                 {profile.id !== store.activeProfileId && (
-                  <button type="button" onClick={() => run(() => switchProfile(profile.id))}>
-                    Switch
+                  <button type="button" aria-label={`${t('ProfilesSwitch')} ${profile.name}`} onClick={() => run(() => switchProfile(profile.id))}>
+                    {t("ProfilesSwitch")}
                   </button>
                 )}
                 <button
                   type="button"
-                  aria-label={`Rename ${profile.name}`}
+                  aria-label={`${t("ProfilesRename")} ${profile.name}`}
                   onClick={() => {
                     setRenamingId(profile.id);
                     setRenameDraft(profile.name);
                   }}
                 >
-                  Rename
+                  {t("ProfilesRename")}
                 </button>
-                <button type="button" onClick={() => doDuplicate(profile)}>
-                  Duplicate
+                <button type="button" aria-label={`${t('ProfilesDuplicate')} ${profile.name}`} onClick={() => doDuplicate(profile)}>
+                  {t("ProfilesDuplicate")}
                 </button>
                 <button
                   type="button"
                   disabled={!canDelete}
-                  title={canDelete ? undefined : "The last profile cannot be deleted"}
-                  onClick={() => doDelete(profile)}
+                  aria-label={`${t('ProfilesDelete')} ${profile.name}`}
+                  title={canDelete ? undefined : t("ProfilesLastProtected")}
+                  onClick={() => setDeleteId(profile.id)}
                 >
-                  Delete
+                  {t("ProfilesDelete")}
                 </button>
+              </div>
+              <div className="profiles-page__order" role="group" aria-label={`${t('ProfilesOrder')} ${profile.name}`}>
+                <button type="button" disabled={index===0} aria-label={`${t('ProfilesMoveEarlier')} ${profile.name}`} onClick={()=>void run(()=>reorderProfiles(reorderedProfileIds(store.profiles,profile.id,-1)))}>↑ {t('ProfilesMoveEarlier')}</button>
+                <button type="button" disabled={index===store.profiles.length-1} aria-label={`${t('ProfilesMoveLater')} ${profile.name}`} onClick={()=>void run(()=>reorderProfiles(reorderedProfileIds(store.profiles,profile.id,1)))}>↓ {t('ProfilesMoveLater')}</button>
               </div>
             </div>
           ))}
@@ -220,15 +234,15 @@ export default function ProfilesTab() {
               <input
                 autoFocus
                 value={draftName}
-                placeholder="Profile name"
-                aria-label="New profile name"
+                placeholder={t("ProfilesName")}
+                aria-label={t("ProfilesNewName")}
                 onChange={(e) => setDraftName(e.target.value)}
               />
               <button type="submit" disabled={!draftName.trim()}>
-                Add
+                {t("ProfilesAdd")}
               </button>
               <button type="button" onClick={() => setCreating(false)}>
-                Cancel
+                {t("ProfilesCancel")}
               </button>
             </form>
           ) : (
@@ -237,23 +251,29 @@ export default function ProfilesTab() {
               className="profiles-page__row profiles-page__row--new"
               onClick={() => setCreating(true)}
             >
-              + New profile
+              + {t("ProfilesNew")}
             </button>
           )}
+          {pendingDelete&&<section className="profiles-page__delete" aria-label={t('ProfilesDeleteConfirm')}>
+            <strong>{t('ProfilesDelete')} <bdi>{pendingDelete.name}</bdi>?</strong><p>{t('ProfilesDeleteHelp')}</p>
+            <button type="button" onClick={()=>doDelete(pendingDelete)}>{t('ProfilesDeleteConfirm')}</button>
+            <button type="button" onClick={()=>setDeleteId(null)}>{t('ProfilesCancel')}</button>
+          </section>}
         </div>
 
         {selected && (
           <div className="profiles-page__detail">
+            <header className="profiles-page__detail-heading"><h3><bdi>{selected.name}</bdi></h3><p>{t('ProfilesEditingHelp')}</p></header>
             {selected.description && (
               <p className="profiles-page__description">{selected.description}</p>
             )}
 
             <section className="profiles-page__field">
-              <label>Theme</label>
+              <label>{t("ThemeLabel")}</label>
               <Select
-                ariaLabel="Theme"
+                ariaLabel={t("ThemeLabel")}
                 value={selected.theme ?? ""}
-                options={THEME_OPTIONS}
+                options={[{value:"",label:t("ProfilesInheritTheme")},{value:"auto",label:t("ThemeAutoOption")},{value:"light",label:t("ThemeLightOption")},{value:"dark",label:t("ThemeDarkOption")}]}
                 onChange={(value) =>
                   run(() =>
                     updateProfile({
@@ -266,12 +286,12 @@ export default function ProfilesTab() {
             </section>
 
             <section className="profiles-page__field">
-              <label>Structure Theme</label>
+              <label>{t("ProfilesStructureTheme")}</label>
               <Select
-                ariaLabel="Structure Theme"
+                ariaLabel={t("ProfilesStructureTheme")}
                 value={selected.catalogTheme ?? ""}
                 options={[
-                  { value: "", label: "Inherit global theme" },
+                  { value: "", label: t("ProfilesInheritTheme") },
                   ...THEME_CATALOG.map((theme) => ({ value: theme.slug, label: theme.name })),
                 ]}
                 onChange={(value) =>
@@ -286,7 +306,7 @@ export default function ProfilesTab() {
             </section>
 
             <section className="profiles-page__field profiles-page__field--surfaces">
-              <span className="profiles-page__field-label">Surfaces active in this profile</span>
+              <span className="profiles-page__field-label">{t("ProfilesSurfaces")}</span>
               <div className="profiles-page__surfaces">
                 {SURFACE_TOGGLES.map(({ key, label }) => (
                   <label key={key} className="profiles-page__surface-toggle">
@@ -308,10 +328,12 @@ export default function ProfilesTab() {
               <span className="profiles-page__field-label">{t("ProfileProviderMembership")}</span>
               <p className="profiles-page__empty-hint">{t("ProfileMembershipHelp")}</p>
               {store.accounts.length === 0 ? (
-                <p className="profiles-page__empty-hint">No provider accounts yet.</p>
+                <p className="profiles-page__empty-hint">{t("ProfilesNoAccounts")}</p>
               ) : (
                 <div className="profiles-page__accounts">
-                  {store.accounts.map((account) => {
+                  <input type="search" className="profiles-page__search" aria-label={t('ProfilesSearchAccounts')} placeholder={t('ProfilesSearchAccounts')} value={accountQuery} onChange={e=>setAccountQuery(e.target.value)}/>
+                  {!accounts.length&&<p role="status">{t('ProfilesNoMatches')}</p>}
+                  {accounts.map((account) => {
                     const provider = providers.find((p) => p.id === account.provider);
                     const member = selected.accountIds.includes(account.id);
                     return (
@@ -325,9 +347,11 @@ export default function ProfilesTab() {
                             )
                           }
                         />
-                        <span className="profiles-page__account-name">{account.displayName}</span>
+                        <ProviderIcon providerId={account.provider} size={20}/>
+                        <span className="profiles-page__account-identity"><span className="profiles-page__account-name">{account.displayName}</span>
                         <span className="profiles-page__account-provider">
                           {provider?.displayName ?? account.provider}
+                        </span>
                         </span>
                       </label>
                     );
@@ -338,6 +362,7 @@ export default function ProfilesTab() {
           </div>
         )}
       </div>
+      </fieldset>
     </div>
   );
 }
