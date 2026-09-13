@@ -1210,3 +1210,10 @@ were visually inspected. Default active and zero QA profiles confirmed after
 restart. Full frontend 1184, desktop502+1ignored/core1764/CLI1; source/build gates
 green. Structure Theme native selection/clear and broader surface/layout matrices
 remain open; this is not whole-product QA or release acceptance.
+
+- 2026-09-13 P06-17: About identity, owner contribution, technology roles and
+  original-project credits implemented in a1582bde; native page reviewed. Repaired
+  the missing Local update channel across frontend/patch parser, with passing
+  regression and workspace checks. Owner visual approval is pending before new
+  final packages or publication. See PRODUCT06_ABOUT_OWNER_REVIEW.md. P06-16
+  notification-center implementation remains open.
