@@ -26,6 +26,7 @@
 .settings.settings-studio .settings-studio-toolbar,
 .settings.settings-studio .product-nav {background:color-mix(in srgb,var(--workspace-bg) 55%,transparent)}
 .settings.settings-studio[data-background=none] :is(.settings-studio-toolbar,.product-nav) {background:var(--workspace-bg)}
+[data-theme="light"] .settings.settings-studio :is(.settings-studio-toolbar,.product-nav) {background:color-mix(in srgb,var(--workspace-bg) 94%,transparent)}
 .settings.settings-studio .dashboard-cosmic.dashboard-analytics {background:transparent}
 .settings.settings-studio .settings-body:has(.dashboard-cosmic) {padding:12px}
 @media(max-width:600px) {.settings.settings-studio .product-nav {background:var(--workspace-bg)}}

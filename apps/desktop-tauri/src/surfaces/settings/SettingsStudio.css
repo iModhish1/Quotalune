@@ -141,6 +141,11 @@
 /* App appearance is independent of the material selected for desktop widgets. */
 [data-theme="light"] .settings.settings-studio{
   color-scheme:light;background:#f2f4f7;color:#202a35;
+  --workspace-light-bg:#eef2f7;--workspace-light-surface:#ffffff;
+  --workspace-light-edge:#bccad7;--workspace-light-accent:#326477;
+  --workspace-light-text:#202a35;--workspace-light-muted:#465464;
+  --qa-graphite-1:#f7f9fc;--qa-graphite-2:#ffffff;
+  --qa-graphite-3:#edf2f7;--qa-graphite-4:#e4ebf2;
   --text-primary:#202a35;--text-secondary:#465464;--text-muted:#566575;--border-color:#c6ced8;
   --qa-ink-1:#202a35;--qa-ink-2:#354454;--qa-ink-3:#536375;
   --qa-text:#202a35;--qa-text-muted:#536375;--qa-hairline:#c6ced8;
