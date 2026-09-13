@@ -1200,3 +1200,13 @@ discard passed; no owner layout saved. Native screenshots prompted a compact
 full-width control layout and theme-aware preview repair. Final visual evidence
 is recorded in PRODUCT06_OWNER_COMPLETION.md; profile inheritance, broader
 collection customization and native detached-window coverage remain open.
+
+P06-08 appearance increment: corrected nullable profile updates and preserved
+global appearance across switching. Native Light assignment/activation, Inherit
+clearing, restart readback and deletion of the active QA profile passed. Replaced
+four-choice appearance dropdown with visible buttons. Screenshot review found
+and repaired light-mode dark surfaces/dark text; final Light/Default captures
+were visually inspected. Default active and zero QA profiles confirmed after
+restart. Full frontend 1184, desktop502+1ignored/core1764/CLI1; source/build gates
+green. Structure Theme native selection/clear and broader surface/layout matrices
+remain open; this is not whole-product QA or release acceptance.

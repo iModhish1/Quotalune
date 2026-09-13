@@ -641,3 +641,84 @@ All native sessions stopped in finally. No physical input or Save action was
 used. The saved-reload collision is covered by the persisted-layout component
 regression, not by a fabricated native saved-layout scenario. Broader detached
 window, RTL, 70-provider and all-control native acceptance remains open.
+
+## P06-08 — profile appearance inheritance
+
+`1d2c6553` repairs two independent defects. Applying a profile used to overwrite
+the saved global light/dark preference. Tauri's optional command arguments also
+collapsed omitted and explicit-null fields, making the profile's Inherit action
+a silent no-op. Flat update payloads now retain absent/clear/assign semantics;
+runtime snapshots carry a separate active-profile override. Existing settings
+events refresh that effective preference in each frontend window. The new legacy
+profile migration inherits the existing global preference instead of pinning a
+duplicate. Previously saved profile choices remain untouched.
+
+Regression evidence: `product06-profile-theme-red.log` reproduces global Dark
+becoming Light. The repaired focused Rust suite passes 20 tests. Full workspace:
+desktop **502 passed / 1 existing ignored**, core **1764**, CLI **1**, docs 0.
+Clippy all targets with warnings denied, Rust formatting and TypeScript passed.
+Logs use `.local/qa05/product06-profile-theme-*.log`. Independent read-only review
+found no introduced blocker and verified the actual Tauri Request API contract.
+
+The initial native select expansion worked through ExpandCollapsePattern, but
+option Invoke did not establish a changed value. These RPCs are not counted as
+successful edits. `0ba831ff` exposes the four appearance choices directly as
+localized pressed-state buttons, with bounded wrapping and disabled saves while
+busy. Structure Theme retains the catalog selector. The new behavior test failed
+before implementation and then all **16 ProfilesTab tests** passed; it verifies
+explicit null clearing without activating another profile.
+
+No stored schema migration or credential changes are introduced. Previously
+overwritten global preferences cannot be reconstructed, and existing two-file
+profile/settings saves remain nontransactional. Rollback must restore frontend
+and backend together, since old frontends ignore the new runtime override field.
+Native assign/clear/restart evidence and final cleanup are recorded below.
+
+Native Dev `0ba831ff969b`, SHA256
+`4a072a715dd4816b699bdbab1f18b0f710551d9078110ebab811f41e07ad213b`,
+proved Light assignment on an inactive QA-owned duplicate, activation into Light,
+and explicit Inherit clearing back to the global dark appearance. Full frontend
+passed **1184 tests / 200 files**. No owner profile preference was edited.
+
+Visually inspected evidence under the global Desktop Visual QA screenshots path:
+
+- `window-2559030-6a54a8ba80da4f61b9f04f67e43a0129.png`: inactive Light selection.
+- `window-2559030-04158df0a10043a9aab26ec390f37941.png`: activated Light. This
+  **fails visual contrast**: catalog-derived dark surfaces coexist with dark
+  app-appearance text. It is functional theme evidence, not visual acceptance.
+- `window-2559030-b5a643a1517e469cb327c4409508efb9.png`: explicit inheritance
+  selected and global dark appearance restored.
+
+Screenshot-driven repair `a7722d5b` resolves shared workspace surface/text/edge
+tokens together for light appearance, adds a legible navigation backing, and
+restores the selected appearance button's contrast. The chosen catalog's dark
+paint remains the fallback and provider logo/palette tokens are unchanged.
+Focused Profiles/workspace tests **18 passed**. Final native comparison follows.
+
+Final verified Dev source **a7722d5b9716**, SHA256
+`4bc7ee738f6f5007a93523153bdfbd049ce1cc2b44382eaa2e11b9b0c7a5f4cf`.
+Builder passed TypeScript, locale parity, production frontend, Dev identity and
+source/proof-copy equality (`product06-profile-light-build.log`). The embedded
+dirty marker reflects documentation work; production source was committed.
+Full final frontend: **1184 passed / 200 files** (`product06-profile-light-frontend.log`).
+Rust source was unchanged after its successful 502/1764/1 workspace and Clippy gates.
+
+Final screenshots were opened and visually inspected:
+
+- `window-6753022-02808f40aa8348c2a54ffec1c996c00c.png`: Inherit remains selected
+  after restart on the QA-owned active profile.
+- `window-6753022-9f252eca0738407da26fd54cde82ed28.png`: Light after repair;
+  readable navigation, profile text, field boundaries, provider logos and selected
+  state. The wallpaper remains visible outside the content panel.
+- `window-6753022-2d7f5fa19cc44a9f8d77f5fc77972b3b.png`: deleting only the active
+  QA profile restores Default and its original Auto preference/dark appearance.
+- `window-1967676-cbed13dc9fa24807b06001d606459f84.png`: fresh restart confirms
+  Default active and zero QA profiles. Original memberships and surface switches
+  remain as observed at baseline. No owner theme or credentials were edited.
+
+All native calls used inspected HWND/process identity and supported UIA patterns;
+every batch stopped in finally. No physical mouse/keyboard or adapter bypass.
+Native Structure Theme catalog assignment/clear, global preference edits while
+overridden, RTL/narrow and other surface permutations remain explicit coverage
+gaps. This packet is accepted for the demonstrated appearance contract and visual
+repair only; whole-product and release acceptance remain unfinished.

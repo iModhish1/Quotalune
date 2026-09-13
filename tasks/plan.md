@@ -435,9 +435,13 @@ Collections packet verified: fixed detach ID collision after persisted layout
 reload, preserved offline providers/current order when gathering, and exposed
 targeted regrouping without dragging. Native draft detach/regroup/discard and
 compact theme-aware layout verified; persisted collision regression passed.
-Next: reconcile profile theme-clear and global-theme inheritance contracts.
-Separate audit finding: nullable profile theme clearing/global-theme inheritance
-needs backend contract reconciliation; current UI tests alone do not prove it.
+Profile appearance packet verified: global preferences survive profile overrides;
+flat patches distinguish absent/null/value. Native Light activation, Inherit
+clearing, restart persistence and active QA-profile deletion passed. Screenshots
+exposed and verified repair of light-mode surface/text contrast. Default restored,
+no QA profiles remain. See PRODUCT06_OWNER_COMPLETION.md for exact evidence.
+Remaining profile follow-up: native Structure Theme catalog assignment/clear,
+global preference edits while overridden, RTL/narrow and surface permutations.
 Native follow-up: inspect fresh 7ea33671 captures, compact Navigation Layout
 cards and stacked description margins, rebuild and compare General/Notifications.
 Capture labels are not coverage: the last Settings invocation toggled navigation
