@@ -405,3 +405,23 @@ CLI account. This resolves the intended publishing-account ambiguity by direct
 owner confirmation. The private email was not technically verified; do not claim
 otherwise. Bind eventual repository writes to iModhish1 and recheck authenticated
 identity immediately before publishing. Release readiness gates remain required.
+
+
+P06-13 owner extension (2026-09-13): show reset inventory beneath provider logos
+and consistently on all reset-related surfaces: `+1 Reset`, `+N Resets` (N >= 2),
+and `No Reset` for a confirmed zero. Distinguish provider-issued resets from
+Banked Reset cards; expose the last reset, the next weekly reset, available banked
+cards and each card's expiry. Never infer global/company-issued cause from a
+single-account quota drop, invent an expiry (including a presumed month), or
+turn unsupported/missing inventory into zero. Preserve per-account attribution
+and label unavailable evidence explicitly. Implement shared semantics and UI,
+then cover known zero/one/multiple/unknown/expired cards plus native visuals.
+
+P06-14 owner extension (2026-09-13): expose all eight physical logo-relative
+positions (top/bottom left/right plus top/bottom/left/right center) for account
+numbers and reset indicators. Dashboard rearrangement uses left/right labels
+with matching physical movement in RTL. Replace the linear rail with a bounded
+circular carousel showing a configurable three or four providers (fewer only on
+narrow screens), wheel/keyboard controls, and persisted instance order and last
+visible anchor across page/app restarts. Preserve brand marks, account isolation,
+Demo separation and reduced-motion behavior; no continuously running animation.

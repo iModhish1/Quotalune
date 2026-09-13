@@ -1161,3 +1161,26 @@ open because exhaustive control and installer/native OS acceptance is incomplete
 - [ ] P06-08/09: Profiles/Collections capabilities and complete workflow help.
 - [ ] P06-10/11: owner About, release artifacts and verified owner GitHub account.
 - [ ] P06-12: native/source/security/installer requirement-level acceptance.
+
+
+P06-03 increment: independent persisted Codex account cards, missing/conflicting
+observation gating, targeted refresh, saved cross-provider order and numbered
+badge presentation are implemented for the operational rail. Independent review
+repairs cover modal select ancestry and transient discovery UUIDs. Source gates
+and remaining native/account/tray coverage are in PRODUCT06_OWNER_COMPLETION.md.
+The P06-03/04 checkbox remains open.
+
+- [ ] P06-13: shared reset inventory badges, separate reset-event / weekly-schedule / Banked Reset expiry semantics, per-account source tests and native proof.
+
+- [ ] P06-14: eight badge/reset positions, circular 3/4-card rail, saved anchor and physical left/right arrangement; native and persistence proof.
+
+P06-13/P06-14 source increment: implemented typed account-scoped inventories,
+eight positions, bounded circular rail, serial saved anchor/order and isolated
+Demo presentation. Source review repaired four defects; frontend1172/core1763/
+desktop496/CLI1 green (desktop1pre-existingignored). Native Dev verified all
+sixteen position selections, saved position readback across relaunch, shared-edge
+spacing, real per-card reset facts and six-provider/four-visible Demo navigation.
+Original settings and real mode restored. Evidence and final Dev hash are in
+PRODUCT06_OWNER_COMPLETION.md. Three-card/70-provider/wheel/anchor combinations
+are source-tested; remaining native coverage and stage/tray-specific reset layouts
+stay open. Do not mark whole-product PASS.

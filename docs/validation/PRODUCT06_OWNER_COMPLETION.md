@@ -252,3 +252,248 @@ Remaining visual findings include the oversized Collections preview stage,
 remaining large presentation/settings cards, and Grok's existing bundled mark
 looking unlike the requested reference. No provider asset was replaced by guess.
 P06 remains PARTIAL; no exhaustive QA, installer, publication or cross-version PASS.
+
+
+## P06-03 account-instance dashboard increment — 2026-09-13
+
+The operational provider rail now has a separate instance identity. Persisted
+Codex accounts use `codex:<uuid>` while their original brand remains `codex`.
+Each account can be selected separately, retains its own plan/windows/observation
+time, and has a numbered badge. A missing or identity-conflicting observation
+remains unavailable. Account snapshots never inherit ambient money, pace, token
+counts, or provider-only history. Account-specific history is explicitly unavailable.
+The existing provider-wide analytics, KPIs and reset summary have not been widened
+to aggregate these extra accounts; this is still a partial dashboard integration.
+
+From a planet's detail panel, Move earlier/later reorders provider/account cards;
+number visibility and the logical start/end badge corner are persisted through
+`providerInstancePresentation`. These presentation settings do not authenticate,
+change provider order semantics, switch the active account, or migrate credentials.
+Refresh on an extra account targets its exact UUID. Account management continues
+in Providers. The new passive bridge reads persisted metadata and snapshots only;
+it deliberately excludes unpersisted discoveries whose UUID would otherwise change
+on every scan. Successful addition/persistence is required before a new lane appears.
+
+Independent read-only review identified and resolved two defects before delivery:
+- A select list portalled outside an HTML modal becomes inert/hidden. The shared
+  select now retains its owning dialog as portal parent; non-dialog selects still
+  use the document body. A regression covers containment, selection and focus.
+- Including unpersisted discovered accounts would make Refresh and saved ordering
+  refer to expired UUIDs. The passive bridge now uses AccountStore directly.
+
+Source evidence: full frontend 1158 tests / 195 files; workspace Rust desktop
+496 passed + 1 existing ignored, core 1749 passed, CLI 1 passed, doc tests 0.
+The post-review backend command repair passed its 11 focused tests. Workspace
+Clippy with all targets and -D warnings, formatting, TypeScript, locale parity
+(1585 keys), secret scan (3057 files), and diff whitespace checks passed.
+No new skip/focus directives were found in the touched frontend tests.
+Logs: `.local/qa05/product06-instance-*.log`.
+
+Native modal interaction and saved setting readback are recorded below when tested.
+Live second-account OAuth, independent native account tray icons, per-account
+provider-management rows, account history, and exhaustive connection-method tests
+remain open. This increment does not establish a full P06 or release PASS.
+
+
+### Native account-card and modal proof
+
+The first account-card candidate was built from 19781e2a plus the reviewed source
+changes, Dev binary SHA-256
+`b18ecb8b70e708e3d26d5299486e41cd1cac2d3f6bf9f239418f92c309795ebd`.
+The guarded adapter verified `app.quotalis.desktop.dev` and `QuotaArc-Dev`, launched
+its owned process, and used UIA without physical input. The local account store did
+not expose a saved second account, so native proof is for the ordinary Codex card,
+its numbered badge and shared preferences. Multi-account separation is covered by
+source fixtures; it is not claimed as live second-account OAuth evidence.
+
+Native semantics matter: the planet advertises ExpandCollapse, so Legacy default
+Invoke reported success but did not open it. Using the inspected ExpandCollapse
+pattern opened the actual `Provider details` modal. The badge select also uses
+ExpandCollapse; options expose InvokePattern. Selecting Upper start corner changed
+the visible preference, then Upper end corner restored the initial setting. The
+picker remained visible above the modal contents and accepted the native action.
+All images below were inspected. No failed default-invoke screenshot is counted
+as successful dialog coverage.
+
+Capture directory: `C:/Users/imodhish/AI-Tools/Desktop-Visual-QA/screenshots/`.
+
+| State | Capture |
+| --- | --- |
+| Original provider artwork and account 1 badge | `window-68848-6e9fe35b96d14ae78eb935a133b49e3e.png` |
+| Real expanded details modal | `window-331014-b358fb17028b4affba306e6fe23f89f6.png` |
+| Interactive modal picker, two options | `window-265474-d83d6e0503404764a01dcb6e7235913a.png` |
+| Selected start corner | `window-265474-8c3cbd482f20443e9d8c7cd845272ce1.png` |
+| Restored end corner | `window-265474-963a0b6b3f514984b4e914054cdf67de.png` |
+
+This visual pass found a transient account-number disappearance during preference
+saving and an unfilled `{}` in the provider-dashboard action. Both were fixed in
+0c0fe30f. Settings events now retain cards until the newest cache read completes;
+error, removal-result and Demo boundaries still replace/mask them. Independent
+review accepted this stabilization; 24 focused frontend tests passed. The popup
+fix is 50f19dcd. A final rebuilt native check follows below.
+
+### Final account increment native readback (2026-09-13)
+
+Final Dev SHA256: `b0ab9011bc3d32b25cf0aedc33981a449dce6a8e45b610bc926925c35b58947b`;
+embedded source `0c0fe30f9c26` dirty (documentation/test edits). Latest complete
+frontend suite: **1159 passed / 195 files**, log
+`.local/qa05/product06-instance-final-full-frontend.log`.
+
+Guarded native WebView2 UIA verified selection of Upper start, retained account
+number while saving, readback after Providers -> Dashboard remount, and persistence
+across app relaunch. Original Upper end setting was restored and read back as
+selected. Screenshots under the global Desktop-Visual-QA/screenshots directory:
+- `window-1510368-dd40fe8db39f48a4904f9a9a860f9b8a.png`: selected start, stable number.
+- `window-1510368-a9dc4f06ab8440e79c71b3008b80e1d4.png`: remount readback.
+- `window-658676-cef05bb2c08340729a6ab30126cd3e51.png`: original end restored.
+Transient COM Invoke failures were not counted as successful actions; the last
+restore succeeded in a fresh guarded launch and its selected state was inspected.
+Every adapter batch stopped in finally; no owned Dev process remains. Native
+fixture did not contain a second persisted account: account isolation is covered
+by source tests, not claimed as live multi-account OAuth evidence. P06-13/P06-14
+are subsequent requirements and remain open until their own evidence is recorded.
+
+## P06-13 / P06-14 — typed resets and circular provider navigation
+
+Source commits: `82ff9701` (typed reset contract/source/bridge) and `79899d95`
+(presentation, circular navigation, persistence and shared reset views).
+
+### Accepted source behavior
+
+- Eight physical account badge positions; separate eight-position reset badge,
+  independent visibility switches, three/four foreground preference. Legacy
+  start/end remains compatible. RTL rearrangement labels mean physical left/right.
+- Circular wheel, arrows, keyboard and swipe navigation mount at most four cards
+  (narrow windows may show fewer). Stable instance keys preserve account identity.
+  Saved order and first foreground instance restore the visible group. Finite
+  entry/reorder animation respects reduced motion; no idle animation loop.
+- Serial/coalesced presentation writes retain independent fields and the last
+  gesture. Independent Demo local storage never mutates the real presentation.
+- Typed ResetDatum distinguishes known/unsupported/unavailable. Explicit zero
+  remains zero; missing counts/statuses/expiries do not become invented values.
+  Cards retain individual expiries and incomplete detail provenance. Reset badges
+  show +1 Reset / +N Resets / No Reset; missing evidence is a dash with a label.
+- Ambient Codex and persisted managed-account observations carry separate reset
+  facts. An account with no usable quota can still carry its own reset inventory;
+  conflicting provider-account identity withholds both. Additional account facts
+  do not enter provider-wide history.
+- Shared detail UI is used in current limits, rail detail, provider usage settings,
+  tray menu card, Codex account menu, reset horizon and reset schedule. Legacy
+  informational reset-credit rows are excluded from quota/extra usage selection
+  and stage quota windows. Unknown inventory cannot re-arm banked notifications
+  by pretending a confirmed zero was observed.
+- Managed inventory requests use the supported HTTPS origins only. Test-only
+  loopback mock allowance is absent from production. Optional inventory failure
+  cannot invalidate verified quota equivalence.
+
+### Review and validation
+
+Independent Astra review found and rechecked four repaired defects: completion
+microtask lost-write race, rejected/past weekly timestamp fallback, Demo anchor
+leaking into real navigation, and insufficient custom-backend origin validation.
+The reviewer independently replayed 12 queue completion boundaries successfully.
+
+- Full frontend: **1171 passed / 198 files**,
+  `.local/qa05/product06-reset-reviewed-frontend.log`.
+- Workspace Rust: desktop **496 passed + 1 existing ignored**; core **1763 passed**;
+  CLI **1 passed**; doc tests 0, `.local/qa05/product06-reset-workspace-final.log`.
+- Workspace Clippy all targets / -D warnings: passed,
+  `.local/qa05/product06-reset-clippy-final.log`.
+- TypeScript and 1614-key locale parity passed. Secret scan: **3066 files clean**.
+- Focused tests include eight-position settings roundtrip, 70-provider wrap,
+  saved anchor, RTL reorder, Demo transitions, zero/one/multiple/unknown cards,
+  past/explicitly rejected weekly dates, authenticated managed endpoint isolation,
+  two-account snapshot roundtrip and notification unknown-state guard.
+
+### Explicit remaining scope
+
+No current source proves a company-wide reset event or a reliable persisted last
+actual reset; those fields stay unavailable. A quota drop is not upgraded into
+company-issued evidence. Managed verified reads currently fetch optional inventory
+per quota sample, which may add endpoint latency. Native tray glyph/tooltip reset
+inventory and the remaining stage-specific surfaces need their own layout work;
+this increment is not a blanket claim of coverage of every tray/floatbar theme.
+Native screenshots for the rebuilt reviewed candidate follow below. Whole-product
+QA, live OAuth, release/installer and remaining P06 work are still open.
+
+### Native reset and position acceptance (2026-09-13)
+
+The reviewed reset candidate `b838169d` was launched through the guarded,
+hash-verified Dev adapter. Actual Codex inventory displayed **+2 Resets** and
+separate available cards with expiries on October 4 and October 5, 2026. Last
+actual reset and provider-issued reset evidence remained unavailable. The next
+weekly timestamp was reported independently. This does not prove a company-wide
+reset event. The native detail tree contained both cards; the first screenshot
+shows the first card, with the second below the fold.
+
+The original two position dropdowns had no visible field captions. They were
+replaced with labeled, physical 3-by-3 position grids (center reserved, eight
+buttons) in `9881c7a7`; `c2ccc9c9` also normalizes legacy start/end reset values.
+The grids keep physical left/right in RTL, expose pressed state, and inherit
+the existing theme. No provider or application logo asset was modified.
+
+Native acceptance on `c2ccc9c9`, Dev SHA256
+`8f4f04baf99087f603f004ddd3fcd20a071e5bb095957096e7015ed06d3f06bd`:
+
+| Physical position | Account selected readback | Reset selected readback |
+| --- | --- | --- |
+| Top left | Passed | Passed |
+| Top center | Passed | Passed |
+| Top right | Passed | Passed |
+| Middle left | Passed | Passed |
+| Middle right | Passed | Passed |
+| Bottom left | Passed | Passed |
+| Bottom center | Passed | Passed |
+| Bottom right | Passed | Passed |
+
+Each row used inspected native TogglePattern state and expected_value=0, followed
+by a selected-state=1 readback. Account bottom-left and reset bottom-center also
+survived a fresh guarded app launch. Original account top-right and reset
+bottom-center were restored and read back. Initial option Invoke/Legacy RPCs
+either failed or did not change the setting; these were not counted as passes.
+The grid controls worked through their exposed TogglePattern. No physical input,
+adapter bypass, personal profile edits, or OAuth actions were used.
+
+Native Demo was enabled using its actual setting. Six simulated providers yielded
+four mounted cards: Codex, Claude, Gemini, Perplexity. Next produced Claude,
+Gemini, Perplexity, DeepSeek; Previous restored the first group. The screenshot
+shows the explicit Demo label and zero/one/two/three reset inventory examples.
+Demo was switched off and its native unchecked state read back in finally.
+Three-card layout, wheel gestures, 70-provider wrap and cross-mode anchor isolation
+remain source-test evidence; this batch is not native proof of 70 providers or
+physical wheel input. Native adapter batches always released in finally.
+
+Screenshots in `C:/Users/imodhish/AI-Tools/Desktop-Visual-QA/screenshots/`:
+
+| Evidence | File |
+| --- | --- |
+| Real reset details / first card expiry | `window-724186-dc0d28a643094e97942fbc8a42a7cde5.png` |
+| Account bottom-left and reset bottom-center selected | `window-1248498-91142086704b4d3e92d39a9ce4f915e4.png` |
+| Both original positions restored after sixteen selections | `window-2493290-54acda34d70746058a4a95d004993cf0.png` |
+| Six-provider Demo, four visible and reset count cases | `window-1314020-a027a01458034c17b2cc0cf31220cdf7.png` |
+
+All listed images were visually inspected. Latest full frontend suite after the
+grid change: **1172 passed / 198 files**, log
+`.local/qa05/product06-position-grid-frontend.log`; tsc passed. Backend source is
+unchanged from the full Rust/Clippy gates above. `4ca2a255` adds spacing when both
+badges use the same top or bottom edge; final build and native evidence follow.
+
+Final Dev build: embedded source **4ca2a2552c06**, SHA256
+`7b149820d3c651d89a1a82b84640c725908fe62d8cfcfdf554d027bec589c4ab`.
+Verified builder passed, including the production frontend bundle;
+`.local/qa05/product06-position-final-dev-build.log`. Subsequent changes are docs.
+Final secret scan: **3069 files clean**;
+`.local/qa05/product06-position-final-secrets.log`. TypeScript and diff checks pass.
+
+Fresh final-binary launch read back the restored account top-right and reset
+bottom-center settings. Both badges were then selected at top-center and the
+actual dashboard captured: the inventory sits above the number with clear space,
+and the provider logo remains visible. Original positions were restored again
+with native readback and an unblurred dashboard capture:
+
+- Shared top edge: `window-1969230-fff7a6895c5f4717a8057d1d643f42e2.png`.
+- Final real-data/restored state: `window-1969230-4f7e331856aa4bac9d742610fcbebb53.png`.
+
+Both final screenshots were visually inspected. Dev was released by the adapter
+in finally; no owned QA process remains. This increment does not close the broad
+all-feature, installer, live authentication or remaining reset-surface backlog.
