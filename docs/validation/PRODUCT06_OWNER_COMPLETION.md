@@ -570,3 +570,74 @@ COM error. Search is component-local, and a fresh launch confirmed both Claude
 and Codex rows, Default active, and zero QA profiles. Final inspected capture:
 `window-4262492-c9e815ceaf824f2d8e01760be24bbd42.png`.
 No claim of complete profile theme/surface or all-application acceptance is made.
+
+## P06-08 — Collections persistence and accessible regrouping
+
+Source `72e476c2` fixes two reproduced defects: a saved `solo-1` collided with the
+first detached group after remount and changed that existing group's position;
+Gather all rebuilt from current snapshots and discarded temporarily unavailable
+items while resetting user order. Detached IDs now avoid both current groups and
+retained positions, and no positions change when detach rejects the item. Gathering
+retains current group/item order and includes newly available providers afterward.
+
+Targeted regrouping buttons now move the selected provider into a specific group
+without dragging; they preserve target placement and expose contextual accessible
+names. English/Arabic guidance explains the workflow. Existing Collections controls
+are not all localized by this increment. No schema, auth, quota or pricing contract
+changed.
+
+Regression tests were run failing before repairs, then green: saved group placement,
+order/offline retention, and targeted regrouping preserving placement. Focused
+Collections tests: **11 passed**; full frontend: **1181 passed / 199 files**.
+Logs: `.local/qa05/product06-collections-{red,move-red,green,frontend}.log`.
+TypeScript, formatting, diff checks and secret scan (**3071 files**) passed.
+
+The initial full Rust run hit two existing subprocess test timeouts during
+concurrent frontend load. Nine focused login tests passed in isolation and an
+unchanged full workspace rerun passed. Investigation found the descendant fixture
+allowed a three-second startup while its outer test supplied only two seconds.
+The test-only repair uses the existing five-second fixture allowance, retains
+parent/descendant termination checks and adds a lower-bound assertion for timeout.
+Production login deadlines were not changed. Final gates/native evidence follow.
+
+Test-only deadline repair: `0f5fd5ab`. Final workspace tests: desktop **498 passed
+/ 1 preexisting ignored**, core **1764 passed**, CLI **1 passed**, docs 0
+(`product06-collections-workspace-final.log`). Clippy all targets with warnings
+denied passed (`product06-collections-clippy.log`).
+
+Native Dev source `0f5fd5ab2eaa`, SHA256
+`09b3f8b33fc505a478e183dbf2934a8d46dda69fe98682f09e73f5903e7a9ed5`:
+guarded UIA detached Claude from the two-provider group, exposed the exact
+`Move selected to Codex` button, regrouped it, and showed Codex then Claude in
+one group. Navigating away/back restored the original Claude/Codex saved order.
+Save was never invoked, so the owner's layout was preserved. Screenshots opened
+and visually inspected under the global QA screenshots directory:
+
+- Before: `window-5966496-10d4930e144540d6b52881b5c0a7d410.png`.
+- Detached: `window-5966496-c6c96b88154c45149209237fd9102ccd.png`.
+- Regrouped: `window-5966496-594b775d70094e10af9cc1e1793aecc0.png`.
+- Original draft restored: `window-5966496-693f7bcd05d6488a83c59b47205eab67.png`.
+
+The screenshots exposed a tall editor pushing Save below the initial viewport
+beside a mostly empty gray canvas. `b335fa30` uses the page width for related
+controls and replaces that gray canvas with a bounded, theme-aware dotted
+workspace. Provider widget pixels and user-saved coordinates remain unchanged.
+
+Final verified Dev build: **b335fa30bca9**, SHA256
+`4bd5c9badfbcb124c016a342a93322cace18c30ece3cfc20ccf1ea05bb34d779`;
+`product06-collections-final-build.log` includes successful final TypeScript,
+locale parity and production frontend build. Fresh native captures were visually
+inspected:
+
+- Compact initial page: `window-9307030-20280eccbd564f8980aeb900a051a2c8.png`.
+  Save is visible at y654–706 instead of below the initial viewport.
+- Detached draft controls: `window-9307030-ad2ed1ef63894a68873b0945e8deb9e8.png`.
+- Lower preview revealed through ScrollItemPattern:
+  `window-4524636-62a758401b4d40a9ae9df088a355b602.png`; both detached widgets
+  are reachable and visible. The editor and preview scroll when content exceeds
+  their bounds; this is not a claim that all content fits every viewport.
+
+All native sessions stopped in finally. No physical input or Save action was
+used. The saved-reload collision is covered by the persisted-layout component
+regression, not by a fabricated native saved-layout scenario. Broader detached
+window, RTL, 70-provider and all-control native acceptance remains open.

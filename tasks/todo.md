@@ -1192,3 +1192,11 @@ deletion of only QA profiles. Default remained active. A capture-backed search
 field style repair is included. Full source gates and exact counts are recorded
 in PRODUCT06_OWNER_COMPLETION.md. Nullable theme inheritance and Collections
 repairs remain open; the broad P06-08 checkbox is intentionally not closed.
+
+P06-08 Collections increment: fixed saved detached-ID collisions and loss of
+offline providers/order during Gather all. Added targeted regrouping without
+dragging, with EN/AR guidance. Regression tests and native draft detach/regroup/
+discard passed; no owner layout saved. Native screenshots prompted a compact
+full-width control layout and theme-aware preview repair. Final visual evidence
+is recorded in PRODUCT06_OWNER_COMPLETION.md; profile inheritance, broader
+collection customization and native detached-window coverage remain open.

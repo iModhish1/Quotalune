@@ -431,8 +431,11 @@ P06-08 verified increment: persisted profile ordering, explicit rename/save/canc
 distinct copy names, membership search, localized controls and themed inputs.
 Native create/rename/copy/reorder persistence/delete/search passed; all QA profiles
 removed, Default retained. Source and screenshots: PRODUCT06_OWNER_COMPLETION.md.
-Next packet: repair Collections detach ID collision after persisted layout reload,
-then reconcile profile theme-clear and global-theme inheritance contracts.
+Collections packet verified: fixed detach ID collision after persisted layout
+reload, preserved offline providers/current order when gathering, and exposed
+targeted regrouping without dragging. Native draft detach/regroup/discard and
+compact theme-aware layout verified; persisted collision regression passed.
+Next: reconcile profile theme-clear and global-theme inheritance contracts.
 Separate audit finding: nullable profile theme clearing/global-theme inheritance
 needs backend contract reconciliation; current UI tests alone do not prove it.
 Native follow-up: inspect fresh 7ea33671 captures, compact Navigation Layout
