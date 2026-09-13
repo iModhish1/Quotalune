@@ -67,7 +67,12 @@
 .provider-position-picker__grid button[aria-pressed=true]{border-color:var(--qa-analytics-accent);background:color-mix(in srgb,var(--qa-analytics-accent) 18%,transparent);box-shadow:inset 0 0 0 1px var(--qa-analytics-accent)}
 .provider-position-picker__grid button:focus-visible{outline:2px solid var(--qa-analytics-accent);outline-offset:2px}
 .provider-position-picker__center{grid-area:2 / 2;align-self:center;text-align:center;color:var(--qa-analytics-accent);font-size:20px}
-.provider-instance-count{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px}
+.provider-instance-count{min-width:0;margin:0;padding:8px;border:1px solid var(--cosmic-line);border-radius:10px;font-size:12px}
+.provider-instance-count legend{padding-inline:6px;font-weight:600}
+.provider-instance-count__choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.provider-instance-count__choices button{min-height:36px;margin:0;padding:6px 12px;border:1px solid var(--cosmic-line);border-radius:7px;background:var(--qa-analytics-surface-primary);color:inherit;font:inherit}
+.provider-instance-count__choices button[aria-pressed=true]{border-color:var(--qa-analytics-accent);background:color-mix(in srgb,var(--qa-analytics-accent) 18%,transparent);box-shadow:inset 0 0 0 1px var(--qa-analytics-accent)}
+.provider-instance-count__choices button:focus-visible{outline:2px solid var(--qa-analytics-accent);outline-offset:2px}
 .provider-instance-preferences [role=switch]{display:flex;align-items:center;gap:12px;background:transparent;border:0;color:inherit;text-align:start;padding:8px}
 .provider-instance-preferences [role=switch]::before{content:"";width:32px;height:18px;flex:none;border:1px solid var(--cosmic-line);border-radius:999px;background:radial-gradient(circle at 8px 50%,#aab4c3 0 5px,transparent 6px),#929bab22}
 .provider-instance-preferences [role=switch][aria-checked=true]::before{background:radial-gradient(circle at 24px 50%,#f4f8ff 0 5px,transparent 6px),var(--qa-analytics-accent)}

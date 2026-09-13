@@ -1,4 +1,5 @@
 import {render,screen,fireEvent,within,act} from '@testing-library/react';
+import {useState} from 'react';
 import {describe,it,expect,vi} from 'vitest';
 import ProviderRail from './ProviderRail';
 import {railWindow} from './railModel';
@@ -7,6 +8,30 @@ vi.mock('../../../hooks/useLocale',()=>({useLocale:()=>({t:(key:string)=>key,lan
 vi.mock('../../../lib/tauri',()=>({refreshProviders:vi.fn(),codexAccountFetch:vi.fn().mockResolvedValue({})}));
 const settings={showAsUsed:true,providerMetrics:{},providerAccentColors:{}} as SettingsSnapshot;
 const provider=(id:string):ProviderUsageSnapshot=>({providerId:id,displayName:id,planName:id==='codex'?'ChatGPT Pro':null,primary:{usedPercent:62,remainingPercent:38,resetsAt:null,resetDescription:null,windowMinutes:null,isExhausted:false,reservePercent:null,reserveDescription:null},secondary:null,tertiary:null,modelSpecific:null,selectedMetric:{usedPercent:62,remainingPercent:38,resetsAt:null,resetDescription:null,windowMinutes:null,isExhausted:false,reservePercent:null,reserveDescription:null},extraRateWindows:[],cost:null,errorState:'ready',error:null,accountEmail:null,accountOrganization:null,pace:null,trayStatusLabel:null,updatedAt:'2026-09-10T00:00:00Z',sourceLabel:'test'});
+it('offers directly accessible three/four choices without losing the circular anchor',()=>{
+ HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
+ HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};
+ const save=vi.fn();
+ function Harness(){
+  const [visibleCount,setVisibleCount]=useState<3|4>(4);
+  return <ProviderRail providers={Array.from({length:6},(_,i)=>provider(`provider-${i}`))} settings={settings} isDemo
+   onOpenProviders={()=>{}} onAnalytics={()=>{}}
+   presentation={{order:[],badgePosition:'top-right',showAccountNumbers:true,visibleCount,anchorId:'provider-5'}}
+   onPresentationChange={async patch=>{save(patch);if(patch.visibleCount)setVisibleCount(patch.visibleCount);}}/>;
+ }
+ render(<Harness/>);
+ fireEvent.click(within(screen.getByRole('toolbar')).getByRole('button',{name:/provider-5,/}));
+ const choices=screen.getByRole('group',{name:'InstanceVisibleCount'});
+ expect(within(choices).getAllByRole('button')).toHaveLength(2);
+ expect(within(choices).getByRole('button',{name:'4'})).toHaveAttribute('aria-pressed','true');
+ fireEvent.click(within(choices).getByRole('button',{name:'3'}));
+ expect(save).toHaveBeenLastCalledWith({visibleCount:3});
+ expect(within(choices).getByRole('button',{name:'3'})).toHaveAttribute('aria-pressed','true');
+ expect(within(screen.getByRole('toolbar')).getAllByRole('button').map(b=>b.dataset.index)).toEqual(['5','0','1']);
+ fireEvent.click(within(choices).getByRole('button',{name:'4'}));
+ expect(save).toHaveBeenLastCalledWith({visibleCount:4});
+ expect(within(screen.getByRole('toolbar')).getAllByRole('button').map(b=>b.dataset.index)).toEqual(['5','0','1','2']);
+});
 it.each([1,6,12,24,40,70])('bounds mounted controls while all %i providers remain keyboard reachable',count=>{
  const view=render(<ProviderRail providers={Array.from({length:count},(_,i)=>provider(`provider-${i}`))} settings={settings} isDemo onOpenProviders={()=>{}} onAnalytics={()=>{}}/>);
  expect(within(screen.getByRole('toolbar')).getAllByRole('button').length).toBeLessThanOrEqual(4);

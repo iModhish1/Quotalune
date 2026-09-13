@@ -121,7 +121,13 @@ export default function ProviderRail({providers,settings,isDemo,onOpenProviders,
       <BadgePositionPicker label={t('InstanceBadgePosition')} value={badgePosition} onChange={value=>void onPresentationChange({badgePosition:value})}/>
       <BadgePositionPicker label={t('ResetBadgePosition')} value={resetPosition} onChange={value=>void onPresentationChange({resetPosition:value})}/>
       <button type="button" role="switch" aria-checked={presentation.showResetBadge!==false} onClick={()=>void onPresentationChange({showResetBadge:presentation.showResetBadge===false})}>{t('ResetShowBadge')}</button>
-      <div className="provider-instance-count"><span>{t('InstanceVisibleCount')}</span><QuotalisSelect label={t('InstanceVisibleCount')} value={String(presentation.visibleCount??4)} options={[{value:'3',label:'3'},{value:'4',label:'4'}]} onChange={value=>void onPresentationChange({visibleCount:value==='3'?3:4})}/></div>
+      <fieldset className="provider-instance-count"><legend>{t('InstanceVisibleCount')}</legend>
+        <div className="provider-instance-count__choices">
+          {([3,4] as const).map(count=><button type="button" key={count}
+            aria-pressed={(presentation.visibleCount??4)===count}
+            onClick={()=>void onPresentationChange({visibleCount:count})}>{count}</button>)}
+        </div>
+      </fieldset>
       <button type="button" role="switch" aria-checked={presentation.showAccountNumbers} onClick={()=>void onPresentationChange({showAccountNumbers:!presentation.showAccountNumbers})}>{t('InstanceShowNumbers')}</button>
     </fieldset>}
     <div className="provider-quick-panel__actions">
