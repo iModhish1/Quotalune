@@ -16,6 +16,10 @@ pub struct ProviderInstancePresentation {
     pub order: Vec<String>,
     pub badge_position: String,
     pub show_account_numbers: bool,
+    pub reset_position: String,
+    pub show_reset_badge: bool,
+    pub visible_count: u8,
+    pub anchor_id: Option<String>,
 }
 
 impl Default for ProviderInstancePresentation {
@@ -24,6 +28,10 @@ impl Default for ProviderInstancePresentation {
             order: Vec::new(),
             badge_position: "end".into(),
             show_account_numbers: true,
+            reset_position: "bottom-center".into(),
+            show_reset_badge: true,
+            visible_count: 4,
+            anchor_id: None,
         }
     }
 }
@@ -34,11 +42,40 @@ impl ProviderInstancePresentation {
         self.order
             .retain(|id| valid_provider_instance_id(id) && seen.insert(id.clone()));
         self.order.truncate(512);
-        if !["start", "end"].contains(&self.badge_position.as_str()) {
+        if !valid_badge_position(&self.badge_position) {
             self.badge_position = "end".into();
+        }
+        if !valid_badge_position(&self.reset_position) {
+            self.reset_position = "bottom-center".into();
+        }
+        if ![3, 4].contains(&self.visible_count) {
+            self.visible_count = 4;
+        }
+        if self
+            .anchor_id
+            .as_deref()
+            .is_some_and(|id| !valid_provider_instance_id(id))
+        {
+            self.anchor_id = None;
         }
         self
     }
+}
+
+fn valid_badge_position(value: &str) -> bool {
+    [
+        "start",
+        "end",
+        "top-left",
+        "top-right",
+        "bottom-left",
+        "bottom-right",
+        "top-center",
+        "bottom-center",
+        "middle-left",
+        "middle-right",
+    ]
+    .contains(&value)
 }
 
 #[cfg(test)]
@@ -58,6 +95,7 @@ mod tests {
             ],
             badge_position: "absolute".into(),
             show_account_numbers: false,
+            ..Default::default()
         }
         .normalized();
         assert_eq!(value.order, vec![account, "claude"]);
@@ -74,5 +112,41 @@ mod tests {
     fn missing_preferences_keep_numbered_accounts() {
         let value: ProviderInstancePresentation = serde_json::from_str("{}").unwrap();
         assert_eq!(value, ProviderInstancePresentation::default());
+    }
+
+    #[test]
+    fn carousel_and_all_physical_positions_survive_roundtrip() {
+        for position in [
+            "top-left",
+            "top-center",
+            "top-right",
+            "middle-left",
+            "middle-right",
+            "bottom-left",
+            "bottom-center",
+            "bottom-right",
+        ] {
+            let value = ProviderInstancePresentation {
+                badge_position: position.into(),
+                reset_position: position.into(),
+                visible_count: 3,
+                anchor_id: Some("claude".into()),
+                ..Default::default()
+            }
+            .normalized();
+            let restored: ProviderInstancePresentation =
+                serde_json::from_str(&serde_json::to_string(&value).unwrap()).unwrap();
+            assert_eq!(restored.normalized(), value);
+        }
+        let invalid = ProviderInstancePresentation {
+            visible_count: 70,
+            anchor_id: Some("../auth.json".into()),
+            reset_position: "outside".into(),
+            ..Default::default()
+        }
+        .normalized();
+        assert_eq!(invalid.visible_count, 4);
+        assert_eq!(invalid.anchor_id, None);
+        assert_eq!(invalid.reset_position, "bottom-center");
     }
 }

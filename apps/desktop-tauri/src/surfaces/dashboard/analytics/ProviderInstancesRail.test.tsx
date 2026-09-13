@@ -1,0 +1,25 @@
+import {render,screen,within,fireEvent} from '@testing-library/react';
+import {it,expect,vi} from 'vitest';
+import ProviderInstancesRail from './ProviderInstancesRail';
+import type {ProviderUsageSnapshot,SettingsSnapshot} from '../../../types/bridge';
+vi.mock('../../../hooks/useLocale',()=>({useLocale:()=>({t:(key:string)=>key,language:'english'}),useOptionalLocale:()=>null}));
+vi.mock('../../../hooks/useSettings',()=>({useSettings:(settings:SettingsSnapshot)=>({settings,update:vi.fn().mockResolvedValue(undefined),saving:false,error:null})}));
+vi.mock('../../../hooks/useProviderInstances',()=>({useProviderInstances:()=>({instances:[],error:null})}));
+it('restores independent anchors when switching Demo and real in both directions',()=>{
+ localStorage.removeItem('quotalis.demo.providerRail.v1');
+ const providers=['codex','claude','gemini'].map(providerId=>({providerId,displayName:providerId,errorState:'ready',primary:{usedPercent:20,remainingPercent:80,resetsAt:null},extraRateWindows:[],updatedAt:'2026-09-13T00:00:00Z'})) as ProviderUsageSnapshot[];
+ const settings={enabledProviders:['codex','claude','gemini'],providerInstancePresentation:{order:[],badgePosition:'end',showAccountNumbers:true,anchorId:'gemini'}} as SettingsSnapshot;
+ const props={providers,settings,onOpenProviders:()=>{},onAnalytics:()=>{}};
+ const active=()=>within(screen.getByRole('toolbar')).getAllByRole('button').find(b=>b.getAttribute('aria-current')==='true')!;
+ const {rerender}=render(<ProviderInstancesRail {...props} isDemo={false}/>);
+ expect(active()).toHaveAttribute('data-instance-id','gemini');
+ rerender(<ProviderInstancesRail {...props} isDemo/>);
+ expect(active()).toHaveAttribute('data-instance-id','codex');
+ fireEvent.click(screen.getByRole('button',{name:'V3Next'}));
+ expect(active()).toHaveAttribute('data-instance-id','claude');
+ rerender(<ProviderInstancesRail {...props} isDemo={false}/>);
+ expect(active()).toHaveAttribute('data-instance-id','gemini');
+ rerender(<ProviderInstancesRail {...props} isDemo/>);
+ expect(active()).toHaveAttribute('data-instance-id','claude');
+ localStorage.removeItem('quotalis.demo.providerRail.v1');
+});

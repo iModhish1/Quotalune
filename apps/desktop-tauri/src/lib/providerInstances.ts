@@ -2,6 +2,7 @@ import type {ProviderInstancePresentation, ProviderInstanceSnapshot, ProviderUsa
 
 export const DEFAULT_INSTANCE_PRESENTATION: ProviderInstancePresentation = {
   order: [], badgePosition: "end", showAccountNumbers: true,
+  resetPosition: "bottom-center", showResetBadge: true, visibleCount: 4, anchorId: null,
 };
 
 /** Display-only composition. Account observations never enter provider-wide history. */
@@ -16,7 +17,7 @@ export function composeProviderInstances(
   const result: ProviderInstanceSnapshot[] = providers.map(snapshot => ({
     instanceId: snapshot.providerId, providerId: snapshot.providerId,
     accountId: null, accountOrdinal: snapshot.providerId === "codex" ? 1 : null,
-    accountLabel: null, ...metadata.get(snapshot.providerId), snapshot,
+    accountLabel: null, ...metadata.get(snapshot.providerId), snapshot, resetFacts:snapshot.resetFacts,
   }));
   const seen = new Set(result.map(i => i.instanceId));
   for (const instance of instances) {
@@ -24,7 +25,8 @@ export function composeProviderInstances(
     // Only the backend's explicitly supported Codex account namespace is admitted.
     if (instance.providerId !== "codex" || !instance.accountId || instance.instanceId !== `codex:${instance.accountId}`) continue;
     seen.add(instance.instanceId);
-    result.push({...instance, snapshot: instance.snapshot?.providerId === instance.providerId ? instance.snapshot : null});
+    const mismatch=instance.snapshot&&instance.snapshot.providerId!==instance.providerId;
+    result.push({...instance, snapshot: mismatch?null:instance.snapshot,resetFacts:mismatch?null:instance.resetFacts});
   }
   const ranks = new Map(presentation.order.map((id, index) => [id, index]));
   return result.sort((a, b) => (ranks.get(a.instanceId) ?? Infinity) - (ranks.get(b.instanceId) ?? Infinity));

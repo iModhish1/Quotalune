@@ -124,7 +124,7 @@ export function toStageProviders(
         ...(provider.extraRateWindows ?? []).map((extra) =>
           [`extra:${extra.id}`, extra.title, extra.window] as const),
       ] as const).flatMap(([id,label,window])=>{
-        if(!window)return [];
+        if(!window || window.isInformational || id==='extra:reset-credits')return [];
         if (ranks && !ranks.has(id)) return [];
         const selection=ranks ? "all" : config?.providerDetailWindows?.[provider.providerId] ?? "all";
         const weekly=window.windowMinutes===10080 || /weekly|week/i.test(label ?? "");

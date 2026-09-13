@@ -9,11 +9,11 @@ const settings={showAsUsed:true,providerMetrics:{},providerAccentColors:{}} as S
 const provider=(id:string):ProviderUsageSnapshot=>({providerId:id,displayName:id,planName:id==='codex'?'ChatGPT Pro':null,primary:{usedPercent:62,remainingPercent:38,resetsAt:null,resetDescription:null,windowMinutes:null,isExhausted:false,reservePercent:null,reserveDescription:null},secondary:null,tertiary:null,modelSpecific:null,selectedMetric:{usedPercent:62,remainingPercent:38,resetsAt:null,resetDescription:null,windowMinutes:null,isExhausted:false,reservePercent:null,reserveDescription:null},extraRateWindows:[],cost:null,errorState:'ready',error:null,accountEmail:null,accountOrganization:null,pace:null,trayStatusLabel:null,updatedAt:'2026-09-10T00:00:00Z',sourceLabel:'test'});
 it.each([1,6,12,24,40,70])('bounds mounted controls while all %i providers remain keyboard reachable',count=>{
  const view=render(<ProviderRail providers={Array.from({length:count},(_,i)=>provider(`provider-${i}`))} settings={settings} isDemo onOpenProviders={()=>{}} onAnalytics={()=>{}}/>);
- expect(within(screen.getByRole('toolbar')).getAllByRole('button').length).toBeLessThanOrEqual(6);
+ expect(within(screen.getByRole('toolbar')).getAllByRole('button').length).toBeLessThanOrEqual(4);
  const first=within(screen.getByRole('toolbar')).getAllByRole('button')[0];fireEvent.keyDown(first,{key:'End'});
  expect(within(screen.getByRole('toolbar')).getByRole('button',{name:new RegExp(`provider-${count-1},`)})).toHaveAttribute('aria-current','true');
  fireEvent.keyDown(screen.getByRole('toolbar'),{key:'Home'});expect(within(screen.getByRole('toolbar')).getAllByRole('button')[0]).toHaveAttribute('aria-current','true');
- expect(view.container.querySelectorAll('.provider-planet').length).toBeLessThanOrEqual(6);
+ expect(view.container.querySelectorAll('.provider-planet').length).toBeLessThanOrEqual(4);
 });
 it('click exposes genuine plan and physical quotas, and analytics drills into the selected provider',()=>{
  HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};
@@ -24,7 +24,7 @@ it('click exposes genuine plan and physical quotas, and analytics drills into th
 it('wheel changes selection only over the rail and stays bounded',()=>{
  const view=render(<ProviderRail providers={[provider('codex'),provider('claude')]} settings={settings} isDemo onOpenProviders={()=>{}} onAnalytics={()=>{}}/>);
  fireEvent.wheel(view.container.querySelector('.provider-rail__viewport')!,{deltaY:120});expect(within(screen.getByRole('toolbar')).getByRole('button',{name:/claude,/})).toHaveAttribute('aria-current','true');
- const event=new WheelEvent('wheel',{deltaY:120,bubbles:true,cancelable:true});view.container.querySelector('.provider-rail__viewport')!.dispatchEvent(event);expect(event.defaultPrevented).toBe(false);
+ const event=new WheelEvent('wheel',{deltaY:120,bubbles:true,cancelable:true});view.container.querySelector('.provider-rail__viewport')!.dispatchEvent(event);expect(event.defaultPrevented).toBe(true);
 });
 describe('rail window',()=>{it('keeps focused provider mounted at every boundary',()=>{for(let i=0;i<70;i++){const w=railWindow(70,i,7);expect(w.end-w.start).toBe(7);expect(i>=w.start&&i<w.end).toBe(true);}});});
 
@@ -53,7 +53,7 @@ it('selects the second account by identity and never shows ambient history or qu
  expect(within(panel).getByText('17%')).toBeInTheDocument();
  expect(within(panel).queryByText('62%')).toBeNull();
  expect(within(panel).queryByRole('button',{name:'V3ViewAnalytics'})).toBeNull();
- fireEvent.click(within(panel).getByRole('button',{name:'ProviderSidebarMoveUp'}));
+ fireEvent.click(within(panel).getByRole('button',{name:'InstanceMoveLeft'}));
  expect(save).toHaveBeenCalledWith(expect.objectContaining({order:['codex:two','codex']}));
  await act(async()=>fireEvent.click(within(panel).getByRole('button',{name:'ActionRefresh'})));
  expect(codexAccountFetch).toHaveBeenCalledWith('two');
@@ -64,4 +64,30 @@ it('a missing account keeps a distinct selectable card with no ambient fallback'
  fireEvent.click(within(screen.getByRole('toolbar')).getByRole('button'));
  expect(within(screen.getByRole('dialog')).getByText('CodexAccountsUsageUnavailable')).toBeInTheDocument();
  expect(within(screen.getByRole('dialog')).queryByText('62%')).toBeNull();
+});
+
+
+it('restores the saved circular foreground and persists the next wheel anchor',()=>{
+ const save=vi.fn().mockResolvedValue(undefined);
+ const providers=Array.from({length:70},(_,i)=>provider(`provider-${i}`));
+ const view=render(<ProviderRail providers={providers} settings={settings} isDemo={false} onOpenProviders={()=>{}} onAnalytics={()=>{}} presentation={{order:[],badgePosition:'bottom-left',showAccountNumbers:true,visibleCount:4,anchorId:'provider-68'}} onPresentationChange={save}/>);
+ const toolbar=screen.getByRole('toolbar');
+ expect(within(toolbar).getAllByRole('button').map(b=>b.dataset.index)).toEqual(['68','69','0','1']);
+ fireEvent.wheel(view.container.querySelector('.provider-rail__viewport')!,{deltaY:120});
+ expect(save).toHaveBeenCalledWith({anchorId:'provider-69'});
+ expect(within(toolbar).getAllByRole('button').map(b=>b.dataset.index)).toEqual(['69','0','1','2']);
+});
+it('offers eight physical positions and reverses left/right reorder indices in RTL',()=>{
+ document.documentElement.dir='rtl';
+ try {
+ const save=vi.fn().mockResolvedValue(undefined);
+ render(<ProviderRail providers={[provider('codex'),provider('claude')]} settings={settings} isDemo={false} onOpenProviders={()=>{}} onAnalytics={()=>{}} onPresentationChange={save}/>);
+ fireEvent.click(within(screen.getByRole('toolbar')).getByRole('button',{name:/codex,/}));
+ fireEvent.click(screen.getByRole('button',{name:'InstanceMoveLeft'}));
+ expect(save).toHaveBeenCalledWith(expect.objectContaining({order:['claude','codex']}));
+ fireEvent.click(screen.getByRole('button',{name:/InstanceBadgePosition/}));
+ expect(screen.getAllByRole('option')).toHaveLength(8);
+ fireEvent.click(screen.getByRole('option',{name:'BadgeBottomLeft'}));
+ expect(save).toHaveBeenCalledWith({badgePosition:'bottom-left'});
+ }finally{document.documentElement.dir='';}
 });

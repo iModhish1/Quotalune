@@ -740,13 +740,19 @@ export type ProviderStateKind =
   | "localRuntimeOffline"
   | "unknown";
 
+export type ProviderBadgePosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "top-center" | "bottom-center" | "middle-left" | "middle-right";
 export interface ProviderInstancePresentation {
   order: string[];
-  badgePosition: "start" | "end";
+  badgePosition: ProviderBadgePosition | "start" | "end";
   showAccountNumbers: boolean;
+  resetPosition?: ProviderBadgePosition | "start" | "end";
+  showResetBadge?: boolean;
+  visibleCount?: 3 | 4;
+  anchorId?: string | null;
 }
 
 export interface ProviderInstanceSnapshot {
+  resetFacts?: ProviderResetFacts | null;
   instanceId: string;
   providerId: string;
   accountId: string | null;
@@ -756,6 +762,7 @@ export interface ProviderInstanceSnapshot {
 }
 
 export interface ProviderUsageSnapshot {
+  resetFacts?: ProviderResetFacts | null;
   providerId: string;
   displayName: string;
   primary: RateWindowSnapshot;
@@ -1081,6 +1088,7 @@ export type LocaleChangedPayload = Language;
 export type ProviderAuthCapability = "noAuthRequired" | "credentialInput" | "deviceFlow" | "supervisedCli" | "externalDashboard" | "detectionOnly" | "unsupported";
 
 export interface ProviderDetail {
+  resetFacts?: ProviderResetFacts | null;
   authCapability?: ProviderAuthCapability;
   id: string;
   displayName: string;
@@ -1173,6 +1181,7 @@ export interface CodexCreditsBalance {
 }
 
 export interface CodexAccountUsageSnapshot {
+  resetFacts?: ProviderResetFacts | null;
   email: string | null;
   providerAccountId: string | null;
   plan: string | null;
@@ -1366,4 +1375,14 @@ export interface DashboardSnapshot {
   /** Physical-window observations over requested and preceding comparable span.
    * Older clients/fixtures omit this; absence never upgrades legacy selected data. */
   quotaHistory?: QuotaHistoryPoint[];
+}
+
+export type ResetDatum<T> = {state:'known';value:T}|{state:'unavailable';reason:'notReported'|'fetchFailed'|'malformed'|'notObserved'|'ambiguousAccount'|'conflictingEvidence'}|{state:'unsupported'};
+export interface BankedResetCard { opaqueId:string|null;status:'available'|'used'|'expired'|'unknown';expiresAt:ResetDatum<string>; }
+export interface ProviderResetFacts {
+ observedAt:string;
+ providerIssuedResets:ResetDatum<number>;
+ lastActualReset:ResetDatum<{windowKey:string;observedAt:string;classification:'scheduled'|'unexpected';evidence:'providerReported'|'boundaryAdvanced'}>;
+ nextWeeklyReset:ResetDatum<{windowKey:string;resetsAt:string}>;
+ bankedResetCards:ResetDatum<{reportedAvailableCount:number;cards:BankedResetCard[];detailsComplete:boolean}>;
 }

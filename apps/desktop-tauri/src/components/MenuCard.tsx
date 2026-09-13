@@ -1,3 +1,4 @@
+import {ProviderResetDetails} from './providers/ProviderResets';
 import { type CSSProperties, useCallback, useEffect, useState } from "react";
 import type {
   CostSummaryDisplayStyle,
@@ -216,6 +217,7 @@ export default function MenuCard({
       snap: provider.tertiary,
     });
   for (const extra of provider.extraRateWindows ?? []) {
+    if(extra.id === "reset-credits" && provider.resetFacts) continue;
     metrics.push({
       id: `extra-${extra.id}`,
       label: extra.title,
@@ -274,6 +276,7 @@ export default function MenuCard({
         )}
       </header>
 
+      <ProviderResetDetails facts={provider.resetFacts} provider={provider}/>
       {hasDetails && <div className="menu-card__divider" />}
 
       {hasDetails && (

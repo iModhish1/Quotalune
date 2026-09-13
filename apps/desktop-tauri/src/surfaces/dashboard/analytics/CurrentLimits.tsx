@@ -1,3 +1,4 @@
+import {ProviderResetDetails} from '../../../components/providers/ProviderResets';
 import {formatResetPresentation} from "../../../lib/resetPresentation";
 import {physicalWindowLabel} from "../../../lib/analytics/metricLabels";
 import "./CurrentLimits.css";
@@ -62,6 +63,7 @@ export default function CurrentLimits({ providers, settings, models, expanded = 
             <bdi dir="ltr">{cost.used.toLocaleString(resetOptions.locale, {maximumFractionDigits: 2})}{quantity !== "credits" && cost.currencyCode ? ` ${cost.currencyCode}` : ""}</bdi>
           </p>}
           </details>
+          <ProviderResetDetails facts={provider.resetFacts} provider={provider}/>
         </article>;
       })}
     </div>

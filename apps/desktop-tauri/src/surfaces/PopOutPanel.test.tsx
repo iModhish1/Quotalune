@@ -386,13 +386,13 @@ describe("PopOutPanel", () => {
       Array.from(container.querySelectorAll(".provider-rail__node > strong")).map(
         (node) => node.textContent,
       ),
-    ).toEqual(["Codex", "Claude", "Cursor"]);
+    ).toEqual(["Codex · 1", "Claude", "Cursor"]);
   });
 
   it("bounds the provider rail at large counts without a canvas", async () => {
     const providers = TEST_PROVIDER_CATALOG.map(([id, name]) => provider(id, name));
     const {container} = renderPopOut(providers, undefined, [], {enabledProviders: providers.map(p => p.providerId)});
-    await waitFor(() => expect(container.querySelectorAll(".provider-rail__node")).toHaveLength(Math.min(6, providers.length)));
+    await waitFor(() => expect(container.querySelectorAll(".provider-rail__node")).toHaveLength(Math.min(4, providers.length)));
     expect(container.querySelector("canvas")).toBeNull();
     expect(container.querySelector(".provider-grid")).toBeNull();
   });

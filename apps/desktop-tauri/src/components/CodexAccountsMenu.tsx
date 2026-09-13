@@ -1,3 +1,4 @@
+import {ProviderResetDetails} from './providers/ProviderResets';
 import { useCallback, useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import type {
@@ -196,6 +197,7 @@ function CodexAccountRow({
           {t("CodexAccountsSwitchButton")}
         </button>
       </div>
+      <ProviderResetDetails facts={snapshot?.resetFacts}/>
     </li>
   );
 }

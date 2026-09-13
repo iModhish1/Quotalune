@@ -1,3 +1,4 @@
+import {ProviderResetDetails} from '../../../../components/providers/ProviderResets';
 import type {
   ProviderDetail,
   RateWindowSnapshot,
@@ -54,6 +55,7 @@ export function UsageSection({ provider, resetTimeRelative, t }: Props) {
     });
   }
   for (const extra of provider.extraRateWindows ?? []) {
+    if(extra.id === "reset-credits" && provider.resetFacts) continue;
     bars.push({
       key: extra.id,
       label: extra.title,
@@ -68,6 +70,7 @@ export function UsageSection({ provider, resetTimeRelative, t }: Props) {
   return (
     <section className="provider-detail-section">
       <h4>{t("ProviderUsage")}</h4>
+      <ProviderResetDetails facts={provider.resetFacts}/>
       {bars.map((b) => (
         <UsageBar
           key={b.key}

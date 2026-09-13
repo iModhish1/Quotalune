@@ -195,7 +195,7 @@ describe("DashboardTab", () => {
     // AnalyticsDashboard, adding a real async module-resolution tick before
     // content appears -- allow more time than the default findBy timeout.
     expect((await screen.findAllByText("Claude", {}, { timeout: 5000 })).length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Codex").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Codex · 1").length).toBeGreaterThan(0);
     // No detached-window chrome: no title bar restore/close controls, no
     // footer Settings/About/Quit rows -- those are PopOutPanel-only.
     expect(screen.queryByText("MenuQuit")).not.toBeInTheDocument();
@@ -221,7 +221,7 @@ describe("DashboardTab", () => {
 
     expect(await screen.findByText("No providers configured")).toBeInTheDocument();
     expect(screen.queryByText("Claude")).not.toBeInTheDocument();
-    expect(screen.queryByText("Codex")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Codex(?: · 1)?$/)).not.toBeInTheDocument();
   });
 
   it("shows only the providers enabled by the active profile, not every cached provider", async () => {
@@ -232,7 +232,7 @@ describe("DashboardTab", () => {
     );
 
     expect((await screen.findAllByText("Claude", {}, { timeout: 5000 })).length).toBeGreaterThan(0);
-    expect(screen.queryByText("Codex")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Codex(?: · 1)?$/)).not.toBeInTheDocument();
     expect(screen.queryByText("Cursor")).not.toBeInTheDocument();
   });
 

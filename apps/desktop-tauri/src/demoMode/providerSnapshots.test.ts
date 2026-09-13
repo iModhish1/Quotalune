@@ -232,3 +232,11 @@ describe("buildDemoProviderSnapshots -- Mixed Status scenario", () => {
     expect(notReady.every((p) => p.error === "Demo state")).toBe(true);
   });
 });
+it('keeps illustrative reset inventory inside Demo inputs with individual expiries',()=>{
+ const rows=buildDemoProviderSnapshots(config({providerCount:6}),FULL_CATALOG,NOW);
+ expect(rows.map(row=>row.sourceLabel)).toEqual(Array(6).fill('demo'));
+ expect(rows[0].resetFacts?.bankedResetCards).toMatchObject({state:'known',value:{reportedAvailableCount:0}});
+ expect(rows[3].resetFacts?.bankedResetCards).toMatchObject({state:'known',value:{reportedAvailableCount:3,cards:expect.any(Array)}});
+ expect(rows[4].resetFacts?.bankedResetCards.state).toBe('unavailable');
+ expect(buildDemoProviderSnapshots(config({enabled:false}),FULL_CATALOG,NOW)).toEqual([]);
+});

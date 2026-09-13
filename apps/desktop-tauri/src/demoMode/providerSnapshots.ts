@@ -93,6 +93,17 @@ function buildOneSnapshot(
     modelSpecific: null,
     tertiary: null,
     extraRateWindows: [],
+    // Synthetic inventory exists only inside the explicitly labelled Demo input.
+    resetFacts: {
+      observedAt:new Date(now).toISOString(),
+      providerIssuedResets:{state:'unavailable',reason:'notReported'},
+      lastActualReset:{state:'unavailable',reason:'notObserved'},
+      nextWeeklyReset:providerId==='codex'||providerId==='claude'?{state:'known',value:{windowKey:'secondary',resetsAt:new Date(now+3*86400_000).toISOString()}}:{state:'unsupported'},
+      bankedResetCards:index%5===4?{state:'unavailable',reason:'notReported'}:{state:'known',value:{
+        reportedAvailableCount:index%4,detailsComplete:true,
+        cards:Array.from({length:index%4},(_,card)=>({opaqueId:`demo:${providerId}:${card}`,status:'available',expiresAt:{state:'known',value:new Date(now+(card+7)*86400_000).toISOString()}})),
+      }},
+    },
     cost: profile.errorState === "ready" ? demoCostFor(providerId, config.seed) : null,
     planName: null,
     accountEmail: null,

@@ -4,5 +4,10 @@ export function railWindow(count:number, focus:number, capacity:number) {
   return {start,end:Math.min(count,start+size)};
 }
 export function railDestination(count:number, current:number, delta:number) {
-  return Math.max(0,Math.min(Math.max(0,count-1),current+delta));
+  return count > 0 ? ((current + delta) % count + count) % count : 0;
+}
+
+/** Only foreground cards are mounted, even for hundreds of instances. */
+export function circularRailIndices(count:number, anchor:number, capacity:number):number[] {
+  return Array.from({length:Math.max(0,Math.min(count,capacity))},(_,offset)=>railDestination(count,anchor,offset));
 }

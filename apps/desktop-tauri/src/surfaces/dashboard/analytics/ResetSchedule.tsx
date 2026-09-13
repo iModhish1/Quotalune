@@ -1,3 +1,4 @@
+import {ProviderResetDetails} from '../../../components/providers/ProviderResets';
 import { useLocale } from "../../../hooks/useLocale";
 import { useFormattedResetTime } from "../../../hooks/useFormattedResetTime";
 import { ProviderIcon } from "../../../components/providers/ProviderIcon";
@@ -74,6 +75,7 @@ export default function ResetSchedule({
           ))}
         </ul>
       )}
+      {providers.map(provider=><div key={provider.providerId}><strong>{provider.displayName}</strong><ProviderResetDetails facts={provider.resetFacts} provider={provider}/></div>)}
     </section>
   );
 }

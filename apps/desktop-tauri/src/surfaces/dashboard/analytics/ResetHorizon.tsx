@@ -1,3 +1,4 @@
+import {ProviderResetBadge,ProviderResetDetails} from '../../../components/providers/ProviderResets';
 import {useMemo} from "react";
 import {physicalWindowLabel} from "../../../lib/analytics/metricLabels";
 import {ProviderIcon} from "../../../components/providers/ProviderIcon";
@@ -30,7 +31,7 @@ export default function ResetHorizon({models,settings,now,resets:provided}: {
       <div className="cosmic-reset-bands" style={{gridTemplateColumns:labels.map((_,index)=>`${Math.max(1,next.filter(reset=>resetBand(reset.time,now)===index).length)}fr`).join(" ")}}>{labels.map((text,index)=><div key={text}>
         <span className="cosmic-reset-bands__label"><bdi dir="ltr">{text}</bdi></span>
         {next.filter(reset=>resetBand(reset.time,now)===index).map(reset=><div className="cosmic-reset-provider" key={reset.provider.providerId} title={`${physicalWindowLabel(reset.label,t)} · ${label(reset.time)}`}>
-          <ProviderIcon providerId={reset.provider.providerId} size={29}/><strong><bdi>{reset.provider.displayName}</bdi></strong>
+          <ProviderIcon providerId={reset.provider.providerId} size={29}/><ProviderResetBadge facts={reset.provider.resetFacts}/><strong><bdi>{reset.provider.displayName}</bdi></strong>
           <time dateTime={new Date(reset.time).toISOString()} aria-label={label(reset.time)}><bdi>{formatted(reset.time).countdown?.short || formatted(reset.time).time?.short || label(reset.time)}</bdi></time>
         </div>)}
       </div>)}</div>
@@ -42,5 +43,6 @@ export default function ResetHorizon({models,settings,now,resets:provided}: {
           {id:"reset",title:t("V2NextReset"),cell:row=><bdi>{label(row.time)}</bdi>,sortValue:row=>row.time},
         ]}/></CoveragePanel>
     </> : <p className="analytics-empty">{t("DashboardResetScheduleEmpty")}</p>}
+    <details className="reset-horizon__inventories"><summary>{t("ResetBanked")}</summary>{models.map(model=><div key={model.provider.providerId}><strong>{model.provider.displayName}</strong><ProviderResetDetails facts={model.provider.resetFacts} provider={model.provider}/></div>)}</details>
   </AnalyticsSection>;
 }
