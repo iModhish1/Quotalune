@@ -1720,3 +1720,6 @@ ProfilesNoAccounts = No provider accounts yet.
 ProfilesInheritTheme = Inherit global theme
 ProfilesStructureTheme = Structure Theme
 ProfilesSurfaces = Surfaces active in this profile
+CollectionsMoveTarget = Move selected to another collection
+CollectionsMoveAction = Move selected to { "{}" }
+CollectionsArrangeHelp = Select a provider, detach it or move it to another collection. Gather all keeps your current order.

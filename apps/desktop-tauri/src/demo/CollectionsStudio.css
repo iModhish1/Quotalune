@@ -26,3 +26,6 @@
    decorative "desktop" canvas placeholder — no fake grey gradient/border,
    height grows with content instead of a fixed editor-preview height. */
 .collections-canvas[data-native="true"]{height:auto;min-height:0;background:none;border:0;border-radius:0;overflow:visible}
+.collections-targets{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.collections-targets button{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.collections-help{margin:0;font-size:12px;line-height:1.5}
