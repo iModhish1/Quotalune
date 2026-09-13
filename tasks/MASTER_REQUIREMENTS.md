@@ -471,3 +471,26 @@ Dev-only preview builds needed to inspect the page are not release candidates.
 Existing local candidates remain unpublished. Improve repository presentation,
 screenshots and discoverability honestly; do not promise star counts. All earlier
 requirements, including the notification center, remain active.
+
+P06-17 revised (2026-09-13), objective c84e5c07-8d3d-47a0-94b9-bab344be9805:
+owner rejected the first About layout. Product/version/release/update details
+must lead; move creator credit to the final footer: Made by Mohammed Modhish
+(iModhish1), a prominent purple glow, and the owner's GitHub profile image.
+Footer contact group: Contact us with WhatsApp and Telegram @iModhish_1 links;
+third icon links to the canonical GitHub project. Preserve original Quotalis mark.
+The owner now explicitly authorizes beginning publication after these corrections
+and verification, superseding the earlier second-approval wait. All other release
+truth, privacy, account verification and product requirements remain in effect.
+
+P06-17 further revised (2026-09-13), objective 8d55a534-fa79-4ede-a601-6258aea26d6c:
+retain the product-first layout and final creator footer. Add animated purple
+flame-like glow to the creator name/avatar, with hover/press feedback. Add the
+TAWAJUD AI employer link and unmodified official mark from tawajud.net, using its
+verified blue/violet palette. Respect reduced motion and avoid permanent idle
+render loops. Contact/project links and direct-publication authorization remain.
+
+P06-05/17 publication gate, objective ae46db11-c88d-408a-b0eb-c8978f343a25:
+the Windows notification header still lacks the application icon. Fix the app
+identity/header mark (distinct from provider message artwork) and inspect native
+notification evidence before publication. Do not mark an icon-path/code change
+as proof that Windows actually renders the header icon.

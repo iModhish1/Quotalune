@@ -4,6 +4,46 @@ Status: source audit and implementation contract; the center is **not implemente
 by this document. The latest owner objective is attachment
 `5f46054a-7d34-47d8-a851-a6ff8e5689d9/goal-objective.md`.
 
+## Implementation checkpoint — 2026-09-13
+
+The reset/banked foundation now exists in `notification_journal.rs`, with a
+separate per-channel SQLite store and an atomic event/baseline transaction.
+Known-account baselines survive restart; unidentified accounts use a per-process
+lane. Records contain hashed account references, never the raw account identifier.
+They preserve observation intervals and receipt/detection time, leaving exact
+occurrence time unknown. Schema/corruption failures do not replace the database.
+Paging, bounded retention, unread state and boundary-limited mark-all are core
+APIs only; they are not yet connected to a notification-center UI or IPC.
+
+Reset and banked producers now capture changes before toast preference gates.
+The first observation is quiet; repeated/older observations do not create events.
+Banked rearming also clears count-bearing in-memory keys, covering 0→2→0→2.
+Nine journal tests and 36 notification tests pass. Remaining work includes other
+event producers, subscriptions/sounds, UI/IPC, redacted log view and native
+restart evidence. This checkpoint does not claim the full center is complete.
+
+Latest objective `ae46db11-c88d-408a-b0eb-c8978f343a25` explicitly gates
+publication on native notification-header icon evidence. The installer now uses
+its bundled PNG for AUMID IconUri, consistent with runtime PNG registration;
+shortcut/taskbar ICOs remain separate. This source correction is not native proof.
+
+Native header proof on 2026-09-13: guarded UIA opened Dev Settings → Notifications
+and invoked Send test notification using the Quotalis identity. Read-only Helix
+full-screen captures `quotalis-toast-header-test-early.png` and
+`quotalis-toast-header-test-later.png` were both visually inspected. Windows shows
+the app mark in the small header icon beside Quotalis, and a larger original mark
+beside the data-free test message. Files remain private in the global
+Desktop-Visual-QA/screenshots/helix directory because full-desktop captures include
+unrelated host chrome. Do not publish those full-desktop images as marketing art.
+
+The Windows-exe generic screenshot endpoint rejected capture as background-only;
+the documented read-only Helix screenshot without a target window was used. No
+physical input, focus injection or adapter bypass was used. Both backends were
+stopped in finally and the owned Dev app exited normally. The test proves the
+current runtime Dev registration/artwork, not installation/upgrade of the changed
+installer, provider-specific body artwork, every logo finish or Windows version.
+Header icon size is Windows-controlled. Installed/portable release checks remain.
+
 ## Current source findings
 
 - `rust/src/notifications.rs::NotificationManager` detects usage thresholds,

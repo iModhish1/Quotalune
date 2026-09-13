@@ -71,3 +71,50 @@ manifest, components/analytics/charts/EChartsSurface.tsx and design-system/motio
 Approval remains pending specifically because the owner requested a visual review
 before final packaging/publication. Earlier local release candidates must not be
 mistaken for builds of this About page or for approved final downloads.
+
+## Owner supersession and second layout — 2026-09-13
+
+The owner rejected the preceding layout and explicitly removed the second
+approval wait in objectives c84e5c07, 8d55a534 and ae46db11. Product/version and
+updates now lead. The final creator footer includes the bundled owner avatar,
+purple name, WhatsApp, Telegram, project and employer links. The original
+Quotalis mark is unchanged. The employer mark was downloaded without redrawing
+from https://tawajud.net/assets/logo-mark-256.png; blue/violet tokens were read
+from the site's home stylesheet. The GitHub avatar is bundled, not fetched when
+the user opens About. Viewing the page sends no avatar request to GitHub.
+
+Creator effects are finite 3.6-second CSS hover/focus responses; press has visual
+feedback. No video, RAF or permanent timer. App animation-off, shared motion
+reduced/off and OS reduced motion suppress the effect. Native screenshots alone
+do not prove hover animation; that interaction remains separately unverified.
+
+Fresh Dev d65afde8e0e83642f464dd109f9279ceb0de5b0eef69dc4fa2cc779d854f01f9
+was opened through the guarded adapter. About's initial viewport and footer were
+captured and inspected. They showed correct content order but exposed inherited
+button padding/background around the avatar/company. More specific scoped CSS
+corrects those defects; a rebuilt final capture is required below. No Personal
+data or physical input was used, and the owned Dev process exited normally.
+
+Current checks: frontend 1188/1188 across 200 files; Rust desktop 503 passed and
+one existing Personal-database manual check ignored; core 1774; CLI 1; doctests 0.
+TypeScript and production frontend build pass. Secret scan: 3095 files clean.
+The notification-center backend checkpoint and installer IconUri correction are
+separate from About acceptance. Publication now additionally requires actual
+Windows toast-header icon evidence under the owner's latest instruction.
+
+Final scoped-CSS Dev build:
+`ffa084cbb76abe6d596ddcf2d1525f6e098fdf3f7b9d5d0702c47d1af3185e82`.
+Native About HWND 1641764/PID 13196 was inspected, captured and visually reviewed:
+`window-1641764-d4d9bb93929d4265bb23240a7f285579.png` (engineering; restored scroll) and
+`window-1641764-6ad09a54fe7c4daab1d4a32bb2057175.png` (footer), under the global
+Desktop-Visual-QA screenshots directory. The footer image confirms centered round
+avatar, no inherited gray button plate, original company mark beside its link,
+creator text and three readable contact/project buttons. The engineering capture
+is not a top-of-page capture: native scroll position persisted across launches.
+The product/update top is covered by the preceding d65afde8 screenshot (its layout
+did not change in the final footer CSS correction). Captures are English/dark
+at this host scale, not proof of the entire theme/RTL/narrow matrix.
+
+Clippy with warnings denied passed after replacing a test-only usize→i64 cast
+with a checked conversion; fmt and diff whitespace checks pass. The final native
+binary predates only that test-only conversion and documentation changes.

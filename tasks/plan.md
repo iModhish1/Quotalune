@@ -4,11 +4,17 @@ Authority: `MASTER_REQUIREMENTS.md` (2026-09-06). This section supersedes confli
 historical product decisions below. The active goal remains unfinished. Every new
 message must update the ledger and this backlog, not replace previous requirements.
 
-## Current owner review gate
+## Current About correction and publication gate
 
-P06-17: finish About, inspect the actual Dev page and show it to the owner.
-Wait for the owner's review before new final download builds or publication.
+P06-17 revised: the owner rejected the first About layout. Prioritize product,
+version and updates; move the purple creator credit/avatar and contact icons to
+the footer. The latest objective authorizes publication after correction and
+verification without another approval question. Other release gates remain.
 Notification-center implementation and all other requirements remain active.
+Latest revision ae46db11 adds a publication prerequisite: visually verify the
+Windows notification header's original app mark. About adds the verified TAWAJUD
+AI mark/link and bounded interactive creator glow. Do not replace native proof
+with a successful test-toast request or registry write.
 
 ## Ordered delivery gates
 
