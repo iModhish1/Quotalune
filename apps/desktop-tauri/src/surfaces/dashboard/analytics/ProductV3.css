@@ -101,5 +101,9 @@
 .provider-reset-position[data-position=middle-right]{left:calc(100% + 8px)}
 .provider-instance-mark[data-badge-position=middle-left] .provider-reset-position[data-position=middle-left]{right:calc(100% + 18px)}
 .provider-instance-mark[data-badge-position=middle-right] .provider-reset-position[data-position=middle-right]{left:calc(100% + 18px)}
+.provider-instance-mark[data-account-badge=true][data-badge-position^="top-"][data-reset-position^="top-"]{margin-top:36px}
+.provider-instance-mark[data-account-badge=true][data-badge-position^="top-"] .provider-reset-position[data-position^="top-"]{top:-40px}
+.provider-instance-mark[data-account-badge=true][data-badge-position^="bottom-"][data-reset-position^="bottom-"]{margin-bottom:40px}
+.provider-instance-mark[data-account-badge=true][data-badge-position^="bottom-"] .provider-reset-position[data-position^="bottom-"]{bottom:-40px}
 .reset-horizon__inventories{font-size:12px;margin-block-start:12px}
 .reset-horizon__inventories>div{padding-block:8px;border-bottom:1px solid var(--cosmic-line)}
