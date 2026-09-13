@@ -30,7 +30,20 @@
     warm the Windows Cargo and pnpm caches after a large port.
 .PARAMETER SmokeInstall
     After packaging, run scripts/windows-smoke-install.ps1 against the generated
-    installer and uninstall it again.
+    installer and uninstall it again. This is permitted only in an explicitly
+    acknowledged disposable test environment.
+
+.PARAMETER SmokeDisposableTestRoot
+    Existing disposable directory that will contain smoke-test logs and the
+    isolated installation. Required with SmokeInstall.
+
+.PARAMETER SmokeInstallDir
+    New child directory beneath SmokeDisposableTestRoot where the installer is
+    directed. Required with SmokeInstall and must not already exist.
+
+.PARAMETER AcknowledgeDisposableSmokeEnvironment
+    Confirms that SmokeInstall is running in a disposable Windows environment
+    with no Personal Quotalis installation, identity, shortcut, or process.
 
 
 .EXAMPLE
@@ -44,7 +57,10 @@ param(
     [string]$WorkRoot = "C:\code\Win-CodexBar-release",
     [switch]$RefreshInstallerDependencies,
     [switch]$WarmCacheOnly,
-    [switch]$SmokeInstall
+    [switch]$SmokeInstall,
+    [string]$SmokeDisposableTestRoot = "",
+    [string]$SmokeInstallDir = "",
+    [switch]$AcknowledgeDisposableSmokeEnvironment
 )
 
 Set-StrictMode -Version Latest
@@ -64,6 +80,27 @@ $InstallerDepsDir = Join-Path $CacheDir "installer-deps"
 $AssetsDir = Join-Path $WorkRoot "assets"
 $DesktopCargoTargetDir = Join-Path $CacheDir "cargo-target"
 $CliCargoTargetDir = Join-Path $CacheDir "cargo-target-cli"
+
+if ($SmokeInstall) {
+    if ($WarmCacheOnly) {
+        throw "SmokeInstall cannot be combined with WarmCacheOnly because no installer is packaged."
+    }
+    if (-not $AcknowledgeDisposableSmokeEnvironment.IsPresent) {
+        throw "SmokeInstall requires -AcknowledgeDisposableSmokeEnvironment and may run only in a disposable Windows test environment with no Personal installation."
+    }
+    if ([string]::IsNullOrWhiteSpace($SmokeDisposableTestRoot)) {
+        throw "SmokeInstall requires an explicit -SmokeDisposableTestRoot."
+    }
+    if ([string]::IsNullOrWhiteSpace($SmokeInstallDir)) {
+        throw "SmokeInstall requires an explicit -SmokeInstallDir."
+    }
+} elseif (
+    $AcknowledgeDisposableSmokeEnvironment.IsPresent -or
+    -not [string]::IsNullOrWhiteSpace($SmokeDisposableTestRoot) -or
+    -not [string]::IsNullOrWhiteSpace($SmokeInstallDir)
+) {
+    throw "Smoke install safety parameters are valid only when -SmokeInstall is supplied."
+}
 
 function Add-PathIfPresent {
     param([AllowNull()][string]$Path)
@@ -498,7 +535,12 @@ try {
         if (-not (Test-Path $smokeScript)) {
             throw "Smoke install script not found: $smokeScript"
         }
-        & $smokeScript -InstallerPath $installerAsset -ExpectedVersion $version
+        & $smokeScript `
+            -InstallerPath $installerAsset `
+            -ExpectedVersion $version `
+            -DisposableTestRoot $SmokeDisposableTestRoot `
+            -InstallDir $SmokeInstallDir `
+            -AcknowledgeDisposableTestEnvironment
         if ($LASTEXITCODE -ne 0) {
             throw "Smoke install failed with exit code $LASTEXITCODE"
         }
