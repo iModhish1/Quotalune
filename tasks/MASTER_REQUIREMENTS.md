@@ -425,3 +425,39 @@ circular carousel showing a configurable three or four providers (fewer only on
 narrow screens), wheel/keyboard controls, and persisted instance order and last
 visible anchor across page/app restarts. Preserve brand marks, account isolation,
 Demo separation and reduced-motion behavior; no continuously running animation.
+
+P06-15 owner priority update (2026-09-13): accelerate completion and publishing
+to the confirmed owner's GitHub. Deliver more than one suitable download format
+and evaluate OS/architecture support honestly; package only combinations actually
+built and verified. Include professional screenshots of the real themes and
+structures in the repository, and retain the requested new design/background
+batches. Urgency changes delivery priority, not the truth/security/QA gates.
+The authenticated actor was rechecked as iModhish1; canonical repository
+iModhish1/Quotalis does not yet exist as of this check. No publication occurred.
+
+P06-16 owner extension (2026-09-13): add a dedicated persistent notification
+center with a red unread-count badge, capping the display at +99 above 99.
+Include all app/provider/reset alerts whether or not a native toast was shown,
+with separate event/received times, per-item and mark-all-read actions, useful
+filters/search and practical history controls. Include a clearly distinguished,
+redacted technical-log view. Recover notifications after restart and backfill
+offline events only where a provider or retained observation proves them; mark
+late discovery and unavailable original timestamps instead of fabricating events
+while the device/app was off. Preserve account identity, Demo isolation, dedup,
+bounded retention and secret redaction. Native UI, persistence, unread counts,
+offline recovery and all alert producer paths require acceptance evidence.
+
+P06-16 expanded objective file (2026-09-13), source attachment
+02e907f4-bf6a-40f7-8112-d22fa89cda69/goal-objective.md: perform a startup
+reconciliation of new observations/details, reset inventory arrivals and sudden
+reset evidence against the last persisted observations. Add granular notification
+preferences per provider/account/model/physical limit (including Codex Spark
+weekly and five-hour limits separately from ordinary weekly/five-hour limits),
+event types and sound selection. Add a varied sound catalog with preview and
+practical controls. Offline event time and cause still require evidence; a quota
+drop alone cannot prove a company-wide reset. Keep delivery, stored history and
+read state separate so muted toasts do not silently erase the event history.
+Latest objective attachment 5f46054a-7d34-47d8-a851-a6ff8e5689d9/goal-objective.md
+explicitly requires independent on/off switches for each such physical-limit
+notification subscription, including each Spark limit, not only one provider
+master switch. This clarifies and retains all preceding P06 requirements.

@@ -427,6 +427,12 @@ OS tray/toast and disposable installer lifecycle acceptance remain open.
 Evidence: docs/validation/QA05_NATIVE_VISUAL_REVIEW.md.
 
 ## PRODUCT-06 execution
+Latest priority P06-15: release packaging, supported format matrix and authentic
+theme/structure gallery now take precedence over optional further polishing.
+Audit exact installer/runtime resources and owner URLs, build a frozen candidate,
+verify archives/hashes and installer identity, then publish only to iModhish1.
+Do not relabel the Windows desktop as macOS/Linux/ARM-native without evidence.
+Retain new design batches, remaining auth/tray/QA work in the acceptance ledger.
 P06-08 verified increment: persisted profile ordering, explicit rename/save/cancel,
 distinct copy names, membership search, localized controls and themed inputs.
 Native create/rename/copy/reorder persistence/delete/search passed; all QA profiles
@@ -455,3 +461,6 @@ while About stayed open; that image must not count as a Settings page capture.
    credit (P06-09/10). Prepare release files and installer evidence (P06-11).
 5. Verify source, native visuals, credentials boundaries and exact GitHub identity;
    publish only after the specified owner account is verified (P06-12).
+6. Implement the persistent notification center and unread badge (P06-16),
+   covering alert producer ingestion, redacted logs, read state, dedup and
+   evidence-backed offline recovery. Complete native and persistence checks.
