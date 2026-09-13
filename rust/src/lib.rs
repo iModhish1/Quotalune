@@ -18,6 +18,7 @@ pub mod host;
 pub mod locale;
 pub mod logging;
 pub mod login;
+pub mod notification_journal;
 pub mod notifications;
 pub mod paths;
 pub mod pricing_eligibility;

@@ -796,10 +796,15 @@ fn notify_usage_thresholds(
                 }
                 if provider == ProviderId::Codex
                     && let Some(count) = banked_reset_count(snapshot)
+                    && let Some(observed_at) = observed_at
                 {
-                    guard
-                        .notification_manager
-                        .check_banked_reset_credits(provider, &account, count, settings);
+                    guard.notification_manager.check_banked_reset_credits(
+                        provider,
+                        &account,
+                        count,
+                        observed_at,
+                        settings,
+                    );
                 }
                 for (index, named) in snapshot.extra_rate_windows.iter().enumerate() {
                     if named.id == "reset-credits" {

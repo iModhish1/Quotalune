@@ -10,6 +10,10 @@
 use crate::core::ProviderId;
 use crate::core::{RateWindow, UsagePace};
 use crate::locale::{self, LocaleKey};
+use crate::notification_journal::{
+    JournalEventKind, NotificationEvent, NotificationJournal,
+    ResetObservation as JournalObservation,
+};
 use crate::settings::Settings;
 use crate::sound::{NotificationSoundEvent, play_alert};
 use chrono::{DateTime, Local, Timelike, Utc};
@@ -316,13 +320,6 @@ impl PersistedPredictiveWarningKey {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-struct ResetObservation {
-    used_percent: f64,
-    resets_at: Option<DateTime<Utc>>,
-    observed_at: DateTime<Utc>,
-}
-
 impl NotificationType {
     pub fn title(&self) -> &'static str {
         match self {
@@ -404,8 +401,7 @@ pub struct NotificationManager {
     /// Track previous session percent for depleted/restored transitions (per account)
     previous_session_percent: std::collections::HashMap<SessionTransitionKey, f64>,
     previous_usage_percent: std::collections::HashMap<UsageObservationKey, f64>,
-    previous_reset_observations: std::collections::HashMap<UsageObservationKey, ResetObservation>,
-    previous_banked_reset_credits: std::collections::HashMap<(ProviderId, String), u32>,
+    notification_journal: Option<NotificationJournal>,
     predictive_warning_keys: std::collections::HashSet<PredictiveWarningKey>,
     deepseek_pricing_period: Option<String>,
 }
@@ -430,8 +426,7 @@ impl NotificationManager {
             durable_predictive_warning_keys: VecDeque::new(),
             previous_session_percent: std::collections::HashMap::new(),
             previous_usage_percent: std::collections::HashMap::new(),
-            previous_reset_observations: std::collections::HashMap::new(),
-            previous_banked_reset_credits: std::collections::HashMap::new(),
+            notification_journal: Some(NotificationJournal::in_memory()),
             predictive_warning_keys: std::collections::HashSet::new(),
             deepseek_pricing_period: None,
         }
@@ -444,7 +439,13 @@ impl NotificationManager {
     /// Restore cross-process notification suppression. Corrupt or unknown
     /// versions fail safely to an empty manager; quota fetching must continue.
     pub fn load_persisted() -> Self {
-        Self::persistence_path().map_or_else(Self::new, |path| Self::load_from(&path))
+        let path = Self::persistence_path();
+        let mut manager = path
+            .as_ref()
+            .map_or_else(Self::new, |path| Self::load_from(path));
+        manager.notification_journal =
+            path.map(|path| NotificationJournal::at(path.with_file_name("notifications.db")));
+        manager
     }
 
     pub fn persist(&self) -> std::io::Result<()> {
@@ -881,40 +882,20 @@ impl NotificationManager {
         observed_at: DateTime<Utc>,
         settings: &Settings,
     ) {
-        const RESET_DROP_PERCENT: f64 = 20.0;
-        const EXPECTED_TOLERANCE_SECONDS: i64 = 300;
-
-        let lane = (provider, account.to_string(), window.to_string());
-        if self
-            .previous_reset_observations
-            .get(&lane)
-            .is_some_and(|previous| observed_at <= previous.observed_at)
-        {
-            return;
-        }
-        let current = ResetObservation {
-            used_percent: used_percent.clamp(0.0, 100.0),
-            resets_at,
-            observed_at,
+        let observation = JournalObservation::Quota {
+            used_percent: if used_percent.is_finite() {
+                used_percent.clamp(0.0, 100.0)
+            } else {
+                used_percent
+            },
+            resets_at: resets_at.map(|time| time.timestamp()),
+            observed_at: observed_at.timestamp(),
         };
-        let previous = self.previous_reset_observations.insert(lane, current);
-        let Some(previous) = previous else {
+        let Some(event) = self.record_reset_observation(provider, account, window, observation)
+        else {
             return;
         };
-
-        let boundary_moved = matches!(
-            (previous.resets_at, resets_at),
-            (Some(before), Some(after))
-                if after - before > chrono::Duration::seconds(EXPECTED_TOLERANCE_SECONDS)
-        );
-        let usage_dropped = previous.used_percent - current.used_percent >= RESET_DROP_PERCENT;
-        if !boundary_moved && !usage_dropped {
-            return;
-        }
-
-        let expected = previous.resets_at.is_some_and(|announced| {
-            observed_at >= announced - chrono::Duration::seconds(EXPECTED_TOLERANCE_SECONDS)
-        });
+        let expected = event.kind == JournalEventKind::ScheduledResetObserved;
         let fingerprint = resets_at.unwrap_or(observed_at).timestamp();
         let kind = if expected {
             NotificationType::ExpectedReset(fingerprint)
@@ -929,51 +910,52 @@ impl NotificationManager {
         if !settings.show_notifications || !enabled {
             return;
         }
-
         let key = (provider, account.to_string(), window.to_string(), kind);
         if self.mark_sent(key) {
-            self.send_notification(provider, window, current.used_percent, kind, settings);
+            self.send_notification(provider, window, event.current_value, kind, settings);
         }
     }
 
-    /// Track the provider's structured banked-reset count. The first reading is
-    /// a quiet baseline; only a later increase is user-actionable.
+    /// Source-timestamped inventory observations persist even when toasts are
+    /// disabled. An initial reading is a baseline, never a fabricated arrival.
     pub fn check_banked_reset_credits(
         &mut self,
         provider: ProviderId,
         account: &str,
         available_count: u32,
+        observed_at: DateTime<Utc>,
         settings: &Settings,
     ) {
-        let observation_key = (provider, account.to_string());
-        let previous = self
-            .previous_banked_reset_credits
-            .insert(observation_key, available_count);
-        let Some(previous) = previous else {
+        let observation = JournalObservation::Banked {
+            available: available_count,
+            observed_at: observed_at.timestamp(),
+        };
+        let Some(event) =
+            self.record_reset_observation(provider, account, "reset-credits", observation)
+        else {
             return;
         };
-
-        if available_count <= previous {
-            if available_count < previous {
-                self.forget_sent(&(
-                    provider,
-                    account.to_string(),
-                    "reset-credits".to_string(),
-                    NotificationType::BankedResetCredit(previous),
-                ));
-            }
-            return;
-        }
-        if !settings.show_notifications || !settings.notification_events.banked_reset_credit {
-            return;
-        }
-
+        // The durable toast key intentionally ignores inventory count.
+        // The durable key is count-independent, while the in-memory key carries
+        // the count. Rearm every count for this lane after an inventory change.
+        self.sent_notifications.retain(|key| {
+            !(key.0 == provider
+                && key.1 == account
+                && key.2 == "reset-credits"
+                && matches!(key.3, NotificationType::BankedResetCredit(_)))
+        });
         self.forget_sent(&(
             provider,
             account.to_string(),
             "reset-credits".to_string(),
-            NotificationType::BankedResetCredit(previous),
+            NotificationType::BankedResetCredit(0),
         ));
+        if event.kind != JournalEventKind::BankedResetsIncreased
+            || !settings.show_notifications
+            || !settings.notification_events.banked_reset_credit
+        {
+            return;
+        }
         let kind = NotificationType::BankedResetCredit(available_count);
         let key = (
             provider,
@@ -989,6 +971,36 @@ impl NotificationManager {
                 kind,
                 settings,
             );
+        }
+    }
+
+    pub fn notification_history(&self) -> Result<&NotificationJournal, String> {
+        self.notification_journal
+            .as_ref()
+            .ok_or_else(|| "Notification history location is unavailable".into())
+    }
+
+    fn record_reset_observation(
+        &self,
+        provider: ProviderId,
+        account: &str,
+        window: &str,
+        observation: JournalObservation,
+    ) -> Option<NotificationEvent> {
+        match self.notification_history().and_then(|journal| {
+            journal.observe(
+                provider,
+                account,
+                window,
+                observation,
+                Utc::now().timestamp(),
+            )
+        }) {
+            Ok(event) => event,
+            Err(error) => {
+                tracing::warn!(%error, "Could not record notification observation; history is unavailable");
+                None
+            }
         }
     }
 
@@ -2229,11 +2241,45 @@ mod tests {
     }
 
     #[test]
+    fn repeated_banked_inventory_count_rearms_after_a_decrease() {
+        let mut manager = NotificationManager::new();
+        let settings = Settings::default();
+        let key = (
+            ProviderId::Codex,
+            "account".to_string(),
+            "reset-credits".to_string(),
+            NotificationType::BankedResetCredit(2),
+        );
+        for (index, count) in [0, 2, 0, 2].into_iter().enumerate() {
+            manager.check_banked_reset_credits(
+                ProviderId::Codex,
+                "account",
+                count,
+                DateTime::from_timestamp(1_800_000_000 + i64::try_from(index).unwrap(), 0).unwrap(),
+                &settings,
+            );
+            assert_eq!(manager.sent_notifications.contains(&key), count == 2);
+        }
+        let history = manager
+            .notification_history()
+            .unwrap()
+            .page(&crate::notification_journal::NotificationQuery::default())
+            .unwrap();
+        assert_eq!(history.items.len(), 3);
+    }
+
+    #[test]
     fn banked_reset_credit_notifies_only_when_the_available_count_increases() {
         let mut manager = NotificationManager::new();
         let settings = Settings::default();
 
-        manager.check_banked_reset_credits(ProviderId::Codex, "account", 0, &settings);
+        manager.check_banked_reset_credits(
+            ProviderId::Codex,
+            "account",
+            0,
+            DateTime::from_timestamp(1_800_000_000 + 1, 0).unwrap(),
+            &settings,
+        );
         assert!(
             !manager
                 .sent_notifications
@@ -2241,14 +2287,26 @@ mod tests {
                 .any(|key| { matches!(key.3, NotificationType::BankedResetCredit(_)) })
         );
 
-        manager.check_banked_reset_credits(ProviderId::Codex, "account", 1, &settings);
+        manager.check_banked_reset_credits(
+            ProviderId::Codex,
+            "account",
+            1,
+            DateTime::from_timestamp(1_800_000_000 + 2, 0).unwrap(),
+            &settings,
+        );
         assert!(manager.sent_notifications.contains(&(
             ProviderId::Codex,
             "account".to_string(),
             "reset-credits".to_string(),
             NotificationType::BankedResetCredit(1),
         )));
-        manager.check_banked_reset_credits(ProviderId::Codex, "account", 1, &settings);
+        manager.check_banked_reset_credits(
+            ProviderId::Codex,
+            "account",
+            1,
+            DateTime::from_timestamp(1_800_000_000 + 3, 0).unwrap(),
+            &settings,
+        );
         assert_eq!(
             manager
                 .sent_notifications
@@ -2258,8 +2316,20 @@ mod tests {
             1
         );
 
-        manager.check_banked_reset_credits(ProviderId::Codex, "account", 0, &settings);
-        manager.check_banked_reset_credits(ProviderId::Codex, "account", 2, &settings);
+        manager.check_banked_reset_credits(
+            ProviderId::Codex,
+            "account",
+            0,
+            DateTime::from_timestamp(1_800_000_000 + 4, 0).unwrap(),
+            &settings,
+        );
+        manager.check_banked_reset_credits(
+            ProviderId::Codex,
+            "account",
+            2,
+            DateTime::from_timestamp(1_800_000_000 + 5, 0).unwrap(),
+            &settings,
+        );
         assert!(manager.sent_notifications.contains(&(
             ProviderId::Codex,
             "account".to_string(),
@@ -2274,8 +2344,20 @@ mod tests {
         let mut settings = Settings::default();
         settings.notification_events.banked_reset_credit = false;
 
-        manager.check_banked_reset_credits(ProviderId::Codex, "account", 0, &settings);
-        manager.check_banked_reset_credits(ProviderId::Codex, "account", 1, &settings);
+        manager.check_banked_reset_credits(
+            ProviderId::Codex,
+            "account",
+            0,
+            DateTime::from_timestamp(1_800_000_000 + 6, 0).unwrap(),
+            &settings,
+        );
+        manager.check_banked_reset_credits(
+            ProviderId::Codex,
+            "account",
+            1,
+            DateTime::from_timestamp(1_800_000_000 + 7, 0).unwrap(),
+            &settings,
+        );
         assert!(
             !manager
                 .sent_notifications
@@ -2284,14 +2366,26 @@ mod tests {
         );
 
         settings.notification_events.banked_reset_credit = true;
-        manager.check_banked_reset_credits(ProviderId::Codex, "account", 1, &settings);
+        manager.check_banked_reset_credits(
+            ProviderId::Codex,
+            "account",
+            1,
+            DateTime::from_timestamp(1_800_000_000 + 8, 0).unwrap(),
+            &settings,
+        );
         assert!(
             !manager
                 .sent_notifications
                 .iter()
                 .any(|key| { matches!(key.3, NotificationType::BankedResetCredit(_)) })
         );
-        manager.check_banked_reset_credits(ProviderId::Codex, "account", 2, &settings);
+        manager.check_banked_reset_credits(
+            ProviderId::Codex,
+            "account",
+            2,
+            DateTime::from_timestamp(1_800_000_000 + 9, 0).unwrap(),
+            &settings,
+        );
         assert!(
             manager
                 .sent_notifications
