@@ -967,5 +967,6 @@ ProfilesInheritTheme = اتباع الثيم العام
 ProfilesStructureTheme = ثيم الهيكل
 ProfilesSurfaces = الواجهات المفعّلة في هذا البروفايل
 CollectionsMoveTarget = نقل المزوّد المحدد إلى مجموعة أخرى
+ThemeProfileOverrideHelper = يتجاوز البروفايل النشط هذا التفضيل العام. اختر «اتباع الثيم العام» في البروفايلات للعمل بهذا التفضيل.
 CollectionsMoveAction = نقل المحدد إلى { "{}" }
 CollectionsArrangeHelp = اختر مزوّداً ثم افصله أو انقله إلى مجموعة أخرى. يحافظ «جمع الكل» على ترتيبك الحالي.

@@ -622,7 +622,7 @@ pub async fn update_settings(
         });
     }
 
-    Ok(SettingsSnapshot::from(settings))
+    Ok(bridge::runtime_settings_snapshot(settings))
 }
 
 #[cfg(test)]

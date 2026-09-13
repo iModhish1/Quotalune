@@ -769,6 +769,7 @@ export const ALL_LOCALE_KEYS = [
   "CollectionsMoveTarget",
   "CollectionsMoveAction",
   "CollectionsArrangeHelp",
+  "ThemeProfileOverrideHelper",
   "TrayShowTopArc",
   "TrayPopOutPanel",
   "TrayShowFloatBar",

@@ -730,6 +730,7 @@ pub struct SettingsSnapshot {
     privacy_mode: bool,
     catalog_theme: String,
     active_profile_catalog_theme: Option<String>,
+    active_profile_theme: Option<ThemePreference>,
     surface_catalog_themes: std::collections::HashMap<String, String>,
     usage_display_mode: Option<String>,
     provider_usage_overrides: std::collections::HashMap<String, String>,
@@ -792,7 +793,7 @@ pub fn get_bootstrap_state() -> BootstrapState {
     BootstrapState {
         contract_version: "v1",
         providers: provider_catalog_for(&settings),
-        settings: SettingsSnapshot::from(settings),
+        settings: runtime_settings_snapshot(settings),
     }
 }
 
@@ -803,7 +804,58 @@ pub fn get_provider_catalog() -> Vec<ProviderCatalogEntry> {
 
 #[tauri::command]
 pub fn get_settings_snapshot() -> SettingsSnapshot {
-    SettingsSnapshot::from(Settings::load())
+    runtime_settings_snapshot(Settings::load())
+}
+
+pub(super) fn runtime_settings_snapshot(settings: Settings) -> SettingsSnapshot {
+    snapshot_for_profile(settings, &quotalis_core::profiles::ProfileStore::load())
+}
+
+fn snapshot_for_profile(
+    settings: Settings,
+    profiles: &quotalis_core::profiles::ProfileStore,
+) -> SettingsSnapshot {
+    let mut snapshot = SettingsSnapshot::from(settings);
+    snapshot.active_profile_theme = profiles.active_profile().theme;
+    snapshot
+}
+
+#[cfg(test)]
+mod profile_theme_tests {
+    use super::*;
+
+    #[test]
+    fn profile_snapshot_keeps_global_theme_and_resolves_clear_after_reload() {
+        let settings = Settings {
+            theme: ThemePreference::Dark,
+            ..Settings::default()
+        };
+        let mut profiles = quotalis_core::profiles::ProfileStore::default();
+        profiles.profiles[0].theme = Some(ThemePreference::Light);
+        let first = snapshot_for_profile(settings.clone(), &profiles);
+        assert_eq!(first.theme, "dark");
+        assert_eq!(first.active_profile_theme, Some(ThemePreference::Light));
+        profiles.profiles[0].theme = None;
+        let reloaded = serde_json::from_str(&serde_json::to_string(&profiles).unwrap()).unwrap();
+        let cleared = snapshot_for_profile(settings, &reloaded);
+        assert_eq!(cleared.theme, "dark");
+        assert_eq!(cleared.active_profile_theme, None);
+    }
+
+    #[test]
+    fn global_preference_changes_remain_separate_from_active_profile() {
+        let mut profiles = quotalis_core::profiles::ProfileStore::default();
+        profiles.profiles[0].theme = Some(ThemePreference::Light);
+        let snapshot = snapshot_for_profile(
+            Settings {
+                theme: ThemePreference::Auto,
+                ..Settings::default()
+            },
+            &profiles,
+        );
+        assert_eq!(snapshot.theme, "auto");
+        assert_eq!(snapshot.active_profile_theme, Some(ThemePreference::Light));
+    }
 }
 
 impl From<Settings> for SettingsSnapshot {
@@ -879,6 +931,7 @@ impl From<Settings> for SettingsSnapshot {
             privacy_mode: settings.privacy_mode,
             catalog_theme: settings.catalog_theme,
             active_profile_catalog_theme: settings.active_profile_catalog_theme,
+            active_profile_theme: None,
             surface_catalog_themes: settings.surface_catalog_themes,
             usage_display_mode: settings.usage_display_mode,
             provider_usage_overrides: settings.provider_usage_overrides,

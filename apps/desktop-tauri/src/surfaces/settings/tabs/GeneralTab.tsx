@@ -436,7 +436,7 @@ export default function GeneralTab({
       {mode === "appearance" && <section className="settings-section general-settings-card general-settings-card--theme">
         <h3 className="settings-section__title">{t("SectionTheme")}</h3>
         <div className="settings-section__group">
-          <Field label={t("ThemeLabel")} description={t("ThemeHelper")}>
+          <Field label={t("ThemeLabel")} description={settings.activeProfileTheme ? `${t("ThemeHelper")} ${t("ThemeProfileOverrideHelper")}` : t("ThemeHelper")}>
             <Select
               value={settings.theme}
               disabled={saving}

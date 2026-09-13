@@ -1721,5 +1721,6 @@ ProfilesInheritTheme = Inherit global theme
 ProfilesStructureTheme = Structure Theme
 ProfilesSurfaces = Surfaces active in this profile
 CollectionsMoveTarget = Move selected to another collection
+ThemeProfileOverrideHelper = Your active profile overrides this global preference. Choose Inherit global theme in Profiles to follow it.
 CollectionsMoveAction = Move selected to { "{}" }
 CollectionsArrangeHelp = Select a provider, detach it or move it to another collection. Gather all keeps your current order.

@@ -1138,6 +1138,7 @@ locale_keys! {
     CollectionsMoveTarget,
     CollectionsMoveAction,
     CollectionsArrangeHelp,
+    ThemeProfileOverrideHelper,
     TrayShowQuotaIsland,
     TrayPrivacyMode,
     TrayLoading,

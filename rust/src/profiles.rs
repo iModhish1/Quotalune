@@ -380,7 +380,9 @@ pub fn migrate_from_legacy(settings: &Settings) -> ProfileStore {
     let mut store = ProfileStore::default();
     let mut profile = QuotaArcProfile::new("Default");
     profile.surfaces = ProfileSurfaces::from_settings(settings);
-    profile.theme = Some(settings.theme);
+    // Legacy settings already own the global preference. The new default
+    // profile inherits it; migration must not silently pin a second copy.
+    profile.theme = None;
     profile.catalog_theme = None;
 
     // Deterministic order: HashSet iteration must not leak into storage.
@@ -529,6 +531,7 @@ mod tests {
         assert_eq!(store.schema_version, PROFILES_SCHEMA_VERSION);
         assert_eq!(store.profiles.len(), 1);
         assert_eq!(store.profiles[0].name, "Default");
+        assert!(store.profiles[0].theme.is_none());
         assert_eq!(store.accounts.len(), 2);
         assert_eq!(store.accounts[0].display_name, "Main");
         assert_eq!(store.accounts[0].provider, "claude");

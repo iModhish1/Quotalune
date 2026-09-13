@@ -1,7 +1,11 @@
 import { useEffect } from "react";
-import type { ThemePreference } from "../types/bridge";
+import type { SettingsSnapshot, ThemePreference } from "../types/bridge";
 
 export type ResolvedTheme = "light" | "dark";
+
+export function resolveThemePreference(settings: Pick<SettingsSnapshot, "theme" | "activeProfileTheme">): ThemePreference {
+  return settings.activeProfileTheme ?? settings.theme;
+}
 
 const MEDIA_QUERY = "(prefers-color-scheme: light)";
 

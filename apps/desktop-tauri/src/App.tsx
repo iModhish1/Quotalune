@@ -10,7 +10,7 @@ import {
   setSurfaceMode,
 } from "./lib/tauri";
 import { useSurfaceSnapshot } from "./hooks/useSurfaceSnapshot";
-import { useTheme } from "./hooks/useTheme";
+import { resolveThemePreference, useTheme } from "./hooks/useTheme";
 import { useLocale } from "./hooks/useLocale";
 import TrayPanel from "./surfaces/TrayPanel";
 import { FLOATBAR_WINDOW_LABEL } from "./floatbar/api";
@@ -118,7 +118,7 @@ function AppInner() {
           return;
         }
         setState(bootstrap);
-        setThemePreference(bootstrap.settings.theme);
+        setThemePreference(resolveThemePreference(bootstrap.settings));
         syncLogoAppearance({
           variant: bootstrap.settings.logoVariant ?? "silver",
           size: logoSizeFromPercent(bootstrap.settings.logoScalePercent),
@@ -156,7 +156,7 @@ function AppInner() {
           void reloadBootstrapState()
             .then((bootstrap) => {
               setState(bootstrap);
-              setThemePreference(bootstrap.settings.theme);
+              setThemePreference(resolveThemePreference(bootstrap.settings));
               syncLogoAppearance({
                 variant: bootstrap.settings.logoVariant ?? "silver",
                 size: logoSizeFromPercent(bootstrap.settings.logoScalePercent),
@@ -168,7 +168,7 @@ function AppInner() {
       : Promise.resolve(null);
 
     const refreshThemeAndLogo = (settings: BootstrapState["settings"]) => {
-      setThemePreference(settings.theme);
+      setThemePreference(resolveThemePreference(settings));
       syncLogoAppearance({
         variant: settings.logoVariant ?? "silver",
         size: logoSizeFromPercent(settings.logoScalePercent),

@@ -310,6 +310,8 @@ export interface SettingsSnapshot {
   privacyMode?: boolean;
   catalogTheme?: string;
   activeProfileCatalogTheme?: string | null;
+  /** Runtime profile override; theme remains the saved global preference. */
+  activeProfileTheme?: ThemePreference | null;
   surfaceCatalogThemes?: Partial<Record<"taskbar" | "top" | "edge" | "hud" | "quick" | "dashboard", string>>;
   usageDisplayMode?: string | null;
   providerUsageOverrides?: Record<string, string>;

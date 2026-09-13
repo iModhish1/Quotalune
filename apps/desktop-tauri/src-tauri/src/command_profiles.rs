@@ -32,9 +32,8 @@ fn apply_active_profile_to_settings(store: &ProfileStore, settings: &mut Setting
     providers.dedup();
     settings.enabled_providers = providers.into_iter().collect();
 
-    if let Some(theme) = profile.theme {
-        settings.theme = theme;
-    }
+    // Light/dark overrides are resolved in the runtime snapshot, never written
+    // over the user's global preference. Clearing an override must restore it.
     settings.active_profile_catalog_theme = profile.catalog_theme.clone();
     settings.edge_arc_enabled = profile.surfaces.edge_arc;
     settings.top_arc_enabled = profile.surfaces.top_arc;
@@ -198,22 +197,55 @@ pub fn reorder_profiles(app: AppHandle, profile_ids: Vec<String>) -> Result<(), 
     Ok(())
 }
 
-#[tauri::command]
-// Tauri exposes command parameters as named bridge arguments. Keeping this
-// boundary flat preserves the existing TypeScript contract and lets callers
-// patch one profile field without wrapping it in a second payload object.
-#[allow(clippy::too_many_arguments)]
-pub fn update_profile(
-    app: AppHandle,
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ProfileUpdate {
     profile_id: String,
+    #[serde(default, deserialize_with = "nullable_profile_field")]
     theme: Option<Option<ThemePreference>>,
+    #[serde(default, deserialize_with = "nullable_profile_field")]
     catalog_theme: Option<Option<String>>,
+    #[serde(default, deserialize_with = "nullable_profile_field")]
     accent: Option<Option<String>>,
     edge_arc: Option<bool>,
     top_arc: Option<bool>,
     taskbar_arc: Option<bool>,
     float_bar: Option<bool>,
-) -> Result<(), String> {
+}
+
+// Absent = no edit, null = clear, value = assign. Plain Option<Option<T>>
+// collapses absent and null, making the existing "inherit" UI a silent no-op.
+fn nullable_profile_field<'de, D, T>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: serde::Deserialize<'de>,
+{
+    <Option<T> as serde::Deserialize>::deserialize(deserializer).map(Some)
+}
+
+fn decode_profile_update(body: &tauri::ipc::InvokeBody) -> Result<ProfileUpdate, String> {
+    match body {
+        tauri::ipc::InvokeBody::Json(value) => {
+            serde_json::from_value(value.clone()).map_err(|e| e.to_string())
+        }
+        _ => Err("Profile update requires a JSON object".into()),
+    }
+}
+
+#[tauri::command]
+pub fn update_profile(app: AppHandle, request: tauri::ipc::Request<'_>) -> Result<(), String> {
+    // Preserve the flat TypeScript payload while decoding nullable fields as
+    // part of the complete object, before Tauri's optional-argument coercion.
+    let ProfileUpdate {
+        profile_id,
+        theme,
+        catalog_theme,
+        accent,
+        edge_arc,
+        top_arc,
+        taskbar_arc,
+        float_bar,
+    } = decode_profile_update(request.body())?;
     let mut store = ProfileStore::load();
     let Some(profile) = store.profiles.iter_mut().find(|p| p.id == profile_id) else {
         return Err("Profile not found".to_string());
@@ -964,13 +996,64 @@ mod tests {
         store.profiles[0].surfaces.taskbar_arc = true;
         let mut s2 = Settings::default();
         apply_active_profile_to_settings(&store, &mut s2);
-        assert_eq!(s2.theme, ThemePreference::Light);
+        assert_eq!(s2.theme, Settings::default().theme);
         assert_eq!(
             s2.active_profile_catalog_theme.as_deref(),
             Some("01-obsidian-orbit")
         );
         assert!(s2.top_arc_enabled);
         assert!(s2.taskbar_arc_enabled);
+    }
+
+    #[test]
+    fn switching_profile_preserves_the_global_theme_preference() {
+        let mut settings = Settings {
+            theme: ThemePreference::Dark,
+            ..Settings::default()
+        };
+        let mut store = ProfileStore::default();
+        store.profiles[0].theme = Some(ThemePreference::Light);
+        apply_active_profile_to_settings(&store, &mut settings);
+        assert_eq!(settings.theme, ThemePreference::Dark);
+        store.profiles[0].theme = None;
+        apply_active_profile_to_settings(&store, &mut settings);
+        assert_eq!(settings.theme, ThemePreference::Dark);
+    }
+
+    #[test]
+    fn flat_profile_update_distinguishes_missing_clear_and_assign() {
+        let decode = |value| decode_profile_update(&tauri::ipc::InvokeBody::Json(value)).unwrap();
+        let absent = decode(serde_json::json!({"profileId":"test", "topArc":true}));
+        assert!(absent.theme.is_none());
+        assert!(absent.catalog_theme.is_none());
+        assert!(absent.accent.is_none());
+        assert_eq!(absent.top_arc, Some(true));
+        let clear = decode(
+            serde_json::json!({"profileId":"test", "theme":null, "catalogTheme":null, "accent":null}),
+        );
+        assert_eq!(clear.theme, Some(None));
+        assert_eq!(clear.catalog_theme, Some(None));
+        assert_eq!(clear.accent, Some(None));
+        let assign = decode(
+            serde_json::json!({"profileId":"test", "theme":"light", "catalogTheme":"01-obsidian-orbit", "accent":"#ffffff"}),
+        );
+        assert_eq!(assign.theme, Some(Some(ThemePreference::Light)));
+        assert_eq!(
+            assign.catalog_theme.as_ref().and_then(|v| v.as_deref()),
+            Some("01-obsidian-orbit")
+        );
+        assert!(
+            decode_profile_update(&tauri::ipc::InvokeBody::Json(
+                serde_json::json!({"profileId":"test", "theme":false})
+            ))
+            .is_err()
+        );
+        assert!(
+            decode_profile_update(&tauri::ipc::InvokeBody::Json(
+                serde_json::json!({"theme":null})
+            ))
+            .is_err()
+        );
     }
 
     #[test]
