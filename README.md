@@ -1,68 +1,68 @@
+<p align="center"><img src="assets/brand/icons/quotaarc-icon-256.png" width="112" alt="Quotalis"></p>
+
 # Quotalis
 
-**Your AI capacity, always in sight.**
+**Your AI workspace, in one orbit.**
 
-> Quotalis was previously developed under the name QuotaArc.
+Quotalis brings AI-provider limits, reset schedules and usage history into a customizable Windows desktop workspace. Keep your providers in view with a planetary dashboard, compact floating surfaces and system-tray controls.
 
-Quotalis is a premium open-source AI usage / quota / capacity monitor for Windows. It answers one question exceptionally well: *how much AI capacity do I have right now, how quickly am I burning it, and when should I switch provider or model?* — without opening a dozen provider dashboards.
+[Download for Windows](https://github.com/iModhish1/Quotalis/releases/latest) · [Explore the source](https://github.com/iModhish1/Quotalis) · [Get started](docs/GETTING_STARTED.md)
 
-> Windows 11 first · 67 provider integrations · local-first & private · no account, no telemetry
+![Quotalis planetary dashboard in Demo Mode](docs/images/quotalis-dashboard-demo.png)
 
-![hero](docs/images/hero-placeholder.png)
+*Actual Windows app screenshot with clearly labeled simulated provider data.*
 
-## Highlights
+## A workspace that feels like yours
 
-- **Surface Engine** — Quotalis's signature surfaces:
-  - **Edge Arc** — a glass capacity strip snapped to a screen edge, one capacity arc per provider, hover for details, optional click-through.
-  - **Top Arc** — a top-center capacity pill that morphs open on hover into usage windows, reset countdowns, and plan context.
-  - **Tray** — full functionality with every visual surface disabled; quick usage summary, refresh, surface toggles.
-  - **Dashboard & settings** — polished per-provider cards, multiple usage windows, costs, pace, and a live surface editor.
-- **67 providers** — Codex, Claude, Copilot, Cursor, Gemini, Antigravity, OpenRouter, DeepSeek, Groq, Windsurf, Kiro, OpenCode, MiniMax and many more, with OAuth / API-key / cookie / CLI credential modes.
-- **Quota intelligence** — pace, session-equivalent forecasts, reset ETA, and cost projections computed locally; the UI says "not enough history" instead of inventing numbers.
-- **Credential safety** — app-managed secrets live behind Windows DPAPI / user-scoped secure storage; browser cookie import is explicit opt-in per provider.
-- **Privacy-first** — no Quotalis account, no cloud backend, no telemetry, no ads. Data stays on your machine. See [PRIVACY.md](docs/PRIVACY.md).
-- **Performance-minded** — adaptive polling with backoff, animation only on change, essentially zero idle CPU. See [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
+- **Planetary dashboard.** Original provider logos, reported plan details, current limits and reset times. Browse a compact carousel, arrange providers left or right, and keep your chosen order and position between visits.
+- **Dedicated analytics.** Explore observed quota history, individual provider windows and available usage records, with filters and detailed values alongside charts.
+- **Reset visibility.** Distinguish scheduled resets, observed changes and provider-reported banked reset inventory, including expiry dates when supplied.
+- **Provider connections.** Manage supported OAuth, API-key, browser-cookie and CLI-backed integrations from a dedicated provider workspace. Connection methods follow each provider's capabilities.
+- **Notification history.** Revisit recorded reset and quota-change observations, search and filter them, mark items read, and see an unread badge. Observation and receipt times stay visible.
+- **Personal presentation.** Structure themes, original logo finishes, provider presentation styles, backgrounds, resizable navigation and configurable floating surfaces.
+- **Profiles and collections.** Organize providers and presentation choices for different workflows.
+- **Demo Mode.** Explore simulated provider data in a clearly marked workspace, separate from real history.
+- **English and Arabic.** Localized controls, right-to-left layouts and customizable time/reset presentation.
 
-## Installation
+Quotalis displays provider-reported values and preserves their meaning: quotas, Spend, Balance and Credits are distinct. Analytics use available observations rather than inventing missing values.
 
-Download the latest release from [GitHub Releases](https://github.com/quotaarc/quotaarc/releases):
+## Install and start
 
-| Artifact | Purpose |
-|---|---|
-| `Quotalis-X.Y.Z-x64-Setup.exe` | Per-user NSIS installer — no admin required |
-| `Quotalis-X.Y.Z-x64.msi` | Managed/enterprise deployment |
-| `Quotalis-X.Y.Z-x64-Portable.zip` | Portable, no installer |
+Choose a Windows x64 download from [Releases](https://github.com/iModhish1/Quotalis/releases):
 
-Install: download → double-click `Setup.exe` → launch **Quotalis** → onboarding → done. No terminal, no Rust, no Node required.
+| Download | Use |
+| --- | --- |
+| `Quotalis-0.11.0-x64-Setup.exe` | Per-user installation with desktop integration and runtime setup |
+| `Quotalis-0.11.0-x64-Portable.zip` | Extract the complete folder and open `Quotalis.exe` |
+| `Quotalis-0.11.0-x64-CLI.zip` | Command-line tools for usage and configuration |
 
-## Surfaces at a glance
+Windows x64, Microsoft Edge WebView2 Runtime and the Microsoft Visual C++ x64 runtime are required. Setup can install missing runtimes. The ZIP edition uses the normal per-user settings and history location; keep its supplied icons beside the executable.
 
-| Surface | Best for |
-|---|---|
-| Edge Arc | Glanceable per-provider capacity while you work |
-| Top Arc | Focus-mode monitoring with hover-for-detail |
-| Tray only | Minimal footprint; everything still one click away |
-| Dashboard | Deep dives: usage windows, costs, pace, forecasts |
+Open **Providers** to configure your integrations, or enable **Demo Mode** in Dashboard Studio to explore first. Customize your workspace through Appearance, Provider Display and the surface controls.
 
-Configure them live in **Settings → Surfaces** (opacity, scale, click-through, hide during fullscreen games, edge side).
+## Build from source
 
-## Development
+Use Windows with Rust stable (MSVC), Visual Studio C++ Build Tools, Node.js 24 and pnpm 11.24.0.
 
 ```powershell
-# Prerequisites: Rust stable (MSVC), Node 24, pnpm 11, VS Build Tools (C++)
-pnpm --dir apps/desktop-tauri install
-cargo test --manifest-path rust/Cargo.toml
+pnpm --dir apps/desktop-tauri install --frozen-lockfile
 pnpm --dir apps/desktop-tauri test
-pnpm --dir apps/desktop-tauri run tauri:build:debug   # fast local run
-pnpm --dir apps/desktop-tauri exec tauri build --bundles nsis   # installer
+cargo test --workspace
+node scripts/build-dev-verified.mjs
 ```
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/BUILDING.md](docs/BUILDING.md), and [CONTRIBUTING.md](CONTRIBUTING.md).
+The final command builds the isolated Dev channel. For the standard desktop executable:
 
-## Acknowledgments
+```powershell
+pnpm --dir apps/desktop-tauri run tauri:build
+```
 
-Quotalis inherits its provider engine, credential security layer, and Tauri shell from the excellent open-source **[Win-CodexBar](https://github.com/nesszer/Win-CodexBar)** (MIT), which in turn ports ideas from **[CodexBar](https://github.com/steipete/CodexBar)** for macOS, and includes portions of **codexcontrol** (MIT) — see [NOTICE](NOTICE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The Quotalis product experience — brand, design system, Surface Engine, and motion — is original work.
+The React/TypeScript UI is in `apps/desktop-tauri/src`; the Tauri shell is in `apps/desktop-tauri/src-tauri`; provider adapters and domain logic are in `rust/src`. Desktop builds use Tauri so the frontend is embedded in the executable.
 
-## License
+## Created by
 
-[MIT](LICENSE)
+**Mohammed Modhish ([iModhish1](https://github.com/iModhish1))** · [TAWAJUD AI](https://tawajud.net)
+
+Quotalis builds on [Win-CodexBar](https://github.com/nesszer/Win-CodexBar), [CodexBar](https://github.com/steipete/CodexBar), and portions of codexcontrol. Their contributions and licenses are preserved in [NOTICE](NOTICE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). QuotaArc is the project's earlier name and remains in compatibility identifiers.
+
+[MIT License](LICENSE)

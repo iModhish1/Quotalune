@@ -9,7 +9,7 @@ what_if=0
 usage() {
   cat <<'EOF'
 Usage:
-  bash scripts/gh-safe.sh --repo owner/repo --verify-kind repo|pr|issue|release [--target id-or-tag] [--what-if] -- <gh args...>
+  bash scripts/gh-safe.sh --repo owner/repo --verify-kind repo|new-repo|pr|issue|release [--target id-or-tag] [--what-if] -- <gh args...>
 
 Examples:
   bash scripts/gh-safe.sh --repo iModhish1/Quotalis --verify-kind pr --target 361 --what-if -- pr comment 361 --body-file .review/comment.md
@@ -32,7 +32,7 @@ done
 gh_args=("$@")
 
 [[ "$repo" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || { echo "Invalid --repo '$repo'; expected owner/repo." >&2; exit 2; }
-case "$verify_kind" in repo|pr|issue|release) ;; *) echo "Invalid --verify-kind '$verify_kind'." >&2; exit 2 ;; esac
+case "$verify_kind" in repo|new-repo|pr|issue|release) ;; *) echo "Invalid --verify-kind '$verify_kind'." >&2; exit 2 ;; esac
 ((${#gh_args[@]} > 0)) || { echo 'No gh command supplied after --.' >&2; exit 2; }
 
 # The owner explicitly confirmed iModhish1. Never fall back to the upstream fork.
@@ -46,6 +46,23 @@ actor="$(gh api user --jq .login)"
 for arg in "${gh_args[@]}"; do
   case "$arg" in --repo|--repo=*|-R*) echo 'Forwarded gh args may not override the repository.' >&2; exit 3 ;; esac
 done
+
+# First publication has no repository to read back yet. Require an actual 404,
+# the confirmed authenticated owner, and exactly one public repository creation.
+# No --source/--push/import or arbitrary forwarded create options are accepted.
+if [[ "$verify_kind" == new-repo ]]; then
+  [[ ${#gh_args[@]} == 4 && "${gh_args[0]}" == repo && "${gh_args[1]}" == create && "${gh_args[2]}" == "$repo" && "${gh_args[3]}" == --public ]] || { echo 'New repository requires exact repo create owner/repo --public.' >&2; exit 3; }
+  if lookup="$(gh api "repos/$repo" 2>&1)"; then
+    echo 'Repository already exists; use existing repository verification.' >&2; exit 4
+  fi
+  [[ "$lookup" == *"HTTP 404"* ]] || { echo 'Repository absence was not verified; no creation performed.' >&2; exit 4; }
+  if ((what_if == 1)); then echo "WhatIf: create public $repo for verified owner $actor"; exit 0; fi
+  gh repo create "$repo" --public
+  created="$(gh repo view "$repo" --json nameWithOwner,url --jq '.nameWithOwner + "|" + .url')"
+  [[ "${created,,}" == "${repo,,}|https://github.com/${repo,,}" ]] || { echo 'Created repository read-back mismatch.' >&2; exit 4; }
+  echo "Verified created repository: https://github.com/$repo"
+  exit 0
+fi
 
 if [[ "$verify_kind" == repo ]]; then
   case "${gh_args[0]:-}:${gh_args[1]:-}" in

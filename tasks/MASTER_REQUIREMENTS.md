@@ -500,3 +500,9 @@ the Windows notification header still lacks the application icon. Fix the app
 identity/header mark (distinct from provider message artwork) and inspect native
 notification evidence before publication. Do not mark an icon-path/code change
 as proof that Windows actually renders the header icon.
+
+P06-17 public presentation clarification (2026-09-14): the owner requests
+features-focused GitHub project and release pages. Keep defect inventories,
+unfinished-work lists and QA reports internal. Public copy should describe
+verified features, product imagery, downloads and essential runtime requirements;
+never claim unsupported capabilities or turn internal validation into marketing.
