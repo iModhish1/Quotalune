@@ -111,14 +111,14 @@ describe("GeneralTab language picker", () => {
   it("renders all supported language options", () => {
     render(<GeneralTab settings={settings} set={vi.fn()} saving={false} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    fireEvent.click(screen.getByRole("button", { name: "InterfaceLanguage" }));
     expect(screen.getAllByRole("option")).toHaveLength(9);
   });
 
   it("includes spanish as a selectable option", () => {
     render(<GeneralTab settings={settings} set={vi.fn()} saving={false} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    fireEvent.click(screen.getByRole("button", { name: "InterfaceLanguage" }));
     expect(
       screen.getByRole("option", { name: "Español" }),
     ).toBeInTheDocument();
@@ -127,21 +127,21 @@ describe("GeneralTab language picker", () => {
   it("includes russian as a selectable option", () => {
     render(<GeneralTab settings={settings} set={vi.fn()} saving={false} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    fireEvent.click(screen.getByRole("button", { name: "InterfaceLanguage" }));
     expect(screen.getByRole("option", { name: "Русский" })).toBeInTheDocument();
   });
 
   it("includes turkish as a selectable option", () => {
     render(<GeneralTab settings={settings} set={vi.fn()} saving={false} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    fireEvent.click(screen.getByRole("button", { name: "InterfaceLanguage" }));
     expect(screen.getByRole("option", { name: "Türkçe" })).toBeInTheDocument();
   });
 
   it("includes korean as a selectable option", () => {
     render(<GeneralTab settings={settings} set={vi.fn()} saving={false} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    fireEvent.click(screen.getByRole("button", { name: "InterfaceLanguage" }));
     expect(
       screen.getByRole("option", { name: "한국어" }),
     ).toBeInTheDocument();
@@ -150,7 +150,7 @@ describe("GeneralTab language picker", () => {
   it("includes Traditional Chinese as a selectable option", () => {
     render(<GeneralTab settings={settings} set={vi.fn()} saving={false} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    fireEvent.click(screen.getByRole("button", { name: "InterfaceLanguage" }));
     expect(screen.getByRole("option", { name: "繁體中文" })).toBeInTheDocument();
   });
 
@@ -191,7 +191,7 @@ describe("GeneralTab language picker", () => {
     const set = vi.fn();
     render(<GeneralTab settings={settings} set={set} saving={false} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "LowPowerModeOff" }));
+    fireEvent.click(screen.getByRole("button", { name: "LowPowerMode" }));
     fireEvent.click(screen.getByRole("option", { name: "LowPowerModeAutomatic" }));
 
     expect(set).toHaveBeenCalledWith({ lowPowerModePreference: "automatic" });

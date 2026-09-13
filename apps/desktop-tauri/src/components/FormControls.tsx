@@ -57,7 +57,8 @@ export function Select({
   ariaLabel?: string;
   minWidth?: number;
 }) {
-  return <div style={{width:Math.max(minWidth??160,Math.min(420,Math.max(0,...options.map(o=>o.label.length))*7.5+48)),maxWidth:"100%"}}><QuotalisSelect label={ariaLabel??options.find(o=>o.value===value)?.label??value} value={value} options={options} onChange={onChange} disabled={disabled} searchable={options.length>9}/></div>;
+  const field = useContext(FieldContext);
+  return <div style={{width:Math.max(minWidth??160,Math.min(420,Math.max(0,...options.map(o=>o.label.length))*7.5+48)),maxWidth:"100%"}}><QuotalisSelect label={ariaLabel??field?.label??options.find(o=>o.value===value)?.label??value} value={value} options={options} onChange={onChange} disabled={disabled} searchable={options.length>9}/></div>;
 }
 
 export function NumberInput({

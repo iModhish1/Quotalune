@@ -1,6 +1,15 @@
 import {render,screen} from '@testing-library/react';
 import {expect,it,vi} from 'vitest';
 import {Field, NumberInput, Select, Toggle} from './FormControls';
+it('keeps the field name stable when the selected value changes',()=>{
+  const options=[{value:'off',label:'Off'},{value:'on',label:'On'}];
+  const {rerender}=render(<Field label="Power mode"><Select options={options} value="off" onChange={vi.fn()}/></Field>);
+  expect(screen.getByRole('button',{name:'Power mode'})).toHaveTextContent('Off');
+  rerender(<Field label="Power mode"><Select options={options} value="on" onChange={vi.fn()}/></Field>);
+  expect(screen.getByRole('button',{name:'Power mode'})).toHaveTextContent('On');
+  rerender(<Field label="Power mode"><Select ariaLabel="Explicit mode" options={options} value="on" onChange={vi.fn()}/></Field>);
+  expect(screen.getByRole('button',{name:'Explicit mode'})).toHaveTextContent('On');
+});
 it('reserves room for the longest choice and does not shrink on selection',()=>{
   const options=[{value:'one',label:'Single unified icon'},{value:'all',label:'One icon per enabled provider'}];
   const props={options,onChange:vi.fn(),ariaLabel:'Tray mode'};

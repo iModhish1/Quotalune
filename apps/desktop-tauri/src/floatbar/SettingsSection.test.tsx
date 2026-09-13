@@ -30,7 +30,7 @@ describe("FloatBar settings", () => {
       <FloatBarSettingsSection settings={settings} saving={false} set={vi.fn()} />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "FloatBarStyleFloating" }));
+    fireEvent.click(screen.getByRole("button", { name: "FloatBarStyle" }));
     expect(screen.getByRole("option", { name: "FloatBarStyleHud" })).toBeTruthy();
   });
 
