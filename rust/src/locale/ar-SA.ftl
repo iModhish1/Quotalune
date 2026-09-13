@@ -970,3 +970,21 @@ CollectionsMoveTarget = نقل المزوّد المحدد إلى مجموعة �
 ThemeProfileOverrideHelper = يتجاوز البروفايل النشط هذا التفضيل العام. اختر «اتباع الثيم العام» في البروفايلات للعمل بهذا التفضيل.
 CollectionsMoveAction = نقل المحدد إلى { "{}" }
 CollectionsArrangeHelp = اختر مزوّداً ثم افصله أو انقله إلى مجموعة أخرى. يحافظ «جمع الكل» على ترتيبك الحالي.
+
+AboutIdentityEyebrow = مساحة عملك مع الذكاء الاصطناعي
+AboutProductPromise = مكان واحد لمزوديك وحصصك ومواعيد إعادة التعيين.
+AboutOwnerRole = صانع Quotalis · المنتج والتصميم
+AboutDirectionTitle = رؤية المنتج
+AboutDirectionBody = جمع المراقبة والحسابات والتخصيص في مساحة عمل واحدة على سطح المكتب.
+AboutDesignTitle = هوية بصرية خاصة
+AboutDesignBody = هوية Quotalis والعرض الفضائي وثيمات الهياكل وطرق عرض المزودين القابلة للتخصيص.
+AboutWorkflowsTitle = تحكم يومي
+AboutWorkflowsBody = لوحات المزودين وتنظيم الحسابات والبروفايلات والمجموعات وأدوات الوصول السريع على سطح المكتب.
+AboutTechCore = تكاملات المزودين والإعدادات المحلية وسجل الاستخدام.
+AboutTechDesktop = النوافذ الأصلية وأيقونات شريط النظام وعرض الواجهة في Windows.
+AboutTechInterface = واجهات قابلة لإعادة الاستخدام وبيانات ذات أنواع محددة وأدوات التخصيص.
+AboutTechVisuals = تحليلات تفاعلية وحركة تراعي تفضيلات تقليل الحركة.
+AboutCreditIntro = مبني على أعمال مفتوحة المصدر، مع حفظ حقوق أصحابها وتراخيصها.
+
+UpdateChannelLocalOption = محلي · تحديث يدوي
+AboutLocalUpdatesBody = هذه النسخة المحلية لا تبحث عن تحديثات عبر الإنترنت. ثبّت نسخة أحدث موثوقة يدوياً، أو اختر قناة إصدارات منشورة.

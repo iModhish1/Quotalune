@@ -153,4 +153,30 @@ describe("AboutTab", () => {
       expect(screen.getByText("ErrorPrefix no browser")).toBeInTheDocument();
     });
   });
+
+  it("presents the original mark, owner contribution and runtime roles with upstream credit", async () => {
+    render(<AboutTab settings={settings} set={vi.fn()} saving={false} />);
+    expect(await screen.findByRole("heading", { name: "Quotalis" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "AppName" })).toHaveAttribute("data-quotaarc-mark", "official");
+    expect(screen.getByText("0.30.3")).toBeInTheDocument();
+    expect(screen.getByText("AboutOwnerRole")).toBeInTheDocument();
+    expect(screen.getByText("AboutDirectionBody")).toBeInTheDocument();
+    expect(screen.getByText("AboutTechCore")).toBeInTheDocument();
+    expect(screen.getByText("AboutLicenseBody")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "codexcontrol" }));
+    expect(tauriMocks.openExternalUrl).toHaveBeenCalledWith("https://github.com/ademisler/codexcontrol");
+    expect(screen.getByText("WorkflowGuideTitle").closest("details")).not.toHaveAttribute("open");
+  });
+
+  it("shows the local channel and prevents a false up-to-date result without checking", async () => {
+    render(<AboutTab settings={{ ...settings, updateChannel: "local" }} set={vi.fn()} saving={false} />);
+    const channel = await screen.findByRole("button", { name: "UpdateChannelChoice" });
+    expect(channel).toHaveTextContent("UpdateChannelLocalOption");
+    expect(screen.getByRole("button", { name: "AboutCheckForUpdates" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "AutoDownloadUpdates" })).toBeDisabled();
+    expect(screen.getByText("AboutLocalUpdatesBody")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "AboutCheckForUpdates" }));
+    expect(updateMocks.checkNow).not.toHaveBeenCalled();
+    expect(screen.queryByText("AboutUpToDate")).not.toBeInTheDocument();
+  });
 });

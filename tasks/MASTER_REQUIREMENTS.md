@@ -461,3 +461,13 @@ Latest objective attachment 5f46054a-7d34-47d8-a851-a6ff8e5689d9/goal-objective.
 explicitly requires independent on/off switches for each such physical-limit
 notification subscription, including each Spark limit, not only one provider
 master switch. This clarifies and retains all preceding P06 requirements.
+
+P06-17 owner review gate (2026-09-13), objective attachment
+66c64052-a4cb-48b7-b9a0-8ab9e1e93a05/goal-objective.md: finish and improve About
+first, with Mohammed Modhish's contribution, original branding, contact and
+accurate project/tool credits. Show the actual page and wait for the owner's
+opinion/acceptance before building final downloads or publishing to GitHub.
+Dev-only preview builds needed to inspect the page are not release candidates.
+Existing local candidates remain unpublished. Improve repository presentation,
+screenshots and discoverability honestly; do not promise star counts. All earlier
+requirements, including the notification center, remain active.

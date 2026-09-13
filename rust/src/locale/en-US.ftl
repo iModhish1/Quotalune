@@ -1724,3 +1724,21 @@ CollectionsMoveTarget = Move selected to another collection
 ThemeProfileOverrideHelper = Your active profile overrides this global preference. Choose Inherit global theme in Profiles to follow it.
 CollectionsMoveAction = Move selected to { "{}" }
 CollectionsArrangeHelp = Select a provider, detach it or move it to another collection. Gather all keeps your current order.
+
+AboutIdentityEyebrow = YOUR AI WORKSPACE, IN VIEW
+AboutProductPromise = One place for your providers, limits and next reset.
+AboutOwnerRole = Creator of Quotalis · Product & design
+AboutDirectionTitle = Product direction
+AboutDirectionBody = Bringing monitoring, accounts and customization into one desktop workspace.
+AboutDesignTitle = A distinct visual identity
+AboutDesignBody = The Quotalis identity, cosmic presentation, structure themes and configurable provider displays.
+AboutWorkflowsTitle = Everyday control
+AboutWorkflowsBody = Provider dashboards, account organization, profiles, collections and quick-access desktop surfaces.
+AboutTechCore = Provider integrations, local settings and usage history.
+AboutTechDesktop = Native windows, system tray and Windows web rendering.
+AboutTechInterface = Reusable interfaces, typed data and customization controls.
+AboutTechVisuals = Interactive analytics and motion that respects reduced-motion preferences.
+AboutCreditIntro = Built on open-source work, with its authors and licenses acknowledged.
+
+UpdateChannelLocalOption = Local · manual updates
+AboutLocalUpdatesBody = This local build does not check for online updates. Install a verified newer version manually, or choose a published release channel.

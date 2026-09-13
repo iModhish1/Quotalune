@@ -4,6 +4,12 @@ Authority: `MASTER_REQUIREMENTS.md` (2026-09-06). This section supersedes confli
 historical product decisions below. The active goal remains unfinished. Every new
 message must update the ledger and this backlog, not replace previous requirements.
 
+## Current owner review gate
+
+P06-17: finish About, inspect the actual Dev page and show it to the owner.
+Wait for the owner's review before new final download builds or publication.
+Notification-center implementation and all other requirements remain active.
+
 ## Ordered delivery gates
 
 Current packet (2026-09-06 continuation): advance E03/E04 from palette variants

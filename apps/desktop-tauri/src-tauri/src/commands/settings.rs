@@ -545,6 +545,7 @@ fn parse_tray_icon_mode(s: &str) -> Option<TrayIconMode> {
 
 fn parse_update_channel(s: &str) -> Option<UpdateChannel> {
     match s {
+        "local" => Some(UpdateChannel::Local),
         "stable" => Some(UpdateChannel::Stable),
         "beta" => Some(UpdateChannel::Beta),
         _ => None,
@@ -627,6 +628,15 @@ pub async fn update_settings(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn local_update_channel_can_be_selected_again_without_enabling_remote_checks() {
+        assert_eq!(
+            super::parse_update_channel("local"),
+            Some(quotalis_core::settings::UpdateChannel::Local)
+        );
+        assert!(!super::parse_update_channel("local").unwrap().is_remote());
+        assert_eq!(super::parse_update_channel("invalid"), None);
+    }
     use super::*;
 
     #[test]

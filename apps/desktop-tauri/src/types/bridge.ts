@@ -126,7 +126,7 @@ export type LanguageOption = {
   display: string;
 };
 
-export type UpdateChannel = "stable" | "beta";
+export type UpdateChannel = "local" | "stable" | "beta";
 
 export type ThemePreference = "auto" | "light" | "dark";
 
