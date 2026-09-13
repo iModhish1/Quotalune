@@ -50,5 +50,5 @@ export default function QuotalisSelect({label,value,options,onChange,searchable=
    <div id={id} role="listbox" aria-multiselectable={multiple?true:undefined} aria-label={label}>{filtered.map((option,index)=><button type="button" role="option" id={`${id}-${index}`} key={option.value} aria-selected={multiple?multiple.includes(option.value):value===option.value} aria-disabled={option.disabled} tabIndex={-1} data-active={index===active}
     onPointerMove={()=>setActive(index)} onMouseDown={event=>event.preventDefault()} onClick={()=>choose(option)}>
     {option.providerId&&<ProviderIcon providerId={option.providerId} size={18}/>}<span>{option.group&&<small className="quotalis-select-group">{option.group}</small>}{option.label}{option.description&&<small className="quotalis-select-description">{option.description}</small>}</span><span className="quotalis-select-indicator" data-selected={multiple?multiple.includes(option.value):value===option.value} aria-hidden="true"/></button>)}</div>
-  </div>,document.body)}</>;
+  </div>,trigger.current?.closest("dialog")??document.body)}</>;
 }

@@ -2,6 +2,14 @@ import {render,screen,fireEvent} from "@testing-library/react";
 import {describe,it,expect,vi} from "vitest";
 import QuotalisSelect from "./QuotalisSelect";
 const options=[{value:"",label:"All providers"},{value:"codex",label:"Codex"},{value:"claude",label:"Claude"}];
+it("keeps options inside their owning dialog so native modal inertness cannot block them",()=>{
+ const change=vi.fn();render(<dialog open aria-label="Account"><QuotalisSelect label="Position" value="codex" options={options} onChange={change}/></dialog>);
+ fireEvent.click(screen.getByRole("button",{name:"Position"}));
+ expect(screen.getByRole("dialog")).toContainElement(screen.getByRole("listbox"));
+ fireEvent.click(screen.getByRole("option",{name:"Claude"}));
+ expect(change).toHaveBeenCalledWith("claude");
+ expect(screen.getByRole("button",{name:"Position"})).toHaveFocus();
+});
 describe("QuotalisSelect",()=>{
  it("searches and commits the active option with Enter, returning focus",()=>{
   const change=vi.fn();render(<QuotalisSelect label="Provider" value="" options={options} searchable onChange={change}/>);
