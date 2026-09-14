@@ -130,6 +130,13 @@ export function setCatalogTheme(
   return invoke<void>("set_catalog_theme", { slug, scope });
 }
 
+export function setAppearanceScope(
+  scope: import("../design-system/appearanceComposition").AppearanceScopeId,
+  source: import("../design-system/appearanceComposition").AppearanceSource,
+): Promise<void> {
+  return invoke<void>("set_appearance_scope", { scope, source });
+}
+
 export function getTrayVisibilityStatus(): Promise<TrayVisibilityStatusDto> {
   return invoke<TrayVisibilityStatusDto>("tray_visibility_status");
 }

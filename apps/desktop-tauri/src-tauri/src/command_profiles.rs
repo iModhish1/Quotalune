@@ -6,7 +6,7 @@
 //! rebuilt — then a single `profiles-changed` event notifies the frontend.
 
 use quotalis_core::profiles::{ProfileStore, ProviderAccount, QuotaArcProfile};
-use quotalis_core::settings::{Settings, ThemePreference};
+use quotalis_core::settings::{AppearanceSource, Settings, ThemePreference};
 use tauri::{AppHandle, Emitter};
 
 fn emit_changed(app: &AppHandle) {
@@ -580,6 +580,34 @@ pub fn set_catalog_theme(
     Ok(())
 }
 
+/// Sets one Wave 1B appearance-composition scope (logo/provider-identity/
+/// tray/workspace-background — NOT "floatingStructures", which already has
+/// its own Global/Override mechanism via `set_catalog_theme`'s surface
+/// scope) to Global (follow the Main Application theme's recommendation)
+/// or Override (keep this scope's own explicitly-set value). Reuses the
+/// same settings-save + `quotalis:settings-updated` broadcast every other
+/// appearance-affecting command uses — no second event/propagation path.
+#[tauri::command]
+pub fn set_appearance_scope(app: AppHandle, scope: String, source: String) -> Result<(), String> {
+    let resolved = match source.as_str() {
+        "global" => AppearanceSource::Global,
+        "override" => AppearanceSource::Override,
+        other => {
+            return Err(format!(
+                "unknown appearance source '{other}' (expected 'global' or 'override')"
+            ));
+        }
+    };
+    let mut settings = Settings::load();
+    settings
+        .appearance_composition
+        .set_scope(&scope, resolved)?;
+    settings.save().map_err(|e| e.to_string())?;
+    use tauri::Emitter;
+    let _ = app.emit("quotalis:settings-updated", ());
+    Ok(())
+}
+
 /// Persist the usage display configuration: global mode + per-provider
 /// overrides. Provider overrides absent from the map are REMOVED from
 /// persistence (Follow-global = no stored entry). Unknown mode strings are
@@ -912,6 +940,44 @@ mod tests {
         assert!(remove_profile_from_store(&mut store, &mut settings, &id).is_err());
         assert!(remove_profile_from_store(&mut store, &mut settings, "missing").is_err());
         assert_eq!(serde_json::to_value(&store).unwrap(), before);
+    }
+
+    #[test]
+    fn appearance_scope_set_updates_settings_and_leaves_other_fields_untouched() {
+        let mut settings = Settings {
+            theme: ThemePreference::Dark,
+            ..Settings::default()
+        };
+        let before_catalog_theme = settings.catalog_theme.clone();
+        settings
+            .appearance_composition
+            .set_scope("tray", AppearanceSource::Global)
+            .expect("tray is a valid scope");
+        assert_eq!(
+            settings.appearance_composition.tray,
+            AppearanceSource::Global
+        );
+        assert_eq!(
+            settings.appearance_composition.quotalis_logo,
+            AppearanceSource::Override
+        );
+        // Setting one appearance scope must not touch unrelated theme state.
+        assert_eq!(settings.theme, ThemePreference::Dark);
+        assert_eq!(settings.catalog_theme, before_catalog_theme);
+    }
+
+    #[test]
+    fn appearance_scope_set_rejects_floating_structures_scope_id() {
+        // floatingStructures already has real Global/Override semantics via
+        // set_catalog_theme's surface scope; set_appearance_scope must not
+        // silently accept it as a second, conflicting mechanism.
+        let mut settings = Settings::default();
+        assert!(
+            settings
+                .appearance_composition
+                .set_scope("floatingStructures", AppearanceSource::Global)
+                .is_err()
+        );
     }
 
     #[test]

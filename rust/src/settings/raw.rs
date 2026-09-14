@@ -387,6 +387,8 @@ pub(super) struct RawSettings {
     #[serde(default)]
     surface_catalog_themes: std::collections::HashMap<String, String>,
     #[serde(default)]
+    appearance_composition: AppearanceComposition,
+    #[serde(default)]
     privacy_mode: bool,
     #[serde(default = "default_true")]
     promote_tray_icon: bool,
@@ -550,6 +552,7 @@ impl Default for RawSettings {
             catalog_theme: s.catalog_theme,
             active_profile_catalog_theme: s.active_profile_catalog_theme,
             surface_catalog_themes: s.surface_catalog_themes,
+            appearance_composition: s.appearance_composition,
             taskbar_arc_enabled: s.taskbar_arc_enabled,
             taskbar_arc_opacity: s.taskbar_arc_opacity,
             taskbar_arc_click_through: s.taskbar_arc_click_through,
@@ -937,6 +940,7 @@ impl From<RawSettings> for Settings {
                 .as_deref()
                 .and_then(canonical_catalog_theme),
             surface_catalog_themes: normalize_surface_catalog_themes(raw.surface_catalog_themes),
+            appearance_composition: raw.appearance_composition,
             taskbar_arc_enabled: false,
             taskbar_arc_opacity: clamp_surface_opacity(raw.taskbar_arc_opacity),
             taskbar_arc_click_through: raw.taskbar_arc_click_through,

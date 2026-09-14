@@ -313,6 +313,7 @@ export interface SettingsSnapshot {
   /** Runtime profile override; theme remains the saved global preference. */
   activeProfileTheme?: ThemePreference | null;
   surfaceCatalogThemes?: Partial<Record<"taskbar" | "top" | "edge" | "hud" | "quick" | "dashboard", string>>;
+  appearanceComposition?: import('../design-system/appearanceComposition').AppearanceComposition;
   usageDisplayMode?: string | null;
   providerUsageOverrides?: Record<string, string>;
   providerDetailWindows?: Record<string, string>;

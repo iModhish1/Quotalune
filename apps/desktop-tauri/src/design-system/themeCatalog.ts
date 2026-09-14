@@ -65,6 +65,24 @@ export interface CatalogTheme {
     | "dunes";
   /** Fixed, bounded transition duration for the canonical surface. */
   expansionMs: number;
+  /**
+   * Wave 1B theme composition: what this theme recommends for the
+   * appearance scopes that have no pre-existing relationship to Structure
+   * Theme selection (see `appearanceComposition.ts`). Entirely optional —
+   * a theme with no opinion on a scope simply omits that key, and
+   * `resolveAppearanceScope()` falls back to the user's current explicit
+   * value for that scope rather than erroring or blanking it. Only
+   * `CANONICAL_THEME` populates this today; extending it to the rest of
+   * `THEME_CATALOG` is real design work (choosing an actual recommended
+   * logo finish/tray style/background per theme), not a mechanical change,
+   * so it is left for a follow-up rather than backfilled with guesses.
+   */
+  recommendedAppearance?: {
+    quotalisLogo?: import("./logoAppearance").LogoVariant;
+    providerIdentity?: string;
+    trayStyle?: string;
+    workspaceBackground?: string;
+  };
 }
 
 const CANONICAL_PROVIDER_COLORS: Record<string, string> = {
@@ -93,6 +111,7 @@ export const CANONICAL_THEME: CatalogTheme = {
   expansionMs: 180,
   identity:{detailRadius:18,edgeStyle:'solid',font:'sans',relief:'inset 0 1px 0 #ffffff28,0 12px 28px #0008',rimSize:1,iconRadius:'50%',labelTracking:'-.01em',ornament:'radial-gradient(circle at 12% 8%,#2dd4bf18,transparent 38%)',accentHalo:'0 0 0 1px #2dd4bf2b,0 0 18px #2dd4bf1f',signature:'Orbital satin',inlay:'1px solid #b9d6ef18',meterCap:'round',connector:'#182431',markFilter:'drop-shadow(0 0 3px #dcecff88) drop-shadow(0 2px 3px #000)',markFrame:'linear-gradient(145deg,#1e4d50,#08121c)',markBorder:'#9af4e4',markBlend:'screen'},
   material:{text:'#f0f4f8',muted:'#aeb9c5',finish:'linear-gradient(145deg,#ffffff0d,transparent 46%),radial-gradient(circle at 86% 12%,#5b8def16,transparent 38%)',sheen:'#d9e7f633'},
+  recommendedAppearance:{quotalisLogo:'silver',trayStyle:'ring',workspaceBackground:'cosmic'},
 };
 
 /** Identities style the selected structure without replacing it or its native footprint. */

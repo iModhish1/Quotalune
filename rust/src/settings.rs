@@ -21,6 +21,8 @@ mod provider_instances;
 pub use provider_instances::{ProviderInstancePresentation, valid_provider_instance_id};
 mod provider_tray;
 pub use provider_tray::{ProviderTrayConfig, normalize_provider_tray};
+mod appearance_composition;
+pub use appearance_composition::{APPEARANCE_SCOPE_IDS, AppearanceComposition, AppearanceSource};
 mod analytics_preferences;
 mod api_keys;
 pub use analytics_preferences::AnalyticsPreferences;
@@ -1505,6 +1507,15 @@ pub struct Settings {
     #[serde(default)]
     pub surface_catalog_themes: std::collections::HashMap<String, String>,
 
+    /// Wave 1B theme composition: whether the logo/provider-identity/tray/
+    /// workspace-background appearance scopes follow the Main Application
+    /// theme's recommendation or keep their own explicitly-set value. See
+    /// `appearance_composition.rs` for why `floatingStructures` has no
+    /// field here (it already has real Global/Override semantics via
+    /// `surface_catalog_themes` above).
+    #[serde(default)]
+    pub appearance_composition: AppearanceComposition,
+
     /// Privacy Mode: hide account/profile names, emails, and costs across
     /// surfaces. Persisted so it survives restarts; toggleable from the tray.
     #[serde(default)]
@@ -2047,6 +2058,7 @@ impl Default for Settings {
             catalog_theme: default_catalog_theme(),
             active_profile_catalog_theme: None,
             surface_catalog_themes: std::collections::HashMap::new(),
+            appearance_composition: AppearanceComposition::default(),
             privacy_mode: false,
             promote_tray_icon: true,
             claude_daily_routines_usage_visible: true,
