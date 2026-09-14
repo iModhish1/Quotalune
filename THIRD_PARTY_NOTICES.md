@@ -1,6 +1,6 @@
 # Third-party notices
 
-QuotaArc is MIT-licensed. It builds on the work of these projects; each is used under the terms
+Quotalis is MIT-licensed. It builds on the work of these projects; each is used under the terms
 described below. This file must be updated whenever a new material dependency is adopted.
 
 ## Win-CodexBar — https://github.com/nesszer/Win-CodexBar
@@ -9,9 +9,11 @@ described below. This file must be updated whenever a new material dependency is
 - Used: provider engine (`rust/src/providers/*`), credential security layer (DPAPI secure files,
   browser cookie import), Tauri shell infrastructure (tray, settings stores, updater, float
   bar), CLI, shared domain logic.
-- Modifications: re-branded product identity via `rust/src/paths.rs` (QuotaArc directories,
-  registry value, AUMID, installer naming), QuotaArc Surface Engine added alongside the
-  inherited float bar, updater pointed at QuotaArc releases, locale strings re-branded.
+- Modifications: re-branded product identity via `rust/src/paths.rs` (compatibility identifiers
+  intentionally retained as `QuotaArc` directories, registry value and AUMID; see
+  `docs/validation/QUOTALIS_WINDOWS_IDENTITY_MIGRATION.md`), Quotalis Surface Engine added
+  alongside the inherited float bar, updater pointed at Quotalis releases, locale strings
+  re-branded.
 - Attribution: retained in `LICENSE` and `NOTICE`. Provenance details: docs/UPSTREAM_SYNC.md.
 
 ## CodexBar (macOS) — https://github.com/steipete/CodexBar
@@ -41,8 +43,8 @@ described below. This file must be updated whenever a new material dependency is
 - Frontend: React (MIT), Motion for React (MIT), Vite (MIT), Vitest (MIT), TypeScript
   (Apache-2.0)
 
-Brand assets under `assets/brand/` are original QuotaArc artwork. Provider names and marks
-referenced by integrations belong to their respective owners; QuotaArc embeds no provider
+Brand assets under `assets/brand/` are original Quotalis artwork. Provider names and marks
+referenced by integrations belong to their respective owners; Quotalis embeds no provider
 artwork in its own brand.
 
 ## About creator assets
