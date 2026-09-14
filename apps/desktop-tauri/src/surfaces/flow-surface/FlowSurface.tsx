@@ -21,6 +21,7 @@ import ReelSurface from "../reel/ReelSurface";
 import NotchSurface from "../notch/NotchSurface";
 import { isNotchForm } from "../notch/notchGeometry";
 import OfficialQuotaArcMark from '../../components/QuotaArcMark';
+import { StructurePinButton } from "../../design-system/StructureControls";
 
 export interface FlowSurfaceProps {
   catalog: string;
@@ -242,15 +243,13 @@ export default function FlowSurface({
                 compact rail's brand icon already works with no text). */}
             <span className="flow-surface__detail-title" aria-label="Quotalis"><QuotaArcMark /></span>
             <span className="flow-surface__detail-controls">
-              {/* A real pin glyph (Wave 6 Phase 4 follow-up correction —
-                  ⌖ read as an ambiguous abstract symbol). Filled when
-                  pinned, outline otherwise, matching the ⌖/× pair's
-                  existing icon-button sizing. */}
-              <button type="button" onClick={onTogglePinned} aria-pressed={state === "pinned"} aria-label={state === "pinned" ? "Unpin details" : "Pin details"}>
-                <svg aria-hidden viewBox="0 0 16 16" width="13" height="13" fill={state === "pinned" ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M8 1.5c-1.4 0-2.5 1.1-2.5 2.5 0 .9.3 1.9.7 2.7L4 9.8c-.3.4-.1 1 .4 1h3.1v3.2c0 .3.2.5.5.5s.5-.2.5-.5V10.8h3.1c.5 0 .7-.6.4-1l-2.2-3.1c.4-.8.7-1.8.7-2.7 0-1.4-1.1-2.5-2.5-2.5Z" />
-                </svg>
-              </button>
+              {/* Shared StructurePinButton (design-system/StructureControls.tsx)
+                  -- was a per-file real pin glyph here (Wave 6 Phase 4
+                  follow-up correction: replaced an ambiguous ⌖ crosshair),
+                  now the one canonical implementation every structure
+                  render path shares, so this fix can't fail to propagate
+                  to ReelSurface/NotchDetails again. */}
+              <StructurePinButton pinned={state === "pinned"} onTogglePinned={onTogglePinned} />
               <button type="button" onClick={onRequestCompact ?? onToggleExpanded} aria-label="Collapse details">×</button>
             </span>
           </header>

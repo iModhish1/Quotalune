@@ -10,6 +10,12 @@ function InteractiveReel() {
     settings={{form:"reel",anchor:"right",scale:100,autoHide:true,autoHideDelayMs:900}}
     providers={SURFACE_DEMO_PROVIDERS} focusedIndex={focus} onFocusProvider={setFocus} />;
 }
+function InteractivePinnedReel() {
+  const [pinned, setPinned] = useState(false);
+  return <ReelSurface catalog="01-obsidian-orbit" state={pinned ? "pinned" : "expanded"} demoMode
+    settings={{form:"reel",anchor:"right",scale:100,autoHide:true,autoHideDelayMs:900}}
+    providers={SURFACE_DEMO_PROVIDERS} onTogglePinned={() => setPinned((v) => !v)} />;
+}
 describe("Orbit Reel", () => {
   it("reaches all six providers and wraps to Claude with honest demo labels", () => {
     render(<InteractiveReel />);
@@ -30,5 +36,14 @@ describe("Orbit Reel", () => {
     expect(screen.getByRole("dialog", { name: "Claude quota details" })).toBeInTheDocument();
     expect(document.querySelectorAll('.reel-node[tabindex="0"]')).toHaveLength(3);
     expect(document.querySelectorAll('.reel-node[disabled]')).toHaveLength(3);
+  });
+  it("shares the same Pin control (icon + dynamic label) every other structure uses, not the stale ⌖ text glyph", () => {
+    render(<InteractivePinnedReel />);
+    const pinButton = screen.getByRole("button", { name: "Pin details" });
+    expect(pinButton).toHaveAttribute("aria-pressed", "false");
+    expect(pinButton.textContent).not.toContain("⌖");
+    fireEvent.click(pinButton);
+    const unpinButton = screen.getByRole("button", { name: "Unpin details" });
+    expect(unpinButton).toHaveAttribute("aria-pressed", "true");
   });
 });

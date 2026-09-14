@@ -32,14 +32,14 @@ describe("notch family controls",()=>{
       const side=container.querySelectorAll(".notch-provider")[1];
       fireEvent.mouseEnter(side);act(()=>vi.advanceTimersByTime(180));
       expect(Array.from(container.querySelectorAll(".notch-provider")).map(b=>b.getAttribute("aria-label"))).toEqual(before);
-      expect(screen.getByRole("button",{name:"Close usage details"})).toBeInTheDocument();
+      expect(screen.getByRole("button",{name:"Collapse details"})).toBeInTheDocument();
       fireEvent.mouseLeave(host);act(()=>vi.advanceTimersByTime(499));
       expect(container.querySelectorAll(".notch-provider")).toHaveLength(3);
       fireEvent.mouseEnter(host);act(()=>vi.advanceTimersByTime(501));
       expect(container.querySelectorAll(".notch-provider")).toHaveLength(3);
       fireEvent.mouseLeave(host);act(()=>vi.advanceTimersByTime(500));
       expect(container.querySelectorAll(".notch-provider")).toHaveLength(1);
-      expect(screen.queryByRole("button",{name:"Close usage details"})).not.toBeInTheDocument();
+      expect(screen.queryByRole("button",{name:"Collapse details"})).not.toBeInTheDocument();
       fireEvent.mouseEnter(host);
       fireEvent.wheel(host,{deltaY:120});
       expect(container.querySelector(".notch-provider")?.getAttribute("aria-label")).not.toBe(before[0]);
@@ -69,6 +69,6 @@ describe("notch family controls",()=>{
     fireEvent.keyDown(screen.getByRole("button",{name:"Claude: 73% used"}),{key:"End"});expect(focus).toHaveBeenCalledWith(5);
     expect(screen.getByRole("region",{name:"seam provider selector"})).toHaveFocus();
     expect(screen.getByText("DEMO DATA · NOT A REAL ACCOUNT")).toBeInTheDocument();
-    fireEvent.keyDown(screen.getByRole("button",{name:"Close usage details"}),{key:"Escape"});expect(close).toHaveBeenCalledOnce();
+    fireEvent.keyDown(screen.getByRole("button",{name:"Collapse details"}),{key:"Escape"});expect(close).toHaveBeenCalledOnce();
   });
 });

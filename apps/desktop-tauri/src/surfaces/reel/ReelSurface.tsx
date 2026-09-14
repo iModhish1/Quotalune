@@ -7,6 +7,7 @@ import "./ReelSurface.css";
 import UsageWindowList from "../../components/orbit/UsageWindowList";
 import QuotaArcMark from '../../components/QuotaArcMark';
 import { CANONICAL_THEME, catalogBySlug, providerColor } from "../../design-system/themeCatalog";
+import { StructurePinButton } from "../../design-system/StructureControls";
 
 /** A curved provider selector, not a clock. No ticking or permanent animation. */
 export default function ReelSurface({ catalog, settings, state, providers, focusedIndex = 0, demoMode, showDemoBadge = true,
@@ -92,7 +93,7 @@ export default function ReelSurface({ catalog, settings, state, providers, focus
           {!selected && <span className="reel-empty">No quota data</span>}
           <span className="reel-caption" aria-live="polite">{selected?.name ?? "Quotalis"}<small>{providers.length ? `${focus + 1} / ${providers.length}` : "—"}</small></span>
           <button className="reel-drag" aria-label="Move Quotalis" title="Drag to move"
-            onMouseDown={e => { if (e.button === 0) { e.preventDefault(); onStartDrag?.(); } }}>⠿</button>
+            onMouseDown={e => { if (e.button === 0) { e.preventDefault(); onStartDrag?.(); } }}>⋮</button>
         </div>
         {expanded && selected && <section className="reel-details" role="dialog" aria-label={`${selected.name} quota details`}>
           <header><span>{demoLabel ? "DEMO · SYNTHETIC" : "USAGE"}</span><button onClick={onRequestCompact} aria-label="Collapse details">×</button></header>
@@ -102,7 +103,7 @@ export default function ReelSurface({ catalog, settings, state, providers, focus
             <i style={{ width: `${Math.max(0, Math.min(1, selected.arcFraction ?? 0)) * 100}%` }} />
           </div>
           <p>Resets in {selected.reset}</p></>}
-          <footer><button onClick={() => cycle(-1)} aria-label="Previous provider">‹</button><span>{focus + 1} / {providers.length}</span><button onClick={() => cycle(1)} aria-label="Next provider">›</button><button onClick={onTogglePinned} aria-pressed={state === "pinned"} aria-label="Pin details">⌖</button></footer>
+          <footer><button onClick={() => cycle(-1)} aria-label="Previous provider">‹</button><span>{focus + 1} / {providers.length}</span><button onClick={() => cycle(1)} aria-label="Next provider">›</button><StructurePinButton pinned={state === "pinned"} onTogglePinned={onTogglePinned} /></footer>
         </section>}
       </>}
     </div>
