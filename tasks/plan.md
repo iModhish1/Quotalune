@@ -476,3 +476,16 @@ while About stayed open; that image must not count as a Settings page capture.
 6. Implement the persistent notification center and unread badge (P06-16),
    covering alert producer ingestion, redacted logs, read state, dedup and
    evidence-backed offline recovery. Complete native and persistence checks.
+
+## Continuation Wave 1 (2026-09-14) — started and partially completed
+
+Started: legal quick-close, structure registry audit, structure Pin/Close
+consistency fix (real drift found across ReelSurface/NotchDetails vs.
+FlowSurface, fixed with shared component + regression tests), partial
+loading-state audit. Completed and verified: commits `70531577`,
+`a26e8ffb`, `534d9519`, `a33113ad`. Not completed: safe-area system, the
+owner's other screenshot-defect categories, theme-composition Apply
+dialog, unified loading-visual language, native structure QA matrix. Full
+detail: `docs/validation/STRUCTURE_SYSTEM_AUDIT.md`,
+`docs/validation/LOADING_STATE_MATRIX.md`,
+`docs/validation/CLAUDE_EXECUTION_SEQUENCE.md`.

@@ -1217,3 +1217,20 @@ remain open; this is not whole-product QA or release acceptance.
   regression and workspace checks. Owner visual approval is pending before new
   final packages or publication. See PRODUCT06_ABOUT_OWNER_REVIEW.md. P06-16
   notification-center implementation remains open.
+
+- 2026-09-14 Continuation Wave 1 (Structure closure + theme composition +
+  loading UX): legal quick-close (LICENSE/THIRD_PARTY_NOTICES/Cargo.toml
+  authorship, `70531577`); real structure registry audit finding the actual
+  14-form/3-render-path system (`docs/validation/STRUCTURE_SYSTEM_AUDIT.md`);
+  found and fixed a real Pin/Close consistency defect (ReelSurface's stale
+  `⌖` glyph + static aria-label bug, NotchDetails' plain-text pin/differing
+  close label) with a shared `StructurePinButton` and regression tests
+  (`a26e8ffb`); partial loading-state audit confirming the shared data hook
+  already keeps cached data visible on same-scope refresh
+  (`docs/validation/LOADING_STATE_MATRIX.md`). Full gates re-run and green:
+  frontend 203 files/1254 tests, Rust desktop 504/1 ignored/core 1774/CLI 1,
+  clippy, fmt, secret scan, locale parity, Dev-verified build all passed.
+  Safe-area system, theme-composition Apply dialog, unified loading visual
+  language and native structure QA matrix remain open — see
+  `docs/validation/CLAUDE_EXECUTION_SEQUENCE.md` for the full remaining
+  sequence. Not whole-product QA or release acceptance.

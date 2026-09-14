@@ -536,3 +536,43 @@ this ledger's existing rows, and honest PARTIAL verdict:
 tray/background/provider/IA feature work itself remains a future session's
 work, to be picked up as its own bounded slice per this project's established
 pattern — not inferred as started from this audit alone.
+
+### M — Continuation Wave 1 (2026-09-14): Structure closure, theme
+composition, loading UX
+
+Owner requests a 36-section wave: structure/surface system closure (registry
+inventory, unified header/drag/pin/close, safe-area system, identity
+stability, native visual QA), theme composition (application-scope Apply
+dialog), and product-wide loading UX. Real work completed this wave:
+
+- **Legal quick-close** (commit `70531577`): `LICENSE` copyright line,
+  `THIRD_PARTY_NOTICES.md` current-product prose and `rust/Cargo.toml`
+  authorship updated from QuotaArc/CodexBar to Quotalis/Mohammed Modhish.
+  Compatibility identifiers (AUMID, data roots, installer identity) verified
+  untouched. Upstream attribution (Peter Steinberger, Adem Isler) unchanged.
+- **Structure registry audit** (`docs/validation/STRUCTURE_SYSTEM_AUDIT.md`):
+  the real current registry is 14 forms across three render paths
+  (FlowSurface direct, ReelSurface, NotchSurface/NotchDetails) sharing one
+  native window — not the historical Ribbon/Cradle/Deck/Satellite/Flowline/
+  Orbit Reel/Horizon/Petal example list.
+- **Structure Pin/Close consistency fix** (commit `a26e8ffb`): found and
+  fixed a real three-way drift — ReelSurface still used a stale `⌖` pin
+  glyph with a static (accessibility-broken) label; NotchDetails used plain
+  text with no icon and a differently-worded Close label. Extracted one
+  shared `StructurePinButton` (`design-system/StructureControls.tsx`) used
+  by all three render paths, with regression tests.
+- **Loading-state audit, partial** (`docs/validation/LOADING_STATE_MATRIX.md`):
+  confirmed the shared Analytics data hook already implements "don't blank
+  valid cached data on same-scope refresh" and keeps loading/unavailable/
+  zero/error distinct; a unified shared visual loading-language component
+  set remains unbuilt.
+
+**Not completed this wave** (honestly open, not claimed done): the safe-area
+token system; reproducing/fixing the owner's other screenshot categories
+(detached-looking orbs, clipped text/icons, excessive anchor gaps, hard
+clipping); the theme-composition Apply-scopes dialog and per-scope
+persistence (owner §17–23); a native visual QA matrix across all 14
+structures; large-provider-count structure fixtures. See
+`docs/validation/STRUCTURE_SYSTEM_AUDIT.md` and
+`docs/validation/LOADING_STATE_MATRIX.md` for the exact scoping. Remaining
+sequence: `docs/validation/CLAUDE_EXECUTION_SEQUENCE.md`.
