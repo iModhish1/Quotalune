@@ -22,6 +22,7 @@ import NotchSurface from "../notch/NotchSurface";
 import { isNotchForm } from "../notch/notchGeometry";
 import OfficialQuotaArcMark from '../../components/QuotaArcMark';
 import { StructurePinButton } from "../../design-system/StructureControls";
+import { structureDetailsMinContentHeight } from "../../design-system/structureGeometry";
 
 export interface FlowSurfaceProps {
   catalog: string;
@@ -152,6 +153,19 @@ export default function FlowSurface({
     "--flow-lens-details-height": scaled(146),
     "--flow-details-width": scaled(238),
     "--flow-horizon-details-height": scaled(140),
+    // Shared structure geometry contract (see structureGeometry.ts): a
+    // content-driven floor the per-form tuned heights above are clamped
+    // against via CSS max(), so a long provider/plan name or the "Resets
+    // …" line is never silently clipped by .flow-surface__details'
+    // overflow: hidden. The tuned values above still win whenever they are
+    // already tall enough — this only grows the panel when real content
+    // needs the room.
+    "--flow-details-content-min-height": scaled(
+      structureDetailsMinContentHeight({
+        hasProviderIdentity: Boolean(focused),
+        metricRows: focused?.windows ? 1 : 2,
+      }),
+    ),
   } as CSSProperties;
 
   if (state === "hidden") {

@@ -127,6 +127,17 @@ body:has(.flow-surface-host) #root {
   animation: flow-surface-in 180ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
 }
 @keyframes flow-surface-in { from { opacity: 0; transform: translate3d(var(--flow-enter-x, 0), var(--flow-enter-y, 6px), 0) scale(0.98); } to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } }
+/* Wave 1B geometry contract: petal/orbital/lens/horizon set a fixed tuned
+   height on this element below (--flow-*-details-height), and this element
+   is overflow:hidden — so the LAST rendered row (almost always the
+   "Resets …" line under the focused-provider metric) is what silently
+   gets clipped once real content (a provider-identity row + a two-line
+   metric block) is taller than the tuned value. Each of those four forms'
+   height rule is `max(<tuned>, var(--flow-details-content-min-height))`,
+   where the min-height is computed from the real rendered rows in
+   `structureGeometry.ts`'s `structureDetailsMinContentHeight()` — the
+   tuned value still wins whenever it is already tall enough, so this is a
+   safety floor under the deliberate per-form sizing, not a redesign of it. */
 /* Wave 6 Phase 4 collision-safety hardening: .flow-surface__details is a
    CSS grid, and a grid item's default min-width is `auto` (shrink-to-fit
    its content), NOT 0 — so without this, a long focused-provider name
@@ -218,7 +229,7 @@ body:has(.flow-surface-host) #root {
 .flow-surface[data-form="horizon"]:is([data-anchor="left"],[data-anchor="right"]) .flow-surface__quick-providers { flex-direction:column; }
 .flow-surface[data-form="horizon"] .flow-surface__provider-value { display: none; }
 .flow-surface[data-form="horizon"] .flow-surface__drag { right: 6px; top: 16px; }
-.flow-surface[data-form="horizon"] .flow-surface__details { right: 0; left: 0; height: var(--flow-horizon-details-height); border-radius: 22px; --flow-enter-y: -7px; }
+.flow-surface[data-form="horizon"] .flow-surface__details { right: 0; left: 0; height: max(var(--flow-horizon-details-height), var(--flow-details-content-min-height)); border-radius: 22px; --flow-enter-y: -7px; }
 .flow-surface[data-form="horizon"]:is([data-anchor="top"],[data-anchor="top-left"],[data-anchor="top-right"]) .flow-surface__details,
 .flow-surface[data-form="horizon"][data-anchor="free"] .flow-surface__details { bottom: 0; }
 .flow-surface[data-form="horizon"]:is([data-anchor="bottom"],[data-anchor="bottom-left"],[data-anchor="bottom-right"]) .flow-surface__details { top: 0; --flow-enter-y: 7px; }
@@ -232,7 +243,7 @@ body:has(.flow-surface-host) #root {
 .flow-surface[data-form="petal"] .flow-surface__quick-providers { align-self: center; gap: 8px; }
 .flow-surface[data-form="petal"] .flow-surface__provider-value { display: none; }
 .flow-surface[data-form="petal"] .flow-surface__drag { right: 5px; top: 4px; }
-.flow-surface[data-form="petal"] .flow-surface__details { width: var(--flow-petal-details-width); height: var(--flow-petal-details-height); border-radius: 24px; }
+.flow-surface[data-form="petal"] .flow-surface__details { width: var(--flow-petal-details-width); height: max(var(--flow-petal-details-height), var(--flow-details-content-min-height)); border-radius: 24px; }
 .flow-surface[data-form="petal"][data-anchor="bottom-right"] .flow-surface__core,
 .flow-surface[data-form="petal"][data-anchor="free"] .flow-surface__core { right: 0; bottom: 0; }
 .flow-surface[data-form="petal"][data-anchor="bottom-right"] .flow-surface__details,
@@ -264,7 +275,7 @@ body:has(.flow-surface-host) #root {
 .flow-surface[data-form="orbital"] .flow-surface__quick-providers { width: 100%; justify-content: center; gap: 1px; }
 .flow-surface[data-form="orbital"] .flow-surface__provider-value { display: none; }
 .flow-surface[data-form="orbital"] .flow-surface__drag { top: 2px; right: 2px; }
-.flow-surface[data-form="orbital"] .flow-surface__details { width: var(--flow-orbital-details-width); height: var(--flow-orbital-details-height); border-radius: 26px; }
+.flow-surface[data-form="orbital"] .flow-surface__details { width: var(--flow-orbital-details-width); height: max(var(--flow-orbital-details-height), var(--flow-details-content-min-height)); border-radius: 26px; }
 .flow-surface[data-form="orbital"][data-anchor="bottom-right"] .flow-surface__core,
 .flow-surface[data-form="orbital"][data-anchor="free"] .flow-surface__core { right: 0; bottom: 0; }
 .flow-surface[data-form="orbital"][data-anchor="bottom-right"] .flow-surface__details,
@@ -294,7 +305,7 @@ body:has(.flow-surface-host) #root {
 .flow-surface[data-form="lens"] .flow-surface__quick-providers { align-self: flex-end; gap: 3px; }
 .flow-surface[data-form="lens"] .flow-surface__provider-value { display: none; }
 .flow-surface[data-form="lens"] .flow-surface__drag { top: 3px; right: 4px; }
-.flow-surface[data-form="lens"] .flow-surface__details { width: var(--flow-lens-details-width); height: var(--flow-lens-details-height); border-radius: 26px; }
+.flow-surface[data-form="lens"] .flow-surface__details { width: var(--flow-lens-details-width); height: max(var(--flow-lens-details-height), var(--flow-details-content-min-height)); border-radius: 26px; }
 .flow-surface[data-form="lens"][data-anchor="bottom-right"] .flow-surface__core, .flow-surface[data-form="lens"][data-anchor="free"] .flow-surface__core { right: 0; bottom: 0; }
 .flow-surface[data-form="lens"][data-anchor="bottom-right"] .flow-surface__details, .flow-surface[data-form="lens"][data-anchor="free"] .flow-surface__details { top: 0; left: 0; }
 .flow-surface[data-form="lens"][data-anchor="bottom-left"] .flow-surface__core { left: 0; bottom: 0; }
