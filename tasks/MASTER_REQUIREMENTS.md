@@ -513,3 +513,26 @@ native Demo screenshot, Windows installer, portable ZIP, separate CLI ZIP and
 SHA256 manifest. Published links return HTTP 200 and asset digests match the
 verified build. Internal evidence: docs/validation/QUOTALIS_0_11_0_PUBLICATION.md.
 This closes publication/public-presentation only, not remaining product QA rows.
+
+## M — Master product completion request (2026-09-14, Claude)
+
+Owner requests a 71-section end-to-end completion: legal/OSS cleanup,
+structure/theme composition system, Tray Studio, notifications, backgrounds,
+loading UX, provider onboarding hardening, IA consolidation, product-wide QA
+and a Codex publish handoff, targeting a future v0.12.0. Reconciliation found
+local HEAD had already advanced 30+ commits past this session's prior
+knowledge (About/notifications/carousel/profiles/collections/publication),
+and v0.11.0 was already published to GitHub today by prior work — see
+`docs/validation/QUOTALIS_0_11_0_PUBLICATION.md`.
+
+Given the request's real scope (multiple weeks), this session selected one
+evidence-backed slice rather than claiming full completion: a file-by-file
+legal/open-source provenance audit and a rebrand-string cleanup pass (five
+real user-facing "QuotaArc" strings fixed, including one functional CLI-name
+bug, at commit `cd7dcc3c`). Full mapping of the remaining 71 sections against
+this ledger's existing rows, and honest PARTIAL verdict:
+`docs/validation/QUOTALIS_MASTER_PRODUCT_AUDIT.md` and
+`docs/validation/LEGAL_OPEN_SOURCE_AUDIT.md`. M01 (open): the structure/theme/
+tray/background/provider/IA feature work itself remains a future session's
+work, to be picked up as its own bounded slice per this project's established
+pattern — not inferred as started from this audit alone.
