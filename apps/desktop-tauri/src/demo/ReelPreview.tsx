@@ -30,7 +30,7 @@ export default function ReelPreview() {
   const position={x:Math.max(0,Math.min(positioned.x,area.width-width)),y:Math.max(0,Math.min(positioned.y,area.height-height))};
   useEffect(()=>{if(!canvas.current)return;const observer=new ResizeObserver(([entry])=>setArea({width:entry.contentRect.width,height:entry.contentRect.height}));observer.observe(canvas.current);return()=>observer.disconnect();},[]);
   return <main style={{ position: "fixed", inset: 0, background: "radial-gradient(ellipse at 15% 85%,#dfb8a0,transparent 60%),radial-gradient(ellipse at 85% 15%,#a6c7cb,transparent 65%),#e2deda", color: "#202427", padding: 20 }}>
-    <h1 style={{ fontSize: 18,margin:0 }}>QuotaArc · Structure Studio</h1><p style={{fontSize:11}}>Actual-size components · six synthetic providers</p>
+    <h1 style={{ fontSize: 18,margin:0 }}>Quotalis · Structure Studio</h1><p style={{fontSize:11}}>Actual-size components · six synthetic providers</p>
     <label>Structure <select aria-label="Preview structure" value={form} onChange={e=>{setForm(e.target.value as FlowSurfaceForm);setFocus(0);}}>
       {FLOW_SURFACE_FORM_CATALOG.map(({id,name})=><option key={id} value={id}>{name}</option>)}</select></label><br/>
     <label>Position <select aria-label="Preview position" value={anchor} onChange={e => setAnchor(e.target.value as FlowSurfaceAnchor)}>
