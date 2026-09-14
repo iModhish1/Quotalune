@@ -97,12 +97,12 @@ export default function ReelSurface({ catalog, settings, state, providers, focus
         </div>
         {expanded && selected && <section className="reel-details" role="dialog" aria-label={`${selected.name} quota details`}>
           <header><span>{demoLabel ? "DEMO · SYNTHETIC" : "USAGE"}</span><button onClick={onRequestCompact} aria-label="Collapse details">×</button></header>
-          <strong className="reel-detail-name">{selected.name}</strong>
+          <strong className="reel-detail-name" title={selected.name}>{selected.name}</strong>
           {selected.windows ? <UsageWindowList providerId={selected.id} windows={selected.windows} hidden={selected.detailsHidden} presentation={selected.limitPresentation}/> : <><div className="reel-detail-value">{formatPercentage(selected.primaryValue)}<small>{selected.primaryLabel}</small></div>
           <div className="reel-progress" role="meter" aria-label={`${selected.name} ${selected.primaryLabel}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={selected.primaryValue ?? undefined}>
             <i style={{ width: `${Math.max(0, Math.min(1, selected.arcFraction ?? 0)) * 100}%` }} />
           </div>
-          <p>Resets in {selected.reset}</p></>}
+          <p className="reel-detail-reset" title={`Resets in ${selected.reset}`}>Resets in {selected.reset}</p></>}
           <footer><button onClick={() => cycle(-1)} aria-label="Previous provider">‹</button><span>{focus + 1} / {providers.length}</span><button onClick={() => cycle(1)} aria-label="Next provider">›</button><StructurePinButton pinned={state === "pinned"} onTogglePinned={onTogglePinned} /></footer>
         </section>}
       </>}

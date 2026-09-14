@@ -46,4 +46,37 @@ describe("Orbit Reel", () => {
     const unpinButton = screen.getByRole("button", { name: "Unpin details" });
     expect(unpinButton).toHaveAttribute("aria-pressed", "true");
   });
+
+  it("truncates a long provider name and reset string to one line instead of pushing the footer's Pin/Close controls out of the fixed-size native window", () => {
+    // Wave 1B §19/§38: Reel's clipping risk is a fixed-size box inside a
+    // fixed-size native window (unlike FlowSurface's overflow:hidden +
+    // grid-height case) — an unbounded-height name/reset line here would
+    // silently push real content (the footer) past the window's own
+    // bounds, not just past this CSS box.
+    const longNameProvider = {
+      ...SURFACE_DEMO_PROVIDERS[0],
+      name: "A Very Long Enterprise Provider Account Display Name",
+      reset: "2 days, 14 hours, 22 minutes, 9 seconds from now",
+    };
+    render(
+      <ReelSurface
+        catalog="01-obsidian-orbit"
+        state="expanded"
+        settings={{ form: "reel", anchor: "right", scale: 100, autoHide: true, autoHideDelayMs: 900 }}
+        providers={[longNameProvider]}
+      />,
+    );
+    const name = document.querySelector(".reel-detail-name") as HTMLElement;
+    expect(name).toHaveTextContent(longNameProvider.name);
+    expect(name).toHaveAttribute("title", longNameProvider.name);
+    const reset = screen.getByText(`Resets in ${longNameProvider.reset}`);
+    expect(reset).toHaveClass("reel-detail-reset");
+    expect(reset).toHaveAttribute("title", `Resets in ${longNameProvider.reset}`);
+    // The footer's Pin/Close controls must still be reachable regardless of
+    // how long the name/reset content is — a real reproduction of the
+    // owner's "controls pushed off-screen" complaint would surface here as
+    // these queries failing.
+    expect(screen.getByRole("button", { name: "Collapse details" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pin details" })).toBeInTheDocument();
+  });
 });

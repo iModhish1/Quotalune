@@ -23,17 +23,30 @@
 .reel-drag { position: absolute; right: 2px; top: 86px; width: 24px; height: 30px; opacity: .6; cursor: grab !important; }
 .reel-drag:hover { opacity: 1; }
 .reel-empty { position: absolute; top: 90px; left: 14px; font-size: 11px; }
+/* Reel's clipping risk is structurally different from FlowSurface's:
+   .reel-details is a fixed-size box inside a native window sized to match
+   (.reel-host is overflow:hidden at 100%, itself matched to the OS window —
+   growing this CSS box does not grow the window). FlowSurface's fix (a
+   content-height floor the panel grows to) cannot apply here; a long
+   provider name or localized "Resets in …" string must instead never grow
+   taller than one line, or it silently pushes the footer's Pin/Close
+   controls past the window's own bounds. See .reel-detail-name and
+   .reel-detail-reset below. overflow:hidden on this card itself is a
+   defensive backstop so any remaining overflow stays inside the card's own
+   rounded shape instead of visually bleeding past its border. */
 .reel-details { box-sizing: border-box; position: absolute; width: 200px; height: 208px; top: 50%; left: 0; transform: translateY(-50%); padding: 16px;
+  overflow: hidden;
   border: 1px solid #444d59; border-radius: 24px; background: linear-gradient(145deg,#262b32,#0b0e12 65%); box-shadow: inset 0 1px 0 #ffffff13; }
 .reel-details header,.reel-details footer { display: flex; align-items: center; justify-content: space-between; }
 .reel-details header { font-size: 8px; letter-spacing: 1.1px; color: #aeb8c6; }
 .reel-details header button { font-size: 22px; width: 24px; height: 24px; margin-top: -6px; }
-.reel-detail-name { display: block; font-size: 14px; margin-top: 7px; }
+.reel-detail-name { display: block; overflow: hidden; max-width: 100%; font-size: 14px; margin-top: 7px; text-overflow: ellipsis; white-space: nowrap; }
 .reel-detail-value { margin: 7px 0; font-size: 30px; font-variant-numeric: tabular-nums; letter-spacing: -1px; }
 .reel-detail-value small { font-size: 10px; letter-spacing: 0; margin-left: 7px; color: #a9b2bf; }
 .reel-progress { height: 4px; border-radius: 4px; overflow: hidden; background: #414752; }
 .reel-progress i { display: block; height: 100%; background: #c2cfda; border-radius: inherit; transition: width 250ms ease; }
 .reel-details p { font-size: 10px; color: #aeb8c6; margin: 8px 0; }
+.reel-detail-reset { overflow: hidden; max-width: 100%; text-overflow: ellipsis; white-space: nowrap; }
 .reel-details footer { color: #aeb8c6; font-size: 10px; }
 .reel-details footer button { width: 28px; height: 25px; border-radius: 8px; background: #ffffff09; font-size: 18px; }
 .reel-reveal { width: 100%; height: 100%; border: 1px solid var(--surface-edge) !important; border-radius: 18px !important; background: linear-gradient(130deg,var(--surface-raised),var(--surface-core)) !important; }

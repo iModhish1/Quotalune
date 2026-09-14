@@ -67,7 +67,16 @@
 .notch-detail header strong{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:500;letter-spacing:-.25px}
 .notch-detail header button{width:24px;height:24px;font-size:18px;color:#a6a6aa}
 .notch-detail-meta{display:flex;justify-content:space-between;gap:8px;font-size:9px;line-height:13px;margin-top:12px;color:#d5d5d8}
-.notch-detail-meta span:last-child{color:var(--notch-muted);text-align:right}
+/* .notch-detail's rect is a single fixed {width:248,height:148} for every
+   notch form (notchGeometry.ts), not derived from content — same
+   fixed-box-plus-overflow:hidden shape as FlowSurface's reset-clipping
+   defect. The header's provider name already truncates
+   (.notch-detail header strong above); the reset value here did not, so a
+   long localized "Resets in …" string could wrap to a second line and
+   push the meter/value/footer down inside the fixed rect, clipping the
+   footer's Pin/Close controls. min-width:0 lets a flex child shrink below
+   its content size so the ellipsis can actually engage. */
+.notch-detail-meta span:last-child{overflow:hidden;min-width:0;color:var(--notch-muted);text-align:right;text-overflow:ellipsis;white-space:nowrap}
 .notch-meter{height:5px;margin-top:6px;border-radius:5px;overflow:hidden;background:#303033}
 .notch-meter i{display:block;height:100%;border-radius:inherit;background:var(--provider-color);transition:width 240ms cubic-bezier(.2,.8,.2,1)}
 .notch-detail-value{font-size:10px;margin-top:7px;color:#dedee1}

@@ -11,7 +11,7 @@ export function NotchDetails({provider,rect,demo,pinned,onClose,onPin,color=prov
     <header><QaProviderIcon providerId={provider.iconId === "openai"?"codex":provider.iconId} size={18}/><strong title={provider.name}>{provider.name} Usage</strong>
       <button onClick={onClose} aria-label="Collapse details">×</button></header>
     {provider.windows ? <UsageWindowList providerId={provider.id} windows={provider.windows} hidden={provider.detailsHidden} presentation={provider.limitPresentation}/> : <>
-    <div className="notch-detail-meta"><span>Selected limit</span><span>{provider.reset === "—" ? "Reset unavailable" : `Resets in ${provider.reset}`}</span></div>
+    <div className="notch-detail-meta"><span>Selected limit</span><span title={provider.reset === "—" ? "Reset unavailable" : `Resets in ${provider.reset}`}>{provider.reset === "—" ? "Reset unavailable" : `Resets in ${provider.reset}`}</span></div>
     <div className="notch-meter" role="meter" aria-label={`${provider.name} ${provider.primaryLabel}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={provider.primaryValue ?? undefined}>
       <i style={{width:`${Math.max(0,Math.min(1,provider.arcFraction ?? 0))*100}%`}}/></div>
     <div className="notch-detail-value"><b>{formatPercentage(provider.primaryValue)}</b> {provider.primaryLabel}
