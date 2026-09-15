@@ -1,0 +1,105 @@
+import "./QuotalisLoadingStates.css";
+
+/**
+ * Wave 1B §38: the shared Quotalis loading visual language. Deliberately a
+ * small API (§38 "do not build six giant components") reusing the same
+ * obsidian/titanium shimmer material `DashboardHost.css`'s skeleton already
+ * established (`--qa-material-raised` color-mix gradient, reduced-motion
+ * guarded) rather than inventing a second visual language for it.
+ *
+ * `QuotalisAsyncState` covers the five states where there is nothing of the
+ * caller's own to show yet: `loading` (first load, no cached data),
+ * `noData`, `unavailable`, `error`, `timeout`. It intentionally does NOT
+ * have a `zero` or `refreshing` variant:
+ *
+ * - **Real zero (§42)** is not a loading state at all — it is real,
+ *   successfully-loaded data whose value happens to be 0. The caller
+ *   renders its own real value UI directly; nothing in this module ever
+ *   substitutes a "No data"/"Unavailable" message for an observed zero.
+ *   That is a caller-side contract this module cannot enforce by itself,
+ *   which is exactly why it is not one of this component's own states —
+ *   folding "zero" in here would invite exactly the bug §42 warns about.
+ * - **Refreshing (§41)** is additive, not a full-state replacement: valid
+ *   cached data stays on screen and a small `QuotalisRefreshingBadge` is
+ *   rendered alongside it. Use `QuotalisAsyncState` only for the *first*
+ *   load with nothing cached yet.
+ */
+export type QuotalisAsyncStatus = "loading" | "noData" | "unavailable" | "error" | "timeout";
+
+export interface QuotalisAsyncStateProps {
+  status: QuotalisAsyncStatus;
+  /** Required for "unavailable"/"error"/"timeout"; ignored for "loading"/"noData". */
+  message?: string;
+  /** Shown only for "error"/"timeout" when provided. Never shown for the other statuses. */
+  onRetry?: () => void;
+  retryLabel?: string;
+  /** Number of skeleton bars to render for "loading". */
+  skeletonRows?: number;
+}
+
+/**
+ * One real, static message per status — the reason all five read as
+ * distinct UI, not a "Retry" test asserting they're merely different
+ * *props*. §43: "Unavailable" never quietly becomes "0%"/"$0"/"reset now";
+ * §45: Timeout gets its own message, not folded into a generic error.
+ */
+const DEFAULT_MESSAGE: Record<Exclude<QuotalisAsyncStatus, "loading">, string> = {
+  noData: "No data yet",
+  unavailable: "Unavailable",
+  error: "Something went wrong",
+  timeout: "This took too long to respond",
+};
+
+export function QuotalisAsyncState({
+  status,
+  message,
+  onRetry,
+  retryLabel = "Retry",
+  skeletonRows = 3,
+}: QuotalisAsyncStateProps) {
+  if (status === "loading") {
+    return <QuotalisSkeleton rows={skeletonRows} />;
+  }
+  const resolvedMessage = message ?? DEFAULT_MESSAGE[status];
+  return (
+    <div className="quotalis-async-state" data-status={status} role={status === "error" || status === "timeout" ? "alert" : "status"}>
+      <p className="quotalis-async-state__message">{resolvedMessage}</p>
+      {/* Retry is only ever offered for a genuinely retryable condition —
+          "no data" (nothing has loaded because nothing exists yet) and
+          "unavailable" (the provider/surface itself doesn't support this)
+          are not failures a retry would fix, so no button is rendered for
+          them even if a caller passes onRetry by mistake. */}
+      {(status === "error" || status === "timeout") && onRetry && (
+        <button type="button" className="quotalis-async-state__retry" onClick={onRetry}>
+          {retryLabel}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Standalone skeleton, also used internally by QuotalisAsyncState's
+ * "loading" status. Obsidian/titanium shimmer, static under reduced motion
+ * (handled entirely in CSS — see QuotalisLoadingStates.css). */
+export function QuotalisSkeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <div className="quotalis-skeleton" aria-hidden="true">
+      {Array.from({ length: rows }, (_, i) => (
+        <div className="quotalis-skeleton__bar" key={i} />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * §41: rendered ALONGSIDE cached content during a background refresh —
+ * never replaces it. Small, quiet, no full-content blur (§39).
+ */
+export function QuotalisRefreshingBadge({ label = "Updating…" }: { label?: string }) {
+  return (
+    <span className="quotalis-refreshing-badge" role="status">
+      <span className="quotalis-refreshing-badge__dot" aria-hidden="true" />
+      {label}
+    </span>
+  );
+}

@@ -1,0 +1,122 @@
+/* Obsidian/titanium shimmer material, same family as
+   DashboardHost.css's .dashboard-host__skeleton-bar — reused here rather
+   than re-invented so "loading" reads as one consistent Quotalis visual
+   language everywhere it appears (§38/§39). */
+.quotalis-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 2px;
+}
+
+.quotalis-skeleton__bar {
+  height: 16px;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--qa-material-raised) 62%, transparent),
+    color-mix(in srgb, var(--qa-material-raised) 38%, transparent),
+    color-mix(in srgb, var(--qa-material-raised) 62%, transparent)
+  );
+  background-size: 200% 100%;
+  animation: quotalis-loading-shimmer 1.6s ease-in-out infinite;
+}
+.quotalis-skeleton__bar:nth-child(2) {
+  width: 82%;
+}
+.quotalis-skeleton__bar:nth-child(3) {
+  width: 58%;
+}
+
+@keyframes quotalis-loading-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* §40 reduced motion: replace the moving shimmer with a restrained static
+   fill rather than an endless animation against the OS preference — the
+   Loading state must still read as obviously "loading", just not moving. */
+@media (prefers-reduced-motion: reduce) {
+  .quotalis-skeleton__bar {
+    background: color-mix(in srgb, var(--qa-material-raised) 50%, transparent);
+    animation: none;
+  }
+}
+[data-qa-motion="reduced"] .quotalis-skeleton__bar,
+[data-qa-motion="off"] .quotalis-skeleton__bar {
+  background: color-mix(in srgb, var(--qa-material-raised) 50%, transparent);
+  animation: none;
+}
+
+.quotalis-async-state {
+  display: grid;
+  gap: 6px;
+  padding: 10px 2px;
+  color: var(--qa-text-muted);
+}
+.quotalis-async-state__message {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 550;
+}
+/* Error/timeout read as visually distinct from noData/unavailable (never
+   the same flat muted text) so the difference is legible at a glance, not
+   just in markup. */
+.quotalis-async-state[data-status="error"] .quotalis-async-state__message,
+.quotalis-async-state[data-status="timeout"] .quotalis-async-state__message {
+  color: #e26a6a;
+}
+.quotalis-async-state__retry {
+  justify-self: start;
+  padding: 5px 12px;
+  color: var(--qa-text);
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--qa-hairline);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+.quotalis-async-state__retry:hover {
+  border-color: var(--qa-text-muted);
+}
+
+.quotalis-refreshing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--qa-text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.quotalis-refreshing-badge__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--qa-accent, #2dd4bf);
+  animation: quotalis-refreshing-pulse 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .quotalis-refreshing-badge__dot {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+[data-qa-motion="reduced"] .quotalis-refreshing-badge__dot,
+[data-qa-motion="off"] .quotalis-refreshing-badge__dot {
+  animation: none;
+  opacity: 0.7;
+}
+@keyframes quotalis-refreshing-pulse {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}

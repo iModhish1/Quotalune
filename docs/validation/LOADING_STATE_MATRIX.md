@@ -1,16 +1,33 @@
-# Loading / Refreshing / Unavailable UX Audit — 2026-09-14 (partial)
+# Loading / Refreshing / Unavailable UX Audit — 2026-09-15 (partial, component set now implemented)
 
 ## Scope and honesty note
 
-This is a **partial** audit spot-checking the shared data layer and a
-handful of representative surfaces, not the exhaustive full-matrix pass the
-owner's request describes (every async surface × 7 states). Given this
-wave's remaining time budget after the legal-quick-close and structure
-consistency fix, a full implementation of a new shared visual loading
-language (skeleton/shimmer/progress components, applied across every
-surface, with native screenshot verification) was not attempted — that is
-real, multi-day UI work requiring its own native QA cycle, not something to
-claim done from a code read alone.
+Wave 1B FINAL implemented the shared component library this audit
+previously described as unstarted work (§38):
+`design-system/QuotalisLoadingStates.tsx`/`.css` — `QuotalisAsyncState`
+(loading/noData/unavailable/error/timeout), `QuotalisSkeleton`, and
+`QuotalisRefreshingBadge`, reusing `DashboardHost.css`'s existing
+obsidian/titanium shimmer material rather than inventing a second visual
+language, with `prefers-reduced-motion` and the app's own
+`data-qa-motion="reduced"|"off"` attribute both honored. 10 unit tests
+prove the five `QuotalisAsyncState` statuses render distinct DOM/markup
+(not just distinct prop values), that Retry is offered only for
+error/timeout (never noData/unavailable, which are not retryable
+failures), and that error/timeout use `role="alert"` while noData/
+unavailable use `role="status"`.
+
+**Still genuinely open, not claimed done**: this component set is not yet
+wired into any of the real Dashboard/provider/reset/structure/connection
+surfaces listed below — each of those already has its own working
+(if inconsistent) loading treatment tied to locale strings and, in
+Analytics' case, data logic this wave was explicitly told not to touch
+("Do not rewrite Analytics data logic, only unify presentation" — §47).
+Migrating a real surface to the shared component set safely needs the same
+native-verification cycle this document has consistently required before
+claiming a UI change is correct, which was not performed this wave. So:
+the shared library itself is real and tested; using it everywhere is real,
+unstarted follow-up work, same honesty standard as every other item in
+this file.
 
 ## What already exists (real, verified by reading the source)
 
@@ -55,11 +72,10 @@ specifically requests in §25.
 
 ## What is genuinely open (not fixed or built this wave)
 
-- **No single shared loading-visual-language component.** Each surface
-  implements its own loading/skeleton/spinner treatment independently.
-  Building one shared component set (obsidian/titanium, silver highlight,
-  restrained luminous edge, Dark+Light) and migrating every surface to it is
-  real, unstarted work.
+- **The shared component set exists and is tested (see above) but is not
+  wired into any real surface yet.** Migrating Dashboard/provider/reset/
+  structure/connection surfaces to it — and native-verifying each — is
+  real, unstarted follow-up work.
 - **No exhaustive per-surface matrix.** This audit spot-checked the shared
   Analytics data hook and confirmed the vocabulary/pattern exists; it did
   not walk every listed surface (provider connect, Data Sources, background
@@ -75,6 +91,9 @@ specifically requests in §25.
 LOADING UX: **PARTIAL** — the hard architectural rule (don't blank valid
 cached data on same-scope refresh; keep loading/unavailable/zero/error
 distinct) is already correctly implemented in the shared data layer and
-independently verified in a prior phase's test suite; a unified shared
-visual loading language and an exhaustive per-surface matrix remain open,
-honestly not claimed done.
+independently verified in a prior phase's test suite. Wave 1B FINAL added
+the real, tested shared visual-language component set the owner
+specifically asked for (§38-40) — genuinely new, not merely re-described.
+Still open: wiring that component set into real surfaces, an exhaustive
+per-surface matrix, and native visual verification of any of it. Not
+claimed as PASS.
