@@ -50,4 +50,25 @@ describe("resolveStructureConnector", () => {
     // divergence between "is this attached" and "what gap did we place at".
     expect(DEFAULT_CONNECTOR_THRESHOLDS.attachedThreshold).toBe(6);
   });
+
+  it("Wave 1F: a real overlap (negative gap component) reads as attached, never as a large required connector", () => {
+    // Caught while wiring real measured geometry in (petal/orbital/lens's
+    // bounding boxes overlap by design, e.g. -84/-98px) -- the original
+    // implementation took Math.abs() of the raw gap first, so a 90px
+    // overlap was scored as a 90px *gap*, wrongly requiring a connector
+    // between two shapes that already read as one surface.
+    const bigOverlap = resolveStructureConnector({ x: -84, y: -98 });
+    expect(bigOverlap.attached).toBe(true);
+    expect(bigOverlap.connectorRequired).toBe(false);
+    expect(bigOverlap.exceedsMaximum).toBe(false);
+    expect(bigOverlap.length).toBe(0);
+
+    // A small overlap on one axis combined with a real gap on the other
+    // axis: only the real (clamped-to->=0) gap should drive the decision.
+    const mixed = resolveStructureConnector({ x: -20, y: 10 });
+    expect(mixed.attached).toBe(false);
+    expect(mixed.connectorRequired).toBe(true);
+    expect(mixed.orientation).toBe("vertical");
+    expect(mixed.length).toBe(10);
+  });
 });

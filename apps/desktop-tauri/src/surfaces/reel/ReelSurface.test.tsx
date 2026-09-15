@@ -161,4 +161,51 @@ describe("Orbit Reel", () => {
       }
     },
   );
+
+  describe("attachment connector (Wave 1F §17, §21)", () => {
+    it("renders the shared connector primitive when expanded at the default (right) anchor", () => {
+      const { container } = render(
+        <ReelSurface catalog="01-obsidian-orbit" state="expanded"
+          settings={{ form: "reel", anchor: "right", scale: 100, autoHide: true, autoHideDelayMs: 900 }}
+          providers={SURFACE_DEMO_PROVIDERS} />,
+      );
+      expect(container.querySelector(".structure-connector--reel")).toBeInTheDocument();
+    });
+
+    it("mirrors the connector's position for a left anchor (RTL-equivalent layout), same shared primitive", () => {
+      const { container: right } = render(
+        <ReelSurface catalog="01-obsidian-orbit" state="expanded"
+          settings={{ form: "reel", anchor: "right", scale: 100, autoHide: true, autoHideDelayMs: 900 }}
+          providers={SURFACE_DEMO_PROVIDERS} />,
+      );
+      const { container: left } = render(
+        <ReelSurface catalog="01-obsidian-orbit" state="expanded"
+          settings={{ form: "reel", anchor: "left", scale: 100, autoHide: true, autoHideDelayMs: 900 }}
+          providers={SURFACE_DEMO_PROVIDERS} />,
+      );
+      const rightSvg = right.querySelector(".structure-connector--reel") as HTMLElement;
+      const leftSvg = left.querySelector(".structure-connector--reel") as HTMLElement;
+      expect(rightSvg).toBeInTheDocument();
+      expect(leftSvg).toBeInTheDocument();
+      expect(leftSvg.style.left).not.toBe(rightSvg.style.left);
+    });
+
+    it("does not render a connector for the horizontal (top/bottom anchor) layout, whose overlapping geometry was not separately derived", () => {
+      const { container } = render(
+        <ReelSurface catalog="01-obsidian-orbit" state="expanded"
+          settings={{ form: "reel", anchor: "top", scale: 100, autoHide: true, autoHideDelayMs: 900 }}
+          providers={SURFACE_DEMO_PROVIDERS} />,
+      );
+      expect(container.querySelector(".structure-connector--reel")).not.toBeInTheDocument();
+    });
+
+    it("does not render a connector when compact (no detail panel open)", () => {
+      const { container } = render(
+        <ReelSurface catalog="01-obsidian-orbit" state="compact"
+          settings={{ form: "reel", anchor: "right", scale: 100, autoHide: true, autoHideDelayMs: 900 }}
+          providers={SURFACE_DEMO_PROVIDERS} />,
+      );
+      expect(container.querySelector(".structure-connector--reel")).not.toBeInTheDocument();
+    });
+  });
 });

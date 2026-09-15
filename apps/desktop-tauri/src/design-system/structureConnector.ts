@@ -66,9 +66,9 @@ export const DEFAULT_CONNECTOR_THRESHOLDS: ConnectorThresholds = {
   maxConnectorLength: 32,
 };
 
-function dominantOrientation(gap: ConnectorGap): ConnectorOrientation {
-  const ax = Math.abs(gap.x);
-  const ay = Math.abs(gap.y);
+function dominantOrientation(gapX: number, gapY: number): ConnectorOrientation {
+  const ax = Math.abs(gapX);
+  const ay = Math.abs(gapY);
   if (ax <= 1 && ay <= 1) return "horizontal"; // both ~0: no meaningful axis, pick a stable default
   if (ax > ay * 2) return "horizontal";
   if (ay > ax * 2) return "vertical";
@@ -78,12 +78,27 @@ function dominantOrientation(gap: ConnectorGap): ConnectorOrientation {
 /**
  * Decides whether/how a connector should bridge a structure's anchor and
  * detail region, given the real measured gap between them.
+ *
+ * Wave 1F fix: `ConnectorGap`'s own doc comment says a negative component
+ * means overlap ("0 (or negative, meaning overlap) = touching"), but the
+ * original implementation took `Math.abs()` of the raw gap before
+ * comparing to the thresholds — so a real overlap (e.g. two rounded
+ * shapes whose bounding boxes intersect by 90px, as FlowSurface's
+ * petal/orbital/lens forms do by design) was scored as a 90px *gap*,
+ * incorrectly returning `connectorRequired: true` for two elements that
+ * already read as one continuous surface. Caught while wiring real
+ * measured geometry in from `structureConnectorGeometry.ts` (§17) rather
+ * than synthetic test gaps only. Fixed by clamping each axis to >= 0
+ * (overlap collapses to "touching") before computing distance —
+ * `MIN_ATTACHED_GAP_TESTS` below pins this.
  */
 export function resolveStructureConnector(
   gap: ConnectorGap,
   thresholds: ConnectorThresholds = DEFAULT_CONNECTOR_THRESHOLDS,
 ): ConnectorDecision {
-  const distance = Math.max(Math.abs(gap.x), Math.abs(gap.y));
+  const gapX = Math.max(0, gap.x);
+  const gapY = Math.max(0, gap.y);
+  const distance = Math.max(gapX, gapY);
   const attached = distance <= thresholds.attachedThreshold;
   const exceedsMaximum = distance > thresholds.maxConnectorLength;
   const connectorRequired = !attached && !exceedsMaximum;
@@ -92,7 +107,7 @@ export function resolveStructureConnector(
     attached,
     connectorRequired,
     exceedsMaximum,
-    orientation: dominantOrientation(gap),
+    orientation: dominantOrientation(gapX, gapY),
     length,
   };
 }

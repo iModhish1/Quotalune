@@ -25,6 +25,10 @@ import { StructurePinButton } from "../../design-system/StructureControls";
 import { structureDetailsMinContentHeight } from "../../design-system/structureGeometry";
 import { useLocale } from "../../hooks/useLocale";
 import { QuotalisRefreshingBadge } from "../../design-system/QuotalisLoadingStates";
+import { resolveStructureConnector } from "../../design-system/structureConnector";
+import { structureConnectorReferenceGap } from "../../design-system/structureConnectorGeometry";
+import { StructureConnector } from "../../design-system/StructureConnectorView";
+import "../../design-system/StructureConnectorView.css";
 
 export interface FlowSurfaceProps {
   catalog: string;
@@ -169,6 +173,21 @@ export default function FlowSurface({
   const focused = visible[focus];
   const hasQuotaData = visible.length > 0;
   const expanded = hasQuotaData && (state === "expanded" || state === "pinned");
+  // Wave 1F §17: real measured core-to-details gap per form, from
+  // structureConnectorGeometry.ts's cited derivation (BASE_ENVELOPES
+  // minus each form's own fixed core/details CSS dimensions) -- NOT
+  // fabricated per-form numbers. Most forms (petal/orbital/lens) already
+  // overlap by design (their tuned envelopes are smaller than
+  // core+details combined) and correctly resolve to `attached`, so no
+  // connector renders for them; flowline's real 36px gap exceeds the
+  // model's own maxConnectorLength, a genuine disclosed placement
+  // finding rather than something to paper over with a longer bridge.
+  // Horizon is the one form with a real, in-range gap (10px) -- and only
+  // for its reference (non-rotated) anchors; left/right rotates its
+  // layout to a dimension this module has not separately derived, so the
+  // connector is deliberately withheld there rather than guessed.
+  const connectorDecision = resolveStructureConnector(structureConnectorReferenceGap(settings.form));
+  const showConnector = expanded && settings.form === "horizon" && settings.anchor !== "left" && settings.anchor !== "right";
   const scaleFactor = Math.min(1.25, Math.max(0.75, settings.scale / 100));
   const scaled = (pixels: number) => `${Math.round(pixels * scaleFactor)}px`;
   const style = {
@@ -339,6 +358,22 @@ export default function FlowSurface({
         </button>
       </div>
 
+      {showConnector && (
+        <StructureConnector
+          decision={connectorDecision}
+          family="flow"
+          style={
+            settings.anchor === "bottom" || settings.anchor === "bottom-left" || settings.anchor === "bottom-right"
+              // Core is bottom-docked (base 58px tall), details top-docked
+              // (base 140px tall) -- the 10px gap sits just above the details
+              // panel, i.e. `100% - (details height + gap)` from the top.
+              ? { left: "50%", transform: "translateX(-50%)", top: `calc(100% - ${scaled(140 + connectorDecision.length)})` }
+              // Core is top-docked (base 58px tall) -- the gap starts right
+              // where the core ends.
+              : { left: "50%", transform: "translateX(-50%)", top: scaled(58) }
+          }
+        />
+      )}
       {expanded && (
         <section id="quota-flow-details" className="flow-surface__details" role="dialog" aria-label={`${focused?.name ?? "Quotalis"} quota details`}>
           <header className="flow-surface__detail-header">

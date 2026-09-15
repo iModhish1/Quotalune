@@ -105,4 +105,16 @@ describe("notch family controls",()=>{
       expect(container.querySelectorAll(".notch-provider").length).toBeLessThanOrEqual(7);
     },
   );
+
+  it("Wave 1F §17/§21: renders the shared connector primitive (not a bare inline SVG) when a detail panel is open, and not when it's compact", () => {
+    const { container: expanded } = render(
+      <NotchSurface form="crescent" settings={settings} catalog="" state="expanded" providers={SURFACE_DEMO_PROVIDERS} />,
+    );
+    expect(expanded.querySelector(".structure-connector--notch")).toBeInTheDocument();
+
+    const { container: compact } = render(
+      <NotchSurface form="crescent" settings={settings} catalog="" state="compact" providers={SURFACE_DEMO_PROVIDERS} />,
+    );
+    expect(compact.querySelector(".structure-connector--notch")).not.toBeInTheDocument();
+  });
 });

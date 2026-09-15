@@ -12,6 +12,10 @@ import "./NotchSurface.css";
 import {normalizeSurfaceInteractions} from "../../design-system/surfaceInteractions";
 import QuotaArcMark from '../../components/QuotaArcMark';
 import { useLocale } from "../../hooks/useLocale";
+import { resolveStructureConnector } from "../../design-system/structureConnector";
+import { structureConnectorReferenceGap } from "../../design-system/structureConnectorGeometry";
+import { StructureConnector } from "../../design-system/StructureConnectorView";
+import "../../design-system/StructureConnectorView.css";
 
 export default function NotchSurface(props:FlowSurfaceProps & {form:NotchForm}) {
   const { t } = useLocale();
@@ -87,12 +91,27 @@ export default function NotchSurface(props:FlowSurfaceProps & {form:NotchForm}) 
           {demoMode && showDemoBadge && <span className="notch-demo">DEMO</span>}
         </div>
         {layout.detail && selected && <NotchDetails provider={selected} color={providerAccent(selected.id)} rect={layout.detail} demo={demoMode && showDemoBadge} pinned={state==="pinned"} onClose={onRequestCompact} onPin={onTogglePinned}/>}
-        {layout.detail && <svg className="notch-connector" aria-hidden="true" style={{position:"absolute",pointerEvents:"none",
-          left:settings.anchor==="top" || settings.anchor==="bottom" ? layout.width/2-8 : mirror?layout.core.width:layout.detail.width,
-          top:settings.anchor==="top" ? layout.core.height : settings.anchor==="bottom" ? layout.detail.height : Math.max(layout.core.y+8,Math.min(layout.core.y+layout.core.height-8,layout.detail.y+layout.detail.height/2))-8}}
-          width={settings.anchor==="top" || settings.anchor==="bottom"?16:12} height={settings.anchor==="top" || settings.anchor==="bottom"?12:16}>
-          <rect fill="#030303" x="0" y="0" width={settings.anchor==="top" || settings.anchor==="bottom"?16:12} height={settings.anchor==="top" || settings.anchor==="bottom"?12:16} rx="6"/>
-        </svg>}
+        {layout.detail && (() => {
+          // Wave 1F §17: real measured gap (notchLayout's own +12 between
+          // core/detail, see structureConnectorGeometry.ts), routed
+          // through the shared decision model instead of an unconditional
+          // render. This form's gap is always exactly 12px regardless of
+          // anchor, so `connectorRequired` is always true here -- the
+          // gating is a real, non-cosmetic correctness improvement (this
+          // form could in principle have an attached-threshold gap; it
+          // simply doesn't today), not a no-op left in for show.
+          const decision = resolveStructureConnector(structureConnectorReferenceGap(form));
+          return (
+            <StructureConnector
+              decision={decision}
+              family="notch"
+              style={{
+                left: settings.anchor==="top" || settings.anchor==="bottom" ? layout.width/2-8 : mirror?layout.core.width:layout.detail.width,
+                top: settings.anchor==="top" ? layout.core.height : settings.anchor==="bottom" ? layout.detail.height : Math.max(layout.core.y+8,Math.min(layout.core.y+layout.core.height-8,layout.detail.y+layout.detail.height/2))-8,
+              }}
+            />
+          );
+        })()}
       </>}
       {/* Wave 1E §18: Notch's 8 forms have extensively per-form-tuned
           .notch-demo positioning (8+ CSS overrides) — adding a NEW visual

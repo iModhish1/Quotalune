@@ -10,6 +10,10 @@ import { CANONICAL_THEME, catalogBySlug, providerColor } from "../../design-syst
 import { StructurePinButton } from "../../design-system/StructureControls";
 import { useLocale } from "../../hooks/useLocale";
 import { QuotalisRefreshingBadge } from "../../design-system/QuotalisLoadingStates";
+import { resolveStructureConnector } from "../../design-system/structureConnector";
+import { structureConnectorReferenceGap } from "../../design-system/structureConnectorGeometry";
+import { StructureConnector } from "../../design-system/StructureConnectorView";
+import "../../design-system/StructureConnectorView.css";
 
 /** A curved provider selector, not a clock. No ticking or permanent animation. */
 export default function ReelSurface({ catalog, settings, state, providers, focusedIndex = 0, demoMode, showDemoBadge = true,
@@ -23,6 +27,16 @@ export default function ReelSurface({ catalog, settings, state, providers, focus
   const wheel = useRef({ sum: 0, lastAt: -Infinity });
   const horizontal = settings.anchor === "top" || settings.anchor === "bottom";
   const expanded = providers.length > 0 && (state === "expanded" || state === "pinned");
+  // Wave 1F §17: real measured gap (structureConnectorGeometry.ts's
+  // reel derivation, from .reel-core/.reel-details' own fixed CSS
+  // widths against the real window envelope). Only valid for the
+  // non-horizontal (top/bottom anchor excluded) layout this reference
+  // gap was derived from -- horizontal reel's core/details already
+  // overlap by design (see that file's comment) so no connector would
+  // show there anyway, but withheld explicitly rather than assumed.
+  const connectorDecision = resolveStructureConnector(structureConnectorReferenceGap("reel"));
+  const showConnector = expanded && !horizontal;
+  const mirroredReel = settings.anchor.includes("left");
   const size = reelBaseSize(expanded ? "expanded" : state === "hidden" || state === "peek" ? "hidden" : "compact", horizontal);
   const [fit, setFit] = useState(settings.scale / 100);
   const focus = Math.max(0, Math.min(focusedIndex, providers.length - 1));
@@ -115,6 +129,21 @@ export default function ReelSurface({ catalog, settings, state, providers, focus
               else if (e.key === "Home" && onResetPosition) { e.preventDefault(); onResetPosition(); }
             }}>⋮</button>
         </div>
+        {showConnector && (
+          <StructureConnector
+            decision={connectorDecision}
+            family="reel"
+            style={{
+              top: "50%",
+              transform: "translateY(-50%)",
+              // Vertical (default/right-docked) reel: core right, details
+              // left, real 8px gap sits at x=[200,208] of the 320-wide
+              // envelope. Mirrored (anchor includes "left"): core left,
+              // details right, gap sits at x=[112,120].
+              left: mirroredReel ? 112 : 200,
+            }}
+          />
+        )}
         {expanded && selected && <section className="reel-details" role="dialog" aria-label={`${selected.name} quota details`}>
           <header><span>{demoLabel ? "DEMO · SYNTHETIC" : "USAGE"}</span><button onClick={onRequestCompact} aria-label="Collapse details">×</button></header>
           <strong className="reel-detail-name" title={selected.name}>{selected.name}</strong>

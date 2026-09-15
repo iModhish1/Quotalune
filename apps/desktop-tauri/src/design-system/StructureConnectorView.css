@@ -1,0 +1,27 @@
+/* Wave 1F §19: quiet titanium/smoked-silver surface continuation --
+   soft opacity, rounded geometry, no bright line/neon/speech-bubble/
+   arrow. Each family tints toward its own existing material rather than
+   a single hardcoded color, so the bridge reads as part of that
+   family's instrument, not a foreign overlay. */
+.structure-connector__bridge {
+  opacity: 0.92;
+}
+
+/* Notch already renders its own near-black fill via
+   .notch-host .notch-connector rect (NotchSurface.css) -- this default
+   is the fallback for contexts that don't override it. */
+.structure-connector--notch .structure-connector__bridge {
+  fill: #030303;
+}
+
+.structure-connector--flow .structure-connector__bridge {
+  fill: var(--flow-void-strong, #0b0e12);
+  stroke: var(--flow-hairline, rgba(255, 255, 255, 0.08));
+  stroke-width: 1;
+}
+
+.structure-connector--reel .structure-connector__bridge {
+  fill: #0b0e12;
+  stroke: #444d59;
+  stroke-width: 1;
+}

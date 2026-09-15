@@ -4,7 +4,7 @@
 .notch-host:focus{outline:none}
 .notch-host:focus-visible .notch-provider[data-focused="true"] .notch-gauge{box-shadow:0 0 0 2px #fff}
 .notch-stage{position:relative;transform-origin:top left}
-.notch-host .notch-body [fill]:not([fill="none"]),.notch-host .notch-connector rect{fill:var(--surface-core)}
+.notch-host .notch-body [fill]:not([fill="none"]),.notch-host .structure-connector--notch rect{fill:var(--surface-core)}
 .notch-host .notch-body rect:nth-child(1):not(:only-child){fill:var(--surface-edge)}
 .notch-host .notch-body rect:nth-child(2):not(:only-child){fill:var(--surface-raised)}
 .notch-host .notch-gauge{background:var(--surface-raised)}

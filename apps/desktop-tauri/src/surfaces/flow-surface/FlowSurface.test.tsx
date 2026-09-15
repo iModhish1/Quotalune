@@ -448,4 +448,37 @@ describe("FlowSurface", () => {
       expect(screen.getByTestId("flow-surface")).toHaveAttribute("data-form", "petal");
     });
   });
+
+  describe("attachment connector (Wave 1F §17, §21)", () => {
+    it("horizon has a real in-range gap and renders the shared connector primitive when expanded", () => {
+      const { container } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={{ ...settings, form: "horizon", anchor: "top" }} state="expanded" providers={providers} />,
+      );
+      expect(container.querySelector(".structure-connector--flow")).toBeInTheDocument();
+    });
+
+    it("does not render a connector for horizon when compact (no detail panel open)", () => {
+      const { container } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={{ ...settings, form: "horizon", anchor: "top" }} state="compact" providers={providers} />,
+      );
+      expect(container.querySelector(".structure-connector--flow")).not.toBeInTheDocument();
+    });
+
+    it("does not force a connector for forms whose real geometry already overlaps (petal/orbital/lens read as attached by design)", () => {
+      for (const form of ["petal", "orbital", "lens"] as const) {
+        const { container, unmount } = render(
+          <FlowSurface catalog="01-obsidian-orbit" settings={{ ...settings, form, anchor: "bottom-right" }} state="expanded" providers={providers} />,
+        );
+        expect(container.querySelector(".structure-connector--flow")).not.toBeInTheDocument();
+        unmount();
+      }
+    });
+
+    it("withholds horizon's connector for left/right anchors, whose rotated layout has no separately-derived gap (no fabricated geometry)", () => {
+      const { container } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={{ ...settings, form: "horizon", anchor: "left" }} state="expanded" providers={providers} />,
+      );
+      expect(container.querySelector(".structure-connector--flow")).not.toBeInTheDocument();
+    });
+  });
 });
