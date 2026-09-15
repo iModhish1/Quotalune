@@ -7,6 +7,25 @@ names the exact two commands to run first; everything after that is
 detail/context for when something doesn't match what the commands
 report.
 
+**Wave 1F §32: two explicit lanes, matching `WAVE1_NATIVE_QA_MATRIX.json`'s
+`lane` field.** Every acceptance criterion that involves monitor-edge
+placement, real DPI/scale-factor behavior, native window chrome, or real
+Arabic string rendering requires **Lane B**; anything else can usually be
+closed faster in **Lane A**:
+- **Lane A — browser/component visual iteration**: `demo/ReelPreview.tsx`
+  (`?window=demo&gen=reel`) in any CDP-capable Chromium against
+  `npm run dev` — no hardened-launcher dependency, `capture-native-structure-qa-matrix.mjs --lane fixture`.
+  Evidence from this lane is **BROWSER FIXTURE**, never **NATIVE WINDOW
+  PROOF** — see `STRUCTURE_VISUAL_QA_MATRIX.md`'s Wave 1F clarification.
+- **Lane B — real QuotalisDev native-window closure**: the real top-arc
+  WebView2, driven by `surfaces/structure-qa/StructureQaController.tsx`
+  (`?window=structure-qa`, a human-drivable UI) or directly via
+  `set_structure_qa_fixture`/`update_surface_settings` IPC (for
+  automation), `capture-native-structure-qa-matrix.mjs --lane native`.
+  Requires the verified Dev build + CDP connection this document's own
+  "Why this handoff exists" section below explains is blocked for THIS
+  session specifically (re-verify for yours, don't assume).
+
 ## Why this handoff exists
 
 Waves 1B-1E completed every code-buildable Wave 1 requirement they could
@@ -196,24 +215,32 @@ layout mirroring), and it has no Light/Dark control (Structures have no
 distinct light-mode CSS palette today, confirmed by reading
 `FlowSurface.css`).
 
-For the REAL native production window (the "native" lane), only the
-fixed 6-provider demo-mode dataset is reachable via IPC
-(`set_surface_demo_mode`) — the extended fixture matrix above is
-`ReelPreview.tsx`-only. If a native session needs the full matrix
-rendered inside the actual native WebView2 rather than a plain browser,
-the fastest path is still the one this section previously described:
-temporarily edit `lib/surfaceDemo.ts`'s `SURFACE_DEMO_PROVIDERS` export
-to call one of the `structureFixtures.ts` functions, rebuild Dev, capture,
-revert. This is DEV-only source code, never touches Personal, and is
-trivial to revert before any Dev→Personal promotion (which this document
-is explicitly not asking for).
+**Wave 1F closed the gap this paragraph used to describe.** The REAL
+native production window (the "native" lane) is no longer limited to the
+fixed 6-provider demo-mode dataset: `apps/desktop-tauri/src/surfaces/structure-qa/StructureQaController.tsx`,
+reached via `?window=structure-qa` (a Dev-only query route registered in
+`App.tsx`, never linked from any menu — see that file's own doc comment
+and `structure-qa/devSafety.test.ts`), drives the REAL native top-arc
+window through the same full fixture matrix `ReelPreview.tsx` offers
+(provider count/name/reset/windows/data-state/pinned), plus structure/
+anchor/scale (via the existing real `update_surface_settings` +
+`show_top_arc_surface` commands) and — unlike `ReelPreview.tsx` — REAL
+language switching (this route runs inside the real `LocaleProvider`,
+not the stub), so it is now the only route that can natively verify
+actual Arabic string rendering, not just RTL layout mirroring. Backed by
+a new Dev-only, in-memory-only IPC command
+(`set_structure_qa_fixture`/`reset_structure_qa_fixture`, in
+`surfaces/qa_fixture.rs`) that the backend itself refuses outside the
+Dev channel — verify this by running `cargo test qa_fixture` and
+confirming `dev_channel_active_reads_the_same_build_info_channel_constant_every_other_gate_uses`
+passes. The old "temporarily edit `lib/surfaceDemo.ts`" workaround this
+paragraph used to recommend is no longer necessary and should not be
+used — it bypasses the new controller's Dev-only gate entirely.
 
-A known, disclosed limitation while doing this: `StageProvider.status`
-has no distinct "error" value (only `ok`/`attention`/`offline`) — a
-Structure genuinely cannot represent "the last fetch errored" separately
-from "no data" today. If the owner wants that distinction, it needs a
-real product decision (a new status value threaded through
-`toStageProviders()`), not something to fake in a fixture.
+`StageProvider.status` gained real `"error"`/`"timeout"` values this
+wave too (derived from `ProviderUsageSnapshot.error`, the same field
+Dashboard already reads — see `LOADING_STATE_MATRIX.md`), so the
+Structure QA controller's Data state control includes both.
 
 ## 4. The 14 structure IDs (exact registry)
 

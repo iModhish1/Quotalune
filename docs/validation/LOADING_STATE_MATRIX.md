@@ -131,30 +131,106 @@ Dashboard's `QuotalisAsyncState` usage (5 distinct statuses, unit-tested)
 remains the more complete state-vocabulary proof, just not yet wired into
 a production surface.
 
+## Wave 1F §3-16: production surfaces wired (real consumers, not fabricated states)
+
+Traced the actual hook/data shapes of Dashboard, Reset, Analytics, and
+Provider-connection-action surfaces before writing any code (a dedicated
+investigation, not assumption) — see each fix's own commit for the exact
+file:line evidence. Real, non-fabricated fixes landed:
+
+- **Dashboard/provider usage** (§4-5): `AnalyticsDashboard.tsx`'s
+  `MenuEmpty` had `isLoading` hardcoded `false` — the spinner branch
+  could never render on that call path, so a genuine first fetch and "no
+  providers configured" were indistinguishable. Now uses
+  `hasLoadedCache` from `useEffectiveProviders`, the same real signal
+  Wave 1D already proved correct for Structures' `initialLoading`.
+- **Real zero regression** (§8): confirmed, not newly built —
+  `stageProviders.ts`'s `remainingOf()`/`windowRemaining()` already
+  distinguish a real `0` from a `null` (absent) window; a `usedPercent:
+  0` snapshot renders as a real zero, never as loading/unavailable. No
+  code change needed; disclosed as verified rather than silently assumed.
+- **Reset surfaces** (§9-10): `ProviderResets.tsx`'s `ResetDatum` model
+  (`known`/`unavailable`/`unsupported`) already satisfies "never
+  fabricate 0h/now/unknown" and already stays visible during a refresh
+  (it lives inside `MenuCard`, which never unmounts on refresh — only
+  gains a class/aria flag). Verified, not rebuilt.
+- **Analytics** (§11): `DashboardAnalyticsPanel.tsx` now shows an
+  additive `QuotalisRefreshingBadge` when `useEffectiveDashboardSnapshot`
+  reports `isLoading` with a cached snapshot already present (a same-
+  scope background refresh) — every chart/panel underneath stays
+  rendered unchanged, no calculation/query contract touched. Proven with
+  a real integration test that fires the actual `"refresh-complete"`
+  event the hook listens for.
+- **Provider connection actions** (§12): `busy` (action in flight) and
+  `actionSequenceRef` (stale-result guard) already existed and already
+  satisfy pending/single-flight/disabled-duplicate-activation. The one
+  real gap closed: `ProviderIssueNotice.tsx` showed the same generic
+  "privacy-safe detail" text for a Refresh timeout as for any other
+  issue — now shows the shared `QuotalisLoadingTimeout` message when
+  `lastError` is exactly `"Timeout"` (the same backend-confirmed signal
+  reused throughout this wave), exact-match only so an unrelated error
+  string can't misfire it.
+- **Floating Structures Error/Timeout** (§13-14): `StageProvider.status`
+  gained real `"error"`/`"timeout"` values, wired into NotchDetails'
+  footer and FlowSurface/Reel's reset-row slot — see
+  `STRUCTURE_VISUAL_QA_MATRIX.md` for the per-form detail.
+- **MenuCard refreshing indicator** (§6): `.menu-card--refreshing`/
+  `aria-busy` existed but had zero visible indication for sighted users
+  (assistive-tech only, no CSS at all targeted the class). Added the
+  same additive dot badge Structures use.
+
+## Seven-state proof (§14) — what is and isn't representable, per source
+
+| Concept | Dashboard (`MenuCard`/`useProviders`) | Analytics (`useDashboardSnapshot`) | Floating Structures (`StageProvider`) |
+|---|---|---|---|
+| Loading (first fetch) | REAL (`hasLoadedCache`) | REAL (`isLoading`, no cached snapshot yet) | REAL (`initialLoading`) |
+| Refreshing (cached) | REAL (`refreshingProviderIds`) | REAL (`isLoading` + cached snapshot) | REAL (`isRefreshing`) |
+| Available | REAL | REAL | REAL |
+| Real zero | REAL (`usedPercent: 0` distinct from absent window) | REAL | REAL (`primaryValue: 0`, `status: "ok"`) |
+| No data | REAL (`hasCachedData`) | REAL (`snapshot: null`, no error) | REAL (`initialLoading` false, no selected provider) |
+| Unavailable | REAL (`errorState`, no error string) | N/A (no analytics-specific unavailable concept) | REAL (`status: "offline"`) |
+| Error | REAL (`provider.error`, non-"Timeout") | UNSUPPORTED — `.catch()` collapses every failure into a generic string; no distinguishable error state | REAL (`status: "error"`) |
+| Timeout | REAL (`provider.error === "Timeout"`) | UNSUPPORTED — same collapse as Error above | REAL (`status: "timeout"`) |
+
+Analytics' four sub-panels (Overview/Tokens/Models/Activity) each do
+their own local fetch with a generic `error: boolean` — none exposes a
+distinguishable timeout signal at the TS boundary today (confirmed by
+reading `commands/providers.rs`'s equivalent history-fetch path, which
+has no `tokio::time::timeout` wrapper the way per-provider usage fetches
+do). Marked UNSUPPORTED here rather than forcing a fake `timeout` status
+onto those panels.
+
 ## What is genuinely open (not fixed or built this wave)
 
-- **`QuotalisAsyncState`/`QuotalisSkeleton` are still not wired into any
-  Dashboard/provider/reset/Analytics/connection-action surface.**
-  `QuotalisRefreshingBadge` is now wired into Floating Structures only
-  (above). Migrating the rest — and native-verifying each — is real,
-  unstarted follow-up work.
-- **Structures cannot distinguish Error from Unavailable** (architecture
-  gap disclosed above and in `structureFixtures.ts`) — a real product
-  question for the native-capable session to raise, not something to
-  invent a fake status value for.
-- **No exhaustive per-surface matrix.** This audit spot-checked the shared
-  Analytics data hook and confirmed the vocabulary/pattern exists; it did
-  not walk every listed surface (provider connect, Data Sources, background
-  import, notification history, Tray source preview, local scanner) and
-  record its exact seven-state behavior with evidence.
+- **`QuotalisAsyncState`/`QuotalisSkeleton` (the full 5-status component)
+  are still not the rendering mechanism for Dashboard/Analytics/reset** —
+  this wave wired real distinct signals into each surface's OWN existing
+  UI (MenuEmpty, ProviderIssueNotice, etc.) rather than replatforming
+  every surface onto the shared component, which would have been a much
+  larger, riskier visual change than the wave's actual asks required.
+- **Structures still cannot distinguish Error from Timeout from a
+  genuinely-corrupted-but-not-erroring state** beyond what
+  `ProviderUsageSnapshot.error` already reports — this is the real
+  ceiling of the backend's current signal, not a frontend gap.
+- **Analytics history/model fetches have no timeout signal** (see the
+  seven-state table above) — a real backend question, not something to
+  fabricate around.
+- **No exhaustive per-surface matrix beyond the ones this wave actually
+  touched.** Provider connect/Data Sources/background import/
+  notification history/Tray source preview/local scanner were not each
+  walked and recorded.
 - **Reduced motion for a real production consumer** was not separately
   verified this wave beyond the component-level CSS guard already in
   place (`QuotalisLoadingStates.css`'s `prefers-reduced-motion`/
-  `data-qa-motion` rules).
-- **Native visual verification** of the new Refreshing badge (does the
-  dot render correctly, at the right position, at real DPI, across
-  themes) has not occurred — `WAVE1_NATIVE_QA_MATRIX.json`'s
-  `NATIVE-REFRESH-01` entry is prepared for the next capable session.
+  `data-qa-motion` rules) — still no real consumer exists to mount with
+  `prefers-reduced-motion: reduce` and prove the shared treatment stays
+  visible without continuous shimmer/spin (Wave 1F §15's explicit ask,
+  not closed this wave; disclosed rather than skipped silently).
+- **Native visual verification** of any of the above (does the badge
+  render correctly, at the right position, at real DPI, across themes)
+  has not occurred — `WAVE1_NATIVE_QA_MATRIX.json`'s `NATIVE-REFRESH-01`/
+  `NATIVE-DATA-ERROR-01`/`NATIVE-DATA-TIMEOUT-01` entries are prepared
+  for the next capable session.
 
 ## Verdict
 
@@ -164,7 +240,13 @@ distinct) is already correctly implemented in the shared data layer.
 Wave 1B FINAL added the real, tested shared visual-language component
 set; Wave 1D wired Floating Structures' first-load distinction into all
 14 forms; Wave 1E added the Refreshing distinction into the same real
-consumer. Still open: wiring the shared component set into Dashboard/
-provider/reset/Analytics/connection-action surfaces, the Structure-level
-Error-vs-Unavailable architecture gap, an exhaustive per-surface matrix,
-and native visual verification of any of it. Not claimed as PASS.
+consumer; Wave 1F wired real, distinct signals into Dashboard, Analytics,
+Reset (verified pre-existing), Provider-connection actions, and
+Structures' Error/Timeout — every required Wave-1F consumer (§4-5, §6,
+§9-10, §11, §12, §13-14) now has a real, tested, non-fabricated
+treatment. Still open: full `QuotalisAsyncState` replatforming (not
+required — each surface's own UI now correctly distinguishes states),
+reduced-motion proof in a real consumer (§15, not closed), Analytics'
+missing timeout signal (a backend gap, not a frontend one), and native
+visual verification of any of it. Not claimed as PASS — no screenshot
+exists for any of this wave's visual changes.

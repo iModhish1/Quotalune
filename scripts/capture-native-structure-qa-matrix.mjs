@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Wave 1E §27-28: prepared, NOT executed this session -- CDP/native
-// screenshot access is confirmed unavailable in this session's
-// environment (see docs/validation/WAVE1_NATIVE_QA_HANDOFF.md). The next
-// capable session runs this against the exact manifest at
+// Wave 1E §27-28, extended Wave 1F §29-30: prepared, NOT executed this
+// session -- CDP/native screenshot access is confirmed unavailable in
+// this session's environment (see docs/validation/WAVE1_NATIVE_QA_HANDOFF.md).
+// The next capable session runs this against the exact manifest at
 // docs/validation/WAVE1_NATIVE_QA_MATRIX.json and records real PASS/FAIL
 // per entry -- do not hand-wave a result without running it.
 //
@@ -10,11 +10,20 @@
 //   native  -- drives the REAL production top-arc WebView2 via the same
 //              update_surface_settings / set_catalog_theme IPC pattern
 //              already proven in capture-native-surface-proof.mjs and
-//              capture-native-theme-matrix.mjs. Requires a verified Dev
-//              build launched with a working --remote-debugging-port
-//              (blocked for this session by the hardened launcher; see
-//              handoff doc for the documented workaround, if any is
-//              found by a session with real desktop access).
+//              capture-native-theme-matrix.mjs. As of Wave 1F, manifest
+//              entries with a "devControl" field additionally call the
+//              real set_structure_qa_fixture command (surfaces/qa_fixture.rs)
+//              instead of the fixed 6-provider set_surface_demo_mode
+//              toggle, so this lane can now capture the SAME full
+//              provider-count/name/reset/windows/data-state matrix the
+//              fixture lane always could, but inside the real native
+//              window/compositor -- see StructureQaController.tsx for the
+//              human-drivable version of the same commands. Requires a
+//              verified Dev build launched with a working
+//              --remote-debugging-port (blocked for this session by the
+//              hardened launcher; see handoff doc for the documented
+//              workaround, if any is found by a session with real
+//              desktop access).
 //   fixture -- drives the Dev-only demo/ReelPreview.tsx proof-harness
 //              route (`?window=demo&gen=reel&...`) in ANY CDP-capable
 //              browser pointed at a running `npm run dev` (or built
@@ -23,6 +32,9 @@
 //              instance. Still not executed this session (see handoff
 //              doc for why), but has no dependency on the blocked
 //              launcher and should be the faster of the two to unblock.
+//              Label any evidence from this lane BROWSER FIXTURE, never
+//              NATIVE WINDOW PROOF -- it is not proof of native window
+//              chrome, DPI scaling, or compositor behavior.
 
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -157,7 +169,17 @@ async function runNativeLane(entries) {
             topArcAnchor: ${JSON.stringify(entry.anchor)}, topArcScale: 100,
             topArcClickThrough: false, topArcHideFullscreen: false,
           }});
-          await invoke("set_surface_demo_mode", { enabled: true });
+          ${
+            entry.devControl
+              // Wave 1F §29-30: entries with a real Dev control use the
+              // native Structure QA fixture (set_structure_qa_fixture,
+              // surfaces/qa_fixture.rs) instead of the fixed 6-provider
+              // demo-mode dataset -- refused by the backend itself
+              // outside the Dev channel, so this only ever does anything
+              // on a verified Dev build.
+              ? `await invoke("set_structure_qa_fixture", { fixture: ${JSON.stringify(fixtureFromState(entry.fixtureState))} });`
+              : `await invoke("set_surface_demo_mode", { enabled: true });`
+          }
           await invoke("show_top_arc_surface");
         })()`,
       ),
@@ -204,6 +226,23 @@ function parseFixtureState(fixtureState) {
     if (match) pairs.push([match[1], match[2]]);
   }
   return pairs;
+}
+
+/** Wave 1F §29-30: parses the manifest's fixtureState into a
+ * surfaces/qa_fixture.rs::StructureQaFixture payload for the native lane
+ * (distinct from parseFixtureState above, which targets the browser
+ * lane's URL query params) -- fills sensible defaults for any field the
+ * entry's fixtureState doesn't mention. */
+function fixtureFromState(fixtureState) {
+  const pairs = Object.fromEntries(parseFixtureState(fixtureState));
+  return {
+    providerCount: Number(pairs.providerCount ?? pairs.count ?? 6),
+    nameLength: pairs.nameLength ?? "normal",
+    resetLength: pairs.resetLength ?? "normal",
+    windows: Number(pairs.windows ?? 1),
+    dataState: pairs.dataState ?? pairs.data ?? "available",
+    pinned: pairs.pinned === "1" || pairs.pinned === "true",
+  };
 }
 
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
