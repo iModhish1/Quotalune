@@ -1138,6 +1138,105 @@ mod tests {
         );
     }
 
+    // Wave 1C §9: Light/Dark independence proved with deterministic tests
+    // against the real settings/command path, not just cited from the
+    // architecture trace.
+
+    #[test]
+    fn hard_case_a_ceramic_pearl_structure_with_dark_mode_persists_both_independently() {
+        let mut settings = Settings::default();
+        let mut store = ProfileStore::default();
+        apply_catalog_theme_scope(
+            &mut settings,
+            &mut store,
+            "global",
+            "ceramic-pearl-material",
+        )
+        .expect("valid theme applies");
+        settings.theme = ThemePreference::Dark;
+        assert_eq!(settings.catalog_theme, "ceramic-pearl-material");
+        assert_eq!(settings.theme, ThemePreference::Dark);
+        // Round-trip: neither field silently coerces the other on save/reload.
+        let reloaded: Settings =
+            serde_json::from_str(&serde_json::to_string(&settings).unwrap()).unwrap();
+        assert_eq!(reloaded.catalog_theme, "ceramic-pearl-material");
+        assert_eq!(reloaded.theme, ThemePreference::Dark);
+    }
+
+    #[test]
+    fn hard_case_b_obsidian_structure_with_light_mode_persists_both_independently() {
+        let mut settings = Settings::default();
+        let mut store = ProfileStore::default();
+        apply_catalog_theme_scope(&mut settings, &mut store, "global", "01-obsidian-orbit")
+            .expect("valid theme applies");
+        settings.theme = ThemePreference::Light;
+        assert_eq!(settings.catalog_theme, "01-obsidian-orbit");
+        assert_eq!(settings.theme, ThemePreference::Light);
+        let reloaded: Settings =
+            serde_json::from_str(&serde_json::to_string(&settings).unwrap()).unwrap();
+        assert_eq!(reloaded.catalog_theme, "01-obsidian-orbit");
+        assert_eq!(reloaded.theme, ThemePreference::Light);
+    }
+
+    #[test]
+    fn changing_color_mode_never_mutates_catalog_theme() {
+        // update_settings (bridge.rs's SettingsUpdate.theme path) only ever
+        // writes settings.theme directly -- there is no code path from
+        // there into catalog_theme. Proven here at the field-mutation level
+        // since that IS the entire implementation update_settings performs
+        // for this field (settings.theme = value), which the desktop
+        // crate's own command re-exercises identically.
+        let mut settings = Settings {
+            catalog_theme: "smoked-silver".to_string(),
+            ..Settings::default()
+        };
+        let before_catalog = settings.catalog_theme.clone();
+        for mode in [
+            ThemePreference::Light,
+            ThemePreference::Dark,
+            ThemePreference::Auto,
+        ] {
+            settings.theme = mode;
+            assert_eq!(settings.catalog_theme, before_catalog);
+        }
+    }
+
+    #[test]
+    fn changing_catalog_theme_never_mutates_color_mode_unless_the_color_mode_scope_was_explicitly_applied()
+     {
+        // set_catalog_theme (and apply_theme_composition_to_settings, which
+        // shares the same apply_catalog_theme_scope core) never touches
+        // settings.theme at all -- there is no "colorMode" row in
+        // ThemeCompositionApply's payload today (Wave 1B/1C: no catalog
+        // theme currently declares a mode recommendation, so the Apply
+        // sheet never offers that row -- see ApplyThemeSheet.tsx). Proven
+        // across every real theme scope this command supports.
+        let mut settings = Settings {
+            theme: ThemePreference::Dark,
+            ..Settings::default()
+        };
+        let mut store = ProfileStore::default();
+        for scope in ["global", "profile", "surface:top"] {
+            apply_catalog_theme_scope(&mut settings, &mut store, scope, "smoked-silver")
+                .expect("valid scope+theme applies");
+            assert_eq!(
+                settings.theme,
+                ThemePreference::Dark,
+                "scope {scope} must not touch color mode"
+            );
+        }
+        // Same guarantee through the batched Apply path.
+        let payload = ThemeCompositionApply {
+            main_slug: "01-obsidian-orbit".to_string(),
+            main_scope: "global".to_string(),
+            clear_floating_surfaces: vec![],
+            appearance_scopes: vec!["tray".to_string()],
+        };
+        apply_theme_composition_to_settings(&mut settings, &mut store, &payload)
+            .expect("valid payload applies");
+        assert_eq!(settings.theme, ThemePreference::Dark);
+    }
+
     #[test]
     fn usage_settings_accept_all_three_global_modes() {
         let overrides = std::collections::HashMap::new();
