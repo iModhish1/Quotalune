@@ -2106,6 +2106,12 @@ locale_keys! {
     // from "loaded, genuinely no data" (FlowSurface.tsx/ReelSurface.tsx/
     // NotchSurface.tsx's existing "waiting for provider data" text).
     QuotalisStructureLoading,
+
+    // Wave 1D §20-21: accessible keyboard movement for floating Structures
+    // (drag alternative — StructureControls.tsx / FlowSurface.tsx /
+    // ReelSurface.tsx / NotchSurface.tsx).
+    StructureMoveHint,
+    StructureMoveResetPosition,
 }
 
 #[cfg(test)]

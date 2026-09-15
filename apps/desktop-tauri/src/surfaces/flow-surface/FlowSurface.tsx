@@ -59,6 +59,20 @@ export interface FlowSurfaceProps {
    * never has a real loading phase) is unaffected.
    */
   initialLoading?: boolean;
+  /**
+   * Wave 1D §20-21: accessible keyboard alternative to pointer drag.
+   * Called with a direction when the drag control has focus and an arrow
+   * key is pressed; the real caller (TopArc.tsx) resolves this through
+   * `nudgeStructureAnchor()` against the EXISTING `topArcAnchor` position
+   * system (`lib/surfaceBridge.ts`) — no second, pixel-based position
+   * store. Omit to leave arrow keys inert (e.g. read-only preview
+   * contexts, which have nothing to persist a moved position into).
+   */
+  onNudge?: (direction: import("../../design-system/structureAnchorNudge").NudgeDirection) => void;
+  /** Home key on the drag control — reuses the existing
+   * `resetQuotaIslandPosition()` command, the same "Reset Position"
+   * pointer-drag-era mechanism already persists through. */
+  onResetPosition?: () => void;
 }
 
 function QuotaArcMark() {
@@ -130,10 +144,12 @@ export default function FlowSurface({
   demoMode,
   showDemoBadge = true,
   initialLoading = false,
+  onNudge,
+  onResetPosition,
 }: FlowSurfaceProps) {
   const { t } = useLocale();
-  if (isNotchForm(settings.form)) return <NotchSurface key={`${settings.form}:${settings.anchor}`} form={settings.form} {...{catalog, settings, state, providers, focusedIndex, onFocusProvider, onReveal, onToggleExpanded, onTogglePinned, onRequestCompact, onStartDrag, demoMode, showDemoBadge, initialLoading}} />;
-  if (settings.form === "reel") return <ReelSurface {...{catalog, settings, state, providers, focusedIndex, onFocusProvider, onReveal, onToggleExpanded, onTogglePinned, onRequestCompact, onStartDrag, demoMode, showDemoBadge, initialLoading}} />;
+  if (isNotchForm(settings.form)) return <NotchSurface key={`${settings.form}:${settings.anchor}`} form={settings.form} {...{catalog, settings, state, providers, focusedIndex, onFocusProvider, onReveal, onToggleExpanded, onTogglePinned, onRequestCompact, onStartDrag, demoMode, showDemoBadge, initialLoading, onNudge, onResetPosition}} />;
+  if (settings.form === "reel") return <ReelSurface {...{catalog, settings, state, providers, focusedIndex, onFocusProvider, onReveal, onToggleExpanded, onTogglePinned, onRequestCompact, onStartDrag, demoMode, showDemoBadge, initialLoading, onNudge, onResetPosition}} />;
   const theme = catalogBySlug(catalog) ?? CANONICAL_THEME;
   const visible = providers.filter(hasSurfaceQuotaValue).slice(0, 3);
   const focus = visible.length === 0 ? -1 : Math.min(Math.max(focusedIndex, 0), visible.length - 1);
@@ -270,8 +286,29 @@ export default function FlowSurface({
             event.preventDefault();
             onStartDrag?.();
           }}
+          onKeyDown={(event) => {
+            // Wave 1D §20-21: pointer drag is not the only way to
+            // reposition this structure. Arrow keys nudge one step through
+            // the existing topArcAnchor position system; Home resets to
+            // the predictable top-center position the same way
+            // resetQuotaIslandPosition() already does for pointer users.
+            const directionByKey: Record<string, "left" | "right" | "up" | "down"> = {
+              ArrowLeft: "left",
+              ArrowRight: "right",
+              ArrowUp: "up",
+              ArrowDown: "down",
+            };
+            const direction = directionByKey[event.key];
+            if (direction && onNudge) {
+              event.preventDefault();
+              onNudge(direction);
+            } else if (event.key === "Home" && onResetPosition) {
+              event.preventDefault();
+              onResetPosition();
+            }
+          }}
           aria-label="Move Quotalis"
-          title="Drag to move"
+          title={onNudge || onResetPosition ? t("StructureMoveHint") : "Drag to move"}
         >
           <span aria-hidden="true">⋮</span>
         </button>

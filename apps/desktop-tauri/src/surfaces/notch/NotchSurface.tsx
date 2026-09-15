@@ -17,7 +17,7 @@ export default function NotchSurface(props:FlowSurfaceProps & {form:NotchForm}) 
   const { t } = useLocale();
   const theme=catalogBySlug(props.catalog) ?? CANONICAL_THEME;
   const providerAccent=(id:string)=>providerColor(theme,id);
-  const {form,settings,state,providers,focusedIndex=0,onFocusProvider,onToggleExpanded,onRequestCompact,onReveal,onStartDrag,onTogglePinned,demoMode,showDemoBadge=true,initialLoading=false}=props;
+  const {form,settings,state,providers,focusedIndex=0,onFocusProvider,onToggleExpanded,onRequestCompact,onReveal,onStartDrag,onTogglePinned,demoMode,showDemoBadge=true,initialLoading=false,onNudge,onResetPosition}=props;
   const root=useRef<HTMLElement>(null);
   const interactions=normalizeSurfaceInteractions(settings.interactions);
   const [fit,setFit]=useState(settings.scale/100);
@@ -74,7 +74,16 @@ export default function NotchSurface(props:FlowSurfaceProps & {form:NotchForm}) 
           {/* Wave 1D §10: distinct first-load vs. genuinely-no-data text,
               same DOM shape (see FlowSurface.tsx's identical fix). */}
           {!selected && <span className="notch-empty">{initialLoading ? t("QuotalisStructureLoading") : "No data"}</span>}
-          <button className="notch-grip" aria-label="Move Quotalis" title="Drag to move" onMouseDown={e=>{if(e.button===0){e.preventDefault();onStartDrag?.();}}}><span/></button>
+          {/* Wave 1D §20-21: same keyboard-nudge alternative FlowSurface's
+              drag button has -- see its onKeyDown comment. */}
+          <button className="notch-grip" aria-label="Move Quotalis" title={onNudge || onResetPosition ? t("StructureMoveHint") : "Drag to move"}
+            onMouseDown={e=>{if(e.button===0){e.preventDefault();onStartDrag?.();}}}
+            onKeyDown={e=>{
+              const directionByKey: Record<string, "left" | "right" | "up" | "down"> = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down" };
+              const direction = directionByKey[e.key];
+              if (direction && onNudge) { e.preventDefault(); onNudge(direction); }
+              else if (e.key === "Home" && onResetPosition) { e.preventDefault(); onResetPosition(); }
+            }}><span/></button>
           {demoMode && showDemoBadge && <span className="notch-demo">DEMO</span>}
         </div>
         {layout.detail && selected && <NotchDetails provider={selected} color={providerAccent(selected.id)} rect={layout.detail} demo={demoMode && showDemoBadge} pinned={state==="pinned"} onClose={onRequestCompact} onPin={onTogglePinned}/>}

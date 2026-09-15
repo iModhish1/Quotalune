@@ -309,4 +309,53 @@ describe("FlowSurface", () => {
       expect(providerRow?.previousElementSibling).toBe(header);
     });
   });
+
+  describe("accessible keyboard movement (Wave 1D §20-21)", () => {
+    it("arrow keys on the drag control call onNudge with the pressed direction, not pointer drag", () => {
+      const onNudge = vi.fn();
+      const onStartDrag = vi.fn();
+      render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={providers} onNudge={onNudge} onStartDrag={onStartDrag} />,
+      );
+      const drag = screen.getByRole("button", { name: "Move Quotalis" });
+      fireEvent.keyDown(drag, { key: "ArrowLeft" });
+      fireEvent.keyDown(drag, { key: "ArrowRight" });
+      fireEvent.keyDown(drag, { key: "ArrowUp" });
+      fireEvent.keyDown(drag, { key: "ArrowDown" });
+      expect(onNudge).toHaveBeenNthCalledWith(1, "left");
+      expect(onNudge).toHaveBeenNthCalledWith(2, "right");
+      expect(onNudge).toHaveBeenNthCalledWith(3, "up");
+      expect(onNudge).toHaveBeenNthCalledWith(4, "down");
+      expect(onStartDrag).not.toHaveBeenCalled();
+    });
+
+    it("Home key on the drag control calls onResetPosition", () => {
+      const onResetPosition = vi.fn();
+      render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={providers} onResetPosition={onResetPosition} />,
+      );
+      fireEvent.keyDown(screen.getByRole("button", { name: "Move Quotalis" }), { key: "Home" });
+      expect(onResetPosition).toHaveBeenCalledOnce();
+    });
+
+    it("arrow keys and Home are inert (no crash, no unrelated side effect) when no handler is supplied", () => {
+      render(<FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={providers} />);
+      const drag = screen.getByRole("button", { name: "Move Quotalis" });
+      expect(() => {
+        fireEvent.keyDown(drag, { key: "ArrowLeft" });
+        fireEvent.keyDown(drag, { key: "Home" });
+      }).not.toThrow();
+    });
+
+    it("advertises the movement hint in the drag control's title once a handler is wired, falling back to the plain drag hint otherwise", () => {
+      const { rerender } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={providers} />,
+      );
+      expect(screen.getByRole("button", { name: "Move Quotalis" })).toHaveAttribute("title", "Drag to move");
+      rerender(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={providers} onNudge={() => {}} />,
+      );
+      expect(screen.getByRole("button", { name: "Move Quotalis" })).toHaveAttribute("title", "StructureMoveHint");
+    });
+  });
 });

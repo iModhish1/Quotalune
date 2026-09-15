@@ -15,7 +15,9 @@ import { useStageRuntime } from "../../hooks/useStageRuntime";
 import {
   beginQuotaIslandDrag,
   getSurfaceSettings,
+  resetQuotaIslandPosition,
   resizeTopArc,
+  updateSurfaceSettings,
   type SurfaceSettings,
   type SurfaceWindowState,
 } from "../../lib/surfaceBridge";
@@ -24,6 +26,7 @@ import { useSurfaceDemo } from "../../hooks/useSurfaceDemo";
 import { SURFACE_DEMO_PROVIDERS } from "../../lib/surfaceDemo";
 import { isNotchForm } from "../notch/notchGeometry";
 import { wheelStep } from "../reel/reelGeometry";
+import { nudgeStructureAnchor } from "../../design-system/structureAnchorNudge";
 
 const DEMO_PROVIDERS: StageProvider[] = [
   { id: "codex", name: "OpenAI", iconId: "openai", resolvedMode: "remaining", arcFraction: 0.74, primaryValue: 74, secondaryValue: 26, primaryLabel: "remaining", reset: "3h 40m", status: "ok" },
@@ -216,6 +219,17 @@ export default function TopArc({ demo }: TopArcProps) {
             void loadFlowSettings();
             if (!pointerInsideRef.current) scheduleAutoHide();
           });
+        }}
+        onNudge={(direction) => {
+          // Wave 1D §20-21: keyboard alternative to pointer drag, reusing
+          // the same topArcAnchor position system beginQuotaIslandDrag's
+          // own drag-completion eventually persists into.
+          const next = nudgeStructureAnchor(flowSettings.anchor, direction);
+          if (next === flowSettings.anchor) return;
+          void updateSurfaceSettings({ topArcAnchor: next }).then(loadFlowSettings).catch(() => {});
+        }}
+        onResetPosition={() => {
+          void resetQuotaIslandPosition().then(loadFlowSettings).catch(() => {});
         }}
       />
     </div>

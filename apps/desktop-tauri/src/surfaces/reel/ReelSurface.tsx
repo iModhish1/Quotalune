@@ -13,6 +13,7 @@ import { useLocale } from "../../hooks/useLocale";
 /** A curved provider selector, not a clock. No ticking or permanent animation. */
 export default function ReelSurface({ catalog, settings, state, providers, focusedIndex = 0, demoMode, showDemoBadge = true,
   onFocusProvider, onReveal, onToggleExpanded, onRequestCompact, onTogglePinned, onStartDrag, initialLoading = false,
+  onNudge, onResetPosition,
 }: FlowSurfaceProps) {
   const { t } = useLocale();
   const demoLabel = demoMode && showDemoBadge;
@@ -96,8 +97,16 @@ export default function ReelSurface({ catalog, settings, state, providers, focus
               same DOM shape (see FlowSurface.tsx's identical fix). */}
           {!selected && <span className="reel-empty">{initialLoading ? t("QuotalisStructureLoading") : "No quota data"}</span>}
           <span className="reel-caption" aria-live="polite">{selected?.name ?? "Quotalis"}<small>{providers.length ? `${focus + 1} / ${providers.length}` : "—"}</small></span>
-          <button className="reel-drag" aria-label="Move Quotalis" title="Drag to move"
-            onMouseDown={e => { if (e.button === 0) { e.preventDefault(); onStartDrag?.(); } }}>⋮</button>
+          {/* Wave 1D §20-21: same keyboard-nudge alternative FlowSurface's
+              drag button has -- see its onKeyDown comment. */}
+          <button className="reel-drag" aria-label="Move Quotalis" title={onNudge || onResetPosition ? t("StructureMoveHint") : "Drag to move"}
+            onMouseDown={e => { if (e.button === 0) { e.preventDefault(); onStartDrag?.(); } }}
+            onKeyDown={e => {
+              const directionByKey: Record<string, "left" | "right" | "up" | "down"> = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down" };
+              const direction = directionByKey[e.key];
+              if (direction && onNudge) { e.preventDefault(); onNudge(direction); }
+              else if (e.key === "Home" && onResetPosition) { e.preventDefault(); onResetPosition(); }
+            }}>⋮</button>
         </div>
         {expanded && selected && <section className="reel-details" role="dialog" aria-label={`${selected.name} quota details`}>
           <header><span>{demoLabel ? "DEMO · SYNTHETIC" : "USAGE"}</span><button onClick={onRequestCompact} aria-label="Collapse details">×</button></header>
