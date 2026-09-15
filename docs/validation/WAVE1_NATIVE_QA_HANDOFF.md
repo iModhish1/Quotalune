@@ -77,10 +77,10 @@ git status --short
 git log -15 --oneline --decorate
 ```
 
-Expect `HEAD` to be at or after `2c118905` (the last commit this session
-made). If commits exist beyond what you can see referenced here, that is
-fine — proceed from the actual current state, not from an assumption
-frozen in this document.
+Expect `HEAD` to be at or after `b639aeab` (Wave 1E's last commit before
+its final verified Dev build). If commits exist beyond what you can see
+referenced here, that is fine — proceed from the actual current state,
+not from an assumption frozen in this document.
 
 ## 1. Build a verified Dev binary
 
