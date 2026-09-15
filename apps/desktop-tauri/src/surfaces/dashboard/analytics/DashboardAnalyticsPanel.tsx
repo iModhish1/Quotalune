@@ -29,6 +29,7 @@ import TrendIntelligence from "./TrendIntelligence";
 
 import DataStatusPanel from "./DataStatusPanel";
 import DemoIndicator from "../../../demoMode/DemoIndicator";
+import { QuotalisRefreshingBadge } from "../../../design-system/QuotalisLoadingStates";
 import type {
   DashboardRangeKind,
   ProviderCatalogEntry,
@@ -96,7 +97,7 @@ export default function DashboardAnalyticsPanel({
     [providerFilter],
   );
 
-  const { snapshot } = useEffectiveDashboardSnapshot(range, undefined, providersArg, settings, catalog);
+  const { snapshot, isLoading: snapshotLoading } = useEffectiveDashboardSnapshot(range, undefined, providersArg, settings, catalog);
 
   const currentProviders = useMemo(() => (view === "analytics" || preferences.providerFilterScope === "all") && providerFilter
     ? liveProviders.filter(provider => provider.providerId === providerFilter) : liveProviders,
@@ -142,6 +143,22 @@ export default function DashboardAnalyticsPanel({
       })}</div>
     </>:<>
       <DashboardHeader range={range} onRangeChange={setRange} providerOptions={providerOptions} providerFilter={providerFilter} onProviderFilterChange={setProviderFilter} historyChip={historyChip}/>
+      {/* Wave 1F §11: additive only -- the already-visible cached snapshot
+          (and every chart/panel below it) stays rendered unchanged; this
+          is a small "still fresh, being updated" signal alongside it, not
+          a replacement. `snapshotLoading` is true for every load
+          including background refreshes (useEffectiveDashboardSnapshot's
+          own doc comment), so gating on `snapshot` already being present
+          is what distinguishes "refreshing the same scope" from "first
+          load for this scope" -- the latter has no cached snapshot yet
+          and is covered by DashboardAnalyticsPanel's own existing empty/
+          loading paths, not this badge. No calculation/query contract
+          changed -- purely a visual addition. */}
+      {snapshotLoading && snapshot && (
+        <p className="v3-snapshot-refreshing" role="status" aria-live="polite">
+          <QuotalisRefreshingBadge />
+        </p>
+      )}
       {(historyProcessing||historyError)&&<p role="status" aria-live="polite">{t(historyProcessing?'UsageSpendLoading':'DashboardValueUnavailable')}</p>}
       {selectedProvider&&<div className="v3-provider-heading"><ProviderIcon providerId={selectedProvider.providerId} size={32}/><strong><bdi>{selectedProvider.displayName}</bdi></strong><ProviderPlanBadge plan={selectedProvider.planName}/><button type="button" onClick={()=>onOpenProviders(selectedProvider.providerId)}>{t('V3Details')}</button></div>}
       <nav className="v3-section-nav" aria-label={t('V3Analytics')}>{tabs.map(([id,key])=><button type="button" key={id} aria-current={section===id?'page':undefined} onClick={()=>setSection(id)}>{t(key)}</button>)}</nav>

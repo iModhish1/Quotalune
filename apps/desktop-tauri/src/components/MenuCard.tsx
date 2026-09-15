@@ -15,6 +15,7 @@ import CodexAccountsMenu from "./CodexAccountsMenu";
 import { DEEPSEEK_PRICING_EVENT } from "../hooks/useDeepSeekPricingStatus";
 import { getDeepSeekPricingStatus } from "../lib/tauri";
 import type { DeepSeekPricingStatus } from "../types/bridge";
+import { QuotalisRefreshingBadge } from "../design-system/QuotalisLoadingStates";
 
 /** Small copy-to-clipboard button matching macOS CopyIconButton (doc.on.doc → checkmark). */
 function CopyIconButton({ text }: { text: string }) {
@@ -256,6 +257,13 @@ export default function MenuCard({
             <span className="menu-card__name">{provider.displayName}</span>
             {!provider.error && email && <span className="menu-card__email">{email}</span>}
           </div>
+          {/* Wave 1F §6: `.menu-card--refreshing`/`aria-busy` already exist
+              but had no visible indication for sighted users (assistive-
+              tech only) -- additive dot badge, same non-layout-affecting
+              technique Floating Structures already use, keeps every
+              already-rendered value (including the reset row below)
+              untouched. */}
+          {isRefreshing && <QuotalisRefreshingBadge dotOnly />}
         </div>
         {provider.error ? (
           <div className="menu-card__error-block">

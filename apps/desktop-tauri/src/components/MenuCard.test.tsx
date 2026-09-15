@@ -86,6 +86,7 @@ function renderCard(
     showResetWhenExhausted?: boolean;
     showPace?: boolean;
     onLayoutChange?: () => void;
+    isRefreshing?: boolean;
   } = {},
 ) {
   return render(
@@ -100,6 +101,7 @@ function renderCard(
           showPace: opts.showPace,
         }}
         onLayoutChange={opts.onLayoutChange}
+        isRefreshing={opts.isRefreshing}
       />
     </LocaleProvider>,
   );
@@ -619,5 +621,22 @@ describe("MenuCard", () => {
     renderCard(snapshot);
 
     expect(await screen.findByText("3分前")).toBeInTheDocument();
+  });
+
+  it("Wave 1F §6: shows an additive refreshing indicator (previously aria-busy only, no visible cue) while keeping cached values on screen", async () => {
+    const snapshot = provider(null, 42);
+    renderCard(snapshot, { isRefreshing: true });
+    // Cached value (provider name) stays visible the entire time.
+    await screen.findByText("Claude");
+    const badge = document.querySelector(".quotalis-refreshing-badge");
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveAttribute("aria-label", "QuotalisLoadingUpdating");
+    expect(screen.getByRole("article")).toHaveAttribute("aria-busy", "true");
+  });
+
+  it("does not show the refreshing indicator when isRefreshing is false", async () => {
+    renderCard(provider(null, 42));
+    await screen.findByText("Claude");
+    expect(document.querySelector(".quotalis-refreshing-badge")).not.toBeInTheDocument();
   });
 });

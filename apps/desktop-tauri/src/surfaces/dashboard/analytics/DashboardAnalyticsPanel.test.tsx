@@ -98,6 +98,7 @@ const LOCALE_ENTRIES = {
   DashboardDataStatusPricingNotRequired: "Pricing: not required for provider-reported cost",
   DashboardDataAvailableSince: "Data available since {}",
   DashboardDataSamples: "{} samples",
+  QuotalisLoadingUpdating: "Updating…",
 };
 
 function rateWindow(usedPercent = 20) {
@@ -348,5 +349,32 @@ describe("DashboardAnalyticsPanel", () => {
     renderPanel([provider()], snapshot());
     await screen.findByText("Today");
     expect(await screen.findByRole("button", { name: "V3Activity" })).toBeInTheDocument();
+  });
+
+  it("Wave 1F §11: shows an additive Updating badge during a same-scope background refresh, keeping the cached snapshot visible the whole time", async () => {
+    const initial = snapshot({ availability: { firstSampleAt: null, lastSampleAt: null, sampleCount: 3, hasCostData: false, hasTokenData: false, hasRequestData: false, hasModelData: false } });
+    renderPanel([provider()], initial);
+    await screen.findByText("Today");
+    expect(screen.queryByText("Updating…")).not.toBeInTheDocument();
+
+    // "refresh-complete" is the real event useDashboardSnapshot.ts listens
+    // for to trigger a same-scope background refetch -- capture the
+    // handler `listen()` registered and fire it directly, matching how
+    // the app's own refresh pipeline invokes it.
+    const refreshHandler = eventMocks.listen.mock.calls.find(([name]) => name === "refresh-complete")?.[1];
+    expect(refreshHandler).toBeInstanceOf(Function);
+
+    let resolveNext: (value: DashboardSnapshot) => void = () => {};
+    tauriMocks.getDashboardSnapshot.mockReturnValueOnce(new Promise((resolve) => { resolveNext = resolve; }));
+    refreshHandler!({});
+
+    // Cached content (the History range label, present since first load)
+    // stays visible while the badge appears -- never a blank/skeleton
+    // state during a same-scope refresh.
+    expect(await screen.findByText("Updating…")).toBeInTheDocument();
+    expect(screen.getByText("Today")).toBeInTheDocument();
+
+    resolveNext(initial);
+    await vi.waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
   });
 });
