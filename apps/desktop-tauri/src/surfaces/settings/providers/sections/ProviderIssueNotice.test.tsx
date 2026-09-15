@@ -49,4 +49,27 @@ describe("ProviderIssueNotice", () => {
       "Cursor: Usage unavailable",
     );
   });
+
+  it("Wave 1F §12: shows the shared timeout message when lastError is exactly 'Timeout', still without echoing raw diagnostic text for any other error", () => {
+    const t = vi.fn((key: string) => ({
+      ProviderIssueUnknown: "Usage unavailable",
+      QuotalisLoadingTimeout: "This took too long to respond",
+      ProviderIssuePrivacySafeDetail: "Details are hidden here to protect account data.",
+    })[key] ?? key);
+
+    const { rerender } = render(
+      <ProviderIssueNotice detail={{ ...detail, errorState: "unknown", lastError: "Timeout" } as ProviderDetail} t={t} />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("This took too long to respond");
+    expect(screen.queryByText("Details are hidden here to protect account data.")).not.toBeInTheDocument();
+
+    // A different, non-"Timeout" error string still gets the generic,
+    // privacy-safe detail line -- exact-match only, not a substring/regex
+    // that could misclassify an unrelated error mentioning "timeout".
+    rerender(
+      <ProviderIssueNotice detail={{ ...detail, errorState: "unknown", lastError: "connection timeout while reading response" } as ProviderDetail} t={t} />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("Details are hidden here to protect account data.");
+    expect(screen.queryByText("This took too long to respond")).not.toBeInTheDocument();
+  });
 });
