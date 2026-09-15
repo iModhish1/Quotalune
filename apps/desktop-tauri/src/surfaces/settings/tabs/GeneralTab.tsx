@@ -21,6 +21,7 @@ import type { TabProps } from "../settingsTabs";
 import NotificationPreview from "../NotificationPreview";
 import NotificationTestControl from "../NotificationTestControl";
 import QuotaArcMark from "../../../components/QuotaArcMark";
+import AppearanceCompositionSummary from "./AppearanceCompositionSummary";
 import {
   LOGO_SIZES,
   LOGO_VARIANTS,
@@ -398,6 +399,7 @@ export default function GeneralTab({
           </Field>
         </div>
       </section>}
+      {mode === "appearance" && <AppearanceCompositionSummary />}
       {mode === "appearance" && <section className="settings-section general-settings-card general-settings-card--identity">
         <h3 className="settings-section__title">{t("LogoIdentitySection")}</h3>
         <div className="settings-section__group">

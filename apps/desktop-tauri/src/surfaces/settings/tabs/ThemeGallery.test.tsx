@@ -45,17 +45,21 @@ describe("ThemeGallery canonical foundation", () => {
     await waitFor(()=>expect(api.setCatalogTheme).toHaveBeenCalledWith('','surface:top'));
     await waitFor(()=>expect(screen.getByText('Effective source: Current profile')).toBeInTheDocument());
   });
-  it("keeps the previous selection when persistence fails", async()=>{
+  it("keeps the previous selection when persistence fails (Wave 1B: failure now surfaces inside the Apply Theme sheet)", async()=>{
     api.getSettingsSnapshot.mockResolvedValue({catalogTheme:"01-obsidian-orbit"});
     api.setCatalogTheme.mockRejectedValue(new Error("Disk unavailable"));
     render(<ThemeGallery/>);
     const button=screen.getByRole("button",{name:"Apply Ember Alloy"});
     await waitFor(()=>expect(button).not.toBeDisabled());
+    // Global-scope Apply now opens the scope sheet instead of mutating
+    // immediately (§10) — commit from inside it.
     fireEvent.click(button);
+    await screen.findByRole("dialog",{name:"Apply Ember Alloy"});
+    fireEvent.click(screen.getByRole("button",{name:"Apply"}));
     expect(await screen.findByRole("alert")).toHaveTextContent("Disk unavailable");
     expect(button).toHaveAttribute("aria-pressed","false");
   });
-  it("persists an explicit material selection with real component previews", async () => {
+  it("persists an explicit material selection with real component previews (Wave 1B: via the Apply Theme sheet)", async () => {
     api.getSettingsSnapshot.mockResolvedValue({catalogTheme:"01-obsidian-orbit"});
     api.setCatalogTheme.mockResolvedValue(undefined);
     render(<ThemeGallery />);
@@ -63,6 +67,8 @@ describe("ThemeGallery canonical foundation", () => {
     const button=await screen.findByRole("button",{name:"Apply Sapphire Observatory"});
     await waitFor(()=>expect(button).not.toBeDisabled());
     fireEvent.click(button);
+    await screen.findByRole("dialog",{name:"Apply Sapphire Observatory"});
+    fireEvent.click(screen.getByRole("button",{name:"Apply"}));
     await waitFor(()=>expect(api.setCatalogTheme).toHaveBeenCalledWith("sapphire-observatory","global"));
     expect(screen.getAllByLabelText("lens provider selector")).toHaveLength(THEME_CATALOG.length);
     expect(screen.getByText("Observatory reticle · reticle motion")).toBeInTheDocument();
@@ -71,5 +77,18 @@ describe("ThemeGallery canonical foundation", () => {
     expect(screen.getAllByText("Meter")).toHaveLength(THEME_CATALOG.length);
     expect(screen.getAllByText("Motion")).toHaveLength(THEME_CATALOG.length);
     expect(screen.getAllByText("210ms").length).toBeGreaterThanOrEqual(1);
+  });
+  it("Global-scope Apply opens the scope sheet and does not mutate settings until the sheet's own Apply is clicked", async () => {
+    api.getSettingsSnapshot.mockResolvedValue({catalogTheme:"01-obsidian-orbit"});
+    api.setCatalogTheme.mockClear();
+    render(<ThemeGallery/>);
+    const button=await screen.findByRole("button",{name:"Apply Ember Alloy"});
+    await waitFor(()=>expect(button).not.toBeDisabled());
+    fireEvent.click(button);
+    expect(await screen.findByRole("dialog",{name:"Apply Ember Alloy"})).toBeInTheDocument();
+    expect(api.setCatalogTheme).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button",{name:"Cancel"}));
+    expect(screen.queryByRole("dialog",{name:"Apply Ember Alloy"})).not.toBeInTheDocument();
+    expect(api.setCatalogTheme).not.toHaveBeenCalled();
   });
 });

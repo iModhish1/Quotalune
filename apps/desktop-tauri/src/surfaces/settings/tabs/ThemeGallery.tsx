@@ -3,21 +3,24 @@ import {useEffect,useState} from "react";
 import {listen} from "@tauri-apps/api/event";
 import FlowSurface from "../../flow-surface/FlowSurface";
 import { CATALOG_STAGE_FIXTURE } from "../../../components/orbit/stageFixture";
-import { CANONICAL_THEME, THEME_CATALOG, catalogBySlug } from "../../../design-system/themeCatalog";
+import { CANONICAL_THEME, THEME_CATALOG, catalogBySlug, type CatalogTheme } from "../../../design-system/themeCatalog";
 import {getSettingsSnapshot,setCatalogTheme,type CatalogThemeScope} from "../../../lib/tauri";
-import {resolveCatalogTheme,type CatalogThemeSettings,type CatalogSurfaceId} from "../../../design-system/themeResolution";
+import {resolveCatalogTheme,type CatalogSurfaceId} from "../../../design-system/themeResolution";
 import "./ThemeGallery.css";
 import StructurePreview from "../StructurePreview";
+import ApplyThemeSheet from "./ApplyThemeSheet";
 import {FLOW_SURFACE_FORM_CATALOG,type FlowSurfaceForm} from "../../../design-system/flowSurface";
 import {catalogMotion} from "../../../design-system/themeMotion";
 import {Select} from "../../../components/FormControls";
+import type {SettingsSnapshot} from "../../../types/bridge";
 
 export default function ThemeGallery() {
   const tr = useSettingsCopy();
-  const [snapshot,setSnapshot]=useState<CatalogThemeSettings>({});
+  const [snapshot,setSnapshot]=useState<Partial<SettingsSnapshot>>({});
   const [previewForm,setPreviewForm]=useState<FlowSurfaceForm>('lens');
   const [previewExpanded,setPreviewExpanded]=useState<string|null>(null);
   const [scope,setScope]=useState<CatalogThemeScope>('global');
+  const [applySheetTheme,setApplySheetTheme]=useState<CatalogTheme|null>(null);
   const surface=scope.startsWith('surface:')?scope.slice(8) as CatalogSurfaceId:undefined;
   const resolved=resolveCatalogTheme(scope==='global'?{catalogTheme:snapshot.catalogTheme}:scope==='profile'?{...snapshot,surfaceCatalogThemes:{}}:snapshot,surface??'top');
   const active=resolved.slug;
@@ -86,9 +89,20 @@ export default function ThemeGallery() {
             <div><dt>{tr("Meter")}</dt><dd>{theme.identity?.meterCap}</dd></div>
             <div><dt>{tr("Motion")}</dt><dd>{theme.expansionMs}ms</dd></div>
           </dl>
-          <button type="button" aria-label={`Apply ${theme.name}`} aria-pressed={active===theme.slug} disabled={!ready||saving} onClick={()=>void apply(theme.slug)}>{tr(active===theme.slug?"Selected":"Apply theme")}</button>
+          {/* Wave 1B §10: applying to Global (Main Application) opens the
+              Apply Theme scope sheet instead of mutating immediately, since
+              a theme may also carry recommendations for other appearance
+              scopes the owner should get to review first. Profile/surface
+              scopes are already a single, explicit, narrow-purpose action
+              (this gallery's own "Apply theme to" selector already scopes
+              them) and keep their existing immediate-apply behavior. */}
+          <button type="button" aria-label={`Apply ${theme.name}`} aria-pressed={active===theme.slug} disabled={!ready||saving}
+            onClick={()=>scope==='global'?setApplySheetTheme(theme):void apply(theme.slug)}>{tr(active===theme.slug?"Selected":"Apply theme")}</button>
         </article>)}
       </div>
+      {applySheetTheme && ready && <ApplyThemeSheet theme={applySheetTheme} scope={scope} snapshot={snapshot as SettingsSnapshot} previewForm={previewForm}
+        onCancel={()=>setApplySheetTheme(null)}
+        onApplied={()=>{setApplySheetTheme(null);setSnapshot(previous=>({...previous,catalogTheme:applySheetTheme.slug}));}}/>}
     </section>
   );
 }

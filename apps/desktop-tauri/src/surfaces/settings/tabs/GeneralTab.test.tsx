@@ -19,6 +19,19 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: vi.fn(),
 }));
 
+// AppearanceCompositionSummary (rendered on mode="appearance") calls
+// getSettingsSnapshot and subscribes via listen — without these mocks the
+// real @tauri-apps/api/event module throws on unmount in jsdom (no
+// __TAURI_INTERNALS__), producing unhandled rejections unrelated to
+// whatever this file is actually testing.
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn().mockResolvedValue(() => {}),
+}));
+vi.mock("../../../lib/tauri", async () => {
+  const actual = await vi.importActual<typeof import("../../../lib/tauri")>("../../../lib/tauri");
+  return { ...actual, getSettingsSnapshot: vi.fn().mockResolvedValue({}) };
+});
+
 import GeneralTab from "./GeneralTab";
 import type { SettingsSnapshot } from "../../../types/bridge";
 import { invoke } from "@tauri-apps/api/core";
