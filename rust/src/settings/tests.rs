@@ -1804,3 +1804,193 @@ fn workspace_background_fields_are_isolated_and_preserve_layout() {
         );
     }
 }
+
+/// Wave 1B §2-4: legacy settings.json fixtures written the way real files on
+/// disk before `appearance_composition` existed look, deserialized through
+/// the CURRENT code path (not constructed via `Settings { .. }` literals,
+/// which would skip the exact `RawSettings`/serde-default boundary a real
+/// upgrade goes through).
+///
+/// The legacy-semantics question this answers (§3): pre-Wave-1B, did
+/// `logo_variant`/`global_limit_presentation`/`provider_tray_configs`/
+/// `workspace_preferences.background` ever behave as "follows
+/// `catalog_theme`"? Answer, from source (confirmed in
+/// `docs/validation/THEME_COMPOSITION_AUDIT.md`'s architecture trace): no —
+/// none of those fields has ever had any `catalog_theme`-conditional logic
+/// anywhere in the settings/resolution code. There is no legacy
+/// "Follow Global" behavior to discover for these four scopes, because
+/// that coupling never existed before this wave. So `AppearanceComposition`
+/// defaulting every legacy user to all-`Override` is not a fallback
+/// approximation of "preserve current appearance" — it is the literally
+/// correct migration, because `Override` on this model means exactly "keep
+/// behaving the way this field always behaved: independently of
+/// `catalog_theme`." These tests prove that, rather than accepting the
+/// prior report's claim by reasoning alone.
+#[cfg(test)]
+mod appearance_composition_legacy_migration_tests {
+    use super::*;
+
+    /// Fixture A: v0.11-style settings with a non-default catalogTheme, no
+    /// appearance_composition key, minimal shape (most fields absent).
+    const FIXTURE_A_NON_DEFAULT_CATALOG_THEME: &str = r#"{
+        "enabled_providers": ["claude", "codex"],
+        "catalog_theme": "smoked-silver"
+    }"#;
+
+    /// Fixture B: existing Light mode + a custom catalogTheme.
+    const FIXTURE_B_LIGHT_MODE_CUSTOM_THEME: &str = r#"{
+        "enabled_providers": ["claude"],
+        "theme": "light",
+        "catalog_theme": "ceramic-pearl-material"
+    }"#;
+
+    /// Fixture C: existing Dark mode + a custom per-surface (floating
+    /// structure) theme override.
+    const FIXTURE_C_DARK_MODE_SURFACE_OVERRIDE: &str = r#"{
+        "enabled_providers": ["claude", "gemini"],
+        "theme": "dark",
+        "catalog_theme": "01-obsidian-orbit",
+        "surface_catalog_themes": { "top": "ceramic-pearl-material" }
+    }"#;
+
+    /// Fixture D: pre-existing explicit logo/tray/background customization
+    /// (all four fields this wave's AppearanceComposition scopes cover
+    /// already existed and were already independently settable before this
+    /// wave — that is the entire point being tested). `"atmosphere-05"` is a
+    /// real generated-background id (`WorkspacePreferences::normalized()`
+    /// only accepts `"atmosphere-"`/`"motion-"` followed by a zero-padded
+    /// `01`..`12`, or a curated name, or `"custom:<uuid-v4>"` — an invented
+    /// id like `"atmosphere-nebula"` silently normalizes to `"cosmic"`,
+    /// which this fixture deliberately avoids so the assertion below tests
+    /// real preservation, not a value that was already being reset).
+    const FIXTURE_D_EXPLICIT_LOGO_TRAY_BACKGROUND: &str = r#"{
+        "enabled_providers": ["claude"],
+        "logo_variant": "aurora",
+        "provider_tray_configs": {
+            "claude": { "enabled": true, "style": "bar" }
+        },
+        "workspace_preferences": { "background": "atmosphere-05" }
+    }"#;
+
+    #[test]
+    fn fixture_a_preserves_catalog_theme_and_defaults_composition_to_override() {
+        let settings: Settings = serde_json::from_str(FIXTURE_A_NON_DEFAULT_CATALOG_THEME)
+            .expect("v0.11-style settings with only catalog_theme load");
+        assert_eq!(settings.catalog_theme, "smoked-silver");
+        assert_eq!(
+            settings.appearance_composition,
+            super::AppearanceComposition::default(),
+            "no legacy behavior links logo/provider-identity/tray/background to catalog_theme, so Override (independent) is the only correct migrated state"
+        );
+    }
+
+    #[test]
+    fn fixture_b_preserves_light_mode_independent_of_catalog_theme() {
+        let settings: Settings = serde_json::from_str(FIXTURE_B_LIGHT_MODE_CUSTOM_THEME)
+            .expect("light mode + custom theme settings load");
+        assert_eq!(settings.theme, ThemePreference::Light);
+        assert_eq!(settings.catalog_theme, "ceramic-pearl-material");
+        // theme (Color Mode) and catalog_theme (Main Application) were
+        // already two unrelated fields pre-Wave-1B; loading must not couple
+        // them now.
+        assert_eq!(
+            settings.appearance_composition,
+            super::AppearanceComposition::default()
+        );
+    }
+
+    #[test]
+    fn fixture_c_preserves_dark_mode_and_surface_override_together() {
+        let settings: Settings = serde_json::from_str(FIXTURE_C_DARK_MODE_SURFACE_OVERRIDE)
+            .expect("dark mode + surface override settings load");
+        assert_eq!(settings.theme, ThemePreference::Dark);
+        assert_eq!(settings.catalog_theme, "01-obsidian-orbit");
+        assert_eq!(
+            settings.surface_catalog_themes.get("top"),
+            Some(&"ceramic-pearl-material".to_string()),
+            "the floating-structure surface override (already real, pre-existing Global/Override state) must survive unchanged"
+        );
+    }
+
+    #[test]
+    fn fixture_d_preserves_explicit_logo_tray_background_values_exactly() {
+        let settings: Settings = serde_json::from_str(FIXTURE_D_EXPLICIT_LOGO_TRAY_BACKGROUND)
+            .expect("explicit logo/tray/background settings load");
+        assert_eq!(settings.logo_variant, "aurora");
+        assert_eq!(
+            settings
+                .provider_tray_configs
+                .get("claude")
+                .map(|c| c.style.as_str()),
+            Some("bar")
+        );
+        assert_eq!(
+            settings
+                .workspace_preferences
+                .as_ref()
+                .map(|p| p.background.as_str()),
+            Some("atmosphere-05")
+        );
+        // These were the user's real explicit choices before
+        // appearance_composition existed; migrating them to Override (not
+        // Global) is what keeps them rendering exactly as before.
+        assert_eq!(
+            settings.appearance_composition,
+            super::AppearanceComposition::default()
+        );
+        assert_eq!(
+            settings.appearance_composition.quotalis_logo,
+            AppearanceSource::Override
+        );
+        assert_eq!(
+            settings.appearance_composition.tray,
+            AppearanceSource::Override
+        );
+        assert_eq!(
+            settings.appearance_composition.workspace_background,
+            AppearanceSource::Override
+        );
+    }
+
+    /// §4: full round-trip — legacy JSON → Settings → save (serialize) →
+    /// reload (deserialize) — proves no unrelated setting is lost and the
+    /// migrated composition state itself survives a real save/reload cycle,
+    /// not just the initial one-way parse.
+    #[test]
+    fn round_trip_preserves_effective_appearance_and_loses_nothing() {
+        for fixture in [
+            FIXTURE_A_NON_DEFAULT_CATALOG_THEME,
+            FIXTURE_B_LIGHT_MODE_CUSTOM_THEME,
+            FIXTURE_C_DARK_MODE_SURFACE_OVERRIDE,
+            FIXTURE_D_EXPLICIT_LOGO_TRAY_BACKGROUND,
+        ] {
+            let loaded: Settings = serde_json::from_str(fixture).expect("legacy fixture parses");
+            let saved = serde_json::to_string(&loaded).expect("re-serializes");
+            let reloaded: Settings =
+                serde_json::from_str(&saved).expect("round-tripped JSON reparses");
+            // Full-struct equality via JSON value comparison (Settings has
+            // no PartialEq derive): nothing silently reset or dropped by
+            // the save/reload cycle, appearance_composition included.
+            // `enabled_providers` is a HashSet<String>, so its serialized
+            // array order is not stable across the two serialize calls
+            // below even for identical content — sort it in both values
+            // before comparing so this test does not spuriously fail on an
+            // unrelated, pre-existing field's non-deterministic ordering.
+            let normalize = |settings: &Settings| -> serde_json::Value {
+                let mut value = serde_json::to_value(settings).unwrap();
+                if let Some(providers) = value
+                    .get_mut("enabled_providers")
+                    .and_then(|v| v.as_array_mut())
+                {
+                    providers.sort_by(|a, b| a.as_str().cmp(&b.as_str()));
+                }
+                value
+            };
+            assert_eq!(
+                normalize(&loaded),
+                normalize(&reloaded),
+                "fixture: {fixture}"
+            );
+        }
+    }
+}

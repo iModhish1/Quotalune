@@ -89,6 +89,50 @@ Rust tests (`command_profiles.rs`) + 9 TS unit tests
 rejection, JSON round-trip, resolution (Override/Global/no-recommendation
 fallback), and summary-label behavior.
 
+## Legacy migration proof (Wave 1B FINAL §2–4)
+
+The prior report's migration claim ("default-Override preserves current
+appearance with zero migration code beyond serde defaults") was accepted by
+reasoning alone, not proof. Added 5 real tests in
+`rust/src/settings/tests.rs`'s `appearance_composition_legacy_migration_tests`
+module, deserializing realistic pre-Wave-1B `settings.json` fixtures through
+the actual `Settings`/`RawSettings` load path (not constructed via a
+`Settings { .. }` literal, which would skip that boundary):
+
+- **Fixture A** — a v0.11-style file with only a non-default `catalog_theme`.
+- **Fixture B** — Light mode + a custom `catalog_theme`.
+- **Fixture C** — Dark mode + a `surface_catalog_themes` override.
+- **Fixture D** — pre-existing explicit `logo_variant`/`provider_tray_configs`/
+  `workspace_preferences.background` values.
+
+**§3's ownership-intent question, answered from source, not assumed**: did
+any of `logo_variant`/`global_limit_presentation`/`provider_tray_configs`/
+`workspace_preferences.background` ever behave as "follows `catalog_theme`"
+pre-Wave-1B? No — grepping the full settings/resolution code (done in the
+original architecture trace) found zero `catalog_theme`-conditional logic
+touching any of them. There is no legacy "Follow Global" behavior to
+preserve for these four scopes, because that coupling never existed. So
+`AppearanceComposition::default()` (all-`Override`) is not an approximation
+that happens to preserve today's appearance — it is the literally correct
+migration, because `Override` means exactly "keep behaving the way this
+field always behaved: independently of `catalog_theme`." Fixtures A–D each
+assert this explicitly, and a 5th test round-trips all four fixtures through
+save→reload and asserts nothing else in the ~90-field `Settings` struct is
+lost or altered (via a full-value JSON comparison, with `enabled_providers`
+sorted first since it round-trips through a `HashSet` and has no stable
+serialization order — an unrelated, pre-existing property of that field
+that would otherwise make the comparison spuriously flaky).
+
+One real bug in the fixture itself was caught and fixed by running the
+tests, not written around: an invented background id
+(`"atmosphere-nebula"`) silently normalizes to `"cosmic"` via
+`WorkspacePreferences::normalized()`'s real validation (it only accepts
+`"atmosphere-"`/`"motion-"` + zero-padded `01`-`12`, a curated name, or
+`"custom:<uuid-v4>"`) — the fixture was corrected to a real generated-
+background id (`"atmosphere-05"`) so the assertion tests actual
+preservation rather than a value that was already being reset by existing,
+unrelated code.
+
 ## What is genuinely NOT built this wave — not to be claimed done
 
 - **Apply Theme scope-selection sheet** (§7–10): no UI. This is the biggest
