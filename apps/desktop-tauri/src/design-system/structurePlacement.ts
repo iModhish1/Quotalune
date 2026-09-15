@@ -1,15 +1,26 @@
 /**
- * Wave 1D §14-17: a pure, testable placement resolver for a floating
- * Structure's expanded/detail region relative to its compact anchor and
- * the monitor work area. This is the "code work" piece of edge placement —
- * deliberately separated from any native window-positioning call so it can
- * be exercised in jsdom/vitest without a live Tauri runtime; a native
- * session wires the (still pending, see WAVE1_NATIVE_QA_HANDOFF.md) actual
- * on-screen placement through this same function.
+ * Wave 1D §14-17: a pure, testable placement resolver for an auto-
+ * flipping tooltip/popover-style attachment — preferred side wins if it
+ * fits, otherwise flips, otherwise shifts within a work area.
  *
- * Does not invent per-structure viewport math — every render path (Flow/
- * Reel/Notch) is expected to funnel its own anchor rect + detail size
- * through this one resolver rather than each hand-rolling edge logic.
+ * CORRECTION (Wave 1E, see `docs/validation/STRUCTURE_COORDINATE_MODEL.md`
+ * for the full trace): this is NOT wired into native Flow Surface window
+ * positioning, and should not be. That real production system already
+ * exists in `apps/desktop-tauri/src-tauri/src/surfaces.rs`
+ * (`anchored_top_arc_position` + `clamp_top_arc_position_to_work_area`),
+ * is already tested, and deliberately does NOT auto-flip a user's chosen
+ * anchor — flipping a deliberately-docked window's side because it
+ * happens to be tall would be surprising, unwanted behavior, not a bug
+ * this function should "fix." The detail panel's position WITHIN that one
+ * window is separately owned by deliberately-tuned per-form CSS, which
+ * already stays inside the window's own bounds by construction (the
+ * window itself resizes to contain it).
+ *
+ * This function remains real, tested, and available for a genuinely new
+ * floating-attachment UI pattern this codebase does not have yet (or the
+ * Dev QA fixture panel's own layout) — it is not currently invoked by any
+ * production render path, and forcing it into either existing layer would
+ * mean fighting already-correct, already-tested code.
  */
 
 export interface StructureRect {

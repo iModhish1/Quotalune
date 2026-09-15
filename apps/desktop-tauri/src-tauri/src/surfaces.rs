@@ -516,12 +516,32 @@ fn free_top_arc_resize_position(
     )
 }
 
-fn set_top_arc_position(window: &tauri::WebviewWindow, position: (f64, f64)) {
-    let scale = window.scale_factor().unwrap_or(1.0).max(0.01);
-    let target = tauri::PhysicalPosition::new(
+/// Wave 1E §5: the ONE place logical Flow Surface coordinates convert to
+/// physical pixels. Every other position calculation in this file
+/// (`anchored_top_arc_position`, `clamp_top_arc_position_to_work_area`,
+/// `monitor_work_area_logical`'s own output, `resolve_flow_surface_dock`,
+/// the `top-arc-dock-{anchor}` fractional centre, and this TS mirror's
+/// `structurePlacement.ts`) operates purely in LOGICAL pixels — the DPI
+/// scale factor is applied exactly once, right here, at the boundary where
+/// a value actually leaves this process and reaches the Win32 window API
+/// (which speaks physical pixels). Extracted as a pure function so scale
+/// behavior is unit-testable without a live `tauri::WebviewWindow`.
+fn logical_to_physical_position(position: (f64, f64), scale_factor: f64) -> (i32, i32) {
+    let scale = if scale_factor.is_finite() && scale_factor > 0.0 {
+        scale_factor
+    } else {
+        1.0
+    };
+    (
         (position.0 * scale).round() as i32,
         (position.1 * scale).round() as i32,
-    );
+    )
+}
+
+fn set_top_arc_position(window: &tauri::WebviewWindow, position: (f64, f64)) {
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let (x, y) = logical_to_physical_position(position, scale);
+    let target = tauri::PhysicalPosition::new(x, y);
     if window.outer_position().ok() != Some(target) {
         let _ = window.set_position(target);
     }
@@ -1521,6 +1541,89 @@ mod tests {
             ),
             (770.0, 100.0),
         );
+    }
+
+    // Wave 1E §5-6: DPI/coordinate-model tests. Every position calculation
+    // in this file (anchored_top_arc_position, clamp_top_arc_position_to_
+    // work_area, monitor_work_area_logical's output) operates purely in
+    // logical pixels; logical_to_physical_position is the one conversion
+    // boundary, applied only when a value actually reaches the Win32
+    // window API. These prove that boundary is correct at the scale
+    // factors real Windows displays commonly use, and that everything
+    // upstream of it stays scale-invariant (the same logical input always
+    // produces the same logical output regardless of DPI -- only the
+    // final physical conversion changes).
+    #[test]
+    fn logical_to_physical_position_scales_correctly_at_representative_dpi_factors() {
+        for scale in [1.0, 1.25, 1.5, 2.0] {
+            assert_eq!(
+                logical_to_physical_position((0.0, 0.0), scale),
+                (0, 0),
+                "origin must map to origin at scale {scale}"
+            );
+            assert_eq!(
+                logical_to_physical_position((100.0, 200.0), scale),
+                (
+                    (100.0 * scale).round() as i32,
+                    (200.0 * scale).round() as i32
+                ),
+                "scale {scale}"
+            );
+        }
+        // Exact values at the four representative factors, so a future
+        // change to the rounding rule shows up as an explicit diff here.
+        assert_eq!(logical_to_physical_position((320.0, 56.0), 1.0), (320, 56));
+        assert_eq!(logical_to_physical_position((320.0, 56.0), 1.25), (400, 70));
+        assert_eq!(logical_to_physical_position((320.0, 56.0), 1.5), (480, 84));
+        assert_eq!(logical_to_physical_position((320.0, 56.0), 2.0), (640, 112));
+    }
+
+    #[test]
+    fn logical_to_physical_position_never_panics_on_non_finite_or_non_positive_scale() {
+        // window.scale_factor() is an OS query and could theoretically
+        // return something degenerate; the conversion must fail safe
+        // (fall back to 1.0) rather than produce NaN/overflow physical
+        // coordinates that could put the window somewhere unrecoverable.
+        assert_eq!(
+            logical_to_physical_position((100.0, 100.0), 0.0),
+            (100, 100)
+        );
+        assert_eq!(
+            logical_to_physical_position((100.0, 100.0), -1.0),
+            (100, 100)
+        );
+        assert_eq!(
+            logical_to_physical_position((100.0, 100.0), f64::NAN),
+            (100, 100)
+        );
+        assert_eq!(
+            logical_to_physical_position((100.0, 100.0), f64::INFINITY),
+            (100, 100)
+        );
+    }
+
+    #[test]
+    fn anchored_position_and_work_area_clamp_are_scale_invariant_in_logical_space() {
+        // anchored_top_arc_position/clamp_top_arc_position_to_work_area
+        // never see a scale factor at all -- proving the SAME logical
+        // inputs (work area, size, anchor) produce the SAME logical output
+        // regardless of what DPI the caller happens to be at, which is
+        // exactly the "does not mix logical/physical implicitly" property
+        // §5 asks for. The physical conversion is a pure, separate step
+        // (see the test above) applied only once, at the very end.
+        let work_area = (10.0, 40.0, 1_280.0, 720.0);
+        let size = (320.0, 56.0);
+        for _dpi_label in ["100%", "125%", "150%", "200%"] {
+            // Scale is intentionally NOT passed here -- that is the point.
+            assert_eq!(
+                anchored_top_arc_position("right", size, work_area, (0.5, 0.5)),
+                (970.0, 372.0),
+            );
+            assert_eq!(
+                clamp_top_arc_position_to_work_area((-50.0, 2_000.0), size, work_area),
+                (10.0, 704.0),
+            );
+        }
     }
 
     #[test]
