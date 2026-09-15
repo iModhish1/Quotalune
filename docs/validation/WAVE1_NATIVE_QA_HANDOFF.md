@@ -57,6 +57,33 @@ This was confirmed by actually launching `QuotalisDev.exe` through the
 sanctioned tool and observing the correct verified Dev identity before
 hitting the screenshot wall — not assumed from documentation alone.
 
+**Wave 1 native-closure session re-confirmed this fresh** (built a new
+verified Dev candidate from `29447752a165`, launched it twice through
+`desktop_qa_launch_quotalis_dev` with the real SHA-256, confirmed correct
+identity both times): `take_screenshot` returned `BACKGROUND_ONLY` from
+BOTH `windows-exe-automation` and `helix-pilot` (two independently
+implemented MCP servers hitting the identical session-level guard — this
+is a categorical policy, not a per-tool quirk worth trying a third
+server against). **New finding beyond prior waves**: a passive
+`desktop_qa_background_control` "inspect" call on the real launched
+window DOES work (no `BACKGROUND_ONLY` block on read-only inspection)
+and returns real window geometry (confirmed: 630×1020 at
+`(1282,100)-(1912,1120)` on this session's 1920-wide display, consistent
+with a right-edge dock), but the returned control tree bottoms out at
+generic unnamed `Pane` nodes for the entire `WRY_WEBVIEW`/`Chrome_WidgetWin`
+content area — the real React UI's buttons/selects/ARIA labels are NOT
+bridged into Win32 UIA at all in this environment, so there is no
+addressable control for `desktop_qa_background_control`'s `invoke`/
+`set_value` actions to target either. Practical implication for the next
+session: don't plan on driving the app via named-control UIA invocation
+(e.g. clicking a Settings tab or typing a URL) — if your environment has
+this same limitation, real interaction requires either a working
+CDP connection or restored `take_screenshot`+input capability, not a
+UIA workaround. The window disappeared from `list_windows_tool` after
+the first launch's screenshot attempt (kill-on-close job reclaim, same
+behavior Wave 1D first observed) — relaunching produced a fresh window
+each time, so this is not a one-off flake.
+
 If your session has working `take_screenshot`/CDP/DOM-inspection
 capability for a launched `QuotalisDev.exe` window, you can close
 everything below.
