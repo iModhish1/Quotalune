@@ -247,6 +247,29 @@ pub mod build_info {
     };
 }
 
+/// Wave 1E §22/§25: the ONLY frontend-facing signal for "is this a Dev-
+/// channel build". Reads the same compile-time `build_info::CHANNEL`
+/// constant `--print-build-info` and `channel_launch_is_safe` already use,
+/// so there is no second notion of "is this Dev" to drift out of sync with
+/// the real channel-safety guard.
+///
+/// NOT currently called by the structure QA fixture panel
+/// (`demo/ReelPreview.tsx`, reached via the pre-existing `?window=demo`
+/// proof-harness route) — that route's own `DemoStage.tsx` documents
+/// itself as running with no Tauri APIs at all, so it cannot invoke this
+/// or any other command; its own unreachability from real app navigation
+/// (and therefore from Personal) is what makes it Dev-safe, not this
+/// command. This command exists for a possible future in-app-integrated
+/// fixture surface (one rendered inside the real Tauri window rather than
+/// the browser-only demo route), where gating on a live channel check
+/// would matter. Kept and tested now so that if/when such a surface is
+/// built, the channel check does not need to be invented and verified for
+/// the first time under time pressure.
+#[tauri::command]
+fn is_dev_channel() -> bool {
+    build_info::CHANNEL == "dev"
+}
+
 fn channel_launch_is_safe(dev_channel: bool, proof_requested: bool, exe_name: &str) -> bool {
     dev_channel || (!proof_requested && !exe_name.eq_ignore_ascii_case("QuotalisDev.exe"))
 }
@@ -420,6 +443,7 @@ fn main() {
             },
         ))
         .invoke_handler(tauri::generate_handler![
+            is_dev_channel,
             commands::list_workspace_backgrounds,
             commands::read_workspace_background,
             commands::import_workspace_background,
@@ -754,6 +778,22 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn is_dev_channel_matches_the_same_build_info_channel_constant_the_launch_guard_uses() {
+        // Wave 1E §25: proves the Dev QA fixture panel's gate cannot drift
+        // from the real channel-safety constant -- both read
+        // build_info::CHANNEL, nothing computes its own separate notion of
+        // "is this Dev".
+        assert_eq!(super::is_dev_channel(), super::build_info::CHANNEL == "dev");
+        // This binary's own Cargo features decide which one is true at
+        // compile time; whichever it is, the two must always agree.
+        if cfg!(feature = "dev-channel") {
+            assert!(super::is_dev_channel());
+        } else {
+            assert!(!super::is_dev_channel());
+        }
+    }
+
     #[test]
     fn channel_identity_rejects_mixed_and_missing_config() {
         let dev = "app.quotalis.desktop.dev";

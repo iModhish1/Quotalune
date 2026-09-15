@@ -64,6 +64,15 @@ export function getSettingsSnapshot(): Promise<SettingsSnapshot> {
   return invoke<SettingsSnapshot>("get_settings_snapshot");
 }
 
+/** Wave 1E §22/§25: the one frontend-facing signal for "is this a
+ * Dev-channel build" — gates the Dev-only structure QA fixture panel.
+ * Reads the same compile-time channel constant the native launch-safety
+ * guard uses (`is_dev_channel` in main.rs), so there is no second notion
+ * of "is this Dev" that could drift out of sync. */
+export function isDevChannel(): Promise<boolean> {
+  return invoke<boolean>("is_dev_channel");
+}
+
 export function getDashboardSnapshot(options: {
   range: DashboardRangeKind;
   timezone?: string;
