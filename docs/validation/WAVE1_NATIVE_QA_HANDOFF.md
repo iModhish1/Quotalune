@@ -2,24 +2,32 @@
 
 This document tells a session that HAS working native pixel-screenshot
 capability everything it needs to close Wave 1. It does not require
-reading the chat history that produced it.
+reading the chat history that produced it. **Start at §2a below** — it
+names the exact two commands to run first; everything after that is
+detail/context for when something doesn't match what the commands
+report.
 
 ## Why this handoff exists
 
-This session (Wave 1D) completed every code-buildable Wave 1 requirement
-it could verify without native pixel capture: theme composition (data
-model, migration, Apply sheet, real previews, atomicity, Recommended
-semantics, Light/Dark independence), Floating Structures' loading-state
-distinction, an edge-placement resolver, accessible keyboard movement,
-structure state-machine tests, and provider-count fixtures. All of it is
-real, automated, and gate-clean (jsdom/vitest + cargo test).
+Waves 1B-1E completed every code-buildable Wave 1 requirement they could
+verify without native pixel capture: theme composition (data model,
+migration, Apply sheet, real previews, atomicity, Recommended semantics,
+Light/Dark independence), Floating Structures' loading-state AND
+refreshing-state distinction, the real native edge-placement/DPI
+coordinate model (traced and closed in `surfaces.rs`, not a parallel
+resolver), a connector decision model, accessible keyboard movement,
+structure state-machine tests, provider-count fixtures, and a Dev-only
+structure QA fixture panel driving the real production components
+through the full fixture matrix. All of it is real, automated, and
+gate-clean (jsdom/vitest + cargo test) — see §1a for exactly which
+document proves which claim.
 
-It could NOT perform any native visual verification. The exact,
-confirmed reason: `mcp__windows-exe-automation__take_screenshot` and
-`take_control_screenshot` both return `BACKGROUND_ONLY` in this session
-(foreground-input-capable tools are disabled by this session's own
-policy), and the CDP-based screenshot technique this project used
-earlier in this same overall effort (`.local/proof/claude-audit/`,
+No session in Wave 1 has been able to perform native visual
+verification. The exact, confirmed reason (re-confirmed each wave, not
+just assumed from a stale note): `mcp__windows-exe-automation__take_screenshot`
+and `take_control_screenshot` both return `BACKGROUND_ONLY` (foreground-
+input-capable tools are disabled by session policy), and the CDP-based
+screenshot technique this project used earlier (`.local/proof/claude-audit/`,
 `cdp-lib.mjs` connecting to `127.0.0.1:9333`) requires WebView2's
 `--remote-debugging-port` flag, which the hardened, args-free
 `desktop_qa_launch_quotalis_dev` launcher does not accept by design (it
@@ -33,6 +41,33 @@ hitting the screenshot wall — not assumed from documentation alone.
 If your session has working `take_screenshot`/CDP/DOM-inspection
 capability for a launched `QuotalisDev.exe` window, you can close
 everything below.
+
+## 1a. What's already proven in code (read these instead of re-deriving)
+
+- `docs/validation/STRUCTURE_COORDINATE_MODEL.md` — the real two-layer
+  native-window-position vs. detail-panel-CSS-position split, and why
+  `structurePlacement.ts`'s resolver deliberately is NOT wired into
+  native window positioning (it solves a different, currently
+  hypothetical problem).
+- `docs/validation/STRUCTURE_ICON_RING_SAFE_BOX.md` — the icon/ring
+  clipping candidate flagged in Wave 1D is hand-computed CLOSED, not a
+  real defect (≥14.5px clearance in the tightest case), with one
+  disclosed unchecked case (75% minimum structure scale) worth a native
+  spot-check, not a full re-investigation.
+- `apps/desktop-tauri/src-tauri/src/surfaces.rs`'s `mod tests` — DPI/
+  logical-to-physical conversion is closed with exact-value tests at
+  1.0/1.25/1.5/2.0 scale factors (`logical_to_physical_position_scales_correctly_at_representative_dpi_factors`).
+  This is a real, non-DPI-scaled screenshot check now: capture at
+  whatever scale factor the native machine is actually running and
+  confirm the window's on-screen position matches what these tests say
+  it should be — don't re-derive the arithmetic by eye.
+- `apps/desktop-tauri/src/design-system/structureConnector.ts` — the
+  connector/attachment decision model (attached?/connector-required?/
+  orientation/length), tested, NOT yet wired into any of the 14 forms'
+  visuals (deliberately — see the file header).
+- `docs/validation/STRUCTURE_VISUAL_QA_MATRIX.md` — per-form CODE READY /
+  NATIVE VISUAL STATUS / FIXTURE ID / EVIDENCE PATH. Every FIXTURE ID
+  column value is a real entry in `WAVE1_NATIVE_QA_MATRIX.json` (§2a).
 
 ## 0. First, reconcile
 
@@ -84,6 +119,45 @@ you have a CDP-capable launch path, capture real pixels. If you have
 similarly restricted in your session, either may also work — check their
 own tool descriptions for input-capability gates before relying on them.
 
+## 2a. Run the prepared capture harness (the fast path)
+
+Wave 1E prepared a deterministic manifest and a capture script so you do
+not have to invent capture logic or filenames from scratch. Two
+independent lanes — run whichever your environment actually supports;
+you do not need both to make progress:
+
+```bash
+# Lane "fixture" -- the Dev-only demo/ReelPreview.tsx panel. Needs ONLY a
+# normal CDP-capable browser (any Chromium with --remote-debugging-port)
+# pointed at a running `npm run dev` server -- does NOT need the hardened
+# Quotalis Dev launcher at all, so try this lane FIRST if the "native"
+# lane's launcher restriction (§ "Why this handoff exists") still applies
+# in your session.
+cd apps/desktop-tauri && npm run dev &   # serves on http://localhost:5173/ by default
+node scripts/capture-native-structure-qa-matrix.mjs --lane fixture --port 9333
+
+# Lane "native" -- the real production top-arc WebView2, via
+# scripts/build-dev-verified.mjs + desktop_qa_launch_quotalis_dev (§0-2
+# above), then a CDP connection on whatever port your launch path exposes.
+node scripts/capture-native-structure-qa-matrix.mjs --lane native --port 9223 --pid <launched pid>
+```
+
+Each run writes PNGs to `docs/images/v9/native/structures/<lane's files,
+per WAVE1_NATIVE_QA_MATRIX.json's expectedFilename>` plus one
+`evidence-<lane>.json` (sha256 + physical pixel dimensions + captured
+runtime text per entry — the same shape `capture-native-surface-proof.mjs`/
+`capture-native-theme-matrix.mjs` already produce, so any existing
+tooling that consumes those evidence files works unchanged here). Check
+each capture's PNG against its manifest entry's `passCriteria` by eye (or
+programmatically, e.g. diffing `runtime.text` against expected strings)
+before marking anything PASS — the script proves a screenshot was taken,
+not that it looks correct.
+
+If you add or change entries, edit
+`docs/validation/WAVE1_NATIVE_QA_MATRIX.json` directly (it's a plain
+array under `entries`) rather than hand-writing new capture calls; the
+script reads it as the single source of truth for what to capture.
+
 ## 3. Load fixture data
 
 `apps/desktop-tauri/src/lib/structureFixtures.ts` (this session's new
@@ -101,8 +175,33 @@ module) exports deterministic, clearly-synthetic provider fixtures:
 These reuse the EXISTING demo-mode mechanism (`getSurfaceDemoMode`/
 `setSurfaceDemoMode` in `lib/surfaceDemo.ts`, already wired through every
 form's `demoMode`/`showDemoBadge` props) rather than a second fixture
-store. **Not built this session**: a live in-app UI to swap these in at
-runtime without a code change. The fastest path for a native session:
+store.
+
+**Wave 1E built the live UI this section previously said did not exist**:
+`apps/desktop-tauri/src/demo/ReelPreview.tsx`, reached via
+`?window=demo&gen=reel` (no Dev build or Tauri IPC required at all — it
+runs in a plain browser, which is also why it can never touch Personal or
+any real settings/history store, see that file's own header comment and
+`demo/devSafety.test.ts`). It has live `<select>`/checkbox controls for:
+structure (all 14 forms), anchor/position, provider count (1/3/6/12/24/70),
+provider name length, reset length/availability, quota-window count
+(1/2), data state (available/loading/refreshing/unavailable), an RTL
+layout-direction toggle, and Pin/Unpin — driving the REAL
+`FlowSurface`/`ReelSurface`/`NotchSurface` components, not a mock. This is
+the "fixture" lane in §2a's capture script. Two things it deliberately
+does NOT do, disclosed rather than faked: it cannot show real Arabic
+text (its `PreviewLocaleProvider` is a stub, fixed to English, no live
+Tauri IPC to fetch `ar-SA.ftl` strings — the RTL toggle only proves
+layout mirroring), and it has no Light/Dark control (Structures have no
+distinct light-mode CSS palette today, confirmed by reading
+`FlowSurface.css`).
+
+For the REAL native production window (the "native" lane), only the
+fixed 6-provider demo-mode dataset is reachable via IPC
+(`set_surface_demo_mode`) — the extended fixture matrix above is
+`ReelPreview.tsx`-only. If a native session needs the full matrix
+rendered inside the actual native WebView2 rather than a plain browser,
+the fastest path is still the one this section previously described:
 temporarily edit `lib/surfaceDemo.ts`'s `SURFACE_DEMO_PROVIDERS` export
 to call one of the `structureFixtures.ts` functions, rebuild Dev, capture,
 revert. This is DEV-only source code, never touches Personal, and is
@@ -153,7 +252,15 @@ any form a screenshot reveals as visibly broken.
 
 ## 6. Evidence filenames
 
-Store under `docs/images/structures/final/`:
+**`WAVE1_NATIVE_QA_MATRIX.json` is authoritative for exact filenames** —
+use `expectedFilename` per entry (relative to
+`docs/images/v9/native/structures/`) when running via §2a's script; it
+writes there automatically. The list below is Wave 1D's original,
+broader checklist, kept for cases the manifest doesn't yet have a
+dedicated entry for (extend the manifest with a new entry rather than
+inventing an ad-hoc filename, so `STRUCTURE_VISUAL_QA_MATRIX.md`'s
+FIXTURE ID/EVIDENCE PATH columns stay accurate). Store any of these
+under `docs/images/structures/final/`:
 
 ```
 <form-id>-collapsed.png
@@ -226,22 +333,42 @@ something to native-QA as if it were this component.
 
 ## 9. Edge placement / DPI
 
-`design-system/structurePlacement.ts`'s `resolveStructurePlacement()` is
-fully unit-tested (13 cases: all 4 edges, all 4 corners, small work area,
-RTL tie-break, safe inset, anchor gap) but **not wired into any native
-window-positioning call** — no production caller passes it real monitor
-work-area bounds yet. Before native-testing edge placement, either (a)
-wire it into the actual Structure positioning path (Flow Surface's window
-move/anchor-resolution code) and re-verify with unit tests unaffected,
-or (b) native-test the CURRENT ad-hoc behavior and treat any defects
-found as new findings, not regressions of something this wave claimed to
-fix (it explicitly did not wire this in — see
-`STRUCTURE_VISUAL_QA_MATRIX.md`'s "Edge" column: NOT NATIVE-TESTED
-everywhere).
+Wave 1E traced the REAL native edge-placement/DPI pipeline (it already
+existed, tested, and correct — see `docs/validation/STRUCTURE_COORDINATE_MODEL.md`)
+rather than wiring in a parallel system. The two coordinate layers:
 
-DPI: this session could not test any scale factor. Record the actual
-tested scale (100%/125%/150%) or `ENVIRONMENT_BLOCKED` with the specific
-reason if the native session's environment also cannot switch DPI.
+- **Layer A — native window position on the monitor**: Rust-owned,
+  `apps/desktop-tauri/src-tauri/src/surfaces.rs`
+  (`anchored_top_arc_position`, `clamp_top_arc_position_to_work_area`,
+  `resolve_flow_surface_dock`, `logical_to_physical_position`). Already
+  unit-tested for edges/corners/negative monitor origins/DPI scale
+  factors (1.0/1.25/1.5/2.0, exact expected values). Native-testing this
+  layer means: set a real Windows display-scale factor, dock a Structure
+  to each of the 9 anchors, and confirm the on-screen physical pixel
+  position matches `logical_to_physical_position`'s tested arithmetic —
+  not eyeballing "does it look roughly right."
+- **Layer B — detail-panel CSS position inside that one window**:
+  per-form-tuned CSS, not a shared resolver. This is what a screenshot
+  actually shows when you look at "is the content correctly placed
+  inside the structure" — it is a different concern from Layer A and
+  should be evaluated separately (a defect here is a CSS bug in that
+  specific form's `.css` file, not a coordinate-model bug).
+- `design-system/structurePlacement.ts`'s `resolveStructurePlacement()`
+  is real and unit-tested (13 cases) but is DELIBERATELY not wired into
+  either layer — it solves a still-hypothetical third problem (auto-
+  flipping tooltip/popover attachment against an anchor point) that no
+  current production caller needs. Do not wire it in "to close this
+  section" without confirming a real defect exists that only it would
+  fix — see the coordinate-model doc's own reasoning.
+
+DPI: no session in Wave 1 has been able to test a real scale factor
+against actual pixels yet — the arithmetic is now closed and tested in
+isolation (`surfaces.rs`), but never cross-checked against a real
+Windows display-scale setting and a real screenshot. Record the actual
+tested scale (100%/125%/150%/200%) or `ENVIRONMENT_BLOCKED` with the
+specific reason if the native session's environment also cannot switch
+DPI. `NATIVE-FORM-ANCHOR-03` in `WAVE1_NATIVE_QA_MATRIX.json` is the
+prepared entry for this.
 
 ## 10. Accessible movement
 
@@ -256,12 +383,16 @@ requires pointer drag.
 
 ## 11. Icon/ring safe box
 
-One candidate spot flagged, not confirmed as a real defect and not fixed
-blind: `.flow-surface__core`'s `overflow: hidden`
-(`FlowSurface.css`) wraps the brand mark's decorative halo
-(`box-shadow` glow on `.flow-surface__brand`). If a native screenshot
-shows the halo visibly clipped at the core's edge, that is the fix
-target; if not, this can be closed as a non-issue.
+Wave 1E hand-computed this: `.flow-surface__core`'s `overflow: hidden`
+(`FlowSurface.css`) wraps the brand mark's decorative halo (`box-shadow`
+glow on `.flow-surface__brand`), and the clearance in the tightest case
+is ≥14.5px — **closed as not a real defect**, see
+`docs/validation/STRUCTURE_ICON_RING_SAFE_BOX.md` for the full
+calculation and a forward safe-box contract for future icon/ring
+additions. One disclosed gap that IS still worth a quick native spot-
+check: the 75% minimum structure-scale case was not hand-verified (only
+100% was). If a native screenshot at 75% scale shows any clipping, that
+is a real finding this wave's math missed, not a regression.
 
 ## 12. Structure lifecycle/performance
 
