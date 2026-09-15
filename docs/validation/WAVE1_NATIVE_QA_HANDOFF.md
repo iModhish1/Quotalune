@@ -96,7 +96,7 @@ git status --short
 git log -15 --oneline --decorate
 ```
 
-Expect `HEAD` to be at or after `b639aeab` (Wave 1E's last commit before
+Expect `HEAD` to be at or after `8c7974cd` (Wave 1F's last commit before
 its final verified Dev build). If commits exist beyond what you can see
 referenced here, that is fine — proceed from the actual current state,
 not from an assumption frozen in this document.
