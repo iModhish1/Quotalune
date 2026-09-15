@@ -113,7 +113,7 @@ describe("ApplyThemeSheet", () => {
     third.unmount();
   });
 
-  it("Select All enables Floating Structures plus every available optional scope; Recommended enables only the optional scopes", () => {
+  it("Select All enables every compatible scope including Floating Structures", () => {
     renderSheet();
     fireEvent.click(screen.getByRole("button", { name: "Select All" }));
     expect(screen.getByLabelText("Apply Floating Structures")).toBeChecked();
@@ -124,12 +124,28 @@ describe("ApplyThemeSheet", () => {
     fireEvent.click(screen.getByRole("button", { name: "Clear" }));
     expect(screen.getByLabelText("Apply Floating Structures")).not.toBeChecked();
     expect(screen.getByLabelText("Apply Quotalis Logo")).not.toBeChecked();
+  });
 
+  it("Wave 1D §2: Recommended includes Floating Structures when the theme's metadata recommends it, even though that scope persists through a different mechanism than the others", () => {
+    // CANONICAL_THEME declares recommendedAppearance.floatingStructures = true.
+    renderSheet();
     fireEvent.click(screen.getByRole("button", { name: "Recommended" }));
-    expect(screen.getByLabelText("Apply Floating Structures")).not.toBeChecked();
+    expect(screen.getByLabelText("Apply Floating Structures")).toBeChecked();
     expect(screen.getByLabelText("Apply Quotalis Logo")).toBeChecked();
     expect(screen.getByLabelText("Apply Tray")).toBeChecked();
     expect(screen.getByLabelText("Apply Background")).toBeChecked();
+  });
+
+  it("Recommended leaves Floating Structures unchecked for a theme that has no opinion on it", () => {
+    const themeWithNoFloatingOpinion = {
+      ...CANONICAL_THEME,
+      recommendedAppearance: { ...CANONICAL_THEME.recommendedAppearance, floatingStructures: undefined },
+    };
+    renderSheet({ theme: themeWithNoFloatingOpinion });
+    fireEvent.click(screen.getByRole("button", { name: "Recommended" }));
+    expect(screen.getByLabelText("Apply Floating Structures")).not.toBeChecked();
+    // Its own real recommendations are still selected.
+    expect(screen.getByLabelText("Apply Quotalis Logo")).toBeChecked();
   });
 
   it("Apply commits everything in ONE atomic applyThemeComposition call reflecting exactly the checked rows", async () => {

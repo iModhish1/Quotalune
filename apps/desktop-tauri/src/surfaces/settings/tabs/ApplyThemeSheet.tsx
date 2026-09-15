@@ -103,10 +103,16 @@ export default function ApplyThemeSheet({
     setOptionalEnabled(new Set());
   }
   function recommended() {
-    // Distinct from Select All: only the scopes the theme's own metadata
-    // recommends, never the structural Floating Structures action (which
-    // is not something recommendedAppearance expresses an opinion on).
-    setFloatingEnabled(false);
+    // Wave 1D §2: Recommended selects exactly the scopes the theme's own
+    // metadata declares an opinion on -- Floating Structures included,
+    // when the theme recommends it, even though that scope persists
+    // through a different mechanism (surface_catalog_themes) than the
+    // other four (AppearanceComposition). Which storage mechanism a scope
+    // uses is an implementation detail; it must not change what
+    // "Recommended" means to the user. Select All stays broader (every
+    // compatible scope, not just recommended ones), so the two actions
+    // remain meaningfully distinct.
+    setFloatingEnabled(theme.recommendedAppearance?.floatingStructures === true);
     setOptionalEnabled(new Set(availableOptionalScopes));
   }
 

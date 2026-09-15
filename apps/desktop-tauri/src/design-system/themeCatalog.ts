@@ -82,6 +82,21 @@ export interface CatalogTheme {
     providerIdentity?: string;
     trayStyle?: string;
     workspaceBackground?: string;
+    /**
+     * Wave 1D §2: whether this theme's author intends Floating Structures
+     * to match Main Application too. `floatingStructures` is deliberately
+     * NOT part of `AppearanceComposition` (it already has real Global/
+     * Override persistence via `surface_catalog_themes` — see
+     * `appearanceComposition.ts`'s module doc comment), but a theme can
+     * still have an opinion on it, and the ApplyThemeSheet's "Recommended"
+     * action must honor that opinion regardless of which mechanism
+     * ultimately persists the scope. `true` = the theme recommends
+     * applying itself to floating structures too; omitted/`false` = no
+     * opinion, so Recommended leaves Floating Structures out (Select All
+     * still offers it, since Select All means "every compatible scope",
+     * not "every recommended scope").
+     */
+    floatingStructures?: boolean;
   };
 }
 
@@ -111,7 +126,7 @@ export const CANONICAL_THEME: CatalogTheme = {
   expansionMs: 180,
   identity:{detailRadius:18,edgeStyle:'solid',font:'sans',relief:'inset 0 1px 0 #ffffff28,0 12px 28px #0008',rimSize:1,iconRadius:'50%',labelTracking:'-.01em',ornament:'radial-gradient(circle at 12% 8%,#2dd4bf18,transparent 38%)',accentHalo:'0 0 0 1px #2dd4bf2b,0 0 18px #2dd4bf1f',signature:'Orbital satin',inlay:'1px solid #b9d6ef18',meterCap:'round',connector:'#182431',markFilter:'drop-shadow(0 0 3px #dcecff88) drop-shadow(0 2px 3px #000)',markFrame:'linear-gradient(145deg,#1e4d50,#08121c)',markBorder:'#9af4e4',markBlend:'screen'},
   material:{text:'#f0f4f8',muted:'#aeb9c5',finish:'linear-gradient(145deg,#ffffff0d,transparent 46%),radial-gradient(circle at 86% 12%,#5b8def16,transparent 38%)',sheen:'#d9e7f633'},
-  recommendedAppearance:{quotalisLogo:'silver',trayStyle:'ring',workspaceBackground:'cosmic'},
+  recommendedAppearance:{quotalisLogo:'silver',trayStyle:'ring',workspaceBackground:'cosmic',floatingStructures:true},
 };
 
 /** Identities style the selected structure without replacing it or its native footprint. */
