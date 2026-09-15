@@ -1,6 +1,5 @@
 import { readFileSync, readdirSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -34,7 +33,7 @@ import { describe, expect, it } from "vitest";
  * guarantee.
  */
 
-const here = dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname!;
 const srcRoot = join(here, "..");
 
 function collectSourceFiles(dir: string, out: string[] = []): string[] {
