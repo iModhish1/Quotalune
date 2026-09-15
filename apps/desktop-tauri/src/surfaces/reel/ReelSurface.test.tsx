@@ -1,8 +1,13 @@
 import { useState } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import ReelSurface from "./ReelSurface";
 import { SURFACE_DEMO_PROVIDERS } from "../../lib/surfaceDemo";
+
+vi.mock("../../hooks/useLocale", () => ({
+  useLocale: () => ({ t: (key: string) => key, language: "english", direction: "ltr" }),
+  useOptionalLocale: () => null,
+}));
 
 function InteractiveReel() {
   const [focus, setFocus] = useState(0);
@@ -78,5 +83,19 @@ describe("Orbit Reel", () => {
     // these queries failing.
     expect(screen.getByRole("button", { name: "Collapse details" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Pin details" })).toBeInTheDocument();
+  });
+
+  it("Wave 1D §10: shows a distinct Loading message during the first fetch, not the same 'No quota data' text", () => {
+    render(
+      <ReelSurface
+        catalog="01-obsidian-orbit"
+        state="expanded"
+        settings={{ form: "reel", anchor: "right", scale: 100, autoHide: true, autoHideDelayMs: 900 }}
+        providers={[]}
+        initialLoading
+      />,
+    );
+    expect(screen.getByText("QuotalisStructureLoading")).toBeInTheDocument();
+    expect(screen.queryByText("No quota data")).not.toBeInTheDocument();
   });
 });

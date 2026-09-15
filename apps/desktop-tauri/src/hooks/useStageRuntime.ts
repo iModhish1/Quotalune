@@ -72,5 +72,10 @@ export function useStageRuntime({
     settingsError,
     refresh: live.refresh,
     isRefreshing: live.isRefreshing,
+    /** Wave 1D §10: true until the very first cached-provider read (or
+     * fetch) has completed — the "first load" signal FlowSurface/
+     * ReelSurface/NotchSurface use to show a Loading message instead of a
+     * "no data" message before real data has ever arrived. */
+    initialLoading: !live.hasLoadedCache,
   };
 }

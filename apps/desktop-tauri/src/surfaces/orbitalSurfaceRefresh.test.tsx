@@ -4,6 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import EdgeArc from "./edge-arc/EdgeArc";
 import TopArc from "./top-arc/TopArc";
 
+vi.mock("../hooks/useLocale", () => ({
+  useLocale: () => ({ t: (key: string) => key, language: "english", direction: "ltr" }),
+  useOptionalLocale: () => null,
+}));
+
 const runtime = vi.hoisted(() => ({
   refresh: vi.fn(),
   providers: [

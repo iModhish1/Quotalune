@@ -4,6 +4,11 @@ import NotchSurface from "./NotchSurface";
 import { SURFACE_DEMO_PROVIDERS } from "../../lib/surfaceDemo";
 import { NOTCH_FORMS } from "./notchGeometry";
 import {useState} from "react";
+
+vi.mock("../../hooks/useLocale", () => ({
+  useLocale: () => ({ t: (key: string) => key, language: "english", direction: "ltr" }),
+  useOptionalLocale: () => null,
+}));
 const settings={form:"flowline" as const,anchor:"right" as const,scale:100,autoHide:true,autoHideDelayMs:900};
 describe("notch family controls",()=>{
   it("respects disabled hover, wheel and automatic folding",()=>{
@@ -70,5 +75,11 @@ describe("notch family controls",()=>{
     expect(screen.getByRole("region",{name:"seam provider selector"})).toHaveFocus();
     expect(screen.getByText("DEMO DATA · NOT A REAL ACCOUNT")).toBeInTheDocument();
     fireEvent.keyDown(screen.getByRole("button",{name:"Collapse details"}),{key:"Escape"});expect(close).toHaveBeenCalledOnce();
+  });
+  it("Wave 1D §10: shows a distinct Loading message during the first fetch, not the same 'No data' text",()=>{
+    render(<NotchSurface form="seam" settings={settings} catalog="" state="compact" providers={[]} initialLoading/>);
+    expect(screen.getAllByText("QuotalisStructureLoading").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText("No data")).not.toBeInTheDocument();
+    expect(screen.queryByText("No quota data")).not.toBeInTheDocument();
   });
 });

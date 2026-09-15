@@ -2101,6 +2101,11 @@ locale_keys! {
     QuotalisLoadingTimeout,
     QuotalisLoadingRetry,
     QuotalisLoadingUpdating,
+
+    // Wave 1D §10: Floating Structures' own first-load state, distinct
+    // from "loaded, genuinely no data" (FlowSurface.tsx/ReelSurface.tsx/
+    // NotchSurface.tsx's existing "waiting for provider data" text).
+    QuotalisStructureLoading,
 }
 
 #[cfg(test)]

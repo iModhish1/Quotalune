@@ -23,6 +23,7 @@ import { isNotchForm } from "../notch/notchGeometry";
 import OfficialQuotaArcMark from '../../components/QuotaArcMark';
 import { StructurePinButton } from "../../design-system/StructureControls";
 import { structureDetailsMinContentHeight } from "../../design-system/structureGeometry";
+import { useLocale } from "../../hooks/useLocale";
 
 export interface FlowSurfaceProps {
   catalog: string;
@@ -46,6 +47,18 @@ export interface FlowSurfaceProps {
    *  tiny scaled-down size made the watermark overlap the structure's own
    *  content (Wave 6 Phase 4 — reported directly by the owner). */
   showDemoBadge?: boolean;
+  /**
+   * Wave 1D §10: true only during the very first provider fetch, before
+   * any cached snapshot has ever loaded (`!useStageRuntime(...).hasLoadedCache`
+   * in the real caller) — distinct from "loaded, but genuinely no quota
+   * data" (providers disabled, none connected). Both cases currently
+   * render through the same disabled compact-summary button (no data means
+   * there is nothing to expand either way), but the message shown must not
+   * conflate "waiting for the first answer" with "there is no answer".
+   * Defaults to false so every existing demo/preview/test caller (which
+   * never has a real loading phase) is unaffected.
+   */
+  initialLoading?: boolean;
 }
 
 function QuotaArcMark() {
@@ -116,9 +129,11 @@ export default function FlowSurface({
   onStartDrag,
   demoMode,
   showDemoBadge = true,
+  initialLoading = false,
 }: FlowSurfaceProps) {
-  if (isNotchForm(settings.form)) return <NotchSurface key={`${settings.form}:${settings.anchor}`} form={settings.form} {...{catalog, settings, state, providers, focusedIndex, onFocusProvider, onReveal, onToggleExpanded, onTogglePinned, onRequestCompact, onStartDrag, demoMode, showDemoBadge}} />;
-  if (settings.form === "reel") return <ReelSurface {...{catalog, settings, state, providers, focusedIndex, onFocusProvider, onReveal, onToggleExpanded, onTogglePinned, onRequestCompact, onStartDrag, demoMode, showDemoBadge}} />;
+  const { t } = useLocale();
+  if (isNotchForm(settings.form)) return <NotchSurface key={`${settings.form}:${settings.anchor}`} form={settings.form} {...{catalog, settings, state, providers, focusedIndex, onFocusProvider, onReveal, onToggleExpanded, onTogglePinned, onRequestCompact, onStartDrag, demoMode, showDemoBadge, initialLoading}} />;
+  if (settings.form === "reel") return <ReelSurface {...{catalog, settings, state, providers, focusedIndex, onFocusProvider, onReveal, onToggleExpanded, onTogglePinned, onRequestCompact, onStartDrag, demoMode, showDemoBadge, initialLoading}} />;
   const theme = catalogBySlug(catalog) ?? CANONICAL_THEME;
   const visible = providers.filter(hasSurfaceQuotaValue).slice(0, 3);
   const focus = visible.length === 0 ? -1 : Math.min(Math.max(focusedIndex, 0), visible.length - 1);
@@ -204,7 +219,9 @@ export default function FlowSurface({
           aria-controls="quota-flow-details"
           aria-label={hasQuotaData
             ? `Expand ${focused?.name ?? "Quotalis"} details`
-            : "Quotalis is waiting for provider data"}
+            : initialLoading
+              ? t("QuotalisStructureLoading")
+              : "Quotalis is waiting for provider data"}
         >
           {/* This icon is the application anchor — QuotaArc's own mark,
               never a provider glyph (Wave 6 Phase 4 correction: an earlier
@@ -215,7 +232,20 @@ export default function FlowSurface({
           <span className="flow-surface__brand"><QuotaArcMark /></span>
           <span className="flow-surface__summary-copy">
             <strong>{focused?.name ?? "Quotalis"}</strong>
-            <small>{focused ? `${formatPercentage(focused.primaryValue)} ${focused.primaryLabel}` : "Waiting for provider data"}</small>
+            {/* Wave 1D §10: distinguishes "still fetching the first
+                snapshot" from "loaded, genuinely nothing to show" — both
+                previously rendered the identical "Waiting for provider
+                data" text, so a user with zero enabled providers looked
+                indistinguishable from one whose first fetch just hadn't
+                returned yet. Same DOM shape either way — no silhouette
+                resize (§10's "structure silhouette remains stable"). */}
+            <small>
+              {focused
+                ? `${formatPercentage(focused.primaryValue)} ${focused.primaryLabel}`
+                : initialLoading
+                  ? t("QuotalisStructureLoading")
+                  : "Waiting for provider data"}
+            </small>
           </span>
         </button>
         <div className="flow-surface__quick-providers" aria-label="Provider status">

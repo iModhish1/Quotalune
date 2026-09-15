@@ -1686,6 +1686,7 @@ export const ALL_LOCALE_KEYS = [
   "QuotalisLoadingTimeout",
   "QuotalisLoadingRetry",
   "QuotalisLoadingUpdating",
+  "QuotalisStructureLoading",
 
   "V24AttentionStale",
   "V24AttentionGap",

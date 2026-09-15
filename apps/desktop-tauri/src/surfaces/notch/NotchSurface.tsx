@@ -11,11 +11,13 @@ import { NotchDetails } from "./NotchDetails";
 import "./NotchSurface.css";
 import {normalizeSurfaceInteractions} from "../../design-system/surfaceInteractions";
 import QuotaArcMark from '../../components/QuotaArcMark';
+import { useLocale } from "../../hooks/useLocale";
 
 export default function NotchSurface(props:FlowSurfaceProps & {form:NotchForm}) {
+  const { t } = useLocale();
   const theme=catalogBySlug(props.catalog) ?? CANONICAL_THEME;
   const providerAccent=(id:string)=>providerColor(theme,id);
-  const {form,settings,state,providers,focusedIndex=0,onFocusProvider,onToggleExpanded,onRequestCompact,onReveal,onStartDrag,onTogglePinned,demoMode,showDemoBadge=true}=props;
+  const {form,settings,state,providers,focusedIndex=0,onFocusProvider,onToggleExpanded,onRequestCompact,onReveal,onStartDrag,onTogglePinned,demoMode,showDemoBadge=true,initialLoading=false}=props;
   const root=useRef<HTMLElement>(null);
   const interactions=normalizeSurfaceInteractions(settings.interactions);
   const [fit,setFit]=useState(settings.scale/100);
@@ -69,7 +71,9 @@ export default function NotchSurface(props:FlowSurfaceProps & {form:NotchForm}) 
             </button>;
           })}
           {form==="deck" && selected && <div className="notch-deck-label"><strong title={selected.name}>{selected.name}</strong><span>{selected.primaryLabel}</span><div className="notch-page-dots" aria-hidden="true">{providers.map((p,i)=><i key={p.id} data-active={i===focus}/>)}</div></div>}
-          {!selected && <span className="notch-empty">No data</span>}
+          {/* Wave 1D §10: distinct first-load vs. genuinely-no-data text,
+              same DOM shape (see FlowSurface.tsx's identical fix). */}
+          {!selected && <span className="notch-empty">{initialLoading ? t("QuotalisStructureLoading") : "No data"}</span>}
           <button className="notch-grip" aria-label="Move Quotalis" title="Drag to move" onMouseDown={e=>{if(e.button===0){e.preventDefault();onStartDrag?.();}}}><span/></button>
           {demoMode && showDemoBadge && <span className="notch-demo">DEMO</span>}
         </div>
@@ -81,7 +85,7 @@ export default function NotchSurface(props:FlowSurfaceProps & {form:NotchForm}) 
           <rect fill="#030303" x="0" y="0" width={settings.anchor==="top" || settings.anchor==="bottom"?16:12} height={settings.anchor==="top" || settings.anchor==="bottom"?12:16} rx="6"/>
         </svg>}
       </>}
-      <span className="notch-sr" aria-live="polite">{selected ? `${selected.name}, ${formatPercentage(selected.primaryValue)} ${selected.primaryLabel}, ${focus+1} of ${providers.length}` : "No quota data"}</span>
+      <span className="notch-sr" aria-live="polite">{selected ? `${selected.name}, ${formatPercentage(selected.primaryValue)} ${selected.primaryLabel}, ${focus+1} of ${providers.length}` : initialLoading ? t("QuotalisStructureLoading") : "No quota data"}</span>
     </div>
   </section>;
 }

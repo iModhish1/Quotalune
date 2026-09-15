@@ -1,6 +1,11 @@
 import {render,screen} from "@testing-library/react";
-import {expect,it} from "vitest";
+import {expect,it,vi} from "vitest";
 import StructurePreview from "./StructurePreview";
+
+vi.mock("../../hooks/useLocale", () => ({
+  useLocale: () => ({ t: (key: string) => key, language: "english", direction: "ltr" }),
+  useOptionalLocale: () => null,
+}));
 it("renders the real provider gauge while keeping provider identity independent from the theme",()=>{
   const {container}=render(<StructurePreview form="satellite" catalog="ember-alloy"/>);
   expect(container.querySelector('[stroke="#10a37f"]')).not.toBeNull();

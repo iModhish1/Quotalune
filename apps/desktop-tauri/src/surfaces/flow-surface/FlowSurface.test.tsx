@@ -5,6 +5,11 @@ import type { StageProvider } from "../../components/orbit/stageTypes";
 import type { FlowSurfaceSettings } from "../../design-system/flowSurface";
 import FlowSurface from "./FlowSurface";
 
+vi.mock("../../hooks/useLocale", () => ({
+  useLocale: () => ({ t: (key: string) => key, language: "english", direction: "ltr" }),
+  useOptionalLocale: () => null,
+}));
+
 const providers: StageProvider[] = [
   { id: "codex", name: "OpenAI", iconId: "openai", resolvedMode: "remaining", arcFraction: 0.79, primaryValue: 79, secondaryValue: 21, primaryLabel: "remaining", reset: "3h", status: "ok" },
   { id: "claude", name: "Claude", iconId: "claude", resolvedMode: "remaining", arcFraction: 0.27, primaryValue: 27, secondaryValue: 73, primaryLabel: "remaining", reset: "26h", status: "attention" },
@@ -80,6 +85,37 @@ describe("FlowSurface", () => {
     expect(screen.getByTestId("flow-surface")).toHaveAttribute("data-empty", "true");
     expect(screen.getByText("Waiting for provider data")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Gemini: –/ })).not.toBeInTheDocument();
+  });
+
+  it("Wave 1D §10: shows a distinct Loading message during the first fetch, not the same text as genuinely-no-data", () => {
+    render(
+      <FlowSurface
+        catalog="01-obsidian-orbit"
+        settings={settings}
+        state="compact"
+        providers={[]}
+        initialLoading
+      />,
+    );
+    expect(screen.getByText("QuotalisStructureLoading")).toBeInTheDocument();
+    expect(screen.queryByText("Waiting for provider data")).not.toBeInTheDocument();
+    // Still the same disabled, non-expandable compact shape -- no
+    // silhouette resize between the loading and no-data states.
+    expect(screen.getByTestId("flow-surface")).toHaveAttribute("data-empty", "true");
+  });
+
+  it("falls back to the genuinely-no-data message once initialLoading is false, even with an empty provider list", () => {
+    render(
+      <FlowSurface
+        catalog="01-obsidian-orbit"
+        settings={settings}
+        state="compact"
+        providers={[]}
+        initialLoading={false}
+      />,
+    );
+    expect(screen.getByText("Waiting for provider data")).toBeInTheDocument();
+    expect(screen.queryByText("QuotalisStructureLoading")).not.toBeInTheDocument();
   });
 
   it("reflows the same data through Horizon without changing quota semantics", () => {

@@ -194,6 +194,7 @@ export default function TopArc({ demo }: TopArcProps) {
         state={surfaceState}
         providers={providers}
         demoMode={surfaceDemo.enabled}
+        initialLoading={!surfaceDemo.enabled && runtime.initialLoading}
         focusedIndex={focus}
         onFocusProvider={setFocus}
         onReveal={() => setSurfaceState("compact")}

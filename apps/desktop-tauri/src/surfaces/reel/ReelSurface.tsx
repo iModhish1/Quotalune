@@ -8,11 +8,13 @@ import UsageWindowList from "../../components/orbit/UsageWindowList";
 import QuotaArcMark from '../../components/QuotaArcMark';
 import { CANONICAL_THEME, catalogBySlug, providerColor } from "../../design-system/themeCatalog";
 import { StructurePinButton } from "../../design-system/StructureControls";
+import { useLocale } from "../../hooks/useLocale";
 
 /** A curved provider selector, not a clock. No ticking or permanent animation. */
 export default function ReelSurface({ catalog, settings, state, providers, focusedIndex = 0, demoMode, showDemoBadge = true,
-  onFocusProvider, onReveal, onToggleExpanded, onRequestCompact, onTogglePinned, onStartDrag,
+  onFocusProvider, onReveal, onToggleExpanded, onRequestCompact, onTogglePinned, onStartDrag, initialLoading = false,
 }: FlowSurfaceProps) {
+  const { t } = useLocale();
   const demoLabel = demoMode && showDemoBadge;
   const theme = catalogBySlug(catalog) ?? CANONICAL_THEME;
   const root = useRef<HTMLElement>(null);
@@ -90,7 +92,9 @@ export default function ReelSurface({ catalog, settings, state, providers, focus
               <span className="reel-value">{formatPercentage(provider.primaryValue)}</span>
             </button>;
           })}
-          {!selected && <span className="reel-empty">No quota data</span>}
+          {/* Wave 1D §10: distinct first-load vs. genuinely-no-data text,
+              same DOM shape (see FlowSurface.tsx's identical fix). */}
+          {!selected && <span className="reel-empty">{initialLoading ? t("QuotalisStructureLoading") : "No quota data"}</span>}
           <span className="reel-caption" aria-live="polite">{selected?.name ?? "Quotalis"}<small>{providers.length ? `${focus + 1} / ${providers.length}` : "—"}</small></span>
           <button className="reel-drag" aria-label="Move Quotalis" title="Drag to move"
             onMouseDown={e => { if (e.button === 0) { e.preventDefault(); onStartDrag?.(); } }}>⋮</button>

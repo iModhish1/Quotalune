@@ -1,9 +1,14 @@
 import {render} from "@testing-library/react";
-import {describe,expect,it} from "vitest";
+import {describe,expect,it,vi} from "vitest";
 
 import {ALL_FLOW_SURFACE_ANCHORS,FLOW_SURFACE_FORM_CATALOG} from "../../design-system/flowSurface";
 import {THEME_CATALOG} from "../../design-system/themeCatalog";
 import {catalogMotion} from "../../design-system/themeMotion";
+
+vi.mock("../../hooks/useLocale", () => ({
+  useLocale: () => ({ t: (key: string) => key, language: "english", direction: "ltr" }),
+  useOptionalLocale: () => null,
+}));
 import StructurePreview from "./StructurePreview";
 
 describe.each(THEME_CATALOG)("theme and structure compatibility: $slug",(theme)=>{

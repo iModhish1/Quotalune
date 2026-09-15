@@ -558,6 +558,7 @@ fn wave_1c_appearance_composition_and_loading_keys_are_real_in_english_and_arabi
         LocaleKey::QuotalisLoadingTimeout,
         LocaleKey::QuotalisLoadingRetry,
         LocaleKey::QuotalisLoadingUpdating,
+        LocaleKey::QuotalisStructureLoading,
     ] {
         for lang in [Language::English, Language::Arabic] {
             let text = get_text(lang, key);
