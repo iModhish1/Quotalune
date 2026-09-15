@@ -188,6 +188,31 @@ unrelated code.
   `LOADING_STATE_MATRIX.md`/`STRUCTURE_VISUAL_QA_MATRIX.md` — not part of
   this document.
 
+## Wave 1E re-confirmation (§31)
+
+Wave 1E did not change the theme-composition data model, UI, or
+resolution logic above — it worked on Structure edge-placement/DPI,
+Loading/Refreshing integration, the connector decision model, and the
+Dev-only fixture panel (see `STRUCTURE_COORDINATE_MODEL.md`,
+`LOADING_STATE_MATRIX.md`, `STRUCTURE_VISUAL_QA_MATRIX.md`). Re-reading
+this document's own source this wave confirms every claim above is still
+accurate against current `rust/src/settings/appearance_composition.rs`,
+`command_profiles.rs`, and `appearanceComposition.ts` — no drift found.
+Two points worth cross-referencing rather than re-deriving:
+
+- The DPI/logical-vs-physical coordinate model Wave 1E closed
+  (`surfaces.rs::logical_to_physical_position`, tested at 1.0/1.25/1.5/2.0
+  scale) is a **native window positioning** concern, not a theme/
+  appearance-composition concern — it has no interaction with
+  `catalog_theme`/`theme`/`appearance_composition` resolution, and this
+  document's existing Light/Dark-independence tests (§Wave 1C/1D) remain
+  the correct, unrelated proof for that axis.
+- Wave 1E's new `structureConnector.ts` decision model and the
+  `resolveStructurePlacement()` doc correction do not touch theme
+  resolution either — `catalog` (Structure Theme) stays a fully separate
+  prop/axis from anchor/connector geometry, confirmed while building
+  both this wave.
+
 ## Verdict
 
 THEME COMPOSITION DATA MODEL: **real, tested, reuses the existing
@@ -197,4 +222,6 @@ atomicity, pending-state, correct Recommended semantics, localized).
 THEME COMPOSITION NATIVE VERIFICATION (mixed cases, restart persistence,
 RTL/Light screenshots): **not performed — PARTIAL overall** for theme
 composition as a whole, with the code-level work now substantially more
-complete than the prior wave's report.
+complete than the prior wave's report. Wave 1E re-confirmed all of the
+above still holds and found no drift; Wave 1E itself made no changes to
+this subsystem.

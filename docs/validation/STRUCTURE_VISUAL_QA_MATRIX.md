@@ -1,4 +1,4 @@
-# Structure Visual QA Matrix — Wave 1D
+# Structure Visual QA Matrix — Wave 1D / Wave 1E
 
 ## Honesty note
 
@@ -20,25 +20,33 @@ This matrix separates two genuinely different kinds of verification:
   without a screenshot would be exactly the fabrication this project's
   own culture has consistently refused to do.
 
-Columns match Wave 1D §48's list. "—" means not applicable to that form
-(e.g. a form with only 2 anchor slots for pinned state).
+Columns match Wave 1D §48's list, plus four columns Wave 1E §29 adds:
+**CODE READY** (has this form's code-level behavior, loading integration,
+and fixture-panel support all landed — independent of native pixels),
+**NATIVE VISUAL STATUS** (always `PENDING — ENVIRONMENT_BLOCKED` this
+wave, never PASS — see the Honesty note above and
+`WAVE1_NATIVE_QA_HANDOFF.md`), **FIXTURE ID** (the
+`WAVE1_NATIVE_QA_MATRIX.json` entry id(s) the next session runs to close
+this row), **EVIDENCE PATH** (where that capture will land once run). "—"
+means not applicable to that form (e.g. a form with only 2 anchor slots
+for pinned state).
 
-| Form (id) | Family | Collapsed | Expanded | Brand | Provider | Pin | Close | Drag | Move alt | Reset clipping | Icon/ring clipping | Anchor gap | Edge | Light | RTL | Provider-count | Native evidence |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| crescent | Notch | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (truncation) | NOT AUDITED | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (1/3/6/12/24/70) | NONE |
-| pebble | Notch | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (truncation) | NOT AUDITED | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level) | NONE |
-| fan | Notch | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (truncation) | NOT AUDITED | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level) | NONE |
-| seam | Notch | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (truncation, direct) | NOT AUDITED | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (direct: 1/3/6/12/24/70) | NONE |
-| ribbon | Notch | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (truncation, direct) | NOT AUDITED | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level) | NONE |
-| cradle | Notch | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (truncation, direct) | NOT AUDITED | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level) | NONE |
-| deck | Notch | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (truncation, direct) | NOT AUDITED | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level; page-dots DOM scales with N, disclosed) | NONE |
-| satellite | Notch | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (truncation, direct) | NOT AUDITED | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level) | NONE |
-| flowline | FlowSurface | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (content-height floor) | NOT AUDITED | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (1/3/6/12/24/70) | NONE |
-| horizon | FlowSurface | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (content-height floor) | NOT AUDITED | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level) | NONE |
-| petal | FlowSurface | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (content-height floor) | NOT AUDITED | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level) | NONE |
-| orbital | FlowSurface | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (content-height floor) | NOT AUDITED | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level) | NONE |
-| lens | FlowSurface | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (content-height floor) | NOT AUDITED | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level) | NONE |
-| reel | Reel | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (truncation) | NOT AUDITED | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED — interactive count capped at 3, but DOM mounts all N (disclosed, not fixed — see ReelSurface.test.tsx) | NONE |
+| Form (id) | Family | Collapsed | Expanded | Brand | Provider | Pin | Close | Drag | Move alt | Reset clipping | Icon/ring clipping | Anchor gap | Edge | Light | RTL | Provider-count | Native evidence | CODE READY | NATIVE VISUAL STATUS | FIXTURE ID | EVIDENCE PATH |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| crescent | Notch | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (truncation) | CLOSED (not a defect, see STRUCTURE_ICON_RING_SAFE_BOX.md) | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (1/3/6/12/24/70) | NONE | READY | PENDING — ENVIRONMENT_BLOCKED | NATIVE-FORM-ANCHOR-01, NATIVE-REFRESH-01, FIXTURE-COUNT-01, FIXTURE-RESET-02, FIXTURE-WINDOWS-01, FIXTURE-DATA-LOADING-01, FIXTURE-DATA-REFRESHING-01, FIXTURE-DATA-UNAVAILABLE-01 | docs/images/v9/native/structures/{native,fixture}/... (see WAVE1_NATIVE_QA_MATRIX.json) |
+| pebble | Notch | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (truncation) | NOT AUDITED (family-level, not this form specifically) | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level) | NONE | READY | PENDING — ENVIRONMENT_BLOCKED | (none dedicated yet — covered by Notch family sweep) | docs/images/v9/native/structures/... |
+| fan | Notch | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (truncation) | NOT AUDITED (family-level, not this form specifically) | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level) | NONE | READY | PENDING — ENVIRONMENT_BLOCKED | (none dedicated yet — covered by Notch family sweep) | docs/images/v9/native/structures/... |
+| seam | Notch | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (truncation, direct) | NOT AUDITED (family-level, not this form specifically) | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (direct: 1/3/6/12/24/70) | NONE | READY | PENDING — ENVIRONMENT_BLOCKED | FIXTURE-COUNT-03 | docs/images/v9/native/structures/fixture/seam-count-24.png |
+| ribbon | Notch | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (truncation, direct) | NOT AUDITED (family-level, not this form specifically) | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level) | NONE | READY | PENDING — ENVIRONMENT_BLOCKED | (none dedicated yet — covered by Notch family sweep) | docs/images/v9/native/structures/... |
+| cradle | Notch | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (truncation, direct) | NOT AUDITED (family-level, not this form specifically) | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level) | NONE | READY | PENDING — ENVIRONMENT_BLOCKED | (none dedicated yet — covered by Notch family sweep) | docs/images/v9/native/structures/... |
+| deck | Notch | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (truncation, direct) | NOT AUDITED (family-level, not this form specifically) | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level; page-dots DOM scales with N, disclosed) | NONE | READY | PENDING — ENVIRONMENT_BLOCKED | (none dedicated yet — covered by Notch family sweep) | docs/images/v9/native/structures/... |
+| satellite | Notch | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED (direct) | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (truncation, direct) | NOT AUDITED (family-level, not this form specifically) | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level) | NONE | READY | PENDING — ENVIRONMENT_BLOCKED | NATIVE-FORM-ANCHOR-04, FIXTURE-EDGE-CORNER-01 | docs/images/v9/native/structures/... |
+| flowline | FlowSurface | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (content-height floor) | CLOSED (not a defect, see STRUCTURE_ICON_RING_SAFE_BOX.md) | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (1/3/6/12/24/70) | NONE | READY | PENDING — ENVIRONMENT_BLOCKED | (none dedicated yet — covered by FlowSurface family sweep) | docs/images/v9/native/structures/... |
+| horizon | FlowSurface | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (content-height floor) | NOT AUDITED (family-level, not this form specifically) | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level) | NONE | READY | PENDING — ENVIRONMENT_BLOCKED | NATIVE-FORM-ANCHOR-03 | docs/images/v9/native/structures/native/structures/horizon-top-05-noir-constellation.png |
+| petal | FlowSurface | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (content-height floor) | NOT AUDITED (family-level, not this form specifically) | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level) | NONE | READY | PENDING — ENVIRONMENT_BLOCKED | (none dedicated yet — covered by FlowSurface family sweep) | docs/images/v9/native/structures/... |
+| orbital | FlowSurface | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (content-height floor) | NOT AUDITED (family-level, not this form specifically) | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level) | NONE | READY | PENDING — ENVIRONMENT_BLOCKED | (none dedicated yet — covered by FlowSurface family sweep) | docs/images/v9/native/structures/... |
+| lens | FlowSurface | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (content-height floor) | NOT AUDITED (family-level, not this form specifically) | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED (family-level) | NONE | READY | PENDING — ENVIRONMENT_BLOCKED | (none dedicated yet — covered by FlowSurface family sweep) | docs/images/v9/native/structures/... |
+| reel | Reel | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED | CODE VERIFIED (truncation) | NOT AUDITED | NOT BUILT | NOT NATIVE-TESTED | NOT NATIVE-TESTED | NOT NATIVE-TESTED | CODE VERIFIED — interactive count capped at 3, but DOM mounts all N (disclosed, not fixed — see ReelSurface.test.tsx) | NONE | READY | PENDING — ENVIRONMENT_BLOCKED | NATIVE-FORM-ANCHOR-02, FIXTURE-COUNT-02, FIXTURE-NAME-01, FIXTURE-RESET-01, FIXTURE-RTL-01, FIXTURE-PINNED-01 | docs/images/v9/native/structures/... |
 
 Notes:
 - "(direct)" marks the two Notch forms (seam, ribbon — plus cradle/deck/
@@ -46,29 +54,52 @@ Notes:
   assertions in `NotchSurface.test.tsx`, beyond the shared family sweep
   covering all 8 (`crescent`/`pebble`/`fan`/`seam`/`ribbon`/`cradle`/
   `deck`/`satellite`) via `NOTCH_FORMS.map(...)`.
-- Icon/ring clipping: not audited beyond a quick grep for `overflow:hidden`
-  near gauge/mark containers this wave; `.flow-surface__core`'s
-  `overflow: hidden` wrapping the brand mark's decorative halo
-  (`box-shadow` glow) is the one candidate spot flagged for native visual
-  inspection — not confirmed as an actual defect, not changed blind.
-- Anchor gap: `structurePlacement.ts`'s `DEFAULT_GAP = 6` is the one
-  shared numeric contract that exists; it is not yet wired into any of
-  the 14 forms' own CSS-positioned detail panels (those still use their
-  own tuned per-form offsets from earlier waves) — a real, open
+- Icon/ring clipping: Wave 1E hand-computed the CSS clearance for
+  `.flow-surface__brand`'s halo inside `.flow-surface__core`'s
+  `overflow: hidden` (the one candidate flagged in Wave 1D) and found
+  ≥14.5px of clearance in the tightest case — **closed as not a real
+  defect**, documented in `STRUCTURE_ICON_RING_SAFE_BOX.md` along with a
+  forward safe-box contract and one disclosed unchecked case (75%
+  minimum structure scale). Marked CLOSED above only for crescent/
+  flowline, the two forms actually hand-checked; the rest of the Notch/
+  FlowSurface families share the same CSS structure but were not each
+  individually re-measured — treat as the same low-risk finding, not a
+  separately proven one.
+- Anchor gap / connector: Wave 1E built a real decision model
+  (`structureConnector.ts` — `resolveStructureConnector()`, tested) for
+  attached/connector-required/orientation/length, and corrected
+  `structurePlacement.ts`'s own doc comment to stop overclaiming it
+  drives native window positioning (see `STRUCTURE_COORDINATE_MODEL.md`
+  for the real two-layer split). Neither is wired into the 14 forms' own
+  CSS-positioned detail panels or into Notch's pre-existing
+  `.notch-connector` yet — deliberately left unwired to avoid regressing
+  tuned visuals without native verification. Still a real, open
   integration gap, not claimed closed.
-- Connector: only the Notch family has an actual connector element
-  (`.notch-connector`, pre-existing). FlowSurface/Reel have none — not
-  built this wave.
+- Loading/Refreshing: Wave 1E wired `isRefreshing` (distinct from
+  `initialLoading`) into FlowSurface/Reel (visible dot badge) and Notch
+  (sr-only text only, see `NotchSurface.tsx` comment for why no new
+  visual element was added blind) — see `LOADING_STATE_MATRIX.md`.
 - Edge/DPI/Light/RTL: code-only Light/Dark independence and RTL locale
-  keys exist (see `THEME_COMPOSITION_AUDIT.md`) but no structure-specific
-  Light/RTL/edge/DPI check has been performed, native or otherwise.
+  keys exist (see `THEME_COMPOSITION_AUDIT.md`); Wave 1E closed the DPI/
+  logical-vs-physical coordinate model in `surfaces.rs` with tests at
+  1.0/1.25/1.5/2.0 scale factors (native window positioning only — not a
+  per-structure CSS concern). A structure-specific Light/RTL/edge/DPI
+  visual check still has not been performed, native or otherwise.
 
 ## Verdict
 
-STRUCTURE VISUAL QA: **PARTIAL (code)** / **NOT PASSED (native)** — every
-form has real, automated coverage for its shared behaviors (identity
-stability, Pin/Close consistency, reset-clipping mitigation, keyboard
-movement, state-machine transitions, provider-count scaling), but zero
-native pixel verification has occurred for any of the 14 forms. See
-`WAVE1_NATIVE_QA_HANDOFF.md` for exactly what the next capable session
-needs to do to close this.
+STRUCTURE VISUAL QA — CODE: **READY**. Every form has real, automated
+coverage for its shared behaviors (identity stability, Pin/Close
+consistency, reset-clipping mitigation, keyboard movement, state-machine
+transitions, provider-count scaling, and — new this wave — a distinct
+Refreshing indicator), plus a Dev-only fixture QA panel
+(`demo/ReelPreview.tsx`) that can drive every form through the full
+provider-count/name/reset/windows/data-state/RTL-layout matrix using the
+real production components.
+
+STRUCTURE VISUAL QA — NATIVE: **PENDING — ENVIRONMENT_BLOCKED**, not
+PASS, for all 14 forms. Zero native pixel verification has occurred. See
+`WAVE1_NATIVE_QA_HANDOFF.md` and `WAVE1_NATIVE_QA_MATRIX.json` for
+exactly what the next capable session runs to close this — the manifest
+and capture script (`scripts/capture-native-structure-qa-matrix.mjs`)
+are prepared but not executed this session, per explicit instruction.

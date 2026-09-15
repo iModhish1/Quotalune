@@ -1,4 +1,4 @@
-# Loading / Refreshing / Unavailable UX Audit — 2026-09-15 (partial, component set now implemented)
+# Loading / Refreshing / Unavailable UX Audit — 2026-09-15 (partial, component set now implemented; Refreshing wired into Floating Structures)
 
 ## Scope and honesty note
 
@@ -92,18 +92,56 @@ existing text-swap mechanism. 6 tests (2 per render path) prove the
 distinct message appears during `initialLoading` and the prior message is
 unchanged once it resolves.
 
-**Still genuinely open**: `QuotalisAsyncState`/`QuotalisSkeleton`/
-`QuotalisRefreshingBadge` themselves are still not wired into any
-Dashboard/provider/reset/Analytics/connection-action surface — items A-C
-and E of Wave 1D §4 remain real, unstarted work, same honesty standard as
-before. No exhaustive per-surface matrix walk was performed.
+**Still genuinely open (as of Wave 1D)**: `QuotalisAsyncState`/
+`QuotalisSkeleton`/`QuotalisRefreshingBadge` themselves were still not
+wired into any Dashboard/provider/reset/Analytics/connection-action
+surface — items A-C and E of Wave 1D §4 remained real, unstarted work.
+No exhaustive per-surface matrix walk had been performed.
+
+## Wave 1E §12-21: Refreshing wired into Floating Structures (one real production consumer)
+
+Wave 1E added an `isRefreshing` prop to `FlowSurfaceProps` (distinct from
+`initialLoading`), threaded it from the real production caller
+`TopArc.tsx` (`isRefreshing={!surfaceDemo.enabled && runtime.isRefreshing}`,
+sourced from `useStageRuntime`'s pre-existing `isRefreshing` field, itself
+from `useProviders`), and rendered it as a small additive
+`QuotalisRefreshingBadge` (new `dotOnly` mode: same `aria-label` text,
+no visible label text) in FlowSurface and Reel, and as an sr-only text
+append in Notch (no new visual element — Notch's 8+ per-form
+`.notch-demo` CSS position overrides made a blind visual addition too
+risky; see the code comment in `NotchSurface.tsx`). This is now a real
+**Loading vs. Refreshing** distinction proven through one real production
+consumer (Floating Structures), not just component-primitive tests:
+`initialLoading` (Wave 1D) shows the first-fetch message; `isRefreshing`
+(Wave 1E) shows cached data with an additive dot badge, never blanking it
+— 6+ new tests across `FlowSurface.test.tsx`/`ReelSurface.test.tsx`/
+`NotchSurface.test.tsx` prove the badge only appears with cached data
+present and never during `initialLoading`.
+
+**Honest limit of this closure**: this proves Loading vs. Refreshing are
+distinct in one real consumer. It does NOT prove Zero/No-Data/
+Unavailable/Error/Timeout are all distinct in that same consumer —
+`StageProvider.status` (`"ok" | "attention" | "offline"`) has no distinct
+"error" value at the layer Structures consume (see
+`lib/structureFixtures.ts`'s own doc comment for the full architecture
+finding), so a Structure genuinely cannot distinguish "no data yet" from
+"the last fetch errored" today. §20's full seven-state distinctness
+requirement is therefore only partially closed by this one consumer;
+Dashboard's `QuotalisAsyncState` usage (5 distinct statuses, unit-tested)
+remains the more complete state-vocabulary proof, just not yet wired into
+a production surface.
 
 ## What is genuinely open (not fixed or built this wave)
 
-- **`QuotalisAsyncState`/`QuotalisSkeleton`/`QuotalisRefreshingBadge` are
-  still not wired into Dashboard/provider/reset/Analytics/connection-action
-  surfaces.** Migrating those — and native-verifying each — is real,
+- **`QuotalisAsyncState`/`QuotalisSkeleton` are still not wired into any
+  Dashboard/provider/reset/Analytics/connection-action surface.**
+  `QuotalisRefreshingBadge` is now wired into Floating Structures only
+  (above). Migrating the rest — and native-verifying each — is real,
   unstarted follow-up work.
+- **Structures cannot distinguish Error from Unavailable** (architecture
+  gap disclosed above and in `structureFixtures.ts`) — a real product
+  question for the native-capable session to raise, not something to
+  invent a fake status value for.
 - **No exhaustive per-surface matrix.** This audit spot-checked the shared
   Analytics data hook and confirmed the vocabulary/pattern exists; it did
   not walk every listed surface (provider connect, Data Sources, background
@@ -112,7 +150,11 @@ before. No exhaustive per-surface matrix walk was performed.
 - **Reduced motion for a real production consumer** was not separately
   verified this wave beyond the component-level CSS guard already in
   place (`QuotalisLoadingStates.css`'s `prefers-reduced-motion`/
-  `data-qa-motion` rules) — no real consumer exists yet to test it in.
+  `data-qa-motion` rules).
+- **Native visual verification** of the new Refreshing badge (does the
+  dot render correctly, at the right position, at real DPI, across
+  themes) has not occurred — `WAVE1_NATIVE_QA_MATRIX.json`'s
+  `NATIVE-REFRESH-01` entry is prepared for the next capable session.
 
 ## Verdict
 
@@ -120,8 +162,9 @@ LOADING UX: **PARTIAL** — the hard architectural rule (don't blank valid
 cached data on same-scope refresh; keep loading/unavailable/zero/error
 distinct) is already correctly implemented in the shared data layer.
 Wave 1B FINAL added the real, tested shared visual-language component
-set; Wave 1D wired the one Wave-1-required integration (Floating
-Structures' first-load distinction) into all 14 forms. Still open:
-wiring the shared component set into Dashboard/provider/reset/Analytics/
-connection-action surfaces, an exhaustive per-surface matrix, and native
-visual verification of any of it. Not claimed as PASS.
+set; Wave 1D wired Floating Structures' first-load distinction into all
+14 forms; Wave 1E added the Refreshing distinction into the same real
+consumer. Still open: wiring the shared component set into Dashboard/
+provider/reset/Analytics/connection-action surfaces, the Structure-level
+Error-vs-Unavailable architecture gap, an exhaustive per-surface matrix,
+and native visual verification of any of it. Not claimed as PASS.

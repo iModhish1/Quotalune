@@ -76,6 +76,7 @@ nul
 !/docs/validation/
 /docs/validation/*
 !/docs/validation/*.md
+!/docs/validation/WAVE1_NATIVE_QA_MATRIX.json
 !/docs/validation/native-0.10.1/
 /docs/validation/native-0.10.1/*
 !/docs/validation/native-0.10.1/*.md
@@ -92,6 +93,7 @@ nul
 !/scripts/capture-native-usage-proof.mjs
 !/scripts/capture-native-surface-proof.mjs
 !/scripts/capture-native-theme-matrix.mjs
+!/scripts/capture-native-structure-qa-matrix.mjs
 !/scripts/capture-native-settings-tabs.mjs
 !/scripts/verify-native-settings-reopen.mjs
 !/scripts/playwright/
