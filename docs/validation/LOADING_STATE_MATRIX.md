@@ -70,30 +70,58 @@ coverage, not a blank slate — but it is **per-component**, not a single
 shared "one Quotalis loading system" component library the owner
 specifically requests in §25.
 
+## Wave 1D: Floating Structures wired (partial), other surfaces still open
+
+Wave 1D §10 closed the one integration explicitly marked "required for
+Wave 1": **Floating Structures' own first-load state.** FlowSurface,
+ReelSurface, and NotchSurface previously showed the identical text
+("Waiting for provider data" / "No quota data" / "No data") whether the
+first provider fetch simply hadn't returned yet or there was genuinely
+never going to be any data. A new `initialLoading` prop (threaded through
+all 14 forms via the existing FlowSurface delegation, wired from the real
+production caller `TopArc.tsx` via `useStageRuntime`'s new
+`initialLoading` field — itself a thin derivation of `useProviders`'
+already-existing `hasLoadedCache` signal) now shows a distinct, localized
+`QuotalisStructureLoading` message during the real first-load window,
+same DOM shape either way (no silhouette resize). This does NOT use the
+`QuotalisAsyncState` component itself (the structure's own compact
+silhouette has no room for a full skeleton block without geometry
+changes not made this wave) — it reuses the same localization/distinct-
+message *principle* the shared component enforces, applied to the
+existing text-swap mechanism. 6 tests (2 per render path) prove the
+distinct message appears during `initialLoading` and the prior message is
+unchanged once it resolves.
+
+**Still genuinely open**: `QuotalisAsyncState`/`QuotalisSkeleton`/
+`QuotalisRefreshingBadge` themselves are still not wired into any
+Dashboard/provider/reset/Analytics/connection-action surface — items A-C
+and E of Wave 1D §4 remain real, unstarted work, same honesty standard as
+before. No exhaustive per-surface matrix walk was performed.
+
 ## What is genuinely open (not fixed or built this wave)
 
-- **The shared component set exists and is tested (see above) but is not
-  wired into any real surface yet.** Migrating Dashboard/provider/reset/
-  structure/connection surfaces to it — and native-verifying each — is
-  real, unstarted follow-up work.
+- **`QuotalisAsyncState`/`QuotalisSkeleton`/`QuotalisRefreshingBadge` are
+  still not wired into Dashboard/provider/reset/Analytics/connection-action
+  surfaces.** Migrating those — and native-verifying each — is real,
+  unstarted follow-up work.
 - **No exhaustive per-surface matrix.** This audit spot-checked the shared
   Analytics data hook and confirmed the vocabulary/pattern exists; it did
   not walk every listed surface (provider connect, Data Sources, background
   import, notification history, Tray source preview, local scanner) and
   record its exact seven-state behavior with evidence.
-- **Floating structures' own loading state (§28)** was not audited or built
-  this wave — a separate, smaller scope from the Analytics dashboard's data
-  layer, using the `StageProvider`/`hasSurfaceQuotaValue` model instead
-  (see `docs/validation/STRUCTURE_SYSTEM_AUDIT.md`).
+- **Reduced motion for a real production consumer** was not separately
+  verified this wave beyond the component-level CSS guard already in
+  place (`QuotalisLoadingStates.css`'s `prefers-reduced-motion`/
+  `data-qa-motion` rules) — no real consumer exists yet to test it in.
 
 ## Verdict
 
 LOADING UX: **PARTIAL** — the hard architectural rule (don't blank valid
 cached data on same-scope refresh; keep loading/unavailable/zero/error
-distinct) is already correctly implemented in the shared data layer and
-independently verified in a prior phase's test suite. Wave 1B FINAL added
-the real, tested shared visual-language component set the owner
-specifically asked for (§38-40) — genuinely new, not merely re-described.
-Still open: wiring that component set into real surfaces, an exhaustive
-per-surface matrix, and native visual verification of any of it. Not
-claimed as PASS.
+distinct) is already correctly implemented in the shared data layer.
+Wave 1B FINAL added the real, tested shared visual-language component
+set; Wave 1D wired the one Wave-1-required integration (Floating
+Structures' first-load distinction) into all 14 forms. Still open:
+wiring the shared component set into Dashboard/provider/reset/Analytics/
+connection-action surfaces, an exhaustive per-surface matrix, and native
+visual verification of any of it. Not claimed as PASS.

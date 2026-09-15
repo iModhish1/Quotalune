@@ -133,33 +133,68 @@ background id (`"atmosphere-05"`) so the assertion tests actual
 preservation rather than a value that was already being reset by existing,
 unrelated code.
 
-## What is genuinely NOT built this wave — not to be claimed done
+## Wave 1C/1D additions (superseding the "not built" list below where noted)
 
-- **Apply Theme scope-selection sheet** (§7–10): no UI. This is the biggest
-  remaining piece — a dialog with per-scope Current→New toggle rows, real
-  previews per scope, Select All/Clear/Recommended/Cancel/Apply, wired to
-  `setAppearanceScope`/`setCatalogTheme`.
-- **Real scope previews** (§8): none rendered — needs actual mini-surface
-  renders per scope, not built.
-- **Standalone Light/Dark/System control placement** (§11) — the
-  `theme`/`ThemePreference` setting itself already exists and is already
-  independent of `catalogTheme` at the data layer (confirmed by the trace:
-  they are unrelated fields, changing one never touches the other) and
-  already propagates live via the same event; a dedicated, prominently
-  discoverable UI control for it (vs. wherever it lives in Settings today)
-  was not audited or built this wave.
-- **Hard mix-and-match acceptance cases (§12–14)**: not native-tested this
-  wave — no Dev build was produced.
-- **RTL/Light native verification of the composition UI (§17–18)**: no UI
-  exists yet to verify.
+- **Apply Theme scope-selection sheet**: **built** — `ApplyThemeSheet.tsx`,
+  opens on global-scope Apply instead of mutating immediately. Real
+  per-scope previews (§8): `StructurePreview` for Main Application/
+  Floating Structures, `QuotaArcMark` for the logo row, `ProviderIcon` for
+  Provider Identity, a ring/bar SVG + `ProviderIcon` emblem for Tray
+  (same technique `TrayStudioTab` itself uses), a real `backgroundCatalog.ts`
+  thumbnail for Background — no generic placeholders remain.
+- **Atomicity** (Wave 1D §3): `apply_theme_composition` — one Rust command,
+  one settings load→mutate→save cycle for every checked row (main theme,
+  floating-structure override clears, and appearance-composition scopes
+  together), replacing the earlier sequential-IPC-calls design. A failure
+  partway through writes zero bytes to disk (the save call is the sole
+  persistence point, reached only after every mutation already succeeded
+  in memory) — proven by a dedicated failure-path test.
+- **Pending state**: re-entry guard, disabled controls mid-request, Escape
+  ignored while applying, failed Apply keeps the sheet open with pending
+  selections intact and shows the real error.
+- **Recommended semantics fixed** (Wave 1D §2): Recommended now includes
+  Floating Structures when the theme's own metadata recommends it
+  (`recommendedAppearance.floatingStructures`), even though that scope
+  persists through a different mechanism (`surface_catalog_themes`) than
+  the other four. Which storage mechanism a scope uses no longer leaks
+  into what "Recommended" means to the user.
+- **Localization**: 30 real locale keys (en-US + ar-SA), every string the
+  summary/sheet introduces — no English fallback for Arabic. A bilingual
+  Rust test proves every key resolves to a real translation in both
+  languages, not the bare-key fallback.
+- **Light/Dark independence — now proven with deterministic tests**
+  (Wave 1D §9, not just the architecture trace): Ceramic Pearl + Dark,
+  Obsidian + Light, changing mode never mutates `catalog_theme`, changing
+  `catalog_theme` through any scope (global/profile/surface, and the
+  batched Apply path) never mutates `theme` — 4 Rust tests.
+
+## What is still genuinely NOT built — not to be claimed done
+
+- **Hard mix-and-match acceptance native cases (§12–14 of Wave 1B, §15–16
+  of Wave 1C)**: not native-tested — no Dev build interaction was
+  performed with real UI clicks (see `WAVE1_NATIVE_QA_HANDOFF.md`).
+- **RTL/Light native verification of the composition UI**: the UI now
+  exists and is localized, but no native screenshot of it in either mode
+  has been captured.
 - **`recommendedAppearance` for the rest of the theme catalog**: only
-  `CANONICAL_THEME` is populated.
-- Reel/Notch geometry closure, shared loading-UX components, and native
-  structure QA are tracked separately — not part of this document.
+  `CANONICAL_THEME` is populated (now including `floatingStructures:
+  true`). Extending it to the rest of `THEME_CATALOG` is real design
+  work (choosing an actual recommended finish per theme), left open.
+- **Cross-window live propagation**: architecturally unchanged (reuses
+  `quotalis:settings-updated`, unmodified this wave) but not re-verified
+  natively across two real open windows.
+- Reel/Notch geometry closure, native structure QA, and the shared
+  loading-UX component set's production wiring are tracked in
+  `LOADING_STATE_MATRIX.md`/`STRUCTURE_VISUAL_QA_MATRIX.md` — not part of
+  this document.
 
 ## Verdict
 
 THEME COMPOSITION DATA MODEL: **real, tested, reuses the existing
 resolver/event/persistence architecture with no parallel system.**
-THEME COMPOSITION UI (Apply sheet, previews, RTL/Light native verification):
-**not built — PARTIAL overall for theme composition as a whole.**
+THEME COMPOSITION UI: **built and tested** (Apply sheet, real previews,
+atomicity, pending-state, correct Recommended semantics, localized).
+THEME COMPOSITION NATIVE VERIFICATION (mixed cases, restart persistence,
+RTL/Light screenshots): **not performed — PARTIAL overall** for theme
+composition as a whole, with the code-level work now substantially more
+complete than the prior wave's report.
