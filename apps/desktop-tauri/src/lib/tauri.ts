@@ -137,6 +137,21 @@ export function setAppearanceScope(
   return invoke<void>("set_appearance_scope", { scope, source });
 }
 
+export interface ThemeCompositionApplyPayload {
+  mainSlug: string;
+  mainScope: CatalogThemeScope;
+  clearFloatingSurfaces?: CatalogSurfaceId[];
+  appearanceScopes?: import("../design-system/appearanceComposition").AppearanceScopeId[];
+}
+
+/** Wave 1C §10: commits every ApplyThemeSheet row's checked scope in one
+ * settings load→mutate→save cycle on the Rust side — see
+ * `apply_theme_composition_to_settings`'s doc comment in
+ * command_profiles.rs for the atomicity reasoning. */
+export function applyThemeComposition(payload: ThemeCompositionApplyPayload): Promise<void> {
+  return invoke<void>("apply_theme_composition", { payload });
+}
+
 export function getTrayVisibilityStatus(): Promise<TrayVisibilityStatusDto> {
   return invoke<TrayVisibilityStatusDto>("tray_visibility_status");
 }

@@ -566,6 +566,7 @@ fn main() {
             command_profiles::set_privacy_mode,
             command_profiles::set_catalog_theme,
             command_profiles::set_appearance_scope,
+            command_profiles::apply_theme_composition,
             command_profiles::set_usage_settings,
             command_profiles::set_provider_detail_window,
             command_profiles::set_provider_limit_order,
