@@ -2065,6 +2065,42 @@ locale_keys! {
     UnexpectedResetNotificationsHelper,
     BankedResetCreditNotifications,
     BankedResetCreditNotificationsHelper,
+
+    // Wave 1B: Appearance Composition summary + Apply Theme scope sheet
+    // (AppearanceCompositionSummary.tsx, ApplyThemeSheet.tsx).
+    AppearanceCompositionTitle,
+    AppearanceCompositionDescription,
+    AppearanceCompositionMainApplication,
+    AppearanceCompositionColorMode,
+    AppearanceCompositionFloatingStructures,
+    AppearanceCompositionQuotalisLogo,
+    AppearanceCompositionProviderIdentity,
+    AppearanceCompositionTray,
+    AppearanceCompositionBackground,
+    AppearanceCompositionFollowingMain,
+    AppearanceCompositionOverrideAction,
+    AppearanceCompositionFollowAction,
+    AppearanceCompositionOverrideAriaLabel,
+    AppearanceCompositionFollowAriaLabel,
+    ApplyThemeEyebrow,
+    ApplyThemeClose,
+    ApplyThemeCurrentNew,
+    ApplyThemeApplyScopeAriaLabel,
+    ApplyThemeSelectAll,
+    ApplyThemeClear,
+    ApplyThemeRecommended,
+    ApplyThemeCancel,
+    ApplyThemeApply,
+    ApplyThemeApplying,
+
+    // Wave 1B: shared loading/async-state primitives
+    // (design-system/QuotalisLoadingStates.tsx).
+    QuotalisLoadingNoData,
+    QuotalisLoadingUnavailable,
+    QuotalisLoadingError,
+    QuotalisLoadingTimeout,
+    QuotalisLoadingRetry,
+    QuotalisLoadingUpdating,
 }
 
 #[cfg(test)]

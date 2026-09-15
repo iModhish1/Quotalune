@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import {
   APPEARANCE_SCOPE_IDS,
-  APPEARANCE_SCOPE_LABELS,
+  APPEARANCE_SCOPE_LOCALE_KEYS,
   DEFAULT_APPEARANCE_COMPOSITION,
   appearanceScopeSummaryLabel,
   type AppearanceScopeId,
@@ -10,13 +10,19 @@ import {
 import { CANONICAL_THEME, catalogBySlug } from "../../../design-system/themeCatalog";
 import { resolveCatalogTheme, type CatalogThemeSettings } from "../../../design-system/themeResolution";
 import { getSettingsSnapshot, setAppearanceScope } from "../../../lib/tauri";
+import { useLocale } from "../../../hooks/useLocale";
+import type { LocaleKey } from "../../../i18n/keys";
 import type { SettingsSnapshot } from "../../../types/bridge";
 import "./AppearanceCompositionSummary.css";
 
 /** Real current explicit value for a scope, read straight off the settings
- * snapshot — never a placeholder. No locale entries were added for these
- * plain-English labels this slice; that is a real, disclosed gap, not an
- * oversight (see docs/validation/THEME_COMPOSITION_AUDIT.md). */
+ * snapshot — never a placeholder. `logoVariant`/`identity`/tray-mode/
+ * background id are data values (like a catalog theme's own `.name`,
+ * already shown untranslated everywhere in ThemeGallery) rather than UI
+ * copy, so they are not routed through the locale system — only the
+ * defaults below (used when a field is entirely absent, e.g. a
+ * pre-Wave-1B settings.json) are literal English and match the Rust
+ * `default_*` fallback values exactly. */
 function explicitDisplayValue(scope: AppearanceScopeId, snapshot: SettingsSnapshot): string {
   switch (scope) {
     case "quotalisLogo":
@@ -36,6 +42,12 @@ function explicitDisplayValue(scope: AppearanceScopeId, snapshot: SettingsSnapsh
   }
 }
 
+const COLOR_MODE_LOCALE_KEY: Record<string, LocaleKey> = {
+  auto: "ThemeAutoOption",
+  light: "ThemeLightOption",
+  dark: "ThemeDarkOption",
+};
+
 function capitalize(value: string): string {
   return value.length ? value[0].toUpperCase() + value.slice(1) : value;
 }
@@ -49,6 +61,7 @@ function capitalize(value: string): string {
  * one (§5, §6).
  */
 export default function AppearanceCompositionSummary() {
+  const { t } = useLocale();
   const [snapshot, setSnapshot] = useState<SettingsSnapshot | null>(null);
   const [error, setError] = useState<string>();
   const [pending, setPending] = useState<AppearanceScopeId | null>(null);
@@ -104,51 +117,56 @@ export default function AppearanceCompositionSummary() {
     }
   }
 
+  const followingMain = t("AppearanceCompositionFollowingMain");
+
   return (
-    <section className="settings-section appearance-composition-summary" aria-label="Appearance Composition">
-      <h3 className="settings-section__title">Appearance Composition</h3>
-      <p className="settings-section__description">
-        What owns each part of Quotalis's appearance right now.
-      </p>
+    <section className="settings-section appearance-composition-summary" aria-label={t("AppearanceCompositionTitle")}>
+      <h3 className="settings-section__title">{t("AppearanceCompositionTitle")}</h3>
+      <p className="settings-section__description">{t("AppearanceCompositionDescription")}</p>
       {error && <p role="alert" className="appearance-composition-summary__error">{error}</p>}
       <dl className="appearance-composition-summary__rows">
         <div className="appearance-composition-summary__row">
-          <dt>Main Application</dt>
+          <dt>{t("AppearanceCompositionMainApplication")}</dt>
           <dd>{mainTheme.name}</dd>
         </div>
         <div className="appearance-composition-summary__row">
-          <dt>Color Mode</dt>
-          <dd>{capitalize(snapshot.theme ?? "auto")}</dd>
+          <dt>{t("AppearanceCompositionColorMode")}</dt>
+          <dd>{t(COLOR_MODE_LOCALE_KEY[snapshot.theme ?? "auto"] ?? "ThemeAutoOption")}</dd>
         </div>
         <div className="appearance-composition-summary__row">
-          <dt>Floating Structures</dt>
+          <dt>{t("AppearanceCompositionFloatingStructures")}</dt>
           <dd data-source={floating.source}>
             {floating.source === "global" || floating.source === "default"
-              ? "Following Main Application"
+              ? followingMain
               : catalogBySlug(floating.slug)?.name ?? floating.slug}
           </dd>
         </div>
-        {APPEARANCE_SCOPE_IDS.map((scope) => (
-          <div className="appearance-composition-summary__row" key={scope}>
-            <dt>{APPEARANCE_SCOPE_LABELS[scope]}</dt>
-            <dd data-source={composition[scope]}>
-              {appearanceScopeSummaryLabel(scope, composition, explicitDisplayValue(scope, snapshot))}
-              <button
-                type="button"
-                className="appearance-composition-summary__toggle"
-                disabled={pending === scope}
-                aria-label={
-                  composition[scope] === "global"
-                    ? `Override ${APPEARANCE_SCOPE_LABELS[scope]} instead of following Main Application`
-                    : `Follow Main Application for ${APPEARANCE_SCOPE_LABELS[scope]}`
-                }
-                onClick={() => void toggleScope(scope)}
-              >
-                {composition[scope] === "global" ? "Override" : "Follow Main Application"}
-              </button>
-            </dd>
-          </div>
-        ))}
+        {APPEARANCE_SCOPE_IDS.map((scope) => {
+          const scopeLabel = t(APPEARANCE_SCOPE_LOCALE_KEYS[scope]);
+          return (
+            <div className="appearance-composition-summary__row" key={scope}>
+              <dt>{scopeLabel}</dt>
+              <dd data-source={composition[scope]}>
+                {appearanceScopeSummaryLabel(scope, composition, explicitDisplayValue(scope, snapshot), followingMain)}
+                <button
+                  type="button"
+                  className="appearance-composition-summary__toggle"
+                  disabled={pending === scope}
+                  aria-label={
+                    composition[scope] === "global"
+                      ? t("AppearanceCompositionOverrideAriaLabel").replace("{}", scopeLabel)
+                      : t("AppearanceCompositionFollowAriaLabel").replace("{}", scopeLabel)
+                  }
+                  onClick={() => void toggleScope(scope)}
+                >
+                  {composition[scope] === "global"
+                    ? t("AppearanceCompositionOverrideAction")
+                    : t("AppearanceCompositionFollowAction")}
+                </button>
+              </dd>
+            </div>
+          );
+        })}
       </dl>
     </section>
   );

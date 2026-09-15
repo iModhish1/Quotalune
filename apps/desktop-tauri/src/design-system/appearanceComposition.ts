@@ -1,4 +1,5 @@
 import type { CatalogTheme } from "./themeCatalog";
+import type { LocaleKey } from "../i18n/keys";
 
 /**
  * Wave 1B theme composition — frontend mirror of
@@ -49,13 +50,16 @@ export const DEFAULT_APPEARANCE_COMPOSITION: AppearanceComposition = {
   workspaceBackground: "override",
 };
 
-/** Human-readable label for a scope, used by the "what owns each
- * appearance" summary (Wave 1B §6/§16 — SOURCE vs RESOLVED). */
-export const APPEARANCE_SCOPE_LABELS: Record<AppearanceScopeId, string> = {
-  quotalisLogo: "Quotalis Logo",
-  providerIdentity: "Provider Identity",
-  tray: "Tray",
-  workspaceBackground: "Background",
+/** Locale key for a scope's human-readable label, used by the "what owns
+ * each appearance" summary (Wave 1B §6/§16 — SOURCE vs RESOLVED). Callers
+ * resolve the display string via `useLocale().t(...)` — this module stays
+ * locale-agnostic (pure data/logic, no React/i18n dependency beyond the
+ * key type itself). */
+export const APPEARANCE_SCOPE_LOCALE_KEYS: Record<AppearanceScopeId, LocaleKey> = {
+  quotalisLogo: "AppearanceCompositionQuotalisLogo",
+  providerIdentity: "AppearanceCompositionProviderIdentity",
+  tray: "AppearanceCompositionTray",
+  workspaceBackground: "AppearanceCompositionBackground",
 };
 
 /**
@@ -104,14 +108,18 @@ export function resolveAppearanceScope(
 
 /**
  * The compact "what owns each appearance" summary line for one scope
- * (Wave 1B §6): "Following Main Application" when Global, or the resolved
- * display value when Override — matching the owner's exact example format.
+ * (Wave 1B §6): the localized "Following Main Application" string when
+ * Global, or the resolved display value when Override — matching the
+ * owner's exact example format. `followingMainApplicationText` is passed
+ * in (rather than hardcoded here) so this stays a pure, locale-agnostic
+ * function — the caller supplies it via `useLocale().t("AppearanceCompositionFollowingMain")`.
  */
 export function appearanceScopeSummaryLabel(
   scope: AppearanceScopeId,
   composition: AppearanceComposition,
   explicitDisplayValue: string,
+  followingMainApplicationText: string,
 ): string {
-  if (composition[scope] === "global") return "Following Main Application";
+  if (composition[scope] === "global") return followingMainApplicationText;
   return explicitDisplayValue;
 }

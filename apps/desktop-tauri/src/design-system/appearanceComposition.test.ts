@@ -57,13 +57,13 @@ describe("resolveAppearanceScope", () => {
 describe("appearanceScopeSummaryLabel", () => {
   it("shows 'Following Main Application' for a Global scope, not the resolved value", () => {
     const composition: AppearanceComposition = { ...DEFAULT_APPEARANCE_COMPOSITION, tray: "global" };
-    expect(appearanceScopeSummaryLabel("tray", composition, "Provider Accent")).toBe(
+    expect(appearanceScopeSummaryLabel("tray", composition, "Provider Accent", "Following Main Application")).toBe(
       "Following Main Application",
     );
   });
 
   it("shows the scope's own explicit display value for an Override scope", () => {
     const composition: AppearanceComposition = { ...DEFAULT_APPEARANCE_COMPOSITION, tray: "override" };
-    expect(appearanceScopeSummaryLabel("tray", composition, "Provider Accent")).toBe("Provider Accent");
+    expect(appearanceScopeSummaryLabel("tray", composition, "Provider Accent", "Following Main Application")).toBe("Provider Accent");
   });
 });

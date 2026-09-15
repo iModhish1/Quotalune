@@ -1776,3 +1776,37 @@ HistoryScheduledReset = Scheduled reset observed
 HistoryQuotaChange = Unexpected quota change
 HistoryBankedIncreased = Banked Resets increased
 HistoryBankedDecreased = Banked Resets decreased
+
+# Wave 1B: Appearance Composition summary + Apply Theme scope sheet
+AppearanceCompositionTitle = Appearance Composition
+AppearanceCompositionDescription = What owns each part of Quotalis's appearance right now.
+AppearanceCompositionMainApplication = Main Application
+AppearanceCompositionColorMode = Color Mode
+AppearanceCompositionFloatingStructures = Floating Structures
+AppearanceCompositionQuotalisLogo = Quotalis Logo
+AppearanceCompositionProviderIdentity = Provider Identity
+AppearanceCompositionTray = Tray
+AppearanceCompositionBackground = Background
+AppearanceCompositionFollowingMain = Following Main Application
+AppearanceCompositionOverrideAction = Override
+AppearanceCompositionFollowAction = Follow Main Application
+AppearanceCompositionOverrideAriaLabel = Override { "{}" } instead of following Main Application
+AppearanceCompositionFollowAriaLabel = Follow Main Application for { "{}" }
+ApplyThemeEyebrow = Apply Theme
+ApplyThemeClose = Close
+ApplyThemeCurrentNew = Current: { "{}" } → New: { "{}" }
+ApplyThemeApplyScopeAriaLabel = Apply { "{}" }
+ApplyThemeSelectAll = Select All
+ApplyThemeClear = Clear
+ApplyThemeRecommended = Recommended
+ApplyThemeCancel = Cancel
+ApplyThemeApply = Apply
+ApplyThemeApplying = Applying…
+
+# Wave 1B: shared loading/async-state primitives
+QuotalisLoadingNoData = No data yet
+QuotalisLoadingUnavailable = Unavailable
+QuotalisLoadingError = Something went wrong
+QuotalisLoadingTimeout = This took too long to respond
+QuotalisLoadingRetry = Retry
+QuotalisLoadingUpdating = Updating…

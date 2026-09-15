@@ -6,6 +6,31 @@ const api = vi.hoisted(() => ({ getSettingsSnapshot: vi.fn(), setAppearanceScope
 vi.mock("../../../lib/tauri", () => api);
 vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn().mockResolvedValue(() => {}) }));
 
+// Mirrors the real en-US.ftl content for the keys this component uses.
+const EN_STRINGS: Record<string, string> = {
+  AppearanceCompositionTitle: "Appearance Composition",
+  AppearanceCompositionDescription: "What owns each part of Quotalis's appearance right now.",
+  AppearanceCompositionMainApplication: "Main Application",
+  AppearanceCompositionColorMode: "Color Mode",
+  AppearanceCompositionFloatingStructures: "Floating Structures",
+  AppearanceCompositionQuotalisLogo: "Quotalis Logo",
+  AppearanceCompositionProviderIdentity: "Provider Identity",
+  AppearanceCompositionTray: "Tray",
+  AppearanceCompositionBackground: "Background",
+  AppearanceCompositionFollowingMain: "Following Main Application",
+  AppearanceCompositionOverrideAction: "Override",
+  AppearanceCompositionFollowAction: "Follow Main Application",
+  AppearanceCompositionOverrideAriaLabel: "Override {} instead of following Main Application",
+  AppearanceCompositionFollowAriaLabel: "Follow Main Application for {}",
+  ThemeAutoOption: "Auto (system)",
+  ThemeLightOption: "Light",
+  ThemeDarkOption: "Dark",
+};
+vi.mock("../../../hooks/useLocale", () => ({
+  useLocale: () => ({ t: (key: string) => EN_STRINGS[key] ?? key, language: "english", direction: "ltr" }),
+  useOptionalLocale: () => null,
+}));
+
 describe("AppearanceCompositionSummary", () => {
   it("shows the resolved main application theme and color mode from real settings", async () => {
     api.getSettingsSnapshot.mockResolvedValue({

@@ -2,6 +2,20 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { QuotalisAsyncState, QuotalisRefreshingBadge, QuotalisSkeleton } from "./QuotalisLoadingStates";
 
+// Mirrors the real en-US.ftl content for the keys this module uses.
+const EN_STRINGS: Record<string, string> = {
+  QuotalisLoadingNoData: "No data yet",
+  QuotalisLoadingUnavailable: "Unavailable",
+  QuotalisLoadingError: "Something went wrong",
+  QuotalisLoadingTimeout: "This took too long to respond",
+  QuotalisLoadingRetry: "Retry",
+  QuotalisLoadingUpdating: "Updating…",
+};
+vi.mock("../hooks/useLocale", () => ({
+  useLocale: () => ({ t: (key: string) => EN_STRINGS[key] ?? key, language: "english", direction: "ltr" }),
+  useOptionalLocale: () => null,
+}));
+
 describe("QuotalisAsyncState", () => {
   it("renders a distinct message and DOM shape for loading/noData/unavailable/error/timeout — never the same UI twice", () => {
     const rendered: Record<string, string> = {};

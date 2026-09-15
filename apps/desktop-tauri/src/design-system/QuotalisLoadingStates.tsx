@@ -1,3 +1,5 @@
+import { useLocale } from "../hooks/useLocale";
+import type { LocaleKey } from "../i18n/keys";
 import "./QuotalisLoadingStates.css";
 
 /**
@@ -42,25 +44,28 @@ export interface QuotalisAsyncStateProps {
  * distinct UI, not a "Retry" test asserting they're merely different
  * *props*. §43: "Unavailable" never quietly becomes "0%"/"$0"/"reset now";
  * §45: Timeout gets its own message, not folded into a generic error.
+ * Localized (§24) via the shared locale system — no hardcoded English.
  */
-const DEFAULT_MESSAGE: Record<Exclude<QuotalisAsyncStatus, "loading">, string> = {
-  noData: "No data yet",
-  unavailable: "Unavailable",
-  error: "Something went wrong",
-  timeout: "This took too long to respond",
+const DEFAULT_MESSAGE_LOCALE_KEY: Record<Exclude<QuotalisAsyncStatus, "loading">, LocaleKey> = {
+  noData: "QuotalisLoadingNoData",
+  unavailable: "QuotalisLoadingUnavailable",
+  error: "QuotalisLoadingError",
+  timeout: "QuotalisLoadingTimeout",
 };
 
 export function QuotalisAsyncState({
   status,
   message,
   onRetry,
-  retryLabel = "Retry",
+  retryLabel,
   skeletonRows = 3,
 }: QuotalisAsyncStateProps) {
+  const { t } = useLocale();
   if (status === "loading") {
     return <QuotalisSkeleton rows={skeletonRows} />;
   }
-  const resolvedMessage = message ?? DEFAULT_MESSAGE[status];
+  const resolvedMessage = message ?? t(DEFAULT_MESSAGE_LOCALE_KEY[status]);
+  const resolvedRetryLabel = retryLabel ?? t("QuotalisLoadingRetry");
   return (
     <div className="quotalis-async-state" data-status={status} role={status === "error" || status === "timeout" ? "alert" : "status"}>
       <p className="quotalis-async-state__message">{resolvedMessage}</p>
@@ -71,7 +76,7 @@ export function QuotalisAsyncState({
           them even if a caller passes onRetry by mistake. */}
       {(status === "error" || status === "timeout") && onRetry && (
         <button type="button" className="quotalis-async-state__retry" onClick={onRetry}>
-          {retryLabel}
+          {resolvedRetryLabel}
         </button>
       )}
     </div>
@@ -95,11 +100,12 @@ export function QuotalisSkeleton({ rows = 3 }: { rows?: number }) {
  * §41: rendered ALONGSIDE cached content during a background refresh —
  * never replaces it. Small, quiet, no full-content blur (§39).
  */
-export function QuotalisRefreshingBadge({ label = "Updating…" }: { label?: string }) {
+export function QuotalisRefreshingBadge({ label }: { label?: string }) {
+  const { t } = useLocale();
   return (
     <span className="quotalis-refreshing-badge" role="status">
       <span className="quotalis-refreshing-badge__dot" aria-hidden="true" />
-      {label}
+      {label ?? t("QuotalisLoadingUpdating")}
     </span>
   );
 }

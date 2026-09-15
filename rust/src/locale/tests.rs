@@ -479,6 +479,97 @@ fn test_fluent_preserves_literal_placeholders_and_status_spacing() {
     );
 }
 
+#[test]
+fn wave_1c_appearance_composition_and_loading_keys_are_real_in_english_and_arabic() {
+    // English
+    assert_eq!(
+        get_text(Language::English, LocaleKey::AppearanceCompositionTitle),
+        "Appearance Composition"
+    );
+    assert_eq!(
+        get_text(
+            Language::English,
+            LocaleKey::AppearanceCompositionFollowingMain
+        ),
+        "Following Main Application"
+    );
+    assert_eq!(
+        get_text(Language::English, LocaleKey::ApplyThemeCurrentNew),
+        "Current: {} → New: {}"
+    );
+    assert_eq!(
+        get_text(Language::English, LocaleKey::QuotalisLoadingTimeout),
+        "This took too long to respond"
+    );
+
+    // Arabic — real translations, not the English fallback (the whole
+    // point of Wave 1C §1: "Do not leave English fallback for Arabic").
+    assert_eq!(
+        get_text(Language::Arabic, LocaleKey::AppearanceCompositionTitle),
+        "تكوين المظهر"
+    );
+    assert_eq!(
+        get_text(
+            Language::Arabic,
+            LocaleKey::AppearanceCompositionFollowingMain
+        ),
+        "يتبع التطبيق الرئيسي"
+    );
+    assert_eq!(
+        get_text(Language::Arabic, LocaleKey::ApplyThemeCurrentNew),
+        "الحالي: {} — الجديد: {}"
+    );
+    assert_eq!(
+        get_text(Language::Arabic, LocaleKey::QuotalisLoadingTimeout),
+        "استغرق الرد وقتًا طويلاً جدًا"
+    );
+
+    // None of the new keys fall back to their own bare variant name (the
+    // no-translation-found fallback get_text() uses) in either language —
+    // proving real .ftl coverage, not just registered enum variants.
+    for key in [
+        LocaleKey::AppearanceCompositionTitle,
+        LocaleKey::AppearanceCompositionDescription,
+        LocaleKey::AppearanceCompositionMainApplication,
+        LocaleKey::AppearanceCompositionColorMode,
+        LocaleKey::AppearanceCompositionFloatingStructures,
+        LocaleKey::AppearanceCompositionQuotalisLogo,
+        LocaleKey::AppearanceCompositionProviderIdentity,
+        LocaleKey::AppearanceCompositionTray,
+        LocaleKey::AppearanceCompositionBackground,
+        LocaleKey::AppearanceCompositionFollowingMain,
+        LocaleKey::AppearanceCompositionOverrideAction,
+        LocaleKey::AppearanceCompositionFollowAction,
+        LocaleKey::AppearanceCompositionOverrideAriaLabel,
+        LocaleKey::AppearanceCompositionFollowAriaLabel,
+        LocaleKey::ApplyThemeEyebrow,
+        LocaleKey::ApplyThemeClose,
+        LocaleKey::ApplyThemeCurrentNew,
+        LocaleKey::ApplyThemeApplyScopeAriaLabel,
+        LocaleKey::ApplyThemeSelectAll,
+        LocaleKey::ApplyThemeClear,
+        LocaleKey::ApplyThemeRecommended,
+        LocaleKey::ApplyThemeCancel,
+        LocaleKey::ApplyThemeApply,
+        LocaleKey::ApplyThemeApplying,
+        LocaleKey::QuotalisLoadingNoData,
+        LocaleKey::QuotalisLoadingUnavailable,
+        LocaleKey::QuotalisLoadingError,
+        LocaleKey::QuotalisLoadingTimeout,
+        LocaleKey::QuotalisLoadingRetry,
+        LocaleKey::QuotalisLoadingUpdating,
+    ] {
+        for lang in [Language::English, Language::Arabic] {
+            let text = get_text(lang, key);
+            assert_ne!(
+                text,
+                key.name(),
+                "{key:?} has no real {lang:?} translation (fell back to the bare key name)"
+            );
+        }
+    }
+}
+
 fn resource_key_names(resource: &str) -> HashSet<&str> {
     resource
         .lines()

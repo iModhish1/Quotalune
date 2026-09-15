@@ -1022,3 +1022,37 @@ HistoryScheduledReset = رُصدت إعادة تعيين مجدولة
 HistoryQuotaChange = تغيّر غير متوقع في الحصة
 HistoryBankedIncreased = زاد عدد بطاقات الريسيتس
 HistoryBankedDecreased = انخفض عدد بطاقات الريسيتس
+
+# Wave 1B: Appearance Composition summary + Apply Theme scope sheet
+AppearanceCompositionTitle = تكوين المظهر
+AppearanceCompositionDescription = الجهة المسؤولة عن كل جزء من مظهر Quotalis الآن.
+AppearanceCompositionMainApplication = التطبيق الرئيسي
+AppearanceCompositionColorMode = وضع الألوان
+AppearanceCompositionFloatingStructures = الهياكل العائمة
+AppearanceCompositionQuotalisLogo = شعار Quotalis
+AppearanceCompositionProviderIdentity = هوية المزوّد
+AppearanceCompositionTray = شريط النظام
+AppearanceCompositionBackground = الخلفية
+AppearanceCompositionFollowingMain = يتبع التطبيق الرئيسي
+AppearanceCompositionOverrideAction = تجاوز
+AppearanceCompositionFollowAction = اتباع التطبيق الرئيسي
+AppearanceCompositionOverrideAriaLabel = تجاوز { "{}" } بدلاً من اتباع التطبيق الرئيسي
+AppearanceCompositionFollowAriaLabel = اتباع التطبيق الرئيسي لـ { "{}" }
+ApplyThemeEyebrow = تطبيق السمة
+ApplyThemeClose = إغلاق
+ApplyThemeCurrentNew = الحالي: { "{}" } — الجديد: { "{}" }
+ApplyThemeApplyScopeAriaLabel = تطبيق { "{}" }
+ApplyThemeSelectAll = تحديد الكل
+ApplyThemeClear = مسح
+ApplyThemeRecommended = موصى به
+ApplyThemeCancel = إلغاء
+ApplyThemeApply = تطبيق
+ApplyThemeApplying = جارٍ التطبيق…
+
+# Wave 1B: shared loading/async-state primitives
+QuotalisLoadingNoData = لا توجد بيانات بعد
+QuotalisLoadingUnavailable = غير متاح
+QuotalisLoadingError = حدث خطأ ما
+QuotalisLoadingTimeout = استغرق الرد وقتًا طويلاً جدًا
+QuotalisLoadingRetry = إعادة المحاولة
+QuotalisLoadingUpdating = جارٍ التحديث…
