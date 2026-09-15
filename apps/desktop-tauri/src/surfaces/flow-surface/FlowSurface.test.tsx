@@ -481,4 +481,24 @@ describe("FlowSurface", () => {
       expect(container.querySelector(".structure-connector--flow")).not.toBeInTheDocument();
     });
   });
+
+  describe("per-provider status text (Wave 1F §13/§14)", () => {
+    it("shows a distinct error message in the reset row's slot for status='error', without changing the panel's geometry", () => {
+      const errored = [{ ...providers[0], status: "error" as const }];
+      render(<FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={errored} />);
+      expect(screen.getByText("QuotalisLoadingError")).toBeInTheDocument();
+      expect(screen.queryByText(/Resets/)).not.toBeInTheDocument();
+    });
+
+    it("shows a distinct timeout message for status='timeout'", () => {
+      const timedOut = [{ ...providers[0], status: "timeout" as const }];
+      render(<FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={timedOut} />);
+      expect(screen.getByText("QuotalisLoadingTimeout")).toBeInTheDocument();
+    });
+
+    it("still shows the normal reset text for status='ok'", () => {
+      render(<FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={providers} />);
+      expect(screen.getByText(/Resets 3h/)).toBeInTheDocument();
+    });
+  });
 });

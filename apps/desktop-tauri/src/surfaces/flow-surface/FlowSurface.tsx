@@ -428,7 +428,17 @@ export default function FlowSurface({
               {focused?.windows ? <div style={{"--provider-color":providerMeterFillColor(providerColor(theme,focused.id),focused.limitPresentation?.identity,theme)} as CSSProperties}><UsageWindowList providerId={focused.id} windows={focused.windows} hidden={focused.detailsHidden} presentation={focused.limitPresentation}/></div> : <div className="flow-surface__metric">
                 <strong>{formatPercentage(focused?.primaryValue)}</strong>
                 <span>{focused?.primaryLabel ?? "unavailable"}</span>
-                <small>Resets {focused?.reset ?? "—"}</small>
+                {/* Wave 1F §13/§14: same DOM slot regardless of which case
+                    applies (no geometry change) -- error/timeout reuse the
+                    same shared locale keys QuotalisAsyncState uses, no
+                    second vocabulary invented for Structures. */}
+                <small>
+                  {focused?.status === "error"
+                    ? t("QuotalisLoadingError")
+                    : focused?.status === "timeout"
+                      ? t("QuotalisLoadingTimeout")
+                      : `Resets ${focused?.reset ?? "—"}`}
+                </small>
               </div>}
             </div>
             <div className="flow-surface__detail-providers" role="list" aria-label="Providers">

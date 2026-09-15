@@ -208,4 +208,27 @@ describe("Orbit Reel", () => {
       expect(container.querySelector(".structure-connector--reel")).not.toBeInTheDocument();
     });
   });
+
+  describe("per-provider status text (Wave 1F §13/§14)", () => {
+    it("shows a distinct error message in the reset row's slot for status='error'", () => {
+      const errored = [{ ...SURFACE_DEMO_PROVIDERS[0], status: "error" as const }];
+      render(
+        <ReelSurface catalog="01-obsidian-orbit" state="expanded"
+          settings={{ form: "reel", anchor: "right", scale: 100, autoHide: true, autoHideDelayMs: 900 }}
+          providers={errored} />,
+      );
+      expect(screen.getByText("QuotalisLoadingError")).toBeInTheDocument();
+      expect(screen.queryByText(/Resets in/)).not.toBeInTheDocument();
+    });
+
+    it("shows a distinct timeout message for status='timeout'", () => {
+      const timedOut = [{ ...SURFACE_DEMO_PROVIDERS[0], status: "timeout" as const }];
+      render(
+        <ReelSurface catalog="01-obsidian-orbit" state="expanded"
+          settings={{ form: "reel", anchor: "right", scale: 100, autoHide: true, autoHideDelayMs: 900 }}
+          providers={timedOut} />,
+      );
+      expect(screen.getByText("QuotalisLoadingTimeout")).toBeInTheDocument();
+    });
+  });
 });

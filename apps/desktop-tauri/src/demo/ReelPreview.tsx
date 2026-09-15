@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { placeSurface, snapSurface, SURFACE_POSITIONS } from "../design-system/surfacePlacement";
 import FlowSurface from "../surfaces/flow-surface/FlowSurface";
 import {
+  syntheticErrorProvider,
   syntheticLongProviderName,
   syntheticLongReset,
   syntheticProviderCount,
+  syntheticTimeoutProvider,
   syntheticTwoUsageWindows,
   syntheticUnavailableProvider,
 } from "../lib/structureFixtures";
@@ -26,10 +28,16 @@ import {THEME_CATALOG} from "../design-system/themeCatalog";
  * `docs/validation/WAVE1_NATIVE_QA_HANDOFF.md`). It already drove the
  * REAL production `FlowSurface` component (which internally dispatches to
  * the real `ReelSurface`/`NotchSurface` too) with a structure/anchor/
- * state/interactions selector; this wave adds the remaining fixture
- * dimensions §23 asks for: provider count, name/reset length, usage
- * windows, and data state (loading/refreshing/available/unavailable),
- * plus a pin toggle and an RTL layout-direction toggle.
+ * state/interactions selector; Wave 1E added provider count, name/reset
+ * length, usage windows, data state, a pin toggle and an RTL layout-
+ * direction toggle. Wave 1F extended data state with `error`/`timeout`
+ * once `StageProvider.status` gained real, non-fabricated values for
+ * both (see `stageProviders.ts`'s `toStageProviders()` and
+ * `structureFixtures.ts`'s `syntheticErrorProvider()`/
+ * `syntheticTimeoutProvider()`) — `zero` is deliberately NOT a distinct
+ * data-state option here: a real zero-usage provider is just
+ * `primaryValue: 0` with `status: "ok"`, which every "available" fixture
+ * can already represent by construction, not a separate case to fake.
  *
  * Two dimensions §23 also lists are NOT added here, for real, checked
  * reasons rather than an oversight:
@@ -65,8 +73,8 @@ export default function ReelPreview() {
   const [nameLength, setNameLength] = useState<"normal" | "long">((params.get("name") as "long") ?? "normal");
   const [resetLength, setResetLength] = useState<"normal" | "long" | "unavailable">((params.get("reset") as "long" | "unavailable") ?? "normal");
   const [windows, setWindows] = useState<"1" | "2">((params.get("windows") as "2") ?? "1");
-  const [dataState, setDataState] = useState<"available" | "loading" | "refreshing" | "unavailable">(
-    (params.get("data") as "loading" | "refreshing" | "unavailable") ?? "available",
+  const [dataState, setDataState] = useState<"available" | "loading" | "refreshing" | "unavailable" | "error" | "timeout">(
+    (params.get("data") as "loading" | "refreshing" | "unavailable" | "error" | "timeout") ?? "available",
   );
   const [rtl, setRtl] = useState(params.get("rtl") === "1");
   useEffect(() => {
@@ -76,6 +84,8 @@ export default function ReelPreview() {
 
   const providers: StageProvider[] = (() => {
     if (dataState === "unavailable") return [syntheticUnavailableProvider()];
+    if (dataState === "error") return [syntheticErrorProvider()];
+    if (dataState === "timeout") return [syntheticTimeoutProvider()];
     let base = syntheticProviderCount(providerCount);
     if (nameLength === "long" && base.length > 0) base = [syntheticLongProviderName(), ...base.slice(1)];
     if (resetLength === "long" && base.length > 0) base = [{ ...base[0], reset: syntheticLongReset().reset }, ...base.slice(1)];
@@ -121,9 +131,10 @@ export default function ReelPreview() {
       <label>Windows <select aria-label="Quota windows" value={windows} onChange={e=>setWindows(e.target.value as "1"|"2")}>
         <option value="1">1</option><option value="2">2</option>
       </select></label>
-      <label>Data <select aria-label="Data state" value={dataState} onChange={e=>setDataState(e.target.value as "available"|"loading"|"refreshing"|"unavailable")}>
+      <label>Data <select aria-label="Data state" value={dataState} onChange={e=>setDataState(e.target.value as "available"|"loading"|"refreshing"|"unavailable"|"error"|"timeout")}>
         <option value="available">Available</option><option value="loading">Loading</option>
         <option value="refreshing">Refreshing</option><option value="unavailable">Unavailable</option>
+        <option value="error">Error</option><option value="timeout">Timeout</option>
       </select></label>
       <label><input type="checkbox" checked={rtl} onChange={e=>setRtl(e.target.checked)}/> RTL layout (direction only — see file header re: real Arabic text)</label>
       <button onClick={()=>setState(state==="pinned"?"expanded":"pinned")}>{state==="pinned"?"Unpin":"Pin"}</button>

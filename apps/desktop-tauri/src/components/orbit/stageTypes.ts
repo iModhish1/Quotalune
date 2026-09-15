@@ -1,5 +1,20 @@
 export type UsageMode = "used" | "remaining" | "hybrid";
-export type ProviderStatus = "ok" | "attention" | "offline";
+/**
+ * Wave 1F §13: `"error"`/`"timeout"` are real, non-fabricated additions --
+ * `toStageProviders()` (stageProviders.ts) derives them from
+ * `ProviderUsageSnapshot.error`, the same field `MenuCard.tsx`'s Dashboard
+ * card already reads (see `LOADING_STATE_MATRIX.md`'s Wave 1F section for
+ * the full source trace). `"timeout"` specifically means the backend's
+ * own per-fetch timeout fired (`commands/providers.rs`'s
+ * `tokio::time::timeout(...)` wrapper, surfaced as the exact string
+ * `error === "Timeout"`) -- not inferred from elapsed wall-clock time on
+ * the frontend. `"offline"` keeps its pre-existing meaning: no error, but
+ * genuinely no data (e.g. `structureFixtures.ts`'s
+ * `syntheticUnavailableProvider()`) -- a status `toStageProviders()`
+ * itself does not produce today, only fixtures/future callers that know
+ * a provider has no data yet without an error.
+ */
+export type ProviderStatus = "ok" | "attention" | "offline" | "error" | "timeout";
 export interface StageUsageWindow {
   id:string;
   label:string;

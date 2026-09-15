@@ -151,7 +151,16 @@ export default function ReelSurface({ catalog, settings, state, providers, focus
           <div className="reel-progress" role="meter" aria-label={`${selected.name} ${selected.primaryLabel}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={selected.primaryValue ?? undefined}>
             <i style={{ width: `${Math.max(0, Math.min(1, selected.arcFraction ?? 0)) * 100}%` }} />
           </div>
-          <p className="reel-detail-reset" title={`Resets in ${selected.reset}`}>Resets in {selected.reset}</p></>}
+          {/* Wave 1F §13/§14: same DOM slot regardless of which case
+              applies (no geometry change) -- reuses the same shared
+              locale keys QuotalisAsyncState uses for error/timeout. */}
+          {selected.status === "error" ? (
+            <p className="reel-detail-reset">{t("QuotalisLoadingError")}</p>
+          ) : selected.status === "timeout" ? (
+            <p className="reel-detail-reset">{t("QuotalisLoadingTimeout")}</p>
+          ) : (
+            <p className="reel-detail-reset" title={`Resets in ${selected.reset}`}>Resets in {selected.reset}</p>
+          )}</>}
           <footer><button onClick={() => cycle(-1)} aria-label="Previous provider">‹</button><span>{focus + 1} / {providers.length}</span><button onClick={() => cycle(1)} aria-label="Next provider">›</button><StructurePinButton pinned={state === "pinned"} onTogglePinned={onTogglePinned} /></footer>
         </section>}
       </>}

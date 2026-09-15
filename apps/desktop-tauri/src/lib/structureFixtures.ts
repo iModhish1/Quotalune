@@ -94,18 +94,20 @@ export function syntheticTwoUsageWindows(): StageProvider {
  * `FlowSurfaceProps.initialLoading` flag (§10), not a provider fixture,
  * since it is a first-fetch signal rather than a per-provider status.
  *
- * Real, disclosed architecture finding from building this fixture:
- * `StageProvider.status` is `"ok" | "attention" | "offline"` only — there
- * is no distinct "error" status at this layer (unlike the raw
- * `ProviderUsageSnapshot.errorState`/`.error` fields `CurrentLimits.tsx`
- * reads from, upstream of the `toStageProviders()` conversion Structures
- * consume). A Structure therefore cannot currently distinguish "provider
- * genuinely has no data" from "the last fetch errored" the way Analytics
- * surfaces can — both fixture identically as `status: "offline"` today.
- * Whether Structures should gain their own error-vs-unavailable
- * distinction is a real product question for the native-capable session
- * to raise with the owner, not something to invent a fake status value
- * for here.
+ * Wave 1E disclosed architecture finding, closed in Wave 1F: at the time
+ * this comment was first written, `StageProvider.status` was
+ * `"ok" | "attention" | "offline"` only, so a Structure could not
+ * distinguish "provider genuinely has no data" from "the last fetch
+ * errored". Wave 1F extended `ProviderStatus` with real `"error"`/
+ * `"timeout"` values, derived in `toStageProviders()` from the same
+ * `ProviderUsageSnapshot.error` field `MenuCard.tsx`'s Dashboard card
+ * already reads (`"timeout"` specifically only when the backend's own
+ * per-fetch timeout produced the exact string `"Timeout"` --
+ * `commands/providers.rs`'s `tokio::time::timeout` wrapper -- never
+ * inferred from elapsed time). `syntheticUnavailableProvider()` below
+ * still represents the distinct "offline" case (no error, no data) --
+ * see `syntheticErrorProvider()`/`syntheticTimeoutProvider()` for the two
+ * newly-representable cases.
  */
 export function syntheticUnavailableProvider(): StageProvider {
   return {
@@ -114,5 +116,32 @@ export function syntheticUnavailableProvider(): StageProvider {
     primaryValue: null,
     secondaryValue: null,
     status: "offline",
+  };
+}
+
+/** Wave 1F §13/§14: a provider whose last fetch failed with a real (non-
+ * timeout) error — distinct from `syntheticUnavailableProvider()`'s
+ * "no error, just no data" case. */
+export function syntheticErrorProvider(): StageProvider {
+  return {
+    ...baseProvider(0, "error"),
+    arcFraction: null,
+    primaryValue: null,
+    secondaryValue: null,
+    status: "error",
+  };
+}
+
+/** Wave 1F §13/§14: a provider whose last fetch hit the backend's own
+ * per-fetch timeout (`commands/providers.rs`'s `tokio::time::timeout`
+ * wrapper) — the one real, backend-confirmed timeout signal Structures
+ * can represent. */
+export function syntheticTimeoutProvider(): StageProvider {
+  return {
+    ...baseProvider(0, "timeout"),
+    arcFraction: null,
+    primaryValue: null,
+    secondaryValue: null,
+    status: "timeout",
   };
 }

@@ -1,8 +1,17 @@
 import { useState } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { NotchDetails } from "./NotchDetails";
 import { SURFACE_DEMO_PROVIDERS } from "../../lib/surfaceDemo";
+
+const EN_STRINGS: Record<string, string> = {
+  QuotalisLoadingError: "Something went wrong",
+  QuotalisLoadingTimeout: "This took too long to respond",
+};
+vi.mock("../../hooks/useLocale", () => ({
+  useLocale: () => ({ t: (key: string) => EN_STRINGS[key] ?? key, language: "english", direction: "ltr" }),
+  useOptionalLocale: () => null,
+}));
 
 function InteractivePinnedDetails() {
   const [pinned, setPinned] = useState(false);
@@ -54,5 +63,54 @@ describe("NotchDetails", () => {
     expect(reset).toHaveTextContent(`Resets in ${longResetProvider.reset}`);
     // Footer controls must still be reachable regardless of reset length.
     expect(screen.getByRole("button", { name: "Collapse details" })).toBeInTheDocument();
+  });
+
+  describe("per-provider status footer (Wave 1F §13/§14)", () => {
+    it("shows the shared error message for status='error', distinct from the default 'Quota unavailable'", () => {
+      render(
+        <NotchDetails
+          provider={{ ...SURFACE_DEMO_PROVIDERS[0], status: "error" }}
+          rect={{ x: 0, y: 0, width: 248, height: 148 }}
+          pinned={false}
+        />,
+      );
+      expect(screen.getByText("Something went wrong")).toBeInTheDocument();
+      expect(screen.queryByText("Quota unavailable")).not.toBeInTheDocument();
+    });
+
+    it("shows the shared timeout message for status='timeout', distinct from error and from the default", () => {
+      render(
+        <NotchDetails
+          provider={{ ...SURFACE_DEMO_PROVIDERS[0], status: "timeout" }}
+          rect={{ x: 0, y: 0, width: 248, height: 148 }}
+          pinned={false}
+        />,
+      );
+      expect(screen.getByText("This took too long to respond")).toBeInTheDocument();
+      expect(screen.queryByText("Something went wrong")).not.toBeInTheDocument();
+    });
+
+    it("falls back to 'Quota unavailable' for offline/attention, unchanged from before", () => {
+      render(
+        <NotchDetails
+          provider={{ ...SURFACE_DEMO_PROVIDERS[0], status: "offline" }}
+          rect={{ x: 0, y: 0, width: 248, height: 148 }}
+          pinned={false}
+        />,
+      );
+      expect(screen.getByText("Quota unavailable")).toBeInTheDocument();
+    });
+
+    it("demo mode still takes precedence over status text", () => {
+      render(
+        <NotchDetails
+          provider={{ ...SURFACE_DEMO_PROVIDERS[0], status: "error" }}
+          rect={{ x: 0, y: 0, width: 248, height: 148 }}
+          pinned={false}
+          demo
+        />,
+      );
+      expect(screen.getByText("DEMO DATA · NOT A REAL ACCOUNT")).toBeInTheDocument();
+    });
   });
 });

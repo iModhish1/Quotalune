@@ -112,7 +112,16 @@ export function toStageProviders(
       secondaryValue: semantics.secondary,
       primaryLabel: semantics.label,
       reset: resetOf(provider, resetOptions),
-      status: provider.error ? "offline" : "ok",
+      // Wave 1F §13/§14: real, distinguishable per-provider failure modes
+      // instead of collapsing every non-null `error` into "offline" (which
+      // conflated "the last fetch errored" with "genuinely no data yet",
+      // an architecture gap this session's Wave 1E already disclosed --
+      // see structureFixtures.ts). "Timeout" is the exact string the
+      // backend's per-fetch timeout wrapper produces
+      // (commands/providers.rs), so this is a real signal, not an
+      // inferred one; any other non-null error reads as "error"; no error
+      // stays "ok".
+      status: provider.error === "Timeout" ? "timeout" : provider.error ? "error" : "ok",
       detailsHidden: limitOrder === undefined
         ? config?.providerDetailWindows?.[provider.providerId] === "none"
         : limitOrder.length === 0,
