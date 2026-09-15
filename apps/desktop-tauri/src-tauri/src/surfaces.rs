@@ -18,6 +18,7 @@ use std::sync::{Mutex, OnceLock};
 pub mod demo;
 mod native_drag;
 mod notch;
+pub mod qa_fixture;
 use tauri::{Emitter, LogicalPosition, Manager, WebviewUrl};
 
 use crate::geometry_store::{self, StoredGeometry};

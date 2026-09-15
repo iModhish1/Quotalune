@@ -2112,6 +2112,36 @@ locale_keys! {
     // ReelSurface.tsx / NotchSurface.tsx).
     StructureMoveHint,
     StructureMoveResetPosition,
+
+    // Wave 1F §22-30: the Dev-only native Structure QA controller
+    // (surfaces/structure-qa/StructureQaController.tsx).
+    StructureQaUnavailable,
+    StructureQaTitle,
+    StructureQaHint,
+    StructureQaStructure,
+    StructureQaAnchor,
+    StructureQaScale,
+    StructureQaProviders,
+    StructureQaProviderCount,
+    StructureQaName,
+    StructureQaNormal,
+    StructureQaLong,
+    StructureQaReset,
+    StructureQaUnavailableOption,
+    StructureQaWindows,
+    StructureQaData,
+    StructureQaAvailable,
+    StructureQaLoading,
+    StructureQaRefreshing,
+    StructureQaError,
+    StructureQaTimeout,
+    StructureQaPinned,
+    StructureQaLocale,
+    StructureQaLanguage,
+    StructureQaMode,
+    StructureQaDark,
+    StructureQaLight,
+    StructureQaModeHint,
 }
 
 #[cfg(test)]

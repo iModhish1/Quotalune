@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildStructureQaProviders,
   syntheticLongProviderName,
   syntheticLongReset,
   syntheticProviderCount,
@@ -52,5 +53,31 @@ describe("edge-case single-provider fixtures", () => {
     expect(provider.status).toBe("offline");
     expect(provider.primaryValue).toBeNull();
     expect(provider.arcFraction).toBeNull();
+  });
+});
+
+describe("buildStructureQaProviders (Wave 1F §22-30: shared by both Dev QA panels)", () => {
+  const base = { providerCount: 6, nameLength: "normal", resetLength: "normal", windows: 1 } as const;
+
+  it("dataState unavailable/error/timeout each produce exactly one provider with the matching status", () => {
+    expect(buildStructureQaProviders({ ...base, dataState: "unavailable" })[0].status).toBe("offline");
+    expect(buildStructureQaProviders({ ...base, dataState: "error" })[0].status).toBe("error");
+    expect(buildStructureQaProviders({ ...base, dataState: "timeout" })[0].status).toBe("timeout");
+  });
+
+  it("respects providerCount for available/loading/refreshing data states", () => {
+    for (const dataState of ["available", "loading", "refreshing"] as const) {
+      expect(buildStructureQaProviders({ ...base, providerCount: 24, dataState })).toHaveLength(24);
+    }
+  });
+
+  it("applies name/reset/windows overrides only to the first provider, matching ReelPreview.tsx's prior behavior", () => {
+    const providers = buildStructureQaProviders({
+      providerCount: 3, nameLength: "long", resetLength: "long", windows: 2, dataState: "available",
+    });
+    expect(providers).toHaveLength(3);
+    expect(providers[0].name.length).toBeGreaterThan(40);
+    expect(providers[0].windows).toHaveLength(2);
+    expect(providers[1].name.length).toBeLessThan(40);
   });
 });

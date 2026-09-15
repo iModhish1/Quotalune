@@ -24,6 +24,8 @@ import {
 import FlowSurface from "../flow-surface/FlowSurface";
 import { useSurfaceDemo } from "../../hooks/useSurfaceDemo";
 import { SURFACE_DEMO_PROVIDERS } from "../../lib/surfaceDemo";
+import { useStructureQaFixture } from "../../hooks/useStructureQaFixture";
+import { buildStructureQaProviders } from "../../lib/structureFixtures";
 import { isNotchForm } from "../notch/notchGeometry";
 import { wheelStep } from "../reel/reelGeometry";
 import { nudgeStructureAnchor } from "../../design-system/structureAnchorNudge";
@@ -62,6 +64,14 @@ function nativeState(state: FlowSurfaceState): SurfaceWindowState {
 export default function TopArc({ demo }: TopArcProps) {
   const surfaceDemo = useSurfaceDemo();
   const runtime = useStageRuntime({ enabled: !demo, surface: "top" });
+  // Wave 1F §22-30: the Dev-only native QA controller. `qa.fixture` is
+  // always `null` outside the Dev channel (the backend refuses to ever
+  // set it there -- surfaces/qa_fixture.rs), so this branch is simply
+  // inert in a Personal/stable build, not something that needs its own
+  // channel check here too.
+  const qa = useStructureQaFixture();
+  const qaFixture = qa.fixture;
+  const qaActive = qaFixture != null;
   const [surfaceState, setSurfaceState] = useState<FlowSurfaceState>(() => demo ? demoState(demo) : "hidden");
   const [flowSettings, setFlowSettings] = useState<FlowSurfaceSettings>(DEFAULT_FLOW_SURFACE_SETTINGS);
   const [focus, setFocus] = useState(0);
@@ -74,7 +84,15 @@ export default function TopArc({ demo }: TopArcProps) {
   const nativeRevisionRef = useRef<string | null>(null);
   // A registered account is not a rendering entitlement. The compact host
   // receives only resolved values, so it cannot grow into an empty rail.
-  const providers = (surfaceDemo.enabled ? SURFACE_DEMO_PROVIDERS : demo ? DEMO_PROVIDERS : runtime.providers).filter(hasSurfaceQuotaValue);
+  const providers = (qaFixture ? buildStructureQaProviders(qaFixture) : surfaceDemo.enabled ? SURFACE_DEMO_PROVIDERS : demo ? DEMO_PROVIDERS : runtime.providers).filter(hasSurfaceQuotaValue);
+  // The QA controller drives real Flow Surface state, not a second
+  // renderer: Pinned forces `state="pinned"` the same way the real Pin
+  // button does; otherwise a fixture that just activated is nudged out of
+  // "hidden" (nothing to inspect otherwise) but leaves the user's own
+  // compact/expanded/drag interactions alone once visible.
+  const effectiveSurfaceState: FlowSurfaceState = qaActive
+    ? (qaFixture!.pinned ? "pinned" : surfaceState === "hidden" ? "compact" : surfaceState)
+    : surfaceState;
 
   const clearAutoHide = useCallback(() => {
     if (autoHideTimer.current != null) {
@@ -194,11 +212,11 @@ export default function TopArc({ demo }: TopArcProps) {
       <FlowSurface
         catalog={runtime.catalog}
         settings={flowSettings}
-        state={surfaceState}
+        state={effectiveSurfaceState}
         providers={providers}
-        demoMode={surfaceDemo.enabled}
-        initialLoading={!surfaceDemo.enabled && runtime.initialLoading}
-        isRefreshing={!surfaceDemo.enabled && runtime.isRefreshing}
+        demoMode={surfaceDemo.enabled || qaActive}
+        initialLoading={qaActive ? qaFixture!.dataState === "loading" : !surfaceDemo.enabled && runtime.initialLoading}
+        isRefreshing={qaActive ? qaFixture!.dataState === "refreshing" : !surfaceDemo.enabled && runtime.isRefreshing}
         focusedIndex={focus}
         onFocusProvider={setFocus}
         onReveal={() => setSurfaceState("compact")}

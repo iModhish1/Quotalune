@@ -145,3 +145,32 @@ export function syntheticTimeoutProvider(): StageProvider {
     status: "timeout",
   };
 }
+
+/**
+ * Wave 1F §22-30: the ONE place a `StructureQaFixture` selection (as
+ * defined identically in `demo/ReelPreview.tsx`'s local state -- browser
+ * lane -- and `lib/structureQaFixture.ts`'s `StructureQaFixture` type --
+ * native lane) turns into a real `StageProvider[]`, so the two Dev QA
+ * panels can never drift into producing different-looking fixtures for
+ * the same selection. Both panels call this instead of duplicating the
+ * generator-composition logic.
+ */
+export interface StructureQaFixtureSelection {
+  providerCount: number;
+  nameLength: "normal" | "long";
+  resetLength: "normal" | "long" | "unavailable";
+  windows: 1 | 2;
+  dataState: "available" | "loading" | "refreshing" | "unavailable" | "error" | "timeout";
+}
+
+export function buildStructureQaProviders(selection: StructureQaFixtureSelection): StageProvider[] {
+  if (selection.dataState === "unavailable") return [syntheticUnavailableProvider()];
+  if (selection.dataState === "error") return [syntheticErrorProvider()];
+  if (selection.dataState === "timeout") return [syntheticTimeoutProvider()];
+  let base = syntheticProviderCount(selection.providerCount);
+  if (selection.nameLength === "long" && base.length > 0) base = [syntheticLongProviderName(), ...base.slice(1)];
+  if (selection.resetLength === "long" && base.length > 0) base = [{ ...base[0], reset: syntheticLongReset().reset }, ...base.slice(1)];
+  if (selection.resetLength === "unavailable" && base.length > 0) base = [{ ...base[0], reset: "—" }, ...base.slice(1)];
+  if (selection.windows === 2 && base.length > 0) base = [{ ...base[0], windows: syntheticTwoUsageWindows().windows }, ...base.slice(1)];
+  return base;
+}

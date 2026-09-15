@@ -1,16 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { placeSurface, snapSurface, SURFACE_POSITIONS } from "../design-system/surfacePlacement";
 import FlowSurface from "../surfaces/flow-surface/FlowSurface";
-import {
-  syntheticErrorProvider,
-  syntheticLongProviderName,
-  syntheticLongReset,
-  syntheticProviderCount,
-  syntheticTimeoutProvider,
-  syntheticTwoUsageWindows,
-  syntheticUnavailableProvider,
-} from "../lib/structureFixtures";
-import type { StageProvider } from "../components/orbit/stageTypes";
+import { buildStructureQaProviders } from "../lib/structureFixtures";
 import { reelBaseSize } from "../surfaces/reel/reelGeometry";
 import {FLOW_SURFACE_FORM_CATALOG,flowSurfaceEnvelope,type FlowSurfaceAnchor, type FlowSurfaceState } from "../design-system/flowSurface";
 import type { FlowSurfaceForm } from "../design-system/flowSurface";
@@ -82,17 +73,14 @@ export default function ReelPreview() {
     return () => { document.documentElement.dir = "ltr"; };
   }, [rtl]);
 
-  const providers: StageProvider[] = (() => {
-    if (dataState === "unavailable") return [syntheticUnavailableProvider()];
-    if (dataState === "error") return [syntheticErrorProvider()];
-    if (dataState === "timeout") return [syntheticTimeoutProvider()];
-    let base = syntheticProviderCount(providerCount);
-    if (nameLength === "long" && base.length > 0) base = [syntheticLongProviderName(), ...base.slice(1)];
-    if (resetLength === "long" && base.length > 0) base = [{ ...base[0], reset: syntheticLongReset().reset }, ...base.slice(1)];
-    if (resetLength === "unavailable" && base.length > 0) base = [{ ...base[0], reset: "—" }, ...base.slice(1)];
-    if (windows === "2" && base.length > 0) base = [{ ...base[0], windows: syntheticTwoUsageWindows().windows }, ...base.slice(1)];
-    return base;
-  })();
+  // Wave 1F: shared with the native-lane Dev QA controller
+  // (hooks/useStructureQaFixture.ts / TopArc.tsx) via
+  // buildStructureQaProviders(), so the two panels can never render
+  // different providers for what looks like the same selection.
+  const providers = buildStructureQaProviders({
+    providerCount, nameLength, resetLength, dataState,
+    windows: windows === "2" ? 2 : 1,
+  });
   const initialLoading = dataState === "loading";
   const isRefreshing = dataState === "refreshing";
 

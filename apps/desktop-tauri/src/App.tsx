@@ -36,6 +36,7 @@ const FloatBar = lazy(() => import("./floatbar/FloatBar"));
 const TopArc = lazy(() => import("./surfaces/top-arc/TopArc"));
 const CollectionsNativeView = lazy(() => import("./surfaces/collections/CollectionsNativeView"));
 const DemoStage = lazy(() => import("./demo/DemoStage"));
+const StructureQaController = lazy(() => import("./surfaces/structure-qa/StructureQaController"));
 
 function SurfaceFallback() {
   return null;
@@ -85,6 +86,22 @@ export default function App() {
           <DemoStage />
         </Suspense>
       </PreviewLocaleProvider>
+    );
+  }
+  // Wave 1F §22-30: the Dev-only native Structure QA controller. Unlike
+  // the demo stage route above, this one DOES need real Tauri IPC and
+  // real locale strings (it drives the actual native Flow Surface window
+  // and can switch real app language) -- real LocaleProvider, not the
+  // preview stub. Never linked from any menu; the component itself
+  // refuses to render its controls outside the Dev channel (backed by
+  // the IPC commands' own server-side refusal, not just this check).
+  if (new URLSearchParams(window.location.search).get("window") === "structure-qa") {
+    return (
+      <LocaleProvider>
+        <Suspense fallback={<SurfaceFallback />}>
+          <StructureQaController />
+        </Suspense>
+      </LocaleProvider>
     );
   }
   return (
