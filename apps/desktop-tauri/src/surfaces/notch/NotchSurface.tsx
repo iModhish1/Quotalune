@@ -17,7 +17,7 @@ export default function NotchSurface(props:FlowSurfaceProps & {form:NotchForm}) 
   const { t } = useLocale();
   const theme=catalogBySlug(props.catalog) ?? CANONICAL_THEME;
   const providerAccent=(id:string)=>providerColor(theme,id);
-  const {form,settings,state,providers,focusedIndex=0,onFocusProvider,onToggleExpanded,onRequestCompact,onReveal,onStartDrag,onTogglePinned,demoMode,showDemoBadge=true,initialLoading=false,onNudge,onResetPosition}=props;
+  const {form,settings,state,providers,focusedIndex=0,onFocusProvider,onToggleExpanded,onRequestCompact,onReveal,onStartDrag,onTogglePinned,demoMode,showDemoBadge=true,initialLoading=false,onNudge,onResetPosition,isRefreshing=false}=props;
   const root=useRef<HTMLElement>(null);
   const interactions=normalizeSurfaceInteractions(settings.interactions);
   const [fit,setFit]=useState(settings.scale/100);
@@ -94,7 +94,17 @@ export default function NotchSurface(props:FlowSurfaceProps & {form:NotchForm}) 
           <rect fill="#030303" x="0" y="0" width={settings.anchor==="top" || settings.anchor==="bottom"?16:12} height={settings.anchor==="top" || settings.anchor==="bottom"?12:16} rx="6"/>
         </svg>}
       </>}
-      <span className="notch-sr" aria-live="polite">{selected ? `${selected.name}, ${formatPercentage(selected.primaryValue)} ${selected.primaryLabel}, ${focus+1} of ${providers.length}` : initialLoading ? t("QuotalisStructureLoading") : "No quota data"}</span>
+      {/* Wave 1E §18: Notch's 8 forms have extensively per-form-tuned
+          .notch-demo positioning (8+ CSS overrides) — adding a NEW visual
+          refreshing indicator there risks colliding with that tuned
+          geometry across forms with no way to native-verify any of them
+          this session. The screen-reader-only announcement below is the
+          safe, real, zero-visual-risk signal instead: still a genuine
+          accessibility improvement (an assistive-tech user does learn a
+          refresh is happening), just not a sighted-user visual cue this
+          wave. A visual indicator, if added, needs its own native-verified
+          per-form position like .notch-demo has. */}
+      <span className="notch-sr" aria-live="polite">{selected ? `${selected.name}, ${formatPercentage(selected.primaryValue)} ${selected.primaryLabel}, ${focus+1} of ${providers.length}${isRefreshing && !initialLoading ? `. ${t("QuotalisLoadingUpdating")}` : ""}` : initialLoading ? t("QuotalisStructureLoading") : "No quota data"}</span>
     </div>
   </section>;
 }

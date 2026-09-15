@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { StageProvider } from "../../components/orbit/stageTypes";
 import type { FlowSurfaceSettings } from "../../design-system/flowSurface";
+import { formatPercentage } from "../../design-system";
 import FlowSurface from "./FlowSurface";
 
 vi.mock("../../hooks/useLocale", () => ({
@@ -116,6 +117,39 @@ describe("FlowSurface", () => {
     );
     expect(screen.getByText("Waiting for provider data")).toBeInTheDocument();
     expect(screen.queryByText("QuotalisStructureLoading")).not.toBeInTheDocument();
+  });
+
+  describe("refreshing indicator (Wave 1E §18)", () => {
+    it("shows the additive refreshing badge alongside cached data, never blanking it", () => {
+      const { container } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={providers} isRefreshing />,
+      );
+      // Real cached value stays visible.
+      expect(screen.getByText(`${formatPercentage(providers[0].primaryValue)} ${providers[0].primaryLabel}`)).toBeInTheDocument();
+      expect(container.querySelector(".flow-surface__refreshing")).toBeInTheDocument();
+      expect(screen.getByRole("status")).toHaveAttribute("aria-label", "QuotalisLoadingUpdating");
+    });
+
+    it("does not show the refreshing badge when there is no cached data to keep visible", () => {
+      const { container } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={[]} isRefreshing />,
+      );
+      expect(container.querySelector(".flow-surface__refreshing")).not.toBeInTheDocument();
+    });
+
+    it("does not show the refreshing badge while initialLoading owns the message slot, even if isRefreshing is also true", () => {
+      const { container } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={providers} isRefreshing initialLoading />,
+      );
+      expect(container.querySelector(".flow-surface__refreshing")).not.toBeInTheDocument();
+    });
+
+    it("does not show the refreshing badge when isRefreshing is false", () => {
+      const { container } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={providers} isRefreshing={false} />,
+      );
+      expect(container.querySelector(".flow-surface__refreshing")).not.toBeInTheDocument();
+    });
   });
 
   it("reflows the same data through Horizon without changing quota semantics", () => {

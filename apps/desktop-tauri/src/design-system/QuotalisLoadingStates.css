@@ -94,6 +94,9 @@
   font-weight: 600;
   letter-spacing: 0.01em;
 }
+.quotalis-refreshing-badge--dot-only {
+  gap: 0;
+}
 .quotalis-refreshing-badge__dot {
   width: 5px;
   height: 5px;

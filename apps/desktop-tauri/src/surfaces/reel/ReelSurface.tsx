@@ -9,11 +9,12 @@ import QuotaArcMark from '../../components/QuotaArcMark';
 import { CANONICAL_THEME, catalogBySlug, providerColor } from "../../design-system/themeCatalog";
 import { StructurePinButton } from "../../design-system/StructureControls";
 import { useLocale } from "../../hooks/useLocale";
+import { QuotalisRefreshingBadge } from "../../design-system/QuotalisLoadingStates";
 
 /** A curved provider selector, not a clock. No ticking or permanent animation. */
 export default function ReelSurface({ catalog, settings, state, providers, focusedIndex = 0, demoMode, showDemoBadge = true,
   onFocusProvider, onReveal, onToggleExpanded, onRequestCompact, onTogglePinned, onStartDrag, initialLoading = false,
-  onNudge, onResetPosition,
+  onNudge, onResetPosition, isRefreshing = false,
 }: FlowSurfaceProps) {
   const { t } = useLocale();
   const demoLabel = demoMode && showDemoBadge;
@@ -69,6 +70,12 @@ export default function ReelSurface({ catalog, settings, state, providers, focus
             <path d={horizontal ? "M22 82 C58 12 150 12 186 82" : "M82 22 C12 58 12 150 82 186"} />
           </svg>
           <span className="reel-mode">{demoLabel ? "DEMO" : "QUOTA"}</span>
+          {/* Wave 1E §18: same additive, non-layout-affecting technique as
+              FlowSurface's .flow-surface__refreshing — opposite corner from
+              .reel-mode so the two never collide. */}
+          {isRefreshing && !initialLoading && selected && (
+            <span className="reel-refreshing"><QuotalisRefreshingBadge dotOnly /></span>
+          )}
           {providers.map((provider, index) => {
             const offset = reelOffset(index, focus, providers.length);
             const visible = Math.abs(offset) <= 1;

@@ -24,6 +24,7 @@ import OfficialQuotaArcMark from '../../components/QuotaArcMark';
 import { StructurePinButton } from "../../design-system/StructureControls";
 import { structureDetailsMinContentHeight } from "../../design-system/structureGeometry";
 import { useLocale } from "../../hooks/useLocale";
+import { QuotalisRefreshingBadge } from "../../design-system/QuotalisLoadingStates";
 
 export interface FlowSurfaceProps {
   catalog: string;
@@ -73,6 +74,17 @@ export interface FlowSurfaceProps {
    * `resetQuotaIslandPosition()` command, the same "Reset Position"
    * pointer-drag-era mechanism already persists through. */
   onResetPosition?: () => void;
+  /**
+   * Wave 1E §18: true while a background refresh is in flight AND cached
+   * data already exists — the additive "Refreshing" case (§14), distinct
+   * from `initialLoading`'s "nothing has ever loaded" case. Renders the
+   * shared `QuotalisRefreshingBadge` alongside the still-visible cached
+   * value; never replaces or blanks it, never resizes the compact
+   * silhouette. Ignored while `initialLoading` is true (that state already
+   * owns the message slot) or while there is no quota data to keep
+   * visible. Defaults to false so existing callers are unaffected.
+   */
+  isRefreshing?: boolean;
 }
 
 function QuotaArcMark() {
@@ -146,10 +158,11 @@ export default function FlowSurface({
   initialLoading = false,
   onNudge,
   onResetPosition,
+  isRefreshing = false,
 }: FlowSurfaceProps) {
   const { t } = useLocale();
-  if (isNotchForm(settings.form)) return <NotchSurface key={`${settings.form}:${settings.anchor}`} form={settings.form} {...{catalog, settings, state, providers, focusedIndex, onFocusProvider, onReveal, onToggleExpanded, onTogglePinned, onRequestCompact, onStartDrag, demoMode, showDemoBadge, initialLoading, onNudge, onResetPosition}} />;
-  if (settings.form === "reel") return <ReelSurface {...{catalog, settings, state, providers, focusedIndex, onFocusProvider, onReveal, onToggleExpanded, onTogglePinned, onRequestCompact, onStartDrag, demoMode, showDemoBadge, initialLoading, onNudge, onResetPosition}} />;
+  if (isNotchForm(settings.form)) return <NotchSurface key={`${settings.form}:${settings.anchor}`} form={settings.form} {...{catalog, settings, state, providers, focusedIndex, onFocusProvider, onReveal, onToggleExpanded, onTogglePinned, onRequestCompact, onStartDrag, demoMode, showDemoBadge, initialLoading, onNudge, onResetPosition, isRefreshing}} />;
+  if (settings.form === "reel") return <ReelSurface {...{catalog, settings, state, providers, focusedIndex, onFocusProvider, onReveal, onToggleExpanded, onTogglePinned, onRequestCompact, onStartDrag, demoMode, showDemoBadge, initialLoading, onNudge, onResetPosition, isRefreshing}} />;
   const theme = catalogBySlug(catalog) ?? CANONICAL_THEME;
   const visible = providers.filter(hasSurfaceQuotaValue).slice(0, 3);
   const focus = visible.length === 0 ? -1 : Math.min(Math.max(focusedIndex, 0), visible.length - 1);
@@ -226,6 +239,18 @@ export default function FlowSurface({
     >
       <div className="flow-surface__core">
         {demoMode && showDemoBadge && <span className="flow-surface__demo" title="Synthetic data — not connected accounts">DEMO</span>}
+        {/* Wave 1E §14/§18: additive only -- rendered alongside the still-
+            visible cached value, never replacing/blanking it, never
+            resizing the compact silhouette (absolutely positioned, same
+            technique as .flow-surface__demo above). Suppressed during
+            initialLoading (that state already owns the message slot) and
+            when there is no cached data to keep visible (nothing to mark
+            "updating"). */}
+        {isRefreshing && !initialLoading && hasQuotaData && (
+          <span className="flow-surface__refreshing">
+            <QuotalisRefreshingBadge dotOnly />
+          </span>
+        )}
         <button
           type="button"
           className="flow-surface__summary"

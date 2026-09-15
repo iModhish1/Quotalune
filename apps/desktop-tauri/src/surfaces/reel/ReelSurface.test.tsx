@@ -99,6 +99,34 @@ describe("Orbit Reel", () => {
     expect(screen.queryByText("No quota data")).not.toBeInTheDocument();
   });
 
+  it("Wave 1E §18: shows the additive refreshing badge alongside cached data, never blanking it", () => {
+    const { container } = render(
+      <ReelSurface
+        catalog="01-obsidian-orbit"
+        state="expanded"
+        settings={{ form: "reel", anchor: "right", scale: 100, autoHide: true, autoHideDelayMs: 900 }}
+        providers={SURFACE_DEMO_PROVIDERS}
+        isRefreshing
+      />,
+    );
+    expect(screen.getByRole("dialog", { name: `${SURFACE_DEMO_PROVIDERS[0].name} quota details` })).toBeInTheDocument();
+    expect(container.querySelector(".reel-refreshing")).toBeInTheDocument();
+  });
+
+  it("does not show the refreshing badge without cached data or while initialLoading owns the message slot", () => {
+    const base = {
+      catalog: "01-obsidian-orbit",
+      state: "expanded" as const,
+      settings: { form: "reel" as const, anchor: "right" as const, scale: 100, autoHide: true, autoHideDelayMs: 900 },
+    };
+    const { container: noData } = render(<ReelSurface {...base} providers={[]} isRefreshing />);
+    expect(noData.querySelector(".reel-refreshing")).not.toBeInTheDocument();
+    const { container: loading } = render(
+      <ReelSurface {...base} providers={SURFACE_DEMO_PROVIDERS} isRefreshing initialLoading />,
+    );
+    expect(loading.querySelector(".reel-refreshing")).not.toBeInTheDocument();
+  });
+
   it.each([1, 3, 6, 12, 24, 70])(
     "Wave 1D §23: at most 3 provider nodes are interactive/visible regardless of provider count (n=%i) — cycles via reelOffset, never displays N simultaneously",
     (count) => {

@@ -103,4 +103,17 @@ describe("QuotalisRefreshingBadge", () => {
     render(<QuotalisRefreshingBadge label="Refreshing usage…" />);
     expect(screen.getByText("Refreshing usage…")).toBeInTheDocument();
   });
+
+  it("dotOnly (Wave 1E §18) renders no visible text but keeps the same status text for assistive tech via aria-label", () => {
+    render(<QuotalisRefreshingBadge dotOnly />);
+    const status = screen.getByRole("status");
+    expect(status).toHaveAttribute("aria-label", "Updating…");
+    expect(status.textContent).toBe("");
+    expect(status.querySelector(".quotalis-refreshing-badge__dot")).toBeInTheDocument();
+  });
+
+  it("dotOnly still honors a custom label for the aria-label", () => {
+    render(<QuotalisRefreshingBadge dotOnly label="Refreshing usage…" />);
+    expect(screen.getByRole("status")).toHaveAttribute("aria-label", "Refreshing usage…");
+  });
 });

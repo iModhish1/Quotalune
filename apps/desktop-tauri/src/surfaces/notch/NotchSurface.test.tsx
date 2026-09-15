@@ -82,6 +82,15 @@ describe("notch family controls",()=>{
     expect(screen.queryByText("No data")).not.toBeInTheDocument();
     expect(screen.queryByText("No quota data")).not.toBeInTheDocument();
   });
+  it("Wave 1E §18: announces refreshing via the sr-only live region without a visual element (per-form geometry not touched blind)",()=>{
+    render(<NotchSurface form="seam" settings={settings} catalog="" state="compact" providers={SURFACE_DEMO_PROVIDERS} isRefreshing/>);
+    const sr = document.querySelector(".notch-sr");
+    expect(sr?.textContent).toContain("QuotalisLoadingUpdating");
+  });
+  it("does not announce refreshing when isRefreshing is false or while initialLoading owns the message",()=>{
+    render(<NotchSurface form="seam" settings={settings} catalog="" state="compact" providers={SURFACE_DEMO_PROVIDERS} isRefreshing={false}/>);
+    expect(document.querySelector(".notch-sr")?.textContent).not.toContain("QuotalisLoadingUpdating");
+  });
   it.each([1, 3, 6, 12, 24, 70])(
     "Wave 1D §23: DOM node count for provider slots stays bounded to the fixed silhouette regardless of provider count (n=%i) — cycles into the real slot count instead of rendering N elements",
     (count) => {

@@ -328,3 +328,10 @@ body:has(.flow-surface-host) #root {
 @media (prefers-reduced-motion: reduce) { .flow-surface__details { animation: none; } }
 .flow-surface__demo { position: absolute; top: 2px; left: 5px; font-size: 7px; letter-spacing: 1px; color: #c5ceda; z-index: 2; pointer-events: none; }
 .flow-surface:is([data-form="petal"],[data-form="orbital"],[data-form="lens"]) .flow-surface__demo{top:7px;left:50%;transform:translateX(-50%);font-size:6px}
+/* Wave 1E §18: the same absolute-positioning technique as .flow-surface__demo
+   above (never participates in flex layout, so it can never trigger a
+   resize/reflow of the compact silhouette regardless of form) — opposite
+   corner so the two badges never overlap on the rare occasion both are
+   active (a demo session mid-refresh). */
+.flow-surface__refreshing { position: absolute; top: 2px; right: 5px; z-index: 2; pointer-events: none; }
+.flow-surface:is([data-form="petal"],[data-form="orbital"],[data-form="lens"]) .flow-surface__refreshing{top:7px;right:7px}

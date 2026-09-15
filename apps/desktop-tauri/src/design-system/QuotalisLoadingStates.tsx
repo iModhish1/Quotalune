@@ -99,13 +99,30 @@ export function QuotalisSkeleton({ rows = 3 }: { rows?: number }) {
 /**
  * §41: rendered ALONGSIDE cached content during a background refresh —
  * never replaces it. Small, quiet, no full-content blur (§39).
+ *
+ * `dotOnly` (Wave 1E §18): for a caller with no room for visible text (a
+ * tight compact structure silhouette that must not resize/reflow —
+ * FlowSurface's `orbital`/`petal`/`lens` forms hide even their own
+ * provider-name text in this state), renders only the pulsing dot
+ * visually while keeping the same `role="status"` text for assistive
+ * tech via `aria-label` instead of visible content. The dot alone is
+ * still a real, visible "something is updating" signal — not silently
+ * dropped, just not laid out as flowing text.
  */
-export function QuotalisRefreshingBadge({ label }: { label?: string }) {
+export function QuotalisRefreshingBadge({ label, dotOnly = false }: { label?: string; dotOnly?: boolean }) {
   const { t } = useLocale();
+  const resolvedLabel = label ?? t("QuotalisLoadingUpdating");
+  if (dotOnly) {
+    return (
+      <span className="quotalis-refreshing-badge quotalis-refreshing-badge--dot-only" role="status" aria-label={resolvedLabel}>
+        <span className="quotalis-refreshing-badge__dot" aria-hidden="true" />
+      </span>
+    );
+  }
   return (
     <span className="quotalis-refreshing-badge" role="status">
       <span className="quotalis-refreshing-badge__dot" aria-hidden="true" />
-      {label ?? t("QuotalisLoadingUpdating")}
+      {resolvedLabel}
     </span>
   );
 }
