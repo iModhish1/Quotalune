@@ -263,8 +263,8 @@ describe("FlowSurface", () => {
       },
     );
 
-    it.each([1, 3, 7])(
-      "caps the compact quick-providers rail at 3 regardless of how many providers are configured (n=%i)",
+    it.each([1, 3, 6, 12, 24, 70])(
+      "caps the compact quick-providers rail at 3 regardless of how many providers are configured (n=%i) — Wave 1D §23 synthetic provider-count fixture",
       (count) => {
         const data = Array.from({ length: count }, (_, i) => ({
           ...providers[i % providers.length],
@@ -356,6 +356,62 @@ describe("FlowSurface", () => {
         <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={providers} onNudge={() => {}} />,
       );
       expect(screen.getByRole("button", { name: "Move Quotalis" })).toHaveAttribute("title", "StructureMoveHint");
+    });
+  });
+
+  describe("state-machine transitions (Wave 1D §22)", () => {
+    it("collapsed -> expanded -> pinned -> unpinned: exactly one detail panel exists at every step, never zero-while-open or duplicated", () => {
+      const { rerender } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={providers} />,
+      );
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+      rerender(<FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={providers} />);
+      expect(screen.getAllByRole("dialog")).toHaveLength(1);
+
+      rerender(<FlowSurface catalog="01-obsidian-orbit" settings={settings} state="pinned" providers={providers} />);
+      expect(screen.getAllByRole("dialog")).toHaveLength(1);
+
+      rerender(<FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={providers} />);
+      expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    });
+
+    it("closing (expanded -> compact) removes the detail state entirely, not just visually", () => {
+      const { rerender } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={providers} />,
+      );
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      rerender(<FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={providers} />);
+      // The dialog/detail region itself is gone entirely -- not just
+      // hidden -- while the compact summary (which legitimately still
+      // shows the focused provider's name in its own header) remains.
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(document.getElementById("quota-flow-details")).not.toBeInTheDocument();
+    });
+
+    it("provider switch while expanded: focusedIndex change updates the one detail panel's content without an orphan/duplicate panel or stale provider", () => {
+      const { rerender } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={providers} focusedIndex={0} />,
+      );
+      expect(screen.getByRole("dialog", { name: "OpenAI quota details" })).toBeInTheDocument();
+      rerender(
+        <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="expanded" providers={providers} focusedIndex={1} />,
+      );
+      expect(screen.getAllByRole("dialog")).toHaveLength(1);
+      expect(screen.getByRole("dialog", { name: "Claude quota details" })).toBeInTheDocument();
+      expect(screen.queryByRole("dialog", { name: "OpenAI quota details" })).not.toBeInTheDocument();
+    });
+
+    it("structure switch while expanded: changing settings.form leaves exactly one detail panel, no leftover from the previous form", () => {
+      const { rerender } = render(
+        <FlowSurface catalog="01-obsidian-orbit" settings={{ ...settings, form: "flowline" }} state="expanded" providers={providers} />,
+      );
+      expect(screen.getAllByRole("dialog")).toHaveLength(1);
+      rerender(
+        <FlowSurface catalog="01-obsidian-orbit" settings={{ ...settings, form: "petal" }} state="expanded" providers={providers} />,
+      );
+      expect(screen.getAllByRole("dialog")).toHaveLength(1);
+      expect(screen.getByTestId("flow-surface")).toHaveAttribute("data-form", "petal");
     });
   });
 });

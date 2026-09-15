@@ -98,4 +98,39 @@ describe("Orbit Reel", () => {
     expect(screen.getByText("QuotalisStructureLoading")).toBeInTheDocument();
     expect(screen.queryByText("No quota data")).not.toBeInTheDocument();
   });
+
+  it.each([1, 3, 6, 12, 24, 70])(
+    "Wave 1D §23: at most 3 provider nodes are interactive/visible regardless of provider count (n=%i) — cycles via reelOffset, never displays N simultaneously",
+    (count) => {
+      const data = Array.from({ length: count }, (_, i) => ({ ...SURFACE_DEMO_PROVIDERS[i % SURFACE_DEMO_PROVIDERS.length], id: `synthetic-${i}` }));
+      const { container } = render(
+        <ReelSurface
+          catalog="01-obsidian-orbit"
+          state="expanded"
+          settings={{ form: "reel", anchor: "right", scale: 100, autoHide: true, autoHideDelayMs: 900 }}
+          providers={data}
+        />,
+      );
+      const interactive = container.querySelectorAll('.reel-node[tabindex="0"]');
+      expect(interactive.length).toBeLessThanOrEqual(3);
+      // Known, disclosed gap (not fixed this wave — see
+      // WAVE1_NATIVE_QA_HANDOFF.md): unlike Notch, which only ever mounts
+      // its fixed slot count of DOM nodes, Reel mounts one <button> per
+      // provider (all N) and hides the non-adjacent ones via
+      // aria-hidden/tabindex/opacity, because the wheel/arrow cycle
+      // animates every node's position via CSS custom properties for a
+      // continuous slide -- filtering the mount list to only the visible
+      // three would very likely break that slide (crossing nodes would
+      // mount/unmount abruptly instead of animating), which is not a
+      // change to make blind without native visual verification. At n=70
+      // this does mean 70 real DOM nodes exist, just not 70 *visible/
+      // interactive* ones -- the interaction model the wave's §23
+      // actually cares about ("Do not call 70 synthetic '70 real
+      // providers'" / cycle vs. simultaneous-display) is honored; DOM
+      // node *count* is a separate, smaller concern left open here.
+      if (count > 3) {
+        expect(container.querySelectorAll(".reel-node").length).toBe(count);
+      }
+    },
+  );
 });

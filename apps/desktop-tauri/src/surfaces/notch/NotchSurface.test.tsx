@@ -82,4 +82,18 @@ describe("notch family controls",()=>{
     expect(screen.queryByText("No data")).not.toBeInTheDocument();
     expect(screen.queryByText("No quota data")).not.toBeInTheDocument();
   });
+  it.each([1, 3, 6, 12, 24, 70])(
+    "Wave 1D §23: DOM node count for provider slots stays bounded to the fixed silhouette regardless of provider count (n=%i) — cycles into the real slot count instead of rendering N elements",
+    (count) => {
+      const data = Array.from({ length: count }, (_, i) => ({ ...SURFACE_DEMO_PROVIDERS[i % SURFACE_DEMO_PROVIDERS.length], id: `synthetic-${i}` }));
+      const { container } = render(
+        <NotchSurface form="seam" settings={settings} catalog="" state="compact" providers={data} />,
+      );
+      // "seam" renders at most a handful of fixed provider slots regardless
+      // of how many providers exist -- indices cycle into that fixed slot
+      // count (see the (page+slot)%providers.length arithmetic in
+      // NotchSurface.tsx), so this must never scale with `count`.
+      expect(container.querySelectorAll(".notch-provider").length).toBeLessThanOrEqual(7);
+    },
+  );
 });
