@@ -76,6 +76,33 @@ impl SecretRedactor {
     }
 }
 
+fn profile_path_regex() -> &'static Regex {
+    static REGEX: OnceLock<Regex> = OnceLock::new();
+    REGEX.get_or_init(|| {
+        Regex::new(
+            r"(?i)(?:[a-z]:[\\/]+(?:users|documents and settings)|/home|/users)[\\/]+[^\\/\s:]+",
+        )
+        .expect("Invalid profile path regex")
+    })
+}
+
+/// Text that leaves the process for a surface the user or the OS shell shows
+/// (toasts, tray tooltips): secrets, emails and the account name inside a
+/// home-directory path are removed, and control characters are flattened.
+pub struct UserFacingText;
+
+impl UserFacingText {
+    pub fn sanitize(input: &str) -> String {
+        let redacted = SecretRedactor::redact(input);
+        let redacted = email_regex().replace_all(&redacted, EMAIL_PLACEHOLDER);
+        let redacted = profile_path_regex().replace_all(&redacted, "~");
+        redacted
+            .chars()
+            .map(|c| if c.is_control() && c != '\n' { ' ' } else { c })
+            .collect()
+    }
+}
+
 /// Personal information redactor
 pub struct PersonalInfoRedactor;
 
@@ -149,6 +176,29 @@ impl PersonalInfoRedactor {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn user_facing_text_removes_secrets_identity_and_profile_paths() {
+        let raw = "Bearer abc.def failed for jane.doe@example.com reading C:\\Users\\JaneDoe\\.codex\\auth.json and /home/jane/.claude/.credentials.json\r\nsk-proj-1234567890abcdef cookie: session=xyz";
+        let clean = UserFacingText::sanitize(raw);
+        for leaked in [
+            "abc.def",
+            "jane.doe@example.com",
+            "JaneDoe",
+            "/home/jane",
+            "sk-proj-1234567890abcdef",
+            "session=xyz",
+            "\r",
+        ] {
+            assert!(!clean.contains(leaked), "{leaked} leaked: {clean}");
+        }
+        assert!(clean.contains("~\\.codex\\auth.json"), "{clean}");
+        assert_eq!(
+            UserFacingText::sanitize("Claude 91% used"),
+            "Claude 91% used"
+        );
+        assert_eq!(UserFacingText::sanitize("مستخدم ٩١٪"), "مستخدم ٩١٪");
+    }
 
     #[test]
     fn test_redact_email_disabled() {

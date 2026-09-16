@@ -20,7 +20,7 @@ use crate::core::ProviderId;
 mod provider_instances;
 pub use provider_instances::{ProviderInstancePresentation, valid_provider_instance_id};
 mod provider_tray;
-pub use provider_tray::{ProviderTrayConfig, normalize_provider_tray};
+pub use provider_tray::{ProviderTrayConfig, TRAY_STYLES, normalize_provider_tray};
 mod appearance_composition;
 pub use appearance_composition::{APPEARANCE_SCOPE_IDS, AppearanceComposition, AppearanceSource};
 mod analytics_preferences;

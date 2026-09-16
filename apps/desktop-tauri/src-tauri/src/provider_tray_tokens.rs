@@ -115,6 +115,20 @@ pub fn label(provider: &str, range: &str, language: Language) -> String {
         value.map(format_reading).unwrap_or_else(|| "—".into())
     )
 }
+/// Dev QA fixture token line: same format as a real reading, `—` when absent.
+pub fn fixture_label(total: Option<u64>, language: Language) -> String {
+    format!(
+        "{} {}",
+        get_text(language, LocaleKey::TrayStudioLocalShort),
+        total
+            .filter(|total| *total > 0)
+            .map(|total| format_reading(TokenReading {
+                total,
+                incomplete: false
+            }))
+            .unwrap_or_else(|| "—".into())
+    )
+}
 fn cached_value(
     cache: &Cache,
     provider: &str,

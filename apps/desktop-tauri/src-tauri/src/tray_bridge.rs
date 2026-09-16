@@ -772,7 +772,8 @@ fn build_tooltip(
     let mut lines = Vec::with_capacity(snapshots.len() + 1);
     for s in snapshots {
         let status = if let Some(ref err) = s.error {
-            let short = truncate_tooltip_text(err, 36);
+            let short =
+                truncate_tooltip_text(&quotalis_core::core::UserFacingText::sanitize(err), 36);
             format!("{}: {} ({})", s.display_name, error_label, short)
         } else {
             let label = crate::commands::compact_tray_status_label(headline_window(s), lang);
@@ -781,7 +782,31 @@ fn build_tooltip(
         lines.push(status);
     }
 
-    format!("Quotalis\n{}", lines.join("\n"))
+    fit_tooltip_lines("Quotalis", &lines)
+}
+
+/// Keeps whole provider lines while they fit the native 127-unit tooltip and
+/// ends with a `+N` count instead of silently cutting the text mid-line.
+fn fit_tooltip_lines(header: &str, lines: &[String]) -> String {
+    let limit = crate::provider_tray::TOOLTIP_UTF16_LIMIT;
+    let units = |s: &str| s.encode_utf16().count();
+    let mut result = header.to_string();
+    for (index, line) in lines.iter().enumerate() {
+        let remaining = lines.len() - index - 1;
+        let overflow_reserve = if remaining > 0 {
+            units(&format!("\n+{remaining}"))
+        } else {
+            0
+        };
+        if units(&result) + 1 + units(line) + overflow_reserve <= limit {
+            result.push('\n');
+            result.push_str(line);
+        } else {
+            result.push_str(&format!("\n+{}", lines.len() - index));
+            break;
+        }
+    }
+    result
 }
 
 fn truncate_tooltip_text(text: &str, max_chars: usize) -> String {
@@ -1322,6 +1347,34 @@ mod tests {
         assert!(line.starts_with("Claude: 13% • Resets in Jun 10 at 3:00PM"));
         assert!(line.ends_with("..."));
         assert!(line.chars().count() <= 53);
+    }
+
+    #[test]
+    fn many_providers_keep_the_main_tooltip_within_the_native_limit() {
+        let snapshots: Vec<_> = (0..24)
+            .map(|index| {
+                let mut s = fake_snapshot("claude", &format!("Provider {index}"), 50.0);
+                s.primary.reset_description = Some("3d 17h".to_string());
+                s
+            })
+            .collect();
+        let tooltip = build_tooltip(&snapshots, quotalis_core::settings::Language::Arabic);
+        assert!(tooltip.encode_utf16().count() <= crate::provider_tray::TOOLTIP_UTF16_LIMIT);
+        let last = tooltip.lines().last().unwrap();
+        assert!(last.starts_with('+'), "{tooltip}");
+        let shown = tooltip.lines().count() - 2;
+        assert_eq!(last, format!("+{}", 24 - shown));
+    }
+
+    #[test]
+    fn tooltip_error_text_never_carries_secrets_or_profile_paths() {
+        let mut claude = fake_snapshot("claude", "Claude", 13.0);
+        claude.error = Some("C:\\Users\\JaneDoe Bearer abc".to_string());
+        let tooltip = build_tooltip(&[claude], quotalis_core::settings::Language::English);
+        assert!(
+            !tooltip.contains("JaneDoe") && !tooltip.contains("abc"),
+            "{tooltip}"
+        );
     }
 
     #[test]

@@ -24,6 +24,7 @@ mod surface_target;
 mod surfaces;
 mod tray_bridge;
 mod tray_menu;
+mod tray_qa_fixture;
 mod tray_visibility;
 mod usage_metric;
 mod window_positioner;
@@ -578,6 +579,9 @@ fn main() {
             surfaces::qa_fixture::get_structure_qa_fixture,
             surfaces::qa_fixture::set_structure_qa_fixture,
             surfaces::qa_fixture::reset_structure_qa_fixture,
+            tray_qa_fixture::get_tray_qa_fixture,
+            tray_qa_fixture::set_tray_qa_fixture,
+            provider_tray::render_provider_tray_preview,
             command_profiles::get_profile_store,
             command_profiles::switch_profile,
             command_profiles::create_profile,

@@ -194,6 +194,28 @@ pub fn provider_logo_png(id: &str) -> Option<&'static [u8]> {
     })
 }
 
+/// The Quotalis mark, used when a tray indicator chooses Quotalis identity
+/// and as the fallback for a provider without a verified mark.
+pub fn quotalis_mark_png() -> &'static [u8] {
+    include_bytes!("../../../assets/brand/icons/quotaarc-icon-128.png")
+}
+
+/// Visual inputs for one native provider tray indicator.
+#[derive(Debug, Clone, Copy)]
+pub struct ProviderIconSpec<'a> {
+    pub provider_id: &'a str,
+    pub percent: Option<f64>,
+    pub style: &'a str,
+    pub color: [u8; 3],
+    pub stroke: u8,
+    /// `"provider"` or `"quotalis"`.
+    pub identity: &'a str,
+}
+
+/// Source bitmap edge. Windows downsamples the HICON to the shell's small-icon
+/// size (16px at 100% up to 64px at 400%), so this source is never upscaled.
+pub const PROVIDER_ICON_SIZE: u32 = 64;
+
 /// Provider geometry is never redrawn: composite the original mark into a measured frame.
 /// Missing/error readings render a neutral broken frame, never a known zero.
 pub fn render_provider_icon(
@@ -203,54 +225,92 @@ pub fn render_provider_icon(
     color: [u8; 3],
     stroke: u8,
 ) -> (Vec<u8>, u32, u32) {
+    render_provider_icon_spec(&ProviderIconSpec {
+        provider_id: id,
+        percent,
+        style,
+        color,
+        stroke,
+        identity: "provider",
+    })
+}
+
+pub fn render_provider_icon_spec(spec: &ProviderIconSpec<'_>) -> (Vec<u8>, u32, u32) {
     use image::{Rgba, RgbaImage, imageops};
-    let mut img = RgbaImage::new(64, 64);
-    let value = percent
+    let style = spec.style;
+    let color = spec.color;
+    let mut img = RgbaImage::new(PROVIDER_ICON_SIZE, PROVIDER_ICON_SIZE);
+    let value = spec
+        .percent
         .filter(|p| p.is_finite() && *p >= 0.0)
         .map(|p| p.min(100.0));
-    let thickness = f64::from(stroke.clamp(1, 4)) * 1.5;
-    for y in 0..64 {
-        for x in 0..64 {
-            let dx = f64::from(x) - 31.5;
-            let dy = f64::from(y) - 31.5;
-            let r = dx.hypot(dy);
-            let angle =
-                (dy.atan2(dx) + std::f64::consts::FRAC_PI_2).rem_euclid(std::f64::consts::TAU);
-            let (in_track, fraction) = match style {
-                "bar" => (
-                    (5..59).contains(&x) && y >= 57 && f64::from(y) < 57.0 + thickness,
-                    (f64::from(x) - 5.0) / 54.0,
-                ),
-                "arc" => (
-                    r >= 29.0 - thickness && r <= 29.0 && angle < std::f64::consts::TAU * 0.8,
-                    angle / (std::f64::consts::TAU * 0.8),
-                ),
-                _ => (
-                    r >= 29.0 - thickness && r <= 29.0,
-                    angle / std::f64::consts::TAU,
-                ),
-            };
-            if in_track {
-                let active = value.is_some_and(|v| fraction < v / 100.0);
-                if value.is_some() || (angle * 6.0).floor().rem_euclid(2.0) < 1.0 {
-                    img.put_pixel(
-                        x,
-                        y,
-                        if active {
-                            Rgba([color[0], color[1], color[2], 255])
-                        } else {
-                            Rgba([160, 174, 192, 105])
-                        },
-                    );
+    let thickness = f64::from(spec.stroke.clamp(1, 4)) * 1.5;
+    let track = Rgba([160, 174, 192, 105]);
+    let active_px = Rgba([color[0], color[1], color[2], 255]);
+    if style != "mark" {
+        for y in 0..64 {
+            for x in 0..64 {
+                let dx = f64::from(x) - 31.5;
+                let dy = f64::from(y) - 31.5;
+                let r = dx.hypot(dy);
+                let angle =
+                    (dy.atan2(dx) + std::f64::consts::FRAC_PI_2).rem_euclid(std::f64::consts::TAU);
+                let (in_track, fraction) = match style {
+                    "bar" => (
+                        (5..59).contains(&x) && y >= 57 && f64::from(y) < 57.0 + thickness,
+                        (f64::from(x) - 5.0) / 54.0,
+                    ),
+                    "arc" => (
+                        r >= 29.0 - thickness && r <= 29.0 && angle < std::f64::consts::TAU * 0.8,
+                        angle / (std::f64::consts::TAU * 0.8),
+                    ),
+                    // Orbit keeps a hairline track; the reading is a position, not a fill.
+                    "orbit" => ((28.0..=29.0).contains(&r), angle / std::f64::consts::TAU),
+                    _ => (
+                        r >= 29.0 - thickness && r <= 29.0,
+                        angle / std::f64::consts::TAU,
+                    ),
+                };
+                if in_track {
+                    // A full orbit lights its track: its dot alone sits at the same
+                    // top position for 0% and 100%.
+                    let active = if style == "orbit" {
+                        value.is_some_and(|v| v >= 100.0)
+                    } else {
+                        value.is_some_and(|v| fraction < v / 100.0)
+                    };
+                    if value.is_some() || (angle * 6.0).floor().rem_euclid(2.0) < 1.0 {
+                        img.put_pixel(x, y, if active { active_px } else { track });
+                    }
+                }
+            }
+        }
+        if style == "orbit"
+            && let Some(v) = value
+        {
+            let angle = std::f64::consts::TAU * v / 100.0 - std::f64::consts::FRAC_PI_2;
+            let (cx, cy) = (31.5 + 28.5 * angle.cos(), 31.5 + 28.5 * angle.sin());
+            let radius = 2.5 + thickness * 0.5;
+            for y in 0..64 {
+                for x in 0..64 {
+                    if (f64::from(x) - cx).hypot(f64::from(y) - cy) <= radius {
+                        img.put_pixel(x, y, active_px);
+                    }
                 }
             }
         }
     }
-    let bytes = provider_logo_png(id).unwrap_or(include_bytes!(
-        "../../../assets/brand/icons/quotaarc-icon-128.png"
-    ));
+    let bytes = if spec.identity == "quotalis" {
+        quotalis_mark_png()
+    } else {
+        provider_logo_png(spec.provider_id).unwrap_or(quotalis_mark_png())
+    };
     if let Ok(logo) = image::load_from_memory(bytes) {
-        let size = if style == "bar" { 46 } else { 38 };
+        let size: u32 = match style {
+            "bar" => 46,
+            "mark" => 56,
+            _ => 38,
+        };
         let logo = imageops::resize(&logo.to_rgba8(), size, size, imageops::FilterType::Lanczos3);
         imageops::overlay(
             &mut img,
@@ -269,7 +329,7 @@ pub fn render_provider_icon(
             imageops::overlay(&mut img, &badge, 34, 38);
         }
     }
-    (img.into_raw(), 64, 64)
+    (img.into_raw(), PROVIDER_ICON_SIZE, PROVIDER_ICON_SIZE)
 }
 /// Existing provider identity palette with a contrast floor for Windows dark taskbars.
 pub fn provider_accent(id: &str) -> [u8; 3] {
@@ -372,5 +432,88 @@ mod tests {
             unique.insert(render_provider_icon("claude", Some(62.5), style, [230, 130, 80], 2).0);
         }
         assert_eq!(unique.len(), 4);
+    }
+    fn spec(style: &str, percent: Option<f64>, identity: &str) -> Vec<u8> {
+        render_provider_icon_spec(&ProviderIconSpec {
+            provider_id: "claude",
+            percent,
+            style,
+            color: [230, 130, 80],
+            stroke: 2,
+            identity,
+        })
+        .0
+    }
+    #[test]
+    fn every_style_is_distinct_deterministic_and_64px() {
+        let mut unique = std::collections::HashSet::new();
+        for style in crate::settings::TRAY_STYLES {
+            let (pixels, w, h) = render_provider_icon_spec(&ProviderIconSpec {
+                provider_id: "claude",
+                percent: Some(62.5),
+                style,
+                color: [230, 130, 80],
+                stroke: 2,
+                identity: "provider",
+            });
+            assert_eq!((w, h), (64, 64));
+            assert_eq!(pixels.len(), 64 * 64 * 4);
+            assert_eq!(
+                pixels,
+                spec(style, Some(62.5), "provider"),
+                "{style} drifted"
+            );
+            unique.insert(pixels);
+        }
+        assert_eq!(unique.len(), crate::settings::TRAY_STYLES.len());
+    }
+    #[test]
+    fn gauge_styles_keep_unknown_distinct_from_zero_and_full() {
+        for style in ["ring", "arc", "bar", "badge", "orbit"] {
+            assert_ne!(
+                spec(style, None, "provider"),
+                spec(style, Some(0.0), "provider"),
+                "{style}"
+            );
+            assert_ne!(
+                spec(style, Some(0.0), "provider"),
+                spec(style, Some(100.0), "provider"),
+                "{style}"
+            );
+            assert_ne!(
+                spec(style, Some(90.0), "provider"),
+                spec(style, Some(100.0), "provider"),
+                "{style}"
+            );
+        }
+        // Minimal mark never encodes a reading, so no reading can be mistaken for zero.
+        assert_eq!(
+            spec("mark", None, "provider"),
+            spec("mark", Some(0.0), "provider")
+        );
+    }
+    #[test]
+    fn quotalis_identity_replaces_only_the_center_mark() {
+        assert_ne!(
+            spec("ring", Some(40.0), "quotalis"),
+            spec("ring", Some(40.0), "provider")
+        );
+        let unknown_provider = render_provider_icon_spec(&ProviderIconSpec {
+            provider_id: "made-up",
+            percent: Some(40.0),
+            style: "ring",
+            color: [230, 130, 80],
+            stroke: 2,
+            identity: "provider",
+        })
+        .0;
+        assert_eq!(unknown_provider, spec("ring", Some(40.0), "quotalis"));
+    }
+    #[test]
+    fn repeated_renders_do_not_grow_or_drift() {
+        let first = spec("orbit", Some(33.0), "provider");
+        for _ in 0..100 {
+            assert_eq!(spec("orbit", Some(33.0), "provider"), first);
+        }
     }
 }
