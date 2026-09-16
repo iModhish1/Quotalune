@@ -41,6 +41,14 @@ header icon proof that SHELL-04/P06-05 left open (environment-blocked at
 the time); extend granular per-provider/per-limit notification subscriptions
 per P06-16's objective attachments.
 
+Status (2026-09-16): Wave 2 + 2B code **PASS** (`a15071c4`…`627c0e29`: tray
+DPI policy, token-period truth, complete notification history). Wave 2C
+rollback compatibility **PASS** — published 0.11.0 reads a history file after
+the new build has migrated and written to it (frozen-reader drill,
+`NOTIFICATION_HISTORY_SCHEMA_COMPATIBILITY.md`). Native visual QA for Waves 1
+and 2 remains DEFERRED — ENVIRONMENT BLOCKED; the release gate stays closed
+for that evidence. Wave 3 code development: READY.
+
 ## Wave 3: Provider onboarding + CLI/cookie/OAuth UX
 
 P06-03's remaining scope: independent account instances, ordinal badges,

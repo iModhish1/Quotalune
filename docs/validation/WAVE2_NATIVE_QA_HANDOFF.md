@@ -44,7 +44,7 @@ Embedded HEAD must equal `git rev-parse HEAD`; channel `dev`; AUMID
 | Toast text | `rust/src/notifications.rs::toast_template` | every title/body passes `UserFacingText::sanitize` (secrets, emails, profile paths, control chars) |
 | Status toasts | `NotificationManager::observe_provider_status` | 2 consecutive failures → one localized, content-free toast; silent while failing; re-arms after a healthy refresh; respects master switch and category |
 | Severity | `JournalEventKind::severity`, `NotificationType::severity` | Info / Warning / Critical from observed state only |
-| History | `NotificationJournal::record_notification`, schema v2 | Every issued notification (threshold, milestone, session depleted/restored, pace, provider status, DeepSeek pricing) plus reset/quota/banked observations; one row per dedupe identity; values optional; closed `detail` codes only; v1 databases migrate in place |
+| History | `NotificationJournal::record_notification`, additive `quotalis_notification_records` | Every issued notification (threshold, milestone, session depleted/restored, pace, provider status, DeepSeek pricing) plus reset/quota/banked observations; one row per dedupe identity; values optional; closed `detail` codes only. `notification_events` stays exactly the 0.11.0 layout at `user_version` 1, so a rollback to published 0.11.0 keeps reading its history (frozen-reader drill in `notification_journal/compat_tests.rs`; see `NOTIFICATION_HISTORY_SCHEMA_COMPATIBILITY.md`) |
 | History open | `open_notification_history_event`, `NotificationManager::history_destination` | Rows open through the toast destination model from stored kind + registered provider id; forged ids rejected |
 | Activation | `notification_uri`/`parse_notification_uri`, `main.rs` single-instance | existing tests; fixture cases round-trip to real destinations |
 | Notification fixture | `notification_qa_fixture.rs` | Dev-only, 6 cases, production copy EN/AR, 1 s rate limit, no history/dedupe writes |
@@ -76,8 +76,9 @@ Known limits to record, not to "fix" silently:
 - Minimal mark intentionally shows no reading; the tooltip carries it.
 - Fixture toasts and user test notifications do not write history (explicit
   tests, not events) — use real Dev activity for the history cases.
-- History schema v2 cannot be read by builds from before Wave 2B; do not
-  downgrade the Dev app dir between builds.
+- Rollback to published 0.11.0 is supported for history (Wave 2C). Only the
+  unpublished Wave 2B Dev builds (`c98d339a`…`627c0e29`) must not reopen a
+  Dev app dir after Wave 2C has touched it.
 
 ## 4. Defect loop
 

@@ -59,6 +59,14 @@ across 3082 files at this check; it is not a complete Git-history scan.
 
 ## Explicit remaining release gates
 
+- Standing invariant (Wave 2C, 2026-09-16): a new Quotalis release must not
+  leave the immediately previous published stable version unable to read its
+  existing user history, unless compatibility is proven by the frozen-reader
+  test (`rust/src/notification_journal/compat_tests.rs`) or a fully proven
+  non-destructive rollback restoration exists. Notification history is proven
+  compatible with published 0.11.0 (`NOTIFICATION_HISTORY_SCHEMA_COMPATIBILITY.md`);
+  this invariant applies to Quotalis-owned stores only, not external formats.
+
 - Native isolated install, upgrade, uninstall, prerequisites/restart behavior and
   installed notification artwork acceptance. The installer was never executed on
   the Personal host; compiled contents alone do not prove runtime behavior.
