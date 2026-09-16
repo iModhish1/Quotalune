@@ -647,7 +647,23 @@ impl NotificationManager {
             .as_deref()
             .is_some_and(|previous| previous != period);
         self.deepseek_pricing_period = Some(period.to_string());
-        if !settings.show_notifications || !changed || Self::quiet_hours_active(settings) {
+        if !settings.show_notifications || !changed {
+            return;
+        }
+        self.record_issued(
+            ProviderId::DeepSeek,
+            "",
+            "pricing",
+            JournalEventKind::PricingPeriodChanged,
+            None,
+            None,
+            Some(match period {
+                "peak" => "peak",
+                "offPeak" => "offPeak",
+                _ => "standard",
+            }),
+        );
+        if Self::quiet_hours_active(settings) {
             return;
         }
         let body = match period {
@@ -761,6 +777,22 @@ impl NotificationManager {
             return;
         }
 
+        self.record_issued(
+            provider,
+            identity,
+            match window {
+                PredictiveWarningWindow::Session => "session",
+                PredictiveWarningWindow::Weekly => "weekly",
+            },
+            JournalEventKind::PaceWarning,
+            None,
+            Some(rate_window.used_percent),
+            Some(match window {
+                PredictiveWarningWindow::Session => "session",
+                PredictiveWarningWindow::Weekly => "weekly",
+            }),
+        );
+
         if Self::quiet_hours_active(settings) {
             return;
         }
@@ -865,25 +897,59 @@ impl NotificationManager {
             NotificationType::Exhausted => (JournalEventKind::UsageExhausted, 100.0),
             _ => return,
         };
+        self.record_issued(
+            provider,
+            account,
+            window,
+            kind,
+            Some(level),
+            Some(used_percent),
+            None,
+        );
+    }
+
+    /// History row for a notification whose dedupe identity just fired. Called
+    /// exactly where the toast is allowed (before quiet hours, which only hold
+    /// delivery), so history and toast dedupe describe the same logical event.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "each argument is one typed column of the history row"
+    )]
+    fn record_issued(
+        &self,
+        provider: ProviderId,
+        account: &str,
+        window: &str,
+        kind: JournalEventKind,
+        previous_value: Option<f64>,
+        current_value: Option<f64>,
+        detail: Option<&'static str>,
+    ) {
         let window_key: String = window
             .chars()
             .filter(|c| c.is_ascii_alphanumeric() || "-_:".contains(*c))
             .take(96)
             .collect();
+        let percent = |value: Option<f64>| {
+            value
+                .filter(|value| value.is_finite())
+                .map(|value| value.clamp(0.0, 100.0))
+        };
         if let Err(error) = self.notification_history().and_then(|journal| {
-            journal.record_alert(
+            journal.record_notification(
                 provider,
                 account,
                 &window_key,
-                crate::notification_journal::AlertRecord {
+                crate::notification_journal::NotificationRecord {
                     kind,
-                    threshold: level.clamp(0.0, 100.0),
-                    used_percent: used_percent.clamp(0.0, 100.0),
+                    previous_value: percent(previous_value),
+                    current_value: percent(current_value),
+                    detail,
                     observed_at: Utc::now().timestamp(),
                 },
             )
         }) {
-            tracing::warn!(%error, "Could not record alert in notification history");
+            tracing::warn!(%error, "Could not record notification in history");
         }
     }
 
@@ -932,6 +998,15 @@ impl NotificationManager {
         let kind = NotificationType::UsageStep(milestone);
         let key = (provider, account.to_string(), window.to_string(), kind);
         if self.mark_sent(key) {
+            self.record_issued(
+                provider,
+                account,
+                window,
+                JournalEventKind::UsageMilestoneReached,
+                Some(f64::from(milestone)),
+                Some(used_percent),
+                None,
+            );
             self.send_notification(provider, window, f64::from(milestone), kind, settings);
         }
     }
@@ -983,7 +1058,13 @@ impl NotificationManager {
         }
         let key = (provider, account.to_string(), window.to_string(), kind);
         if self.mark_sent(key) {
-            self.send_notification(provider, window, event.current_value, kind, settings);
+            self.send_notification(
+                provider,
+                window,
+                event.current_value.unwrap_or_default(),
+                kind,
+                settings,
+            );
         }
     }
 
@@ -1107,8 +1188,44 @@ impl NotificationManager {
         if !self.mark_sent(key) {
             return false;
         }
+        self.record_issued(
+            provider,
+            "",
+            "status",
+            JournalEventKind::ProviderStatusIssue,
+            None,
+            None,
+            Some(match kind {
+                ProviderStateKind::NeedsAuthentication => "needsAuthentication",
+                ProviderStateKind::ExpiredSession => "expiredSession",
+                ProviderStateKind::LocalRuntimeOffline => "localRuntimeOffline",
+                ProviderStateKind::Unknown | ProviderStateKind::Ready => "unknown",
+            }),
+        );
         self.send_status_notification(provider, kind, settings);
         true
+    }
+
+    /// Where a history row opens: the same typed destinations toast activation
+    /// uses, derived from the stored kind and a registered provider id only.
+    pub fn history_destination(event: &NotificationEvent) -> Option<NotificationDestination> {
+        let provider = ProviderId::from_cli_name(&event.provider_id)
+            .filter(|provider| provider.cli_name() == event.provider_id)?;
+        Some(match event.kind {
+            JournalEventKind::ScheduledResetObserved
+            | JournalEventKind::UnexpectedQuotaChange
+            | JournalEventKind::BankedResetsIncreased
+            | JournalEventKind::BankedResetsDecreased => NotificationDestination::Dashboard,
+            JournalEventKind::ProviderStatusIssue => NotificationDestination::Providers(provider),
+            JournalEventKind::UsageHighReached
+            | JournalEventKind::UsageCriticalReached
+            | JournalEventKind::UsageExhausted
+            | JournalEventKind::UsageMilestoneReached
+            | JournalEventKind::SessionDepleted
+            | JournalEventKind::SessionRestored
+            | JournalEventKind::PaceWarning
+            | JournalEventKind::PricingPeriodChanged => NotificationDestination::Provider(provider),
+        })
     }
 
     /// The exact title, body and activation target a real alert of this type
@@ -1202,7 +1319,19 @@ impl NotificationManager {
                 "session".to_string(),
                 NotificationType::SessionDepleted,
             );
-            if self.mark_sent(depleted_key) && !Self::quiet_hours_active(settings) {
+            let newly_depleted = self.mark_sent(depleted_key);
+            if newly_depleted {
+                self.record_issued(
+                    provider,
+                    account,
+                    "session",
+                    JournalEventKind::SessionDepleted,
+                    Some(previous_percent),
+                    Some(current_percent),
+                    None,
+                );
+            }
+            if newly_depleted && !Self::quiet_hours_active(settings) {
                 self.show_toast(
                     &title,
                     &body,
@@ -1222,6 +1351,17 @@ impl NotificationManager {
                 NotificationType::SessionDepleted,
             );
             if self.was_sent(&depleted_key) {
+                if settings.notification_events.session_restored {
+                    self.record_issued(
+                        provider,
+                        account,
+                        "session",
+                        JournalEventKind::SessionRestored,
+                        Some(previous_percent),
+                        Some(current_percent),
+                        None,
+                    );
+                }
                 if settings.notification_events.session_restored
                     && !Self::quiet_hours_active(settings)
                 {
@@ -2669,14 +2809,162 @@ mod tests {
         assert_eq!(page.items.len(), 1, "{:?}", page.items);
         let alert = &page.items[0];
         assert_eq!(alert.kind, JournalEventKind::UsageCriticalReached);
-        assert_eq!(alert.current_value, 93.0);
+        assert_eq!(alert.current_value, Some(93.0));
         assert_eq!(
             alert.previous_value,
-            settings
-                .usage_thresholds(ProviderId::Claude, "weekly")
-                .critical
+            Some(
+                settings
+                    .usage_thresholds(ProviderId::Claude, "weekly")
+                    .critical
+            )
         );
         assert_eq!(alert.severity, NotificationSeverity::Critical);
+    }
+
+    fn history(manager: &NotificationManager) -> Vec<NotificationEvent> {
+        manager
+            .notification_history()
+            .unwrap()
+            .page(&crate::notification_journal::NotificationQuery::default())
+            .unwrap()
+            .items
+    }
+
+    #[test]
+    fn provider_failures_record_one_history_row_per_incident() {
+        let settings = Settings::default();
+        let mut manager = NotificationManager::new();
+        let auth = ProviderStateKind::NeedsAuthentication;
+        for _ in 0..50 {
+            manager.observe_provider_status(ProviderId::Codex, auth, &settings);
+        }
+        assert_eq!(history(&manager).len(), 1);
+        manager.observe_provider_status(ProviderId::Codex, ProviderStateKind::Ready, &settings);
+        assert_eq!(history(&manager).len(), 1, "recovery is not a notification");
+        for _ in 0..3 {
+            manager.observe_provider_status(
+                ProviderId::Codex,
+                ProviderStateKind::Unknown,
+                &settings,
+            );
+        }
+        let rows = history(&manager);
+        assert_eq!(
+            rows.len(),
+            2,
+            "a new failure after recovery is a new incident"
+        );
+        assert_eq!(rows[0].detail.as_deref(), Some("unknown"));
+        assert_eq!(rows[1].detail.as_deref(), Some("needsAuthentication"));
+        assert!(
+            rows.iter()
+                .all(|row| row.kind == JournalEventKind::ProviderStatusIssue
+                    && row.previous_value.is_none()
+                    && row.current_value.is_none()
+                    && row.account_ref.is_none())
+        );
+        assert_eq!(
+            NotificationManager::history_destination(&rows[0]),
+            Some(NotificationDestination::Providers(ProviderId::Codex))
+        );
+    }
+
+    #[test]
+    fn milestone_session_and_pricing_notifications_are_recorded_once() {
+        let settings = Settings {
+            usage_step_notification_percent: Some(10),
+            ..Settings::default()
+        };
+        let mut manager = NotificationManager::new();
+        for used in [5.0, 12.0, 12.5, 13.0] {
+            manager.check_and_notify(ProviderId::Claude, "acct", "session", used, &settings);
+        }
+        // One depletion polled repeatedly, one recovery polled repeatedly.
+        for percent in [40.0, 100.0, 100.0, 100.0, 40.0, 40.0, 40.0] {
+            manager.check_session_transition(ProviderId::Claude, "acct", percent, &settings);
+        }
+        for period in ["offPeak", "offPeak", "peak", "peak", "peak"] {
+            manager.notify_pricing_transition(period, &settings);
+        }
+        let kinds: Vec<_> = history(&manager)
+            .into_iter()
+            .map(|row| (row.kind, row.detail))
+            .collect();
+        let count = |kind| kinds.iter().filter(|(k, _)| *k == kind).count();
+        assert_eq!(
+            count(JournalEventKind::UsageMilestoneReached),
+            1,
+            "{kinds:?}"
+        );
+        assert_eq!(count(JournalEventKind::SessionDepleted), 1, "{kinds:?}");
+        assert_eq!(count(JournalEventKind::SessionRestored), 1, "{kinds:?}");
+        assert_eq!(
+            count(JournalEventKind::PricingPeriodChanged),
+            1,
+            "{kinds:?}"
+        );
+        assert!(kinds.contains(&(JournalEventKind::PricingPeriodChanged, Some("peak".into()))));
+    }
+
+    #[test]
+    fn quiet_hours_hold_delivery_but_not_the_record() {
+        let mut settings = Settings::default();
+        settings.notification_quiet_hours.enabled = true;
+        // Equal start and end means quiet all day, so this never depends on the clock.
+        settings.notification_quiet_hours.start_minute = 600;
+        settings.notification_quiet_hours.end_minute = 600;
+        let mut manager = NotificationManager::new();
+        assert!(NotificationManager::quiet_hours_active(&settings));
+        for _ in 0..5 {
+            manager.check_and_notify(ProviderId::Codex, "", "weekly", 95.0, &settings);
+        }
+        assert_eq!(history(&manager).len(), 1);
+    }
+
+    #[test]
+    fn history_rows_open_only_validated_destinations() {
+        let store = crate::notification_journal::NotificationJournal::in_memory();
+        let row = |provider: ProviderId, window: &str, kind, detail| {
+            store
+                .record_notification(
+                    provider,
+                    "",
+                    window,
+                    crate::notification_journal::NotificationRecord {
+                        kind,
+                        previous_value: None,
+                        current_value: None,
+                        detail,
+                        observed_at: 10,
+                    },
+                )
+                .unwrap()
+        };
+        let pace = row(
+            ProviderId::Claude,
+            "weekly",
+            JournalEventKind::PaceWarning,
+            Some("weekly"),
+        );
+        assert_eq!(
+            NotificationManager::history_destination(&pace),
+            Some(NotificationDestination::Provider(ProviderId::Claude))
+        );
+        let mut forged = pace.clone();
+        forged.provider_id = "javascript:alert(1)".into();
+        assert_eq!(NotificationManager::history_destination(&forged), None);
+        forged.provider_id = "CLAUDE".into();
+        assert_eq!(NotificationManager::history_destination(&forged), None);
+        let reset = NotificationEvent {
+            kind: JournalEventKind::ScheduledResetObserved,
+            ..pace
+        };
+        let destination = NotificationManager::history_destination(&reset).unwrap();
+        assert_eq!(destination, NotificationDestination::Dashboard);
+        assert_eq!(
+            parse_notification_uri(&notification_uri(destination)),
+            Some(destination)
+        );
     }
 
     #[test]

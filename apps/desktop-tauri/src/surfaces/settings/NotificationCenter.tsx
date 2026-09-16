@@ -3,14 +3,23 @@ import {useLocale} from '../../hooks/useLocale';
 import type {NotificationHistoryState} from '../../hooks/useNotificationHistory';
 import type {ProviderCatalogEntry} from '../../types/bridge';
 import type {JournalEventKind,NotificationSeverity} from '../../lib/notificationHistory';
-import {isAlertKind,unreadBadge} from '../../lib/notificationHistory';
+import {isAlertKind,openNotificationHistoryEvent,unreadBadge} from '../../lib/notificationHistory';
 import {QuotalisSkeleton} from '../../design-system/QuotalisLoadingStates';
 import type {LocaleKey} from '../../i18n/keys';
 import {ProviderIcon} from '../../components/providers/ProviderIcon';
 import {Select} from '../../components/FormControls';
 import './NotificationCenter.css';
 
-const titles:Record<JournalEventKind,LocaleKey>={scheduledResetObserved:'HistoryScheduledReset',unexpectedQuotaChange:'HistoryQuotaChange',bankedResetsIncreased:'HistoryBankedIncreased',bankedResetsDecreased:'HistoryBankedDecreased',usageHighReached:'HistoryUsageHighReached',usageCriticalReached:'HistoryUsageCriticalReached',usageExhausted:'HistoryUsageExhausted'};
+const titles:Record<JournalEventKind,LocaleKey>={scheduledResetObserved:'HistoryScheduledReset',unexpectedQuotaChange:'HistoryQuotaChange',bankedResetsIncreased:'HistoryBankedIncreased',bankedResetsDecreased:'HistoryBankedDecreased',usageHighReached:'HistoryUsageHighReached',usageCriticalReached:'HistoryUsageCriticalReached',usageExhausted:'HistoryUsageExhausted',usageMilestoneReached:'HistoryUsageMilestoneReached',sessionDepleted:'HistorySessionDepleted',sessionRestored:'HistorySessionRestored',paceWarning:'HistoryPaceWarning',providerStatusIssue:'HistoryProviderStatusIssue',pricingPeriodChanged:'HistoryPricingPeriodChanged'};
+const details:Record<string,LocaleKey>={needsAuthentication:'HistoryDetailNeedsAuthentication',expiredSession:'HistoryDetailExpiredSession',localRuntimeOffline:'HistoryDetailLocalRuntimeOffline',unknown:'HistoryDetailUnknown',peak:'HistoryDetailPeak',offPeak:'HistoryDetailOffPeak',standard:'HistoryDetailStandard',session:'HistoryDetailSession',weekly:'HistoryDetailWeekly'};
+const OBSERVATION_KINDS=new Set<JournalEventKind>(['scheduledResetObserved','unexpectedQuotaChange','bankedResetsIncreased','bankedResetsDecreased']);
+/** Renders only the evidence that exists; a missing value is never shown as 0. */
+export function historyValues(item:{kind:JournalEventKind;previousValue:number|null;currentValue:number|null}):string|null {
+  const unit=item.kind.includes('banked')?'':'%';
+  if(item.previousValue!==null&&item.currentValue!==null)return `${item.previousValue}${unit} → ${item.currentValue}${unit}`;
+  if(item.currentValue!==null)return `${item.currentValue}${unit}`;
+  return null;
+}
 const severities:Record<NotificationSeverity,LocaleKey>={info:'HistorySeverityInfo',warning:'HistorySeverityWarning',critical:'HistorySeverityCritical'};
 export default function NotificationCenter({history,demo,catalog}: {history:NotificationHistoryState;demo:boolean;catalog:ProviderCatalogEntry[]}) {
   const {t,language}=useLocale();
@@ -38,10 +47,12 @@ export default function NotificationCenter({history,demo,catalog}: {history:Noti
       {page.items.map(item=><li key={item.id} className="notification-center__event" data-unread={!item.isRead} data-severity={item.severity}>
         <ProviderIcon providerId={item.providerId} size={32}/>
         <div className="notification-center__event-content"><header><strong>{t(titles[item.kind])}</strong><span className="notification-center__severity" data-severity={item.severity}>{t(severities[item.severity]??'HistorySeverityInfo')}</span><span><bdi>{names.get(item.providerId)??item.providerId} · {item.windowKey}</bdi></span></header>
-          <p className="notification-center__values"><bdi>{item.previousValue}{item.kind.includes('banked')?'':'%'} → {item.currentValue}{item.kind.includes('banked')?'':'%'}</bdi></p>
+          {historyValues(item)!==null&&<p className="notification-center__values"><bdi>{historyValues(item)}</bdi></p>}
+          {item.detail&&details[item.detail]&&<p className="notification-center__detail">{t(details[item.detail])}</p>}
           <dl><div><dt>{t('HistoryOccurred')}</dt><dd>{format(item.occurredAt)}</dd></div><div><dt>{t('HistoryDetected')}</dt><dd>{format(item.detectedAt)}</dd></div><div><dt>{t('HistoryReceived')}</dt><dd>{format(item.receivedAt)}</dd></div></dl>
-          <details><summary>{t('HistoryEvidence')}</summary><p>{t(isAlertKind(item.kind)?'HistoryAlertEvidence':'HistoryObservationInterval')}</p><p><bdi>{format(item.observedFrom)} — {format(item.observedTo)}</bdi></p><p>{t(item.accountRef?'HistoryAccountScoped':'HistoryAccountUnknown')}</p><code>{item.windowKey} · {item.kind} · #{item.id}</code></details>
+          <details><summary>{t('HistoryEvidence')}</summary><p>{t(OBSERVATION_KINDS.has(item.kind)?'HistoryObservationInterval':isAlertKind(item.kind)?'HistoryAlertEvidence':'HistoryNotificationEvidence')}</p><p><bdi>{format(item.observedFrom)} — {format(item.observedTo)}</bdi></p><p>{t(item.accountRef?'HistoryAccountScoped':'HistoryAccountUnknown')}</p><code>{item.windowKey} · {item.kind} · #{item.id}</code></details>
         </div>
+        {!demo&&<button type="button" disabled={loading} aria-label={`${t('HistoryOpen')}: ${names.get(item.providerId)??item.providerId} ${t(titles[item.kind])}`} onClick={()=>void openNotificationHistoryEvent(item.id).catch(()=>{})}>{t('HistoryOpen')}</button>}
         {!item.isRead?<button type="button" disabled={loading} aria-label={`${t('HistoryMarkRead')}: ${names.get(item.providerId)??item.providerId} ${item.windowKey}`} onClick={()=>void history.markRead(item.id)}>{t('HistoryMarkRead')}</button>:<span className="notification-center__read">{t('HistoryRead')}</span>}
       </li>)}
     </ol>

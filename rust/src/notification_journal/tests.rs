@@ -376,76 +376,167 @@ fn future_schema_and_corrupt_files_fail_without_overwriting() {
     assert_eq!(std::fs::read(corrupt).unwrap(), b"not a sqlite database");
 }
 
-#[test]
-fn alerts_record_threshold_and_observation_with_semantic_severity() {
-    let store = NotificationJournal::in_memory();
-    let high = store
-        .record_alert(
-            ProviderId::Claude,
-            "acct",
-            "weekly",
-            AlertRecord {
-                kind: JournalEventKind::UsageHighReached,
-                threshold: 70.0,
-                used_percent: 72.5,
-                observed_at: 2_000,
-            },
-        )
-        .unwrap();
-    assert_eq!((high.previous_value, high.current_value), (70.0, 72.5));
-    assert_eq!(high.severity, NotificationSeverity::Warning);
-    assert_eq!(high.occurred_at, Some(2_000));
-    assert_ne!(high.account_ref.as_deref(), Some("acct"));
-    let exhausted = store
-        .record_alert(
-            ProviderId::Claude,
-            "",
-            "session",
-            AlertRecord {
-                kind: JournalEventKind::UsageExhausted,
-                threshold: 100.0,
-                used_percent: 100.0,
-                observed_at: 2_001,
-            },
-        )
-        .unwrap();
-    assert_eq!(exhausted.severity, NotificationSeverity::Critical);
-    assert!(exhausted.account_ref.is_none());
-    let page = store.page(&NotificationQuery::default()).unwrap();
-    assert_eq!(page.items.len(), 2);
-    assert_eq!(page.items[0].kind, JournalEventKind::UsageExhausted);
-    assert_eq!(page.items[0].severity, NotificationSeverity::Critical);
-    assert_eq!(page.unread_count, 2);
+fn record(
+    kind: JournalEventKind,
+    previous_value: Option<f64>,
+    current_value: Option<f64>,
+    detail: Option<&'static str>,
+    observed_at: i64,
+) -> NotificationRecord {
+    NotificationRecord {
+        kind,
+        previous_value,
+        current_value,
+        detail,
+        observed_at,
+    }
 }
 
 #[test]
-fn alerts_reject_non_alert_kinds_and_invalid_values() {
+fn issued_notifications_record_their_evidence_with_semantic_severity() {
     let store = NotificationJournal::in_memory();
-    for (kind, threshold, used, window) in [
-        (
-            JournalEventKind::ScheduledResetObserved,
-            70.0,
-            80.0,
+    let high = store
+        .record_notification(
+            ProviderId::Claude,
+            "acct",
             "weekly",
+            record(
+                JournalEventKind::UsageHighReached,
+                Some(70.0),
+                Some(72.5),
+                None,
+                2_000,
+            ),
+        )
+        .unwrap();
+    assert_eq!(
+        (high.previous_value, high.current_value),
+        (Some(70.0), Some(72.5))
+    );
+    assert_eq!(high.severity, NotificationSeverity::Warning);
+    assert_eq!(high.occurred_at, Some(2_000));
+    assert_ne!(high.account_ref.as_deref(), Some("acct"));
+    let status = store
+        .record_notification(
+            ProviderId::Codex,
+            "",
+            "status",
+            record(
+                JournalEventKind::ProviderStatusIssue,
+                None,
+                None,
+                Some("needsAuthentication"),
+                2_001,
+            ),
+        )
+        .unwrap();
+    assert_eq!((status.previous_value, status.current_value), (None, None));
+    assert_eq!(status.detail.as_deref(), Some("needsAuthentication"));
+    assert!(status.account_ref.is_none());
+    let page = store.page(&NotificationQuery::default()).unwrap();
+    assert_eq!(page.items.len(), 2);
+    assert_eq!(page.items[0].kind, JournalEventKind::ProviderStatusIssue);
+    assert_eq!(page.items[0].detail.as_deref(), Some("needsAuthentication"));
+    assert_eq!(page.items[1].previous_value, Some(70.0));
+    assert_eq!(page.unread_count, 2);
+    assert_eq!(store.event(status.id).unwrap(), Some(page.items[0].clone()));
+    assert_eq!(store.event(9_999).unwrap(), None);
+}
+
+#[test]
+fn issued_notifications_reject_observation_kinds_values_and_free_text_detail() {
+    let store = NotificationJournal::in_memory();
+    for (window, entry) in [
+        (
+            "weekly",
+            record(
+                JournalEventKind::ScheduledResetObserved,
+                Some(70.0),
+                Some(80.0),
+                None,
+                10,
+            ),
         ),
-        (JournalEventKind::UsageHighReached, f64::NAN, 80.0, "weekly"),
-        (JournalEventKind::UsageHighReached, 70.0, 180.0, "weekly"),
-        (JournalEventKind::UsageHighReached, 70.0, 80.0, "bad window"),
+        (
+            "weekly",
+            record(
+                JournalEventKind::UsageHighReached,
+                Some(f64::NAN),
+                Some(80.0),
+                None,
+                10,
+            ),
+        ),
+        (
+            "weekly",
+            record(
+                JournalEventKind::UsageHighReached,
+                Some(70.0),
+                Some(180.0),
+                None,
+                10,
+            ),
+        ),
+        (
+            "bad window",
+            record(
+                JournalEventKind::UsageHighReached,
+                Some(70.0),
+                Some(80.0),
+                None,
+                10,
+            ),
+        ),
+        (
+            "status",
+            record(
+                JournalEventKind::ProviderStatusIssue,
+                None,
+                None,
+                Some("Bearer sk-secret"),
+                10,
+            ),
+        ),
+        (
+            "status",
+            record(JournalEventKind::ProviderStatusIssue, None, None, None, 10),
+        ),
+        (
+            "pricing",
+            record(
+                JournalEventKind::PricingPeriodChanged,
+                None,
+                None,
+                Some("unknown"),
+                10,
+            ),
+        ),
+        (
+            "weekly",
+            record(
+                JournalEventKind::UsageHighReached,
+                Some(70.0),
+                Some(80.0),
+                Some("peak"),
+                10,
+            ),
+        ),
+        (
+            "weekly",
+            record(
+                JournalEventKind::UsageHighReached,
+                Some(70.0),
+                Some(80.0),
+                None,
+                0,
+            ),
+        ),
     ] {
         assert!(
             store
-                .record_alert(
-                    ProviderId::Codex,
-                    "a",
-                    window,
-                    AlertRecord {
-                        kind,
-                        threshold,
-                        used_percent: used,
-                        observed_at: 10
-                    }
-                )
-                .is_err()
+                .record_notification(ProviderId::Codex, "a", window, entry)
+                .is_err(),
+            "{entry:?}"
         );
     }
     assert!(
@@ -459,20 +550,89 @@ fn alerts_reject_non_alert_kinds_and_invalid_values() {
 
 #[test]
 fn every_kind_has_a_calm_severity_mapping() {
+    use NotificationSeverity::{Critical, Info, Warning};
+    for (kind, severity) in [
+        (JournalEventKind::ScheduledResetObserved, Info),
+        (JournalEventKind::BankedResetsIncreased, Info),
+        (JournalEventKind::BankedResetsDecreased, Info),
+        (JournalEventKind::UsageMilestoneReached, Info),
+        (JournalEventKind::SessionRestored, Info),
+        (JournalEventKind::PricingPeriodChanged, Info),
+        (JournalEventKind::UnexpectedQuotaChange, Warning),
+        (JournalEventKind::UsageHighReached, Warning),
+        (JournalEventKind::PaceWarning, Warning),
+        (JournalEventKind::ProviderStatusIssue, Warning),
+        (JournalEventKind::UsageCriticalReached, Critical),
+        (JournalEventKind::UsageExhausted, Critical),
+        (JournalEventKind::SessionDepleted, Critical),
+    ] {
+        assert_eq!(kind.severity(), severity, "{kind:?}");
+    }
+}
+
+#[test]
+fn version_one_history_migrates_without_losing_rows_or_read_state() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("notifications.db");
+    {
+        let connection = Connection::open(&path).unwrap();
+        connection
+            .execute_batch(
+                "CREATE TABLE notification_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    provider_id TEXT NOT NULL, account_ref TEXT, window_key TEXT NOT NULL,
+                    kind TEXT NOT NULL, occurred_at INTEGER, detected_at INTEGER NOT NULL,
+                    received_at INTEGER NOT NULL, observed_from INTEGER NOT NULL,
+                    observed_to INTEGER NOT NULL, previous_value REAL NOT NULL,
+                    current_value REAL NOT NULL, is_read INTEGER NOT NULL DEFAULT 0 CHECK(is_read IN (0,1))
+                );
+                CREATE INDEX notification_unread ON notification_events(is_read, id);
+                CREATE TABLE notification_baselines (
+                    lane TEXT PRIMARY KEY, observation TEXT NOT NULL, received_at INTEGER NOT NULL
+                );
+                INSERT INTO notification_events (provider_id,account_ref,window_key,kind,detected_at,received_at,observed_from,observed_to,previous_value,current_value,is_read)
+                    VALUES ('codex',NULL,'weekly','\"scheduledResetObserved\"',1000,1000,900,1000,94.0,3.0,1);
+                INSERT INTO notification_baselines VALUES ('lane','{}',1000);
+                PRAGMA user_version = 1;",
+            )
+            .unwrap();
+    }
+    let store = NotificationJournal::at(path.clone());
+    let page = store.page(&NotificationQuery::default()).unwrap();
+    assert_eq!(page.items.len(), 1);
+    let migrated = &page.items[0];
+    assert_eq!(migrated.kind, JournalEventKind::ScheduledResetObserved);
     assert_eq!(
-        JournalEventKind::ScheduledResetObserved.severity(),
-        NotificationSeverity::Info
+        (migrated.previous_value, migrated.current_value),
+        (Some(94.0), Some(3.0))
     );
-    assert_eq!(
-        JournalEventKind::BankedResetsIncreased.severity(),
-        NotificationSeverity::Info
-    );
-    assert_eq!(
-        JournalEventKind::UnexpectedQuotaChange.severity(),
-        NotificationSeverity::Warning
-    );
-    assert_eq!(
-        JournalEventKind::UsageCriticalReached.severity(),
-        NotificationSeverity::Critical
-    );
+    assert!(migrated.is_read && migrated.detail.is_none());
+    let pricing = store
+        .record_notification(
+            ProviderId::DeepSeek,
+            "",
+            "pricing",
+            record(
+                JournalEventKind::PricingPeriodChanged,
+                None,
+                None,
+                Some("peak"),
+                2_000,
+            ),
+        )
+        .unwrap();
+    assert!(pricing.id > migrated.id);
+    drop(store);
+    let version: i64 = Connection::open(&path)
+        .unwrap()
+        .query_row("PRAGMA user_version", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(version, SCHEMA_VERSION);
+    let baselines: i64 = Connection::open(&path)
+        .unwrap()
+        .query_row("SELECT COUNT(*) FROM notification_baselines", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    assert_eq!(baselines, 1);
 }

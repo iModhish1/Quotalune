@@ -79,6 +79,36 @@ pub fn mark_all_notifications_read(
     Ok(changed)
 }
 
+/// Open a history row where its toast would have opened. The destination is
+/// derived from the stored kind and a registered provider id through the same
+/// typed model toast activation uses; no URL or command is ever stored.
+#[tauri::command]
+pub fn open_notification_history_event(
+    app: tauri::AppHandle,
+    window: tauri::WebviewWindow,
+    state: State<'_, Mutex<AppState>>,
+    id: i64,
+) -> Result<(), String> {
+    let destination = {
+        let state = state
+            .lock()
+            .map_err(|_| "Notification history is unavailable")?;
+        authorize_history(
+            window.label(),
+            quotalis_core::settings::Settings::load().demo_mode_enabled,
+        )?;
+        let event = state
+            .notification_manager
+            .notification_history()?
+            .event(id)?
+            .ok_or("Notification not found")?;
+        quotalis_core::notifications::NotificationManager::history_destination(&event)
+            .ok_or("Notification has no valid destination")?
+    };
+    crate::activate_notification_destination(&app, destination);
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
