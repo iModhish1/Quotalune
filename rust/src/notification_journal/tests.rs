@@ -375,3 +375,90 @@ fn future_schema_and_corrupt_files_fail_without_overwriting() {
     );
     assert_eq!(std::fs::read(corrupt).unwrap(), b"not a sqlite database");
 }
+
+#[test]
+fn alerts_record_threshold_and_observation_with_semantic_severity() {
+    let store = NotificationJournal::in_memory();
+    let high = store
+        .record_alert(
+            ProviderId::Claude,
+            "acct",
+            "weekly",
+            JournalEventKind::UsageHighReached,
+            70.0,
+            72.5,
+            2_000,
+        )
+        .unwrap();
+    assert_eq!((high.previous_value, high.current_value), (70.0, 72.5));
+    assert_eq!(high.severity, NotificationSeverity::Warning);
+    assert_eq!(high.occurred_at, Some(2_000));
+    assert_ne!(high.account_ref.as_deref(), Some("acct"));
+    let exhausted = store
+        .record_alert(
+            ProviderId::Claude,
+            "",
+            "session",
+            JournalEventKind::UsageExhausted,
+            100.0,
+            100.0,
+            2_001,
+        )
+        .unwrap();
+    assert_eq!(exhausted.severity, NotificationSeverity::Critical);
+    assert!(exhausted.account_ref.is_none());
+    let page = store.page(&NotificationQuery::default()).unwrap();
+    assert_eq!(page.items.len(), 2);
+    assert_eq!(page.items[0].kind, JournalEventKind::UsageExhausted);
+    assert_eq!(page.items[0].severity, NotificationSeverity::Critical);
+    assert_eq!(page.unread_count, 2);
+}
+
+#[test]
+fn alerts_reject_non_alert_kinds_and_invalid_values() {
+    let store = NotificationJournal::in_memory();
+    for (kind, threshold, used, window) in [
+        (
+            JournalEventKind::ScheduledResetObserved,
+            70.0,
+            80.0,
+            "weekly",
+        ),
+        (JournalEventKind::UsageHighReached, f64::NAN, 80.0, "weekly"),
+        (JournalEventKind::UsageHighReached, 70.0, 180.0, "weekly"),
+        (JournalEventKind::UsageHighReached, 70.0, 80.0, "bad window"),
+    ] {
+        assert!(
+            store
+                .record_alert(ProviderId::Codex, "a", window, kind, threshold, used, 10)
+                .is_err()
+        );
+    }
+    assert!(
+        store
+            .page(&NotificationQuery::default())
+            .unwrap()
+            .items
+            .is_empty()
+    );
+}
+
+#[test]
+fn every_kind_has_a_calm_severity_mapping() {
+    assert_eq!(
+        JournalEventKind::ScheduledResetObserved.severity(),
+        NotificationSeverity::Info
+    );
+    assert_eq!(
+        JournalEventKind::BankedResetsIncreased.severity(),
+        NotificationSeverity::Info
+    );
+    assert_eq!(
+        JournalEventKind::UnexpectedQuotaChange.severity(),
+        NotificationSeverity::Warning
+    );
+    assert_eq!(
+        JournalEventKind::UsageCriticalReached.severity(),
+        NotificationSeverity::Critical
+    );
+}

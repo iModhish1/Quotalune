@@ -8,10 +8,10 @@
 )]
 
 use crate::core::ProviderId;
-use crate::core::{RateWindow, UsagePace};
+use crate::core::{ProviderStateKind, RateWindow, UsagePace, UserFacingText};
 use crate::locale::{self, LocaleKey};
 use crate::notification_journal::{
-    JournalEventKind, NotificationEvent, NotificationJournal,
+    JournalEventKind, NotificationEvent, NotificationJournal, NotificationSeverity,
     ResetObservation as JournalObservation,
 };
 use crate::settings::Settings;
@@ -198,8 +198,8 @@ fn toast_template(
     format!(
         "<toast activationType=\"protocol\" launch=\"{}\"><visual><binding template=\"ToastGeneric\"><text>{}</text><text>{}</text>{logo}</binding></visual><audio silent=\"true\"/></toast>",
         xml_escape(&notification_uri(destination)),
-        xml_escape(title),
-        xml_escape(body),
+        xml_escape(&UserFacingText::sanitize(title)),
+        xml_escape(&UserFacingText::sanitize(body)),
     )
 }
 
@@ -351,6 +351,22 @@ impl NotificationType {
         }
     }
 
+    /// Calm, semantic severity: provider accent never changes it.
+    pub const fn severity(self) -> NotificationSeverity {
+        match self {
+            NotificationType::CriticalUsage
+            | NotificationType::Exhausted
+            | NotificationType::SessionDepleted => NotificationSeverity::Critical,
+            NotificationType::HighUsage
+            | NotificationType::StatusIssue
+            | NotificationType::UnexpectedReset(_) => NotificationSeverity::Warning,
+            NotificationType::UsageStep(_)
+            | NotificationType::SessionRestored
+            | NotificationType::ExpectedReset(_)
+            | NotificationType::BankedResetCredit(_) => NotificationSeverity::Info,
+        }
+    }
+
     fn is_threshold_toast(self) -> bool {
         matches!(
             self,
@@ -404,7 +420,12 @@ pub struct NotificationManager {
     notification_journal: Option<NotificationJournal>,
     predictive_warning_keys: std::collections::HashSet<PredictiveWarningKey>,
     deepseek_pricing_period: Option<String>,
+    /// Consecutive problem refreshes per provider; a single transient failure never toasts.
+    status_failures: std::collections::HashMap<ProviderId, u8>,
 }
+
+/// Refreshes in a row that must fail before a provider status toast is shown.
+pub const STATUS_ISSUE_CONFIRMATIONS: u8 = 2;
 
 impl NotificationManager {
     fn quiet_hours_active(settings: &Settings) -> bool {
@@ -429,6 +450,7 @@ impl NotificationManager {
             notification_journal: Some(NotificationJournal::in_memory()),
             predictive_warning_keys: std::collections::HashSet::new(),
             deepseek_pricing_period: None,
+            status_failures: std::collections::HashMap::new(),
         }
     }
 
@@ -628,14 +650,14 @@ impl NotificationManager {
         if !settings.show_notifications || !changed || Self::quiet_hours_active(settings) {
             return;
         }
-        let label = match period {
-            "peak" => "peak",
-            "offPeak" => "off-peak",
-            _ => "standard/pre-schedule",
+        let body = match period {
+            "peak" => LocaleKey::NotificationPricingPeakBody,
+            "offPeak" => LocaleKey::NotificationPricingOffPeakBody,
+            _ => LocaleKey::NotificationPricingStandardBody,
         };
         self.show_toast(
-            "DeepSeek pricing schedule",
-            &format!("DeepSeek is currently in {label} hours."),
+            &locale::get_text(settings.ui_language, LocaleKey::NotificationPricingTitle),
+            &locale::get_text(settings.ui_language, body),
             NotificationDestination::Provider(ProviderId::DeepSeek),
             Some(ProviderId::DeepSeek),
         );
@@ -811,8 +833,55 @@ impl NotificationManager {
                 notif_type,
             );
             if self.mark_sent(key.clone()) {
+                self.record_alert(
+                    provider,
+                    account,
+                    window,
+                    notif_type,
+                    used_percent,
+                    settings,
+                );
                 self.send_notification(provider, window, used_percent, notif_type, settings);
             }
+        }
+    }
+
+    /// History entry for a threshold alert that just fired for the first time.
+    fn record_alert(
+        &self,
+        provider: ProviderId,
+        account: &str,
+        window: &str,
+        notif_type: NotificationType,
+        used_percent: f64,
+        settings: &Settings,
+    ) {
+        let thresholds = settings.usage_thresholds(provider, window);
+        let (kind, level) = match notif_type {
+            NotificationType::HighUsage => (JournalEventKind::UsageHighReached, thresholds.high),
+            NotificationType::CriticalUsage => {
+                (JournalEventKind::UsageCriticalReached, thresholds.critical)
+            }
+            NotificationType::Exhausted => (JournalEventKind::UsageExhausted, 100.0),
+            _ => return,
+        };
+        let window_key: String = window
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric() || "-_:".contains(*c))
+            .take(96)
+            .collect();
+        if let Err(error) = self.notification_history().and_then(|journal| {
+            journal.record_alert(
+                provider,
+                account,
+                &window_key,
+                kind,
+                level.clamp(0.0, 100.0),
+                used_percent.clamp(0.0, 100.0),
+                Utc::now().timestamp(),
+            )
+        }) {
+            tracing::warn!(%error, "Could not record alert in notification history");
         }
     }
 
@@ -1004,15 +1073,28 @@ impl NotificationManager {
         }
     }
 
-    /// Send a notification for a status issue
-    pub fn notify_status_issue(
+    /// Observe one refresh outcome for a provider. A problem must persist for
+    /// [`STATUS_ISSUE_CONFIRMATIONS`] refreshes before one toast is shown; it
+    /// stays silent while the problem continues and re-arms only after the
+    /// provider is observed healthy again. Returns whether a toast was sent.
+    pub fn observe_provider_status(
         &mut self,
         provider: ProviderId,
-        description: &str,
+        kind: ProviderStateKind,
         settings: &Settings,
-    ) {
-        if !settings.show_notifications || !settings.notification_events.status_issue {
-            return;
+    ) -> bool {
+        if !kind.is_problem() {
+            self.status_failures.remove(&provider);
+            self.clear_status_issue(provider);
+            return false;
+        }
+        let failures = self.status_failures.entry(provider).or_insert(0);
+        *failures = failures.saturating_add(1);
+        if *failures < STATUS_ISSUE_CONFIRMATIONS
+            || !settings.show_notifications
+            || !settings.notification_events.status_issue
+        {
+            return false;
         }
         let key = (
             provider,
@@ -1020,9 +1102,47 @@ impl NotificationManager {
             String::new(),
             NotificationType::StatusIssue,
         );
-        if self.mark_sent(key) {
-            self.send_status_notification(provider, description, settings);
+        if !self.mark_sent(key) {
+            return false;
         }
+        self.send_status_notification(provider, kind, settings);
+        true
+    }
+
+    /// The exact title, body and activation target a real alert of this type
+    /// produces, for previews that must not drift from delivery.
+    pub fn alert_preview(
+        provider: ProviderId,
+        window: &str,
+        used_percent: f64,
+        notif_type: NotificationType,
+        language: crate::settings::Language,
+    ) -> (String, String, NotificationDestination) {
+        (
+            Self::notification_title(notif_type, language),
+            Self::notification_body(provider, window, used_percent, notif_type, language),
+            Self::notification_destination(provider, notif_type),
+        )
+    }
+
+    /// Localized, content-free status copy: provider error text is never shown.
+    pub fn status_notification_text(
+        provider: ProviderId,
+        kind: ProviderStateKind,
+        language: crate::settings::Language,
+    ) -> (String, String) {
+        let key = match kind {
+            ProviderStateKind::NeedsAuthentication => LocaleKey::NotificationStatusAuthBody,
+            ProviderStateKind::ExpiredSession => LocaleKey::NotificationStatusExpiredBody,
+            ProviderStateKind::LocalRuntimeOffline => LocaleKey::NotificationStatusOfflineBody,
+            ProviderStateKind::Unknown | ProviderStateKind::Ready => {
+                LocaleKey::NotificationStatusUnavailableBody
+            }
+        };
+        (
+            Self::notification_title(NotificationType::StatusIssue, language),
+            locale::format_locale(language, key, &[provider.display_name()]),
+        )
     }
 
     /// Clear status issue notification (when resolved)
@@ -1168,17 +1288,30 @@ impl NotificationManager {
             "session" => Cow::Owned(locale::get_text(language, LocaleKey::ProviderSession)),
             "fiveHour" => Cow::Owned(locale::get_text(language, LocaleKey::PanelFiveHours)),
             "weekly" => Cow::Owned(locale::get_text(language, LocaleKey::ProviderWeekly)),
-            "modelSpecific" => Cow::Borrowed("model-specific"),
-            "tertiary" => Cow::Borrowed("additional limit"),
+            "modelSpecific" => Cow::Owned(locale::get_text(
+                language,
+                LocaleKey::NotificationWindowModelSpecific,
+            )),
+            "tertiary" => Cow::Owned(locale::get_text(
+                language,
+                LocaleKey::NotificationWindowAdditional,
+            )),
             other if other.starts_with("window") && other.ends_with("Minutes") => {
                 let minutes = &other[6..other.len() - 7];
-                Cow::Owned(format!("{minutes}-minute"))
+                Cow::Owned(locale::format_locale(
+                    language,
+                    LocaleKey::NotificationWindowMinutes,
+                    &[minutes],
+                ))
             }
             other if let Some(name) = other.strip_prefix("extra-") => {
                 Cow::Owned(name.replace(['-', '_'], " "))
             }
             other if !other.is_empty() => Cow::Borrowed(other),
-            _ => Cow::Borrowed("usage"),
+            _ => Cow::Owned(locale::get_text(
+                language,
+                LocaleKey::NotificationWindowUsage,
+            )),
         }
     }
 
@@ -1308,18 +1441,13 @@ impl NotificationManager {
     fn send_status_notification(
         &self,
         provider: ProviderId,
-        description: &str,
+        kind: ProviderStateKind,
         settings: &Settings,
     ) {
         if Self::quiet_hours_active(settings) {
             return;
         }
-        let title = Self::notification_title(NotificationType::StatusIssue, settings.ui_language);
-        let body = locale::format_locale(
-            settings.ui_language,
-            LocaleKey::NotificationToastStatusBody,
-            &[provider.display_name(), description],
-        );
+        let (title, body) = Self::status_notification_text(provider, kind, settings.ui_language);
         self.show_toast(
             &title,
             &body,
@@ -2392,6 +2520,176 @@ mod tests {
                 .iter()
                 .any(|key| { matches!(key.3, NotificationType::BankedResetCredit(2)) })
         );
+    }
+
+    #[test]
+    fn every_toast_payload_is_sanitized_at_the_shared_template() {
+        let xml = toast_template(
+            "Codex failed for jane@example.com",
+            "Bearer abc123 at C:\\Users\\JaneDoe\\.codex\\auth.json",
+            None,
+            NotificationDestination::Providers(ProviderId::Codex),
+        );
+        for leaked in ["jane@example.com", "abc123", "JaneDoe"] {
+            assert!(!xml.contains(leaked), "{leaked}: {xml}");
+        }
+        assert!(xml.contains("Codex failed"));
+    }
+
+    #[test]
+    fn status_issue_needs_confirmation_toasts_once_and_rearms_after_recovery() {
+        let settings = Settings::default();
+        let mut manager = NotificationManager::new();
+        let auth = ProviderStateKind::NeedsAuthentication;
+        assert!(!manager.observe_provider_status(ProviderId::Claude, auth, &settings));
+        assert!(manager.observe_provider_status(ProviderId::Claude, auth, &settings));
+        for _ in 0..50 {
+            assert!(!manager.observe_provider_status(ProviderId::Claude, auth, &settings));
+        }
+        // A different provider is independent.
+        assert!(!manager.observe_provider_status(
+            ProviderId::Codex,
+            ProviderStateKind::Unknown,
+            &settings
+        ));
+        // One healthy refresh re-arms; a single new blip stays silent.
+        assert!(!manager.observe_provider_status(
+            ProviderId::Claude,
+            ProviderStateKind::Ready,
+            &settings
+        ));
+        assert!(!manager.observe_provider_status(ProviderId::Claude, auth, &settings));
+        assert!(!manager.observe_provider_status(
+            ProviderId::Claude,
+            ProviderStateKind::Ready,
+            &settings
+        ));
+        assert!(!manager.observe_provider_status(ProviderId::Claude, auth, &settings));
+        assert!(manager.observe_provider_status(ProviderId::Claude, auth, &settings));
+    }
+
+    #[test]
+    fn status_issue_respects_master_switch_and_category() {
+        let mut manager = NotificationManager::new();
+        let mut settings = Settings::default();
+        settings.notification_events.status_issue = false;
+        for _ in 0..5 {
+            assert!(!manager.observe_provider_status(
+                ProviderId::Claude,
+                ProviderStateKind::Unknown,
+                &settings
+            ));
+        }
+        settings.notification_events.status_issue = true;
+        settings.show_notifications = false;
+        assert!(!manager.observe_provider_status(
+            ProviderId::Claude,
+            ProviderStateKind::Unknown,
+            &settings
+        ));
+    }
+
+    #[test]
+    fn status_copy_is_localized_and_never_carries_provider_text() {
+        for language in [
+            crate::settings::Language::English,
+            crate::settings::Language::Arabic,
+        ] {
+            for kind in [
+                ProviderStateKind::NeedsAuthentication,
+                ProviderStateKind::ExpiredSession,
+                ProviderStateKind::LocalRuntimeOffline,
+                ProviderStateKind::Unknown,
+            ] {
+                let (title, body) = NotificationManager::status_notification_text(
+                    ProviderId::Claude,
+                    kind,
+                    language,
+                );
+                assert!(!title.is_empty());
+                assert!(body.contains("Claude"), "{body}");
+                assert!(!body.contains("{}"), "{body}");
+            }
+        }
+        let (_, en) = NotificationManager::status_notification_text(
+            ProviderId::Claude,
+            ProviderStateKind::NeedsAuthentication,
+            crate::settings::Language::English,
+        );
+        let (_, ar) = NotificationManager::status_notification_text(
+            ProviderId::Claude,
+            ProviderStateKind::NeedsAuthentication,
+            crate::settings::Language::Arabic,
+        );
+        assert_ne!(en, ar);
+    }
+
+    #[test]
+    fn severity_is_semantic_and_calm() {
+        assert_eq!(
+            NotificationType::UsageStep(50).severity(),
+            NotificationSeverity::Info
+        );
+        assert_eq!(
+            NotificationType::ExpectedReset(1).severity(),
+            NotificationSeverity::Info
+        );
+        assert_eq!(
+            NotificationType::HighUsage.severity(),
+            NotificationSeverity::Warning
+        );
+        assert_eq!(
+            NotificationType::UnexpectedReset(1).severity(),
+            NotificationSeverity::Warning
+        );
+        assert_eq!(
+            NotificationType::CriticalUsage.severity(),
+            NotificationSeverity::Critical
+        );
+        assert_eq!(
+            NotificationType::Exhausted.severity(),
+            NotificationSeverity::Critical
+        );
+    }
+
+    #[test]
+    fn threshold_alerts_are_recorded_once_in_history_with_the_configured_level() {
+        let settings = Settings::default();
+        let mut manager = NotificationManager::new();
+        for _ in 0..20 {
+            manager.check_and_notify(ProviderId::Claude, "acct", "weekly", 93.0, &settings);
+        }
+        let page = manager
+            .notification_history()
+            .unwrap()
+            .page(&crate::notification_journal::NotificationQuery::default())
+            .unwrap();
+        assert_eq!(page.items.len(), 1, "{:?}", page.items);
+        let alert = &page.items[0];
+        assert_eq!(alert.kind, JournalEventKind::UsageCriticalReached);
+        assert_eq!(alert.current_value, 93.0);
+        assert_eq!(
+            alert.previous_value,
+            settings
+                .usage_thresholds(ProviderId::Claude, "weekly")
+                .critical
+        );
+        assert_eq!(alert.severity, NotificationSeverity::Critical);
+    }
+
+    #[test]
+    fn pricing_toast_copy_is_localized() {
+        for key in [
+            LocaleKey::NotificationPricingTitle,
+            LocaleKey::NotificationPricingPeakBody,
+            LocaleKey::NotificationPricingOffPeakBody,
+            LocaleKey::NotificationPricingStandardBody,
+        ] {
+            assert_ne!(
+                locale::get_text(crate::settings::Language::English, key),
+                locale::get_text(crate::settings::Language::Arabic, key)
+            );
+        }
     }
 
     #[test]

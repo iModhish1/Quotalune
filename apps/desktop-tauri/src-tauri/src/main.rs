@@ -11,6 +11,7 @@ mod events;
 mod floatbar;
 mod geometry_store;
 mod history_recorder;
+mod notification_qa_fixture;
 mod powertoys;
 mod proof_harness;
 mod provider_tray;
@@ -582,6 +583,7 @@ fn main() {
             tray_qa_fixture::get_tray_qa_fixture,
             tray_qa_fixture::set_tray_qa_fixture,
             provider_tray::render_provider_tray_preview,
+            notification_qa_fixture::send_notification_qa_fixture,
             command_profiles::get_profile_store,
             command_profiles::switch_profile,
             command_profiles::create_profile,

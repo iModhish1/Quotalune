@@ -714,6 +714,18 @@ fn update_tray_and_notifications(
     Ok(())
 }
 
+/// Typed refresh outcome for status notifications. An error the backend could
+/// not classify still counts as a problem; the raw error text is never used.
+fn provider_status_kind(
+    snapshot: &ProviderUsageSnapshot,
+) -> quotalis_core::core::ProviderStateKind {
+    use quotalis_core::core::ProviderStateKind;
+    match (snapshot.error.is_some(), snapshot.error_state) {
+        (true, ProviderStateKind::Ready) => ProviderStateKind::Unknown,
+        (_, kind) => kind,
+    }
+}
+
 fn notify_usage_thresholds(
     state: &tauri::State<'_, Mutex<AppState>>,
     settings: &Settings,
@@ -723,6 +735,13 @@ fn notify_usage_thresholds(
     let cli_map = quotalis_core::core::cli_name_map();
     if let Ok(mut guard) = state.lock() {
         for snapshot in cached {
+            if let Some(&provider) = cli_map.get(snapshot.provider_id.as_str()) {
+                guard.notification_manager.observe_provider_status(
+                    provider,
+                    provider_status_kind(snapshot),
+                    settings,
+                );
+            }
             if snapshot.error.is_none()
                 && let Some(&provider) = cli_map.get(snapshot.provider_id.as_str())
             {
@@ -1120,6 +1139,32 @@ pub fn get_cached_providers(
         .into_iter()
         .map(|snapshot| ProviderUsagePresentationSnapshot::new(snapshot, &settings))
         .collect()
+}
+
+#[cfg(test)]
+mod status_kind_tests {
+    use super::*;
+    use quotalis_core::core::ProviderStateKind;
+
+    fn snapshot(error: Option<&str>, state: &str) -> ProviderUsageSnapshot {
+        serde_json::from_value(serde_json::json!({"providerId":"claude","sourceLabel":"oauth","errorState":state,"error":error,"primary":{"usedPercent":0.0,"remainingPercent":100.0}})).unwrap()
+    }
+
+    #[test]
+    fn classified_errors_keep_their_kind_and_unclassified_errors_are_problems() {
+        assert_eq!(
+            provider_status_kind(&snapshot(None, "ready")),
+            ProviderStateKind::Ready
+        );
+        assert_eq!(
+            provider_status_kind(&snapshot(Some("401"), "needsAuthentication")),
+            ProviderStateKind::NeedsAuthentication
+        );
+        assert_eq!(
+            provider_status_kind(&snapshot(Some("Timeout"), "ready")),
+            ProviderStateKind::Unknown
+        );
+    }
 }
 
 #[cfg(test)]

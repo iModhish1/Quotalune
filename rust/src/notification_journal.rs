@@ -20,6 +20,41 @@ pub enum JournalEventKind {
     UnexpectedQuotaChange,
     BankedResetsIncreased,
     BankedResetsDecreased,
+    /// Usage first reached the configured high alert level in this window.
+    UsageHighReached,
+    /// Usage first reached the configured critical alert level in this window.
+    UsageCriticalReached,
+    /// The window was observed fully used.
+    UsageExhausted,
+}
+
+/// Semantic weight of a notification. Derived from what was observed, never
+/// from provider accent or presentation choices.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum NotificationSeverity {
+    Info,
+    Warning,
+    Critical,
+}
+
+impl JournalEventKind {
+    pub const fn severity(self) -> NotificationSeverity {
+        match self {
+            Self::ScheduledResetObserved
+            | Self::BankedResetsIncreased
+            | Self::BankedResetsDecreased => NotificationSeverity::Info,
+            Self::UnexpectedQuotaChange | Self::UsageHighReached => NotificationSeverity::Warning,
+            Self::UsageCriticalReached | Self::UsageExhausted => NotificationSeverity::Critical,
+        }
+    }
+
+    const fn is_alert(self) -> bool {
+        matches!(
+            self,
+            Self::UsageHighReached | Self::UsageCriticalReached | Self::UsageExhausted
+        )
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -40,6 +75,7 @@ pub struct NotificationEvent {
     pub previous_value: f64,
     pub current_value: f64,
     pub is_read: bool,
+    pub severity: NotificationSeverity,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -225,12 +261,7 @@ impl NotificationJournal {
         observation: ResetObservation,
         received_at: i64,
     ) -> Result<Option<NotificationEvent>, String> {
-        if window_key.is_empty()
-            || window_key.len() > 96
-            || !window_key
-                .bytes()
-                .all(|c| c.is_ascii_alphanumeric() || b"-_:".contains(&c))
-        {
+        if !valid_window_key(window_key) {
             return Err("Invalid notification window identity".into());
         }
         if !observation.value().is_finite()
@@ -261,7 +292,7 @@ impl NotificationJournal {
                     (provider_id,account_ref,window_key,kind,detected_at,received_at,observed_from,observed_to,previous_value,current_value)
                     VALUES (?1,?2,?3,?4,?5,?5,?6,?7,?8,?9)", params![provider.cli_name(), account_ref, window_key, kind_json, received_at, before.observed_at(), observation.observed_at(), before.value(), observation.value()]).map_err(db_error)?;
                 Some(NotificationEvent { id: tx.last_insert_rowid(), provider_id: provider.cli_name().into(), account_ref: account_ref.clone(), window_key: window_key.into(), kind,
-                    occurred_at: None, detected_at: received_at, received_at, observed_from: before.observed_at(), observed_to: observation.observed_at(), previous_value: before.value(), current_value: observation.value(), is_read: false })
+                    occurred_at: None, detected_at: received_at, received_at, observed_from: before.observed_at(), observed_to: observation.observed_at(), previous_value: before.value(), current_value: observation.value(), is_read: false, severity: kind.severity() })
             } else { None };
             let json = serde_json::to_string(&observation).map_err(|_| "Invalid notification observation")?;
             tx.execute("INSERT INTO notification_baselines(lane,observation,received_at) VALUES(?1,?2,?3)
@@ -272,6 +303,47 @@ impl NotificationJournal {
                 (SELECT lane FROM notification_baselines ORDER BY received_at DESC, lane LIMIT ?2)", params![received_at.saturating_sub(RETENTION_SECONDS), MAX_BASELINES]).map_err(db_error)?;
             tx.commit().map_err(db_error)?;
             Ok(inserted)
+        })
+    }
+
+    /// Record an alert the moment its dedupe identity first fires. `threshold`
+    /// is the configured alert level and `used_percent` the observed value, so
+    /// history shows exactly what crossed; nothing is recorded for repeats.
+    pub fn record_alert(
+        &self,
+        provider: ProviderId,
+        account: &str,
+        window_key: &str,
+        kind: JournalEventKind,
+        threshold: f64,
+        used_percent: f64,
+        observed_at: i64,
+    ) -> Result<NotificationEvent, String> {
+        if !kind.is_alert() {
+            return Err("Only alert kinds are recorded directly".into());
+        }
+        if !valid_window_key(window_key) {
+            return Err("Invalid notification window identity".into());
+        }
+        let valid = |value: f64| value.is_finite() && (0.0..=100.0).contains(&value);
+        if !valid(threshold) || !valid(used_percent) || observed_at <= 0 {
+            return Err("Invalid notification observation".into());
+        }
+        let account_ref =
+            (!account.trim().is_empty()).then(|| digest(&[provider.cli_name(), account]));
+        self.with_connection(|connection| {
+            let tx = connection.transaction_with_behavior(TransactionBehavior::Immediate).map_err(db_error)?;
+            let kind_json = serde_json::to_string(&kind).map_err(|_| "Invalid notification event")?;
+            tx.execute("INSERT INTO notification_events
+                (provider_id,account_ref,window_key,kind,occurred_at,detected_at,received_at,observed_from,observed_to,previous_value,current_value)
+                VALUES (?1,?2,?3,?4,?5,?5,?5,?5,?5,?6,?7)", params![provider.cli_name(), account_ref, window_key, kind_json, observed_at, threshold, used_percent]).map_err(db_error)?;
+            let id = tx.last_insert_rowid();
+            tx.execute("DELETE FROM notification_events WHERE received_at < ?1 OR id NOT IN
+                (SELECT id FROM notification_events ORDER BY id DESC LIMIT ?2)", params![observed_at.saturating_sub(RETENTION_SECONDS), MAX_EVENTS]).map_err(db_error)?;
+            tx.commit().map_err(db_error)?;
+            Ok(NotificationEvent { id, provider_id: provider.cli_name().into(), account_ref, window_key: window_key.into(), kind,
+                occurred_at: Some(observed_at), detected_at: observed_at, received_at: observed_at, observed_from: observed_at, observed_to: observed_at,
+                previous_value: threshold, current_value: used_percent, is_read: false, severity: kind.severity() })
         })
     }
 
@@ -295,7 +367,7 @@ impl NotificationJournal {
             let mut items = statement.query_map(params![query.before_id, query.provider_id, query.unread_only, query.search, limit + 1], |row| {
                 let raw: String = row.get(4)?;
                 let kind = serde_json::from_str(&raw).map_err(|error| rusqlite::Error::FromSqlConversionFailure(4, rusqlite::types::Type::Text, Box::new(error)))?;
-                Ok(NotificationEvent { id: row.get(0)?, provider_id: row.get(1)?, account_ref: row.get(2)?, window_key: row.get(3)?, kind, occurred_at: row.get(5)?, detected_at: row.get(6)?, received_at: row.get(7)?, observed_from: row.get(8)?, observed_to: row.get(9)?, previous_value: row.get(10)?, current_value: row.get(11)?, is_read: row.get(12)? })
+                Ok(NotificationEvent { id: row.get(0)?, provider_id: row.get(1)?, account_ref: row.get(2)?, window_key: row.get(3)?, kind, occurred_at: row.get(5)?, detected_at: row.get(6)?, received_at: row.get(7)?, observed_from: row.get(8)?, observed_to: row.get(9)?, previous_value: row.get(10)?, current_value: row.get(11)?, is_read: row.get(12)?, severity: JournalEventKind::severity(kind) })
             }).map_err(db_error)?.collect::<Result<Vec<_>, _>>().map_err(db_error)?;
             let has_more = items.len() > usize::try_from(limit).unwrap_or(100);
             if has_more { items.pop(); }
@@ -331,6 +403,14 @@ impl NotificationJournal {
                 .map_err(db_error)
         })
     }
+}
+
+fn valid_window_key(window_key: &str) -> bool {
+    !window_key.is_empty()
+        && window_key.len() <= 96
+        && window_key
+            .bytes()
+            .all(|c| c.is_ascii_alphanumeric() || b"-_:".contains(&c))
 }
 
 fn digest(parts: &[&str]) -> String {
