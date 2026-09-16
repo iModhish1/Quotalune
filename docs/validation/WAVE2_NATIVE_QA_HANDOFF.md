@@ -31,7 +31,10 @@ Embedded HEAD must equal `git rev-parse HEAD`; channel `dev`; AUMID
 | Area | Where | Tested contract |
 | --- | --- | --- |
 | Tray config | `rust/src/settings/provider_tray.rs` | 6 styles (`ring arc bar badge orbit mark`), `identity` provider/quotalis, legacy settings load, invalid values normalize |
-| Renderer | `rust/src/tray/provider.rs` `render_provider_icon_spec` | 64×64 RGBA, deterministic, every style distinct, unknown ≠ 0 ≠ 100 for gauge styles, orbit lights full track at 100, Quotalis mark only replaces the center |
+| DPI policy | `rust/src/tray/dpi.rs` | Windows receives one HICON per icon (`tray-icon` `CreateIcon`) and resamples it to the shell small-icon size (16 px at 100 %). Main and provider icons share one 64 px source, drawn natively (not enlarged), so no scale up to 400 % upscales; 100/125/150/200/250/300 % tested |
+| Renderer | `rust/src/tray/provider.rs` `render_provider_icon_spec`, `rust/src/tray/render.rs` `*_sized` | 64×64 RGBA, deterministic, every style distinct, unknown ≠ 0 ≠ 100 for gauge styles, orbit lights full track at 100, Quotalis mark only replaces the center; main bar/percent icon keeps its 32 px layout at 64 px resolution |
+| `tray_scale_percent` | `useTrayPanelController.ts`, `settings.rs` | The tray flyout's content zoom slider (100–200 %); tested to never change tray icon pixels |
+| Token periods | `rust/src/token_periods.rs`, `cost_scanner::observe_token_period` | Codex local sessions (input + output): today/week/month/year exact only with proven scan coverage, year only when local activity reaches Jan 1, lifetime always ≥. Claude transcripts (total only): every period ≥. Other providers: none. Tray Studio offers only these; unsupported persisted choices behave as Off; readings are never truncated |
 | Reconcile | `apps/desktop-tauri/src-tauri/src/provider_tray.rs` | catalog order, disabled providers drop, cap `MAX_PROVIDER_TRAY_ICONS = 8` (pins first), create/update/disable/re-enable/remove/switch ×50/×100 with no orphans or duplicates |
 | Tooltip | same file + `tray_bridge.rs` | ≤127 UTF-16 units (`szTip` is 128 incl. terminator), 3 real rows, missing window = `—`, Arabic within limit, main tooltip keeps whole lines and ends `+N`, error text sanitized |
 | Appearance | `provider_tray.rs::accent` | Tray scope Global → main application Quotalis palette; Override → per-indicator color |
@@ -41,7 +44,8 @@ Embedded HEAD must equal `git rev-parse HEAD`; channel `dev`; AUMID
 | Toast text | `rust/src/notifications.rs::toast_template` | every title/body passes `UserFacingText::sanitize` (secrets, emails, profile paths, control chars) |
 | Status toasts | `NotificationManager::observe_provider_status` | 2 consecutive failures → one localized, content-free toast; silent while failing; re-arms after a healthy refresh; respects master switch and category |
 | Severity | `JournalEventKind::severity`, `NotificationType::severity` | Info / Warning / Critical from observed state only |
-| History | `NotificationJournal::record_alert` | High/Critical/Exhausted recorded once per dedupe identity with configured level → observed usage |
+| History | `NotificationJournal::record_notification`, schema v2 | Every issued notification (threshold, milestone, session depleted/restored, pace, provider status, DeepSeek pricing) plus reset/quota/banked observations; one row per dedupe identity; values optional; closed `detail` codes only; v1 databases migrate in place |
+| History open | `open_notification_history_event`, `NotificationManager::history_destination` | Rows open through the toast destination model from stored kind + registered provider id; forged ids rejected |
 | Activation | `notification_uri`/`parse_notification_uri`, `main.rs` single-instance | existing tests; fixture cases round-trip to real destinations |
 | Notification fixture | `notification_qa_fixture.rs` | Dev-only, 6 cases, production copy EN/AR, 1 s rate limit, no history/dedupe writes |
 
@@ -67,16 +71,13 @@ bulk-flip statuses.
 
 Known limits to record, not to "fix" silently:
 
-- Provider icons have one 64 px source; the main icon has one 32 px source
-  (upscaled above 200 % scale). `tray_scale_percent` is persisted but not read
-  by any renderer.
+- Windows, not Quotalis, resamples the 64 px source to the shell size; judge
+  sharpness at each scale, especially 100 % (heaviest downsample).
 - Minimal mark intentionally shows no reading; the tooltip carries it.
-- Fixture toasts do not write history — use a real Dev threshold crossing for
-  `W2-NOTIF-HISTORY-ENTRY`.
-- Status toasts are not recorded in history; milestone, session, pace and
-  status toasts remain outside history coverage (the history header says so).
-- A history database written by this build contains alert kinds an older
-  build cannot decode; do not downgrade the Dev app dir between builds.
+- Fixture toasts and user test notifications do not write history (explicit
+  tests, not events) — use real Dev activity for the history cases.
+- History schema v2 cannot be read by builds from before Wave 2B; do not
+  downgrade the Dev app dir between builds.
 
 ## 4. Defect loop
 

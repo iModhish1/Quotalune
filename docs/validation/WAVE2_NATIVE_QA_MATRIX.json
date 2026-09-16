@@ -10,45 +10,650 @@
     "appearance": "Settings -> General -> Appearance Composition -> Tray row Follow/Override (set_appearance_scope)."
   },
   "entries": [
-    { "id": "W2-TRAY-COUNT-1", "area": "tray", "setup": "Tray Studio: pin Claude only (Show this provider in the tray).", "fixture": { "providerId": "claude", "dataState": "available", "usedPercent": 62, "secondaryUsedPercent": 18, "plan": "Max", "resetMinutes": 95, "tokens": null }, "expectedEvidence": "native/tray/count-1.png", "passCriteria": "Exactly one quotalis-provider-claude icon beside the main Quotalis icon; no duplicate after 3 settings saves.", "status": "READY" },
-    { "id": "W2-TRAY-COUNT-3", "area": "tray", "setup": "Tray Studio: pin Claude, Codex, Gemini.", "fixture": null, "expectedEvidence": "native/tray/count-3.png", "passCriteria": "Three provider icons in catalog order; each tooltip names its own provider.", "status": "READY" },
-    { "id": "W2-TRAY-COUNT-5", "area": "tray", "setup": "Tray Studio: pin five enabled providers.", "fixture": null, "expectedEvidence": "native/tray/count-5.png", "passCriteria": "Five icons, stable IDs, no orphan after unpinning one and re-pinning it.", "status": "READY" },
-    { "id": "W2-TRAY-COUNT-CAP", "area": "tray", "setup": "Display: Tray icon mode = Per provider with more than 8 enabled providers.", "fixture": null, "expectedEvidence": "native/tray/count-cap-8.png", "passCriteria": "At most MAX_PROVIDER_TRAY_ICONS (8) provider icons; explicitly pinned providers present first.", "status": "READY" },
-    { "id": "W2-TRAY-LOGO-PROVIDER", "area": "tray", "setup": "Tray Studio: Claude, Center mark = Provider mark, style Orbit ring.", "fixture": { "providerId": "claude", "dataState": "available", "usedPercent": 40, "secondaryUsedPercent": null, "plan": null, "resetMinutes": null, "tokens": null }, "expectedEvidence": "native/tray/logo-provider.png", "passCriteria": "Real Claude mark, undistorted and uncropped, inside the ring; accent only around the mark.", "status": "READY" },
-    { "id": "W2-TRAY-LOGO-QUOTALIS", "area": "tray", "setup": "Tray Studio: Claude, Center mark = Quotalis mark.", "fixture": { "providerId": "claude", "dataState": "available", "usedPercent": 40, "secondaryUsedPercent": null, "plan": null, "resetMinutes": null, "tokens": null }, "expectedEvidence": "native/tray/logo-quotalis.png", "passCriteria": "Obsidian Quotalis lens mark in the center; ring still measures Claude's selected limit; changing the floating Structure does not change it.", "status": "READY" },
-    { "id": "W2-TRAY-STYLE-RING", "area": "tray", "setup": "Style Orbit ring, Used, 62%.", "fixture": { "providerId": "claude", "dataState": "available", "usedPercent": 62, "secondaryUsedPercent": null, "plan": null, "resetMinutes": null, "tokens": null }, "expectedEvidence": "native/tray/style-ring.png", "passCriteria": "Full-circle track filled to 62% clockwise from top.", "status": "READY" },
-    { "id": "W2-TRAY-STYLE-ARC", "area": "tray", "setup": "Style Open arc.", "fixture": "same as W2-TRAY-STYLE-RING", "expectedEvidence": "native/tray/style-arc.png", "passCriteria": "80% sweep track, filled proportionally.", "status": "READY" },
-    { "id": "W2-TRAY-STYLE-BAR", "area": "tray", "setup": "Style Horizon bar.", "fixture": "same as W2-TRAY-STYLE-RING", "expectedEvidence": "native/tray/style-bar.png", "passCriteria": "Bottom bar legible at 16px shell size.", "status": "READY" },
-    { "id": "W2-TRAY-STYLE-BADGE", "area": "tray", "setup": "Style Number badge.", "fixture": "same as W2-TRAY-STYLE-RING", "expectedEvidence": "native/tray/style-badge.png", "passCriteria": "Badge digits readable or honestly illegible at 100% scale (record which).", "status": "READY" },
-    { "id": "W2-TRAY-STYLE-ORBIT", "area": "tray", "setup": "Style Orbit marker.", "fixture": "same as W2-TRAY-STYLE-RING", "expectedEvidence": "native/tray/style-orbit.png", "passCriteria": "Hairline track with a single position dot at 62%.", "status": "READY" },
-    { "id": "W2-TRAY-STYLE-MARK", "area": "tray", "setup": "Style Minimal mark.", "fixture": "same as W2-TRAY-STYLE-RING", "expectedEvidence": "native/tray/style-mark.png", "passCriteria": "Mark only, no gauge; reading present in tooltip.", "status": "READY" },
-    { "id": "W2-TRAY-USED", "area": "tray", "setup": "Used, precision 1.", "fixture": { "providerId": "codex", "dataState": "available", "usedPercent": 97.5, "secondaryUsedPercent": null, "plan": null, "resetMinutes": 30, "tokens": null }, "expectedEvidence": "native/tray/used-97.png", "passCriteria": "Gauge near full; tooltip reads 97.5% used.", "status": "READY" },
-    { "id": "W2-TRAY-REMAINING", "area": "tray", "setup": "Remaining, precision 1.", "fixture": "same as W2-TRAY-USED", "expectedEvidence": "native/tray/remaining-2.png", "passCriteria": "Gauge near empty; tooltip reads 2.5% left (no inversion).", "status": "READY" },
-    { "id": "W2-TRAY-ZERO", "area": "tray", "setup": "Used.", "fixture": { "providerId": "codex", "dataState": "available", "usedPercent": 0, "secondaryUsedPercent": null, "plan": null, "resetMinutes": null, "tokens": null }, "expectedEvidence": "native/tray/used-0.png", "passCriteria": "Solid empty track (a real 0%), visibly different from W2-TRAY-UNAVAILABLE.", "status": "READY" },
-    { "id": "W2-TRAY-FULL", "area": "tray", "setup": "Used; repeat with Orbit marker.", "fixture": { "providerId": "codex", "dataState": "available", "usedPercent": 100, "secondaryUsedPercent": null, "plan": null, "resetMinutes": null, "tokens": null }, "expectedEvidence": "native/tray/used-100.png", "passCriteria": "Full gauge; orbit style lights the whole track (distinct from 0%).", "status": "READY" },
-    { "id": "W2-TRAY-UNAVAILABLE", "area": "tray", "setup": "Any gauge style.", "fixture": { "providerId": "codex", "dataState": "unavailable", "usedPercent": 0, "secondaryUsedPercent": null, "plan": null, "resetMinutes": null, "tokens": null }, "expectedEvidence": "native/tray/unavailable.png", "passCriteria": "Dashed neutral track, never a 0% gauge; tooltip reading is a dash.", "status": "READY" },
-    { "id": "W2-TRAY-ERROR", "area": "tray", "setup": "Any gauge style.", "fixture": { "providerId": "codex", "dataState": "error", "usedPercent": 50, "secondaryUsedPercent": null, "plan": null, "resetMinutes": null, "tokens": null }, "expectedEvidence": "native/tray/error.png", "passCriteria": "Same honest broken-track treatment; no stale 50% shown.", "status": "READY" },
-    { "id": "W2-TRAY-TOOLTIP-3", "area": "tray", "setup": "Tooltip limits: Session, Weekly (+ one window the provider does not supply if selectable from prior settings); name + plan on; tokens This week.", "fixture": { "providerId": "claude", "dataState": "available", "usedPercent": 41, "secondaryUsedPercent": 12, "plan": "Max 20x", "resetMinutes": 120, "tokens": 987654 }, "expectedEvidence": "native/tray/tooltip-3-rows.png", "passCriteria": "Header 'Claude · Max 20x', one row per real window, missing window shows a dash, token line 'Local tokens 987654'; whole tooltip not cut mid-line.", "status": "READY" },
-    { "id": "W2-TRAY-TOOLTIP-MAIN-MANY", "area": "tray", "setup": "Enable 24+ providers; hover the main Quotalis icon.", "fixture": null, "expectedEvidence": "native/tray/tooltip-main-many.png", "passCriteria": "Whole provider lines only, ending with a '+N' line; no garbled trailing characters.", "status": "READY" },
-    { "id": "W2-TRAY-FOLLOW-GLOBAL", "area": "tray", "setup": "Appearance Composition: Tray -> Follow Main Application; Quotalis logo variant Ember; indicator accent Silver.", "fixture": "same as W2-TRAY-STYLE-RING", "expectedEvidence": "native/tray/follow-global.png", "passCriteria": "Gauge uses the Ember palette, not Silver; Tray Studio shows the follows-appearance note with the accent select disabled; Appearance summary reads 'Following Main Application'.", "status": "READY" },
-    { "id": "W2-TRAY-EXPLORER-RESTART", "area": "tray", "setup": "With 3 provider icons pinned, restart explorer.exe (Task Manager -> Windows Explorer -> Restart).", "fixture": null, "expectedEvidence": "native/tray/explorer-restart.png", "passCriteria": "Main and all provider icons return with their latest image and tooltip without restarting Quotalis (tray-icon 0.21.3 TaskbarCreated re-registration).", "status": "READY" },
-    { "id": "W2-TRAY-TASKBAR-LIGHT", "area": "tray", "setup": "Windows Settings -> Personalization -> Colors -> Windows mode Light.", "fixture": "same as W2-TRAY-STYLE-RING", "expectedEvidence": "native/tray/taskbar-light.png", "passCriteria": "Icon and track remain legible against a light taskbar; matches Tray Studio's light plate preview.", "status": "READY" },
-    { "id": "W2-TRAY-TASKBAR-DARK", "area": "tray", "setup": "Windows mode Dark.", "fixture": "same as W2-TRAY-STYLE-RING", "expectedEvidence": "native/tray/taskbar-dark.png", "passCriteria": "Legible against a dark taskbar; matches the dark plate preview.", "status": "READY" },
-    { "id": "W2-TRAY-DPI-150", "area": "tray", "setup": "Display scale 150% (then 200%).", "fixture": "same as W2-TRAY-STYLE-RING", "expectedEvidence": "native/tray/dpi-150.png", "passCriteria": "Provider icon (64px source) is downsampled, not upscaled/blurred; main icon (32px source) noted as upscaled above 200%.", "status": "READY" },
-    { "id": "W2-TRAY-CLICK", "area": "tray", "setup": "Left-click a provider icon.", "fixture": null, "expectedEvidence": "native/tray/click-provider.png", "passCriteria": "Settings opens on Providers with that provider selected; single process.", "status": "READY" },
-    { "id": "W2-NOTIF-IDENTITY", "area": "notification", "setup": "Notification fixture: Warning · high usage, provider Claude.", "fixture": { "kind": "warning", "providerId": "claude" }, "expectedEvidence": "native/notifications/identity.png", "passCriteria": "Toast header/app attribution reads 'Quotalis' (Dev AUMID app.quotalis.desktop.dev); no QuotaArc/CodexBar branding.", "status": "READY" },
-    { "id": "W2-NOTIF-PROVIDER-LOGO", "area": "notification", "setup": "Same as W2-NOTIF-IDENTITY.", "fixture": { "kind": "warning", "providerId": "claude" }, "expectedEvidence": "native/notifications/provider-logo.png", "passCriteria": "Claude mark as the toast content logo (appLogoOverride); app identity still Quotalis.", "status": "READY" },
-    { "id": "W2-NOTIF-EN", "area": "notification", "setup": "Language English; send Critical.", "fixture": { "kind": "critical", "providerId": "codex" }, "expectedEvidence": "native/notifications/english-critical.png", "passCriteria": "English title/body, 94% used · 6% remaining, weekly window label.", "status": "READY" },
-    { "id": "W2-NOTIF-AR", "area": "notification", "setup": "?window=structure-qa Language = Arabic; send Critical.", "fixture": { "kind": "critical", "providerId": "codex" }, "expectedEvidence": "native/notifications/arabic-critical.png", "passCriteria": "Arabic copy, correct bidi for provider name and percentages, no tofu.", "status": "READY" },
-    { "id": "W2-NOTIF-INFO", "area": "notification", "setup": "Send Informational.", "fixture": { "kind": "info", "providerId": "claude" }, "expectedEvidence": "native/notifications/info.png", "passCriteria": "Calm session-restored copy.", "status": "READY" },
-    { "id": "W2-NOTIF-WARNING", "area": "notification", "setup": "Send Warning.", "fixture": { "kind": "warning", "providerId": "claude" }, "expectedEvidence": "native/notifications/warning.png", "passCriteria": "Approaching-limit copy, no alarmist language.", "status": "READY" },
-    { "id": "W2-NOTIF-CRITICAL", "area": "notification", "setup": "Send Critical.", "fixture": { "kind": "critical", "providerId": "claude" }, "expectedEvidence": "native/notifications/critical.png", "passCriteria": "Critical copy.", "status": "READY" },
-    { "id": "W2-NOTIF-RESET", "area": "notification", "setup": "Send Reset completed.", "fixture": { "kind": "reset", "providerId": "codex" }, "expectedEvidence": "native/notifications/reset.png", "passCriteria": "Reset copy; clicking opens the Dashboard.", "status": "READY" },
-    { "id": "W2-NOTIF-UNAVAILABLE", "area": "notification", "setup": "Send Provider unavailable.", "fixture": { "kind": "providerUnavailable", "providerId": "gemini" }, "expectedEvidence": "native/notifications/unavailable.png", "passCriteria": "'Gemini could not be refreshed. Quotalis will keep trying.'; no raw error text.", "status": "READY" },
-    { "id": "W2-NOTIF-AUTH-SANITIZED", "area": "notification", "setup": "Send Sign-in required.", "fixture": { "kind": "authRequired", "providerId": "codex" }, "expectedEvidence": "native/notifications/auth-sanitized.png", "passCriteria": "Sign-in copy only; no token, cookie, email, path or stderr text.", "status": "READY" },
-    { "id": "W2-NOTIF-ACTIVATION", "area": "notification", "setup": "With QuotalisDev running, click the Warning toast.", "fixture": { "kind": "warning", "providerId": "claude" }, "expectedEvidence": "native/notifications/activation.png", "passCriteria": "quotalis-dev://provider/claude focuses the existing process and opens the Claude pop-out; Task Manager shows one QuotalisDev.exe primary process.", "status": "READY" },
-    { "id": "W2-NOTIF-DEEPLINK-SETTINGS", "area": "notification", "setup": "Click the Sign-in required toast.", "fixture": { "kind": "authRequired", "providerId": "codex" }, "expectedEvidence": "native/notifications/deeplink-settings.png", "passCriteria": "Settings opens on Providers with Codex selected.", "status": "READY" },
-    { "id": "W2-NOTIF-HISTORY-ENTRY", "area": "notification", "setup": "Real Dev usage crossing the high threshold (fixture toasts intentionally do not write history).", "fixture": null, "expectedEvidence": "native/notifications/history-alert.png", "passCriteria": "Notification center lists 'High usage alert' with Warning severity, configured level → observed usage, alert evidence copy.", "status": "READY" },
-    { "id": "W2-NOTIF-NO-DUPLICATE", "area": "notification", "setup": "Let 5 refreshes run while a threshold stays crossed; separately, keep a provider failing for 5 refreshes.", "fixture": null, "expectedEvidence": "native/notifications/no-duplicate.png", "passCriteria": "One threshold toast total; one status toast total, only after the second consecutive failure.", "status": "READY" }
+    {
+      "id": "W2-TRAY-COUNT-1",
+      "area": "tray",
+      "setup": "Tray Studio: pin Claude only (Show this provider in the tray).",
+      "fixture": {
+        "providerId": "claude",
+        "dataState": "available",
+        "usedPercent": 62,
+        "secondaryUsedPercent": 18,
+        "plan": "Max",
+        "resetMinutes": 95,
+        "tokens": null
+      },
+      "expectedEvidence": "native/tray/count-1.png",
+      "passCriteria": "Exactly one quotalis-provider-claude icon beside the main Quotalis icon; no duplicate after 3 settings saves.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-COUNT-3",
+      "area": "tray",
+      "setup": "Tray Studio: pin Claude, Codex, Gemini.",
+      "fixture": null,
+      "expectedEvidence": "native/tray/count-3.png",
+      "passCriteria": "Three provider icons in catalog order; each tooltip names its own provider.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-COUNT-5",
+      "area": "tray",
+      "setup": "Tray Studio: pin five enabled providers.",
+      "fixture": null,
+      "expectedEvidence": "native/tray/count-5.png",
+      "passCriteria": "Five icons, stable IDs, no orphan after unpinning one and re-pinning it.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-COUNT-CAP",
+      "area": "tray",
+      "setup": "Display: Tray icon mode = Per provider with more than 8 enabled providers.",
+      "fixture": null,
+      "expectedEvidence": "native/tray/count-cap-8.png",
+      "passCriteria": "At most MAX_PROVIDER_TRAY_ICONS (8) provider icons; explicitly pinned providers present first.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-LOGO-PROVIDER",
+      "area": "tray",
+      "setup": "Tray Studio: Claude, Center mark = Provider mark, style Orbit ring.",
+      "fixture": {
+        "providerId": "claude",
+        "dataState": "available",
+        "usedPercent": 40,
+        "secondaryUsedPercent": null,
+        "plan": null,
+        "resetMinutes": null,
+        "tokens": null
+      },
+      "expectedEvidence": "native/tray/logo-provider.png",
+      "passCriteria": "Real Claude mark, undistorted and uncropped, inside the ring; accent only around the mark.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-LOGO-QUOTALIS",
+      "area": "tray",
+      "setup": "Tray Studio: Claude, Center mark = Quotalis mark.",
+      "fixture": {
+        "providerId": "claude",
+        "dataState": "available",
+        "usedPercent": 40,
+        "secondaryUsedPercent": null,
+        "plan": null,
+        "resetMinutes": null,
+        "tokens": null
+      },
+      "expectedEvidence": "native/tray/logo-quotalis.png",
+      "passCriteria": "Obsidian Quotalis lens mark in the center; ring still measures Claude's selected limit; changing the floating Structure does not change it.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-STYLE-RING",
+      "area": "tray",
+      "setup": "Style Orbit ring, Used, 62%.",
+      "fixture": {
+        "providerId": "claude",
+        "dataState": "available",
+        "usedPercent": 62,
+        "secondaryUsedPercent": null,
+        "plan": null,
+        "resetMinutes": null,
+        "tokens": null
+      },
+      "expectedEvidence": "native/tray/style-ring.png",
+      "passCriteria": "Full-circle track filled to 62% clockwise from top.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-STYLE-ARC",
+      "area": "tray",
+      "setup": "Style Open arc.",
+      "fixture": "same as W2-TRAY-STYLE-RING",
+      "expectedEvidence": "native/tray/style-arc.png",
+      "passCriteria": "80% sweep track, filled proportionally.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-STYLE-BAR",
+      "area": "tray",
+      "setup": "Style Horizon bar.",
+      "fixture": "same as W2-TRAY-STYLE-RING",
+      "expectedEvidence": "native/tray/style-bar.png",
+      "passCriteria": "Bottom bar legible at 16px shell size.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-STYLE-BADGE",
+      "area": "tray",
+      "setup": "Style Number badge.",
+      "fixture": "same as W2-TRAY-STYLE-RING",
+      "expectedEvidence": "native/tray/style-badge.png",
+      "passCriteria": "Badge digits readable or honestly illegible at 100% scale (record which).",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-STYLE-ORBIT",
+      "area": "tray",
+      "setup": "Style Orbit marker.",
+      "fixture": "same as W2-TRAY-STYLE-RING",
+      "expectedEvidence": "native/tray/style-orbit.png",
+      "passCriteria": "Hairline track with a single position dot at 62%.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-STYLE-MARK",
+      "area": "tray",
+      "setup": "Style Minimal mark.",
+      "fixture": "same as W2-TRAY-STYLE-RING",
+      "expectedEvidence": "native/tray/style-mark.png",
+      "passCriteria": "Mark only, no gauge; reading present in tooltip.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-USED",
+      "area": "tray",
+      "setup": "Used, precision 1.",
+      "fixture": {
+        "providerId": "codex",
+        "dataState": "available",
+        "usedPercent": 97.5,
+        "secondaryUsedPercent": null,
+        "plan": null,
+        "resetMinutes": 30,
+        "tokens": null
+      },
+      "expectedEvidence": "native/tray/used-97.png",
+      "passCriteria": "Gauge near full; tooltip reads 97.5% used.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-REMAINING",
+      "area": "tray",
+      "setup": "Remaining, precision 1.",
+      "fixture": "same as W2-TRAY-USED",
+      "expectedEvidence": "native/tray/remaining-2.png",
+      "passCriteria": "Gauge near empty; tooltip reads 2.5% left (no inversion).",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-ZERO",
+      "area": "tray",
+      "setup": "Used.",
+      "fixture": {
+        "providerId": "codex",
+        "dataState": "available",
+        "usedPercent": 0,
+        "secondaryUsedPercent": null,
+        "plan": null,
+        "resetMinutes": null,
+        "tokens": null
+      },
+      "expectedEvidence": "native/tray/used-0.png",
+      "passCriteria": "Solid empty track (a real 0%), visibly different from W2-TRAY-UNAVAILABLE.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-FULL",
+      "area": "tray",
+      "setup": "Used; repeat with Orbit marker.",
+      "fixture": {
+        "providerId": "codex",
+        "dataState": "available",
+        "usedPercent": 100,
+        "secondaryUsedPercent": null,
+        "plan": null,
+        "resetMinutes": null,
+        "tokens": null
+      },
+      "expectedEvidence": "native/tray/used-100.png",
+      "passCriteria": "Full gauge; orbit style lights the whole track (distinct from 0%).",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-UNAVAILABLE",
+      "area": "tray",
+      "setup": "Any gauge style.",
+      "fixture": {
+        "providerId": "codex",
+        "dataState": "unavailable",
+        "usedPercent": 0,
+        "secondaryUsedPercent": null,
+        "plan": null,
+        "resetMinutes": null,
+        "tokens": null
+      },
+      "expectedEvidence": "native/tray/unavailable.png",
+      "passCriteria": "Dashed neutral track, never a 0% gauge; tooltip reading is a dash.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-ERROR",
+      "area": "tray",
+      "setup": "Any gauge style.",
+      "fixture": {
+        "providerId": "codex",
+        "dataState": "error",
+        "usedPercent": 50,
+        "secondaryUsedPercent": null,
+        "plan": null,
+        "resetMinutes": null,
+        "tokens": null
+      },
+      "expectedEvidence": "native/tray/error.png",
+      "passCriteria": "Same honest broken-track treatment; no stale 50% shown.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-TOOLTIP-3",
+      "area": "tray",
+      "setup": "Tooltip limits: Session, Weekly (+ one window the provider does not supply if selectable from prior settings); name + plan on; tokens This week.",
+      "fixture": {
+        "providerId": "claude",
+        "dataState": "available",
+        "usedPercent": 41,
+        "secondaryUsedPercent": 12,
+        "plan": "Max 20x",
+        "resetMinutes": 120,
+        "tokens": 987654
+      },
+      "expectedEvidence": "native/tray/tooltip-3-rows.png",
+      "passCriteria": "Header 'Claude · Max 20x', one row per real window, missing window shows a dash, token line 'Local tokens 987654'; whole tooltip not cut mid-line.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-TOOLTIP-MAIN-MANY",
+      "area": "tray",
+      "setup": "Enable 24+ providers; hover the main Quotalis icon.",
+      "fixture": null,
+      "expectedEvidence": "native/tray/tooltip-main-many.png",
+      "passCriteria": "Whole provider lines only, ending with a '+N' line; no garbled trailing characters.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-FOLLOW-GLOBAL",
+      "area": "tray",
+      "setup": "Appearance Composition: Tray -> Follow Main Application; Quotalis logo variant Ember; indicator accent Silver.",
+      "fixture": "same as W2-TRAY-STYLE-RING",
+      "expectedEvidence": "native/tray/follow-global.png",
+      "passCriteria": "Gauge uses the Ember palette, not Silver; Tray Studio shows the follows-appearance note with the accent select disabled; Appearance summary reads 'Following Main Application'.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-EXPLORER-RESTART",
+      "area": "tray",
+      "setup": "With 3 provider icons pinned, restart explorer.exe (Task Manager -> Windows Explorer -> Restart).",
+      "fixture": null,
+      "expectedEvidence": "native/tray/explorer-restart.png",
+      "passCriteria": "Main and all provider icons return with their latest image and tooltip without restarting Quotalis (tray-icon 0.21.3 TaskbarCreated re-registration).",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-TASKBAR-LIGHT",
+      "area": "tray",
+      "setup": "Windows Settings -> Personalization -> Colors -> Windows mode Light.",
+      "fixture": "same as W2-TRAY-STYLE-RING",
+      "expectedEvidence": "native/tray/taskbar-light.png",
+      "passCriteria": "Icon and track remain legible against a light taskbar; matches Tray Studio's light plate preview.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-TASKBAR-DARK",
+      "area": "tray",
+      "setup": "Windows mode Dark.",
+      "fixture": "same as W2-TRAY-STYLE-RING",
+      "expectedEvidence": "native/tray/taskbar-dark.png",
+      "passCriteria": "Legible against a dark taskbar; matches the dark plate preview.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-CLICK",
+      "area": "tray",
+      "setup": "Left-click a provider icon.",
+      "fixture": null,
+      "expectedEvidence": "native/tray/click-provider.png",
+      "passCriteria": "Settings opens on Providers with that provider selected; single process.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-NOTIF-IDENTITY",
+      "area": "notification",
+      "setup": "Notification fixture: Warning · high usage, provider Claude.",
+      "fixture": {
+        "kind": "warning",
+        "providerId": "claude"
+      },
+      "expectedEvidence": "native/notifications/identity.png",
+      "passCriteria": "Toast header/app attribution reads 'Quotalis' (Dev AUMID app.quotalis.desktop.dev); no QuotaArc/CodexBar branding.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-NOTIF-PROVIDER-LOGO",
+      "area": "notification",
+      "setup": "Same as W2-NOTIF-IDENTITY.",
+      "fixture": {
+        "kind": "warning",
+        "providerId": "claude"
+      },
+      "expectedEvidence": "native/notifications/provider-logo.png",
+      "passCriteria": "Claude mark as the toast content logo (appLogoOverride); app identity still Quotalis.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-NOTIF-EN",
+      "area": "notification",
+      "setup": "Language English; send Critical.",
+      "fixture": {
+        "kind": "critical",
+        "providerId": "codex"
+      },
+      "expectedEvidence": "native/notifications/english-critical.png",
+      "passCriteria": "English title/body, 94% used · 6% remaining, weekly window label.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-NOTIF-AR",
+      "area": "notification",
+      "setup": "?window=structure-qa Language = Arabic; send Critical.",
+      "fixture": {
+        "kind": "critical",
+        "providerId": "codex"
+      },
+      "expectedEvidence": "native/notifications/arabic-critical.png",
+      "passCriteria": "Arabic copy, correct bidi for provider name and percentages, no tofu.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-NOTIF-INFO",
+      "area": "notification",
+      "setup": "Send Informational.",
+      "fixture": {
+        "kind": "info",
+        "providerId": "claude"
+      },
+      "expectedEvidence": "native/notifications/info.png",
+      "passCriteria": "Calm session-restored copy.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-NOTIF-WARNING",
+      "area": "notification",
+      "setup": "Send Warning.",
+      "fixture": {
+        "kind": "warning",
+        "providerId": "claude"
+      },
+      "expectedEvidence": "native/notifications/warning.png",
+      "passCriteria": "Approaching-limit copy, no alarmist language.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-NOTIF-CRITICAL",
+      "area": "notification",
+      "setup": "Send Critical.",
+      "fixture": {
+        "kind": "critical",
+        "providerId": "claude"
+      },
+      "expectedEvidence": "native/notifications/critical.png",
+      "passCriteria": "Critical copy.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-NOTIF-RESET",
+      "area": "notification",
+      "setup": "Send Reset completed.",
+      "fixture": {
+        "kind": "reset",
+        "providerId": "codex"
+      },
+      "expectedEvidence": "native/notifications/reset.png",
+      "passCriteria": "Reset copy; clicking opens the Dashboard.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-NOTIF-UNAVAILABLE",
+      "area": "notification",
+      "setup": "Send Provider unavailable.",
+      "fixture": {
+        "kind": "providerUnavailable",
+        "providerId": "gemini"
+      },
+      "expectedEvidence": "native/notifications/unavailable.png",
+      "passCriteria": "'Gemini could not be refreshed. Quotalis will keep trying.'; no raw error text.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-NOTIF-AUTH-SANITIZED",
+      "area": "notification",
+      "setup": "Send Sign-in required.",
+      "fixture": {
+        "kind": "authRequired",
+        "providerId": "codex"
+      },
+      "expectedEvidence": "native/notifications/auth-sanitized.png",
+      "passCriteria": "Sign-in copy only; no token, cookie, email, path or stderr text.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-NOTIF-ACTIVATION",
+      "area": "notification",
+      "setup": "With QuotalisDev running, click the Warning toast.",
+      "fixture": {
+        "kind": "warning",
+        "providerId": "claude"
+      },
+      "expectedEvidence": "native/notifications/activation.png",
+      "passCriteria": "quotalis-dev://provider/claude focuses the existing process and opens the Claude pop-out; Task Manager shows one QuotalisDev.exe primary process.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-NOTIF-DEEPLINK-SETTINGS",
+      "area": "notification",
+      "setup": "Click the Sign-in required toast.",
+      "fixture": {
+        "kind": "authRequired",
+        "providerId": "codex"
+      },
+      "expectedEvidence": "native/notifications/deeplink-settings.png",
+      "passCriteria": "Settings opens on Providers with Codex selected.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-NOTIF-NO-DUPLICATE",
+      "area": "notification",
+      "setup": "Let 5 refreshes run while a threshold stays crossed; separately, keep a provider failing for 5 refreshes.",
+      "fixture": null,
+      "expectedEvidence": "native/notifications/no-duplicate.png",
+      "passCriteria": "One threshold toast total; one status toast total, only after the second consecutive failure.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-DPI-MAIN-HIGH",
+      "area": "tray",
+      "setup": "Display scale 250% then 300% (Settings -> Display -> Scale), main Quotalis icon in bar mode and in percent mode.",
+      "fixture": null,
+      "expectedEvidence": "native/tray/dpi-main-250-300.png",
+      "passCriteria": "Main icon edges and digits are crisp (64px source downsampled to 40/48px), no blocky enlargement; layout matches 100% appearance.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-DPI-PROVIDER-HIGH",
+      "area": "tray",
+      "setup": "Display scale 150%, 200%, 300% with a Claude ring indicator pinned.",
+      "fixture": {
+        "providerId": "claude",
+        "dataState": "available",
+        "usedPercent": 62,
+        "secondaryUsedPercent": null,
+        "plan": null,
+        "resetMinutes": null,
+        "tokens": null
+      },
+      "expectedEvidence": "native/tray/dpi-provider-150-200-300.png",
+      "passCriteria": "Provider mark and ring crisp at each scale; same source policy as the main icon.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-DPI-100",
+      "area": "tray",
+      "setup": "Display scale 100%.",
+      "fixture": "same as W2-TRAY-DPI-PROVIDER-HIGH",
+      "expectedEvidence": "native/tray/dpi-100.png",
+      "passCriteria": "Record legibility of the 64->16px downsample for ring, bar and percent modes; note any style that becomes unreadable.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TRAY-SCALE-PERCENT",
+      "area": "tray",
+      "setup": "Open the tray flyout, move its zoom slider from 100% to 200%.",
+      "fixture": null,
+      "expectedEvidence": "native/tray/flyout-zoom-200.png",
+      "passCriteria": "Flyout content enlarges; notification-area icons are unchanged in size and pixels.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TOKEN-CODEX-EXACT",
+      "area": "tray",
+      "setup": "Real Dev machine with Codex local sessions; Tray Studio Codex tokens = This week; hover after the background scan (up to a few seconds).",
+      "fixture": null,
+      "expectedEvidence": "native/tray/token-codex-week.png",
+      "passCriteria": "Tooltip line 'Local tokens · This week: N' without ≥ when the scan established coverage; with ≥ if the scan was incomplete.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TOKEN-CODEX-YEAR-PARTIAL",
+      "area": "tray",
+      "setup": "Codex tokens = This year on a machine whose local Codex history starts after January 1.",
+      "fixture": null,
+      "expectedEvidence": "native/tray/token-codex-year-partial.png",
+      "passCriteria": "Reading shows ≥ (lower bound), never a plain year total.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TOKEN-LIFETIME",
+      "area": "tray",
+      "setup": "Codex and Claude tokens = All available local history.",
+      "fixture": null,
+      "expectedEvidence": "native/tray/token-lifetime.png",
+      "passCriteria": "Both readings carry ≥; selector labels mark lifetime as a lower bound.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TOKEN-CLAUDE",
+      "area": "tray",
+      "setup": "Claude tokens = Today, then This month.",
+      "fixture": null,
+      "expectedEvidence": "native/tray/token-claude.png",
+      "passCriteria": "Single total with ≥; no input/cached/output split anywhere; every Claude selector period labelled lower bound.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TOKEN-UNSUPPORTED",
+      "area": "tray",
+      "setup": "Tray Studio with Gemini (or any provider other than Codex/Claude) selected.",
+      "fixture": null,
+      "expectedEvidence": "native/tray/token-unsupported.png",
+      "passCriteria": "Token selector disabled at Off with the no-local-history note; tooltip has no token line.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-TOKEN-FIXTURE-TOOLTIP",
+      "area": "tray",
+      "setup": "Tray fixture with tokens 18446744073, Claude, 3 long tooltip rows, name + plan, tokens = lifetime; English then Arabic.",
+      "fixture": {
+        "providerId": "claude",
+        "dataState": "available",
+        "usedPercent": 41,
+        "secondaryUsedPercent": 12,
+        "plan": "Max 20x",
+        "resetMinutes": 120,
+        "tokens": 18446744073
+      },
+      "expectedEvidence": "native/tray/token-fixture-tooltip.png",
+      "passCriteria": "Token reading intact at the end of the last line; no line cut mid-way; no garbled characters.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-HIST-THRESHOLD",
+      "area": "notification",
+      "setup": "Real Dev usage crossing the high then critical thresholds.",
+      "fixture": null,
+      "expectedEvidence": "native/notifications/history-threshold.png",
+      "passCriteria": "One 'High usage alert' (Warning) and one 'Critical usage alert' (Critical) row, each 'level% → used%', no duplicates across refreshes.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-HIST-MILESTONE",
+      "area": "notification",
+      "setup": "Enable usage milestone notifications (e.g. every 10%); let usage cross one step.",
+      "fixture": null,
+      "expectedEvidence": "native/notifications/history-milestone.png",
+      "passCriteria": "One 'Usage milestone' (Information) row per crossed step.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-HIST-SESSION",
+      "area": "notification",
+      "setup": "Session reaches 100%, then resets.",
+      "fixture": null,
+      "expectedEvidence": "native/notifications/history-session.png",
+      "passCriteria": "One 'Session depleted' (Critical) and one 'Session restored' (Information) row.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-HIST-PACE",
+      "area": "notification",
+      "setup": "Predictive pace warnings enabled; Claude or Codex pace projects exhaustion before reset.",
+      "fixture": null,
+      "expectedEvidence": "native/notifications/history-pace.png",
+      "passCriteria": "One 'Pace warning' (Warning) row per reset cycle with the window detail and current usage only.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-HIST-STATUS",
+      "area": "notification",
+      "setup": "Sign a provider out (or stop its local runtime) for 2+ refreshes, recover it, then break it again.",
+      "fixture": null,
+      "expectedEvidence": "native/notifications/history-status.png",
+      "passCriteria": "Two 'Provider needs attention' rows (one per incident) with the correct detail; no values shown; no error text.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-HIST-PRICING",
+      "area": "notification",
+      "setup": "DeepSeek enabled across a pricing period boundary.",
+      "fixture": null,
+      "expectedEvidence": "native/notifications/history-pricing.png",
+      "passCriteria": "One 'DeepSeek pricing changed' (Information) row with the period detail.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-HIST-OPEN",
+      "area": "notification",
+      "setup": "Click Open on a status row, a threshold row and a reset row.",
+      "fixture": null,
+      "expectedEvidence": "native/notifications/history-open.png",
+      "passCriteria": "Status -> Settings Providers for that provider; threshold -> provider pop-out; reset -> Dashboard; single process.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-HIST-ARABIC",
+      "area": "notification",
+      "setup": "Language Arabic; open the notification center with the rows above.",
+      "fixture": null,
+      "expectedEvidence": "native/notifications/history-arabic.png",
+      "passCriteria": "Arabic kind, severity and detail labels; percentages and provider names isolated correctly; coverage note in Arabic.",
+      "status": "READY"
+    },
+    {
+      "id": "W2-HIST-MIGRATION",
+      "area": "notification",
+      "setup": "Start the new Dev build on a Dev app dir that has history from the Wave 2 build.",
+      "fixture": null,
+      "expectedEvidence": "native/notifications/history-migrated.png",
+      "passCriteria": "Existing rows and their read state remain; new kinds append after them.",
+      "status": "READY"
+    }
   ]
 }
