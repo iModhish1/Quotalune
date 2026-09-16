@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { isDevChannel } from "../../lib/tauri";
+import { getProviderCatalog, isDevChannel } from "../../lib/tauri";
+import { TrayNotificationQaPanel } from "./TrayNotificationQaPanel";
 import { updateSettings } from "../../lib/tauri";
 import { showTopArc, updateSurfaceSettings } from "../../lib/surfaceBridge";
 import { useStructureQaFixture } from "../../hooks/useStructureQaFixture";
@@ -45,11 +46,13 @@ export default function StructureQaController() {
   const [form, setForm] = useState<FlowSurfaceForm>("seam");
   const [anchor, setAnchor] = useState<(typeof ANCHORS)[number]>("right");
   const [scale, setScale] = useState(100);
+  const [providerIds, setProviderIds] = useState<string[]>([]);
   const draft = qa.fixture ?? DEFAULT_FIXTURE;
 
   useEffect(() => {
     let mounted = true;
     isDevChannel().then((value) => { if (mounted) setDevChannel(value === true); }).catch(() => { if (mounted) setDevChannel(false); });
+    getProviderCatalog().then((catalog) => { if (mounted) setProviderIds(catalog.map((provider) => provider.id)); }).catch(() => {});
     return () => { mounted = false; };
   }, []);
 
@@ -173,6 +176,8 @@ export default function StructureQaController() {
           <small>{t("StructureQaModeHint")}</small>
         </label>
       </fieldset>
+
+      <TrayNotificationQaPanel providerIds={providerIds} />
 
       <button type="button" onClick={resetAll}>{t("StructureQaReset")}</button>
       {qa.error && <p role="alert">{qa.error}</p>}

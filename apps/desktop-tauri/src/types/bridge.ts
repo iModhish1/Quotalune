@@ -44,10 +44,12 @@ export type DemoScenario =
 // ── Narrowed string-literal unions (persisted settings enums) ─────────
 
 export interface ProviderTrayConfig {
-  enabled:boolean; limitId:string; style:"ring"|"arc"|"bar"|"badge"; showAsUsed:boolean;
+  enabled:boolean; limitId:string; style:"ring"|"arc"|"bar"|"badge"|"orbit"|"mark"; showAsUsed:boolean;
   tooltipLimitIds:string[]; showName:boolean; showPlan:boolean;
   tokenRange:"none"|"today"|"week"|"month"|"year"|"lifetime";
   precision:number; color:"provider"|"identity"|"silver"; stroke:number;
+  /** Center mark; absent in settings written before it existed (loads as "provider"). */
+  identity?:"provider"|"quotalis";
 }
 export type TrayIconMode = "single" | "perProvider";
 

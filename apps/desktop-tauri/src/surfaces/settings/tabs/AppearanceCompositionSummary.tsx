@@ -13,6 +13,7 @@ import { getSettingsSnapshot, setAppearanceScope } from "../../../lib/tauri";
 import { useLocale } from "../../../hooks/useLocale";
 import type { LocaleKey } from "../../../i18n/keys";
 import type { SettingsSnapshot } from "../../../types/bridge";
+import { trayAppearanceValueKey } from "../trayStudioModel";
 import "./AppearanceCompositionSummary.css";
 
 /** Real current explicit value for a scope, read straight off the settings
@@ -23,7 +24,7 @@ import "./AppearanceCompositionSummary.css";
  * defaults below (used when a field is entirely absent, e.g. a
  * pre-Wave-1B settings.json) are literal English and match the Rust
  * `default_*` fallback values exactly. */
-function explicitDisplayValue(scope: AppearanceScopeId, snapshot: SettingsSnapshot): string {
+function explicitDisplayValue(scope: AppearanceScopeId, snapshot: SettingsSnapshot, t: (key: LocaleKey) => string): string {
   switch (scope) {
     case "quotalisLogo":
       return snapshot.logoVariant ? capitalize(snapshot.logoVariant) : "Silver";
@@ -32,7 +33,7 @@ function explicitDisplayValue(scope: AppearanceScopeId, snapshot: SettingsSnapsh
         ? capitalize(snapshot.globalLimitPresentation.identity)
         : "Adaptive";
     case "tray":
-      return snapshot.trayIconMode === "perProvider" ? "Per-Provider" : "Single Icon";
+      return t(trayAppearanceValueKey(snapshot));
     case "workspaceBackground":
       return snapshot.workspacePreferences?.background
         ? capitalize(snapshot.workspacePreferences.background)
@@ -147,7 +148,7 @@ export default function AppearanceCompositionSummary() {
             <div className="appearance-composition-summary__row" key={scope}>
               <dt>{scopeLabel}</dt>
               <dd data-source={composition[scope]}>
-                {appearanceScopeSummaryLabel(scope, composition, explicitDisplayValue(scope, snapshot), followingMain)}
+                {appearanceScopeSummaryLabel(scope, composition, explicitDisplayValue(scope, snapshot, t), followingMain)}
                 <button
                   type="button"
                   className="appearance-composition-summary__toggle"

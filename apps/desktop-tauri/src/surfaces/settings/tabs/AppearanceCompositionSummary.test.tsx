@@ -84,3 +84,19 @@ describe("AppearanceCompositionSummary", () => {
     await waitFor(() => expect(api.setAppearanceScope).toHaveBeenCalledWith("tray", "global"));
   });
 });
+
+describe("AppearanceCompositionSummary tray treatment", () => {
+  it("names the real localized tray treatment on Override instead of a hardcoded mode label", async () => {
+    api.getSettingsSnapshot.mockResolvedValue({
+      catalogTheme: "01-obsidian-orbit",
+      theme: "auto",
+      trayIconMode: "single",
+      providerTrayConfigs: { claude: { enabled: true, color: "provider" }, codex: { enabled: false, color: "silver" } },
+      appearanceComposition: { quotalisLogo: "global", providerIdentity: "global", tray: "override", workspaceBackground: "global" },
+    });
+    render(<AppearanceCompositionSummary />);
+    expect(await screen.findByText("AppearanceTrayProviderAccent")).toBeInTheDocument();
+    expect(screen.queryByText("Per-Provider")).toBeNull();
+    expect(screen.queryByText("Single Icon")).toBeNull();
+  });
+});

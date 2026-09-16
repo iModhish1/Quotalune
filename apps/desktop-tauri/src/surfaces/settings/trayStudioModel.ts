@@ -1,5 +1,8 @@
-import type {ProviderTrayConfig,ProviderUsageSnapshot,RateWindowSnapshot} from "../../types/bridge";
-export const DEFAULT_PROVIDER_TRAY:ProviderTrayConfig={enabled:false,limitId:"",style:"ring",showAsUsed:false,tooltipLimitIds:[],showName:true,showPlan:true,tokenRange:"none",precision:1,color:"provider",stroke:2};
+import type {LocaleKey} from "../../i18n/keys";
+import type {ProviderCatalogEntry,ProviderTrayConfig,ProviderUsageSnapshot,RateWindowSnapshot,SettingsSnapshot} from "../../types/bridge";
+export const DEFAULT_PROVIDER_TRAY:ProviderTrayConfig={enabled:false,limitId:"",style:"ring",showAsUsed:false,tooltipLimitIds:[],showName:true,showPlan:true,tokenRange:"none",precision:1,color:"provider",stroke:2,identity:"provider"};
+/** Mirrors quotalis_core::settings::TRAY_STYLES, in presentation order. */
+export const TRAY_STYLE_OPTIONS:readonly (readonly [ProviderTrayConfig["style"],LocaleKey])[]=[["ring","TrayStudioRing"],["arc","TrayStudioArc"],["bar","TrayStudioBar"],["badge","TrayStudioBadge"],["orbit","TrayStudioOrbit"],["mark","TrayStudioMark"]];
 /** Exact observed identity mirrors provider_tray::limits; no quota inference. */
 export function trayLimits(snapshot?:ProviderUsageSnapshot) {
  const result:{id:string;label:string;window:RateWindowSnapshot}[]=[];if(!snapshot)return result;
@@ -8,8 +11,22 @@ export function trayLimits(snapshot?:ProviderUsageSnapshot) {
  for(const extra of snapshot.extraRateWindows??[])if(!extra.window.isInformational)result.push({id:`extra:${extra.id}:${extra.window.windowMinutes??""}`,label:extra.title,window:extra.window});
  return result;
 }
+/** Mirrors provider_tray::healthy: a snapshot the native icon would not measure never shows a reading here. */
 export function trayPercent(s:ProviderUsageSnapshot|undefined,c:ProviderTrayConfig):number|null {
- if(!s||s.error||s.errorState!=="ready")return null;
+ if(!s||s.error||s.errorState!=="ready"||s.sourceLabel==="unavailable"||s.sourceLabel==="disabled")return null;
  const w=trayLimits(s).find(w=>w.id===c.limitId)?.window;const n=w?(c.showAsUsed?w.usedPercent:w.remainingPercent):null;
  return n!==null&&Number.isFinite(n)&&n>=0&&n<=100?n:null;
+}
+/** Case-insensitive match on display name or id; stays usable with any registry size. */
+export function filterTrayProviders(catalog:readonly ProviderCatalogEntry[],query:string):ProviderCatalogEntry[] {
+ const needle=query.trim().toLocaleLowerCase();
+ return needle?catalog.filter(p=>p.displayName.toLocaleLowerCase().includes(needle)||p.id.toLowerCase().includes(needle)):[...catalog];
+}
+/** Real tray treatment for the Appearance summary when the Tray scope is Override. */
+export function trayAppearanceValueKey(snapshot:Pick<SettingsSnapshot,"trayIconMode"|"providerTrayConfigs">):LocaleKey {
+ const colors=new Set(Object.values(snapshot.providerTrayConfigs??{}).filter(c=>c.enabled).map(c=>c.color));
+ if(colors.size===0)return snapshot.trayIconMode==="perProvider"?"AppearanceTrayProviderAccent":"AppearanceTraySingleIcon";
+ if(colors.size>1)return "AppearanceTrayMixed";
+ const [color]=colors;
+ return color==="identity"?"AppearanceTrayQuotalisPalette":color==="silver"?"AppearanceTraySilver":"AppearanceTrayProviderAccent";
 }
