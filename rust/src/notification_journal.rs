@@ -441,8 +441,42 @@ fn prepare_schema(connection: &mut Connection, fault: Option<MigrationStep>) -> 
         )
         .map_err(db_error)?;
     }
+    repair_id_collisions(&tx)?;
     interrupt(fault, MigrationStep::BeforeCommit)?;
     tx.commit().map_err(db_error)
+}
+
+/// Ids are unique by construction: every record insert raises the legacy
+/// table's `sqlite_sequence` entry, and SQLite itself consults that entry for
+/// the legacy table's AUTOINCREMENT ids no matter which build inserts, so a
+/// 0.11.0 writer after a rollback continues above every record id. This is
+/// defense in depth for the one way that guarantee can break -- the sequence
+/// row being reset by something outside Quotalis. Legacy ids are never
+/// changed; a colliding record moves to a fresh id above both tables.
+fn repair_id_collisions(tx: &rusqlite::Transaction<'_>) -> Result<usize, String> {
+    let colliding: Vec<i64> = {
+        let mut statement = tx
+            .prepare(
+                "SELECT r.id FROM quotalis_notification_records r
+                 JOIN notification_events e ON e.id = r.id ORDER BY r.id",
+            )
+            .map_err(db_error)?;
+        statement
+            .query_map([], |row| row.get(0))
+            .map_err(db_error)?
+            .collect::<Result<Vec<i64>, _>>()
+            .map_err(db_error)?
+    };
+    for old in &colliding {
+        let fresh = max_event_id(tx)? + 1;
+        tx.execute(
+            "UPDATE quotalis_notification_records SET id=?1 WHERE id=?2",
+            params![fresh, old],
+        )
+        .map_err(db_error)?;
+        bump_sequence(tx, fresh)?;
+    }
+    Ok(colliding.len())
 }
 
 /// Raises the legacy AUTOINCREMENT high-water mark so ids stay unique and
@@ -632,9 +666,10 @@ impl NotificationJournal {
 
     pub fn page(&self, query: &NotificationQuery) -> Result<NotificationPage, String> {
         if query.search.len() > 256
-            || query.provider_id.as_ref().is_some_and(|id| {
-                ProviderId::from_cli_name(id).is_none_or(|provider| provider.cli_name() != id)
-            })
+            || query
+                .provider_id
+                .as_ref()
+                .is_some_and(|id| ProviderId::from_cli_name(id).is_none())
         {
             return Err("Invalid notification filter".into());
         }
@@ -774,6 +809,7 @@ fn db_error(_: rusqlite::Error) -> String {
 #[cfg(test)]
 mod compat_tests;
 #[cfg(test)]
+#[rustfmt::skip]
 mod legacy_v0_11_0;
 #[cfg(test)]
 mod tests;

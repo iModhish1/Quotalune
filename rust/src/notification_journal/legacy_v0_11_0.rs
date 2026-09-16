@@ -1,10 +1,13 @@
 // FROZEN COMPATIBILITY FIXTURE -- do not edit to make tests pass.
-// Verbatim `rust/src/notification_journal.rs` from published Quotalis 0.11.0
-// (iModhish1/Quotalis @ c1902e9a3df6c8c11eab2a2afae64cf03e5271bd; identical to
-// this repository's 5c287764), SHA-256
-// a3301bc66cfe2a2780c4e24a0a8317bf38db6d87ed172aac54442b7df38bf76b.
-// Only this header, the lint allowance below, and the removal of its trailing
-// `#[cfg(test)] mod tests;` declaration differ from the original file.
+// Verbatim `rust/src/notification_journal.rs` from published Quotalis 0.11.0,
+// public release source commit c1902e9a3df6c8c11eab2a2afae64cf03e5271bd
+// (iModhish1/Quotalis; identical to this repository's 5c287764), original
+// file SHA-256 a3301bc66cfe2a2780c4e24a0a8317bf38db6d87ed172aac54442b7df38bf76b.
+// Mechanical wrapper only: this header, the lint allowance below, and the
+// removal of the original's trailing `#[cfg(test)] mod tests;` line. The body
+// after the allowance is byte-for-byte the original and is pinned by
+// `compat_tests::frozen_legacy_reader_is_the_published_source`
+// (SHA-256 6b6c3355ebdd08619c80a235986998f950907aa11d041b71ff0d8dffb97084a7). The `mod` declaration carries `#[rustfmt::skip]`.
 #![allow(
     dead_code,
     clippy::all,

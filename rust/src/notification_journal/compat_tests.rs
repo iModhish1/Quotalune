@@ -204,10 +204,33 @@ fn write_every_category(store: &NotificationJournal, base: i64) -> Vec<Notificat
 
 #[test]
 fn frozen_legacy_reader_is_the_published_source() {
+    use sha2::{Digest, Sha256};
     let source = include_str!("legacy_v0_11_0.rs");
+    let body_start = source.find(")]\n\n").expect("allowance header") + 4;
+    let digest = format!("{:x}", Sha256::digest(&source.as_bytes()[body_start..]));
+    assert_eq!(
+        digest, "6b6c3355ebdd08619c80a235986998f950907aa11d041b71ff0d8dffb97084a7",
+        "legacy_v0_11_0.rs body drifted from published 0.11.0 c1902e9a"
+    );
+    assert!(source.contains("c1902e9a3df6c8c11eab2a2afae64cf03e5271bd"));
     assert!(source.contains("const SCHEMA_VERSION: i64 = 1;"));
-    assert!(source.contains("previous_value REAL NOT NULL"));
-    assert!(source.contains("version > SCHEMA_VERSION"));
+}
+
+#[test]
+fn published_reader_never_enumerates_drops_or_rebuilds_tables() {
+    let body = include_str!("legacy_v0_11_0.rs");
+    for forbidden in [
+        "DROP TABLE",
+        "DROP INDEX",
+        "VACUUM",
+        "sqlite_master",
+        "ALTER TABLE",
+    ] {
+        assert!(!body.contains(forbidden), "{forbidden}");
+    }
+    // Its only DDL runs when user_version is 0 (a brand-new file).
+    assert_eq!(body.matches("CREATE TABLE").count(), 2);
+    assert!(body.contains("if version == 0 {"));
 }
 
 #[test]
@@ -384,8 +407,74 @@ fn rollback_drill_legacy_to_current_to_legacy_reader() {
 #[test]
 fn wave2b_layout_converts_back_to_the_legacy_layout_without_losing_anything() {
     let (_dir, path) = temp_db();
-    // Exactly what the short-lived Wave 2B build (627c0e29) wrote.
-    Connection::open(&path).unwrap().execute_batch(
+    // Exactly what the unpublished Wave 2B Dev build (c98d339a..627c0e29) wrote:
+    // every category it knew, hashed account refs, one read row, one baseline.
+    let hash = "a".repeat(64);
+    let rows = [
+        (
+            "\"scheduledResetObserved\"",
+            "weekly",
+            "94.0",
+            "3.0",
+            "NULL",
+            1,
+        ),
+        (
+            "\"bankedResetsIncreased\"",
+            "reset-credits",
+            "0.0",
+            "2.0",
+            "NULL",
+            0,
+        ),
+        ("\"usageHighReached\"", "weekly", "70.0", "72.0", "NULL", 0),
+        (
+            "\"usageCriticalReached\"",
+            "weekly",
+            "90.0",
+            "93.0",
+            "NULL",
+            1,
+        ),
+        ("\"usageExhausted\"", "session", "100.0", "100.0", "NULL", 0),
+        (
+            "\"usageMilestoneReached\"",
+            "session",
+            "50.0",
+            "51.0",
+            "NULL",
+            0,
+        ),
+        ("\"sessionDepleted\"", "session", "40.0", "100.0", "NULL", 0),
+        ("\"sessionRestored\"", "session", "100.0", "3.0", "NULL", 1),
+        ("\"paceWarning\"", "weekly", "NULL", "81.0", "'weekly'", 0),
+        (
+            "\"providerStatusIssue\"",
+            "status",
+            "NULL",
+            "NULL",
+            "'needsAuthentication'",
+            1,
+        ),
+        (
+            "\"pricingPeriodChanged\"",
+            "pricing",
+            "NULL",
+            "NULL",
+            "'peak'",
+            0,
+        ),
+        ("\"someFutureKind\"", "weekly", "NULL", "NULL", "NULL", 0),
+    ];
+    let inserts: String = rows
+        .iter()
+        .enumerate()
+        .map(|(i, (kind, window, prev, cur, detail, read))| {
+            let t = 1_000 + i64::try_from(i).unwrap();
+            format!("INSERT INTO notification_events (provider_id,account_ref,window_key,kind,detected_at,received_at,observed_from,observed_to,previous_value,current_value,detail,is_read) VALUES ('codex','{hash}','{window}','{kind}',{t},{t},{t},{t},{prev},{cur},{detail},{read});")
+        })
+        .collect();
+    Connection::open(&path).unwrap().execute_batch(&format!(
         "CREATE TABLE notification_events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             provider_id TEXT NOT NULL, account_ref TEXT, window_key TEXT NOT NULL,
@@ -396,24 +485,51 @@ fn wave2b_layout_converts_back_to_the_legacy_layout_without_losing_anything() {
         );
         CREATE INDEX notification_unread ON notification_events(is_read, id);
         CREATE TABLE notification_baselines (lane TEXT PRIMARY KEY, observation TEXT NOT NULL, received_at INTEGER NOT NULL);
-        INSERT INTO notification_events (provider_id,window_key,kind,detected_at,received_at,observed_from,observed_to,previous_value,current_value,detail,is_read)
-            VALUES ('codex','weekly','\"scheduledResetObserved\"',1000,1000,900,1000,94.0,3.0,NULL,1),
-                   ('codex','weekly','\"usageHighReached\"',2000,2000,2000,2000,70.0,72.0,NULL,0),
-                   ('codex','status','\"providerStatusIssue\"',3000,3000,3000,3000,NULL,NULL,'needsAuthentication',1),
-                   ('codex','weekly','\"someFutureKind\"',4000,4000,4000,4000,NULL,NULL,NULL,0);
-        INSERT INTO notification_baselines VALUES ('lane','{\"type\":\"quota\",\"usedPercent\":3.0,\"resetsAt\":null,\"observedAt\":1000}',1000);
-        PRAGMA user_version = 2;").unwrap();
+        {inserts}
+        INSERT INTO notification_baselines VALUES ('lane','{{\"type\":\"quota\",\"usedPercent\":3.0,\"resetsAt\":null,\"observedAt\":1000}}',1000);
+        PRAGMA user_version = 2;")).unwrap();
+
     let current = NotificationJournal::at(path.clone());
-    let page = current.page(&NotificationQuery::default()).unwrap();
-    assert_eq!(page.items.len(), 3, "future kind hidden, others kept");
-    assert_eq!(page.items[0].id, 3);
-    assert_eq!(page.items[0].detail.as_deref(), Some("needsAuthentication"));
-    assert!(page.items[0].is_read);
-    assert_eq!(page.items[1].kind, JournalEventKind::UsageHighReached);
-    assert_eq!(page.items[2].id, 1);
-    assert!(page.items[2].is_read);
-    assert_eq!(page.unread_count, 1);
+    let page = current
+        .page(&NotificationQuery {
+            limit: Some(100),
+            ..Default::default()
+        })
+        .unwrap();
+    assert_eq!(
+        page.items.len(),
+        11,
+        "future kind hidden, all Wave 2B categories kept"
+    );
+    for (i, (kind, window, prev, cur, detail, read)) in rows.iter().enumerate().take(11) {
+        let id = i64::try_from(i + 1).unwrap();
+        let event = current
+            .event(id)
+            .unwrap()
+            .unwrap_or_else(|| panic!("row {id} missing"));
+        let expected_kind: JournalEventKind = serde_json::from_str(kind).unwrap();
+        assert_eq!(event.kind, expected_kind);
+        assert_eq!(event.severity, expected_kind.severity());
+        assert_eq!(event.window_key, *window);
+        let num = |v: &str| (v != "NULL").then(|| v.parse::<f64>().unwrap());
+        assert_eq!(event.previous_value, num(prev), "{kind}");
+        assert_eq!(event.current_value, num(cur), "{kind}");
+        assert_eq!(
+            event.detail.as_deref(),
+            (*detail != "NULL").then(|| detail.trim_matches('\'')),
+            "{kind}"
+        );
+        assert_eq!(event.is_read, *read == 1, "{kind}");
+        assert_eq!(event.account_ref.as_deref(), Some(hash.as_str()));
+        assert_eq!(
+            (event.detected_at, event.received_at),
+            (1_000 + id - 1, 1_000 + id - 1)
+        );
+        assert!(NotificationManager_destination_ok(&event));
+    }
+    assert_eq!(page.unread_count, 7);
     drop(current);
+
     assert_eq!(user_version(&path), 1);
     assert!(table_sql(&path, "notification_events").contains("previous_value REAL NOT NULL"));
     assert!(!table_sql(&path, "notification_events").contains("detail"));
@@ -421,20 +537,25 @@ fn wave2b_layout_converts_back_to_the_legacy_layout_without_losing_anything() {
     let legacy_page = legacy
         .page(&super::legacy_v0_11_0::NotificationQuery::default())
         .unwrap();
-    assert_eq!(legacy_page.items.len(), 1);
-    assert_eq!(legacy_page.items[0].id, 1);
-    assert!(legacy_page.items[0].is_read);
+    assert_eq!(
+        legacy_page.items.len(),
+        2,
+        "0.11.0 sees exactly the two observation rows"
+    );
+    assert_eq!(legacy_page.items[0].id, 2);
+    assert_eq!(legacy_page.items[1].id, 1);
+    assert!(legacy_page.items[1].is_read);
     assert_eq!(baselines(&path).len(), 1);
-    // the future kind row was moved intact and is still stored
     let future: i64 = Connection::open(&path)
         .unwrap()
-        .query_row(
-            "SELECT COUNT(*) FROM quotalis_notification_records WHERE kind='\"someFutureKind\"'",
-            [],
-            |r| r.get(0),
-        )
+        .query_row("SELECT COUNT(*) FROM quotalis_notification_records WHERE kind='\"someFutureKind\"' AND id=12", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(future, 1);
+    assert_eq!(future, 1, "unknown kind moved intact with its id");
+}
+
+#[allow(non_snake_case, reason = "helper name mirrors the type it validates")]
+fn NotificationManager_destination_ok(event: &NotificationEvent) -> bool {
+    crate::notifications::NotificationManager::history_destination(event).is_some()
 }
 
 #[test]
@@ -514,7 +635,7 @@ fn repeated_opens_are_idempotent() {
     let (_dir, path) = temp_db();
     write_legacy_fixture(&path);
     let mut snapshots = Vec::new();
-    for round in 0..5 {
+    for round in 0..10 {
         let current = NotificationJournal::at(path.clone());
         if round == 0 {
             write_every_category(&current, 50_000);
@@ -527,22 +648,55 @@ fn repeated_opens_are_idempotent() {
             .unwrap();
         drop(current);
         let c = Connection::open(&path).unwrap();
-        let objects: i64 = c
-            .query_row("SELECT COUNT(*) FROM sqlite_master", [], |r| r.get(0))
+        let schema: Vec<String> = {
+            let mut st = c
+                .prepare("SELECT COALESCE(sql,'') FROM sqlite_master ORDER BY name")
+                .unwrap();
+            st.query_map([], |r| r.get(0))
+                .unwrap()
+                .collect::<Result<_, _>>()
+                .unwrap()
+        };
+        let ids: Vec<i64> = page.items.iter().map(|e| e.id).collect();
+        let component: i64 = c
+            .query_row(
+                "SELECT version FROM quotalis_storage_version WHERE component='notification_records'",
+                [],
+                |r| r.get(0),
+            )
             .unwrap();
-        let component: i64 = c.query_row("SELECT version FROM quotalis_storage_version WHERE component='notification_records'", [], |r| r.get(0)).unwrap();
+        let seq: i64 = c
+            .query_row(
+                "SELECT seq FROM sqlite_sequence WHERE name='notification_events'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
         snapshots.push((
-            page.items.len(),
+            ids,
             page.unread_count,
             user_version(&path),
-            objects,
+            schema,
             component,
+            seq,
             baselines(&path),
         ));
     }
-    assert!(snapshots.windows(2).all(|w| w[0] == w[1]), "{snapshots:?}");
-    assert_eq!(snapshots[0].0, 12);
+    assert!(
+        snapshots.windows(2).all(|w| w[0] == w[1]),
+        "schema or data churned across opens"
+    );
+    assert_eq!(snapshots[0].0.len(), 12);
     assert_eq!(snapshots[0].2, 1);
+    assert_eq!(
+        snapshots[0]
+            .3
+            .iter()
+            .filter(|sql| sql.starts_with("CREATE TABLE"))
+            .count(),
+        5,
+        "events, baselines, records, storage_version and SQLite's own sqlite_sequence"
+    );
 }
 
 #[test]
@@ -651,11 +805,43 @@ fn legacy_reader_never_sees_a_null_or_new_kind_after_any_current_write() {
 }
 
 #[test]
-fn unregistered_provider_filters_are_rejected_and_stored_rows_stay_intact() {
+fn every_canonical_provider_id_round_trips_and_is_found_by_its_filter() {
     let (_dir, path) = temp_db();
     let current = NotificationJournal::at(path.clone());
-    write_every_category(&current, 40_000);
-    for bad in ["invented", "CODEX", "codex; DROP TABLE x", ""] {
+    for (index, provider) in ProviderId::all().iter().enumerate() {
+        let id = provider.cli_name();
+        assert_eq!(ProviderId::from_cli_name(id), Some(*provider), "{id}");
+        assert_eq!(
+            ProviderId::from_cli_name(id).unwrap().cli_name(),
+            id,
+            "{id}"
+        );
+        current
+            .record_notification(
+                *provider,
+                "",
+                "weekly",
+                record(
+                    JournalEventKind::UsageHighReached,
+                    Some(70.0),
+                    Some(71.0),
+                    None,
+                    100 + i64::try_from(index).unwrap(),
+                ),
+            )
+            .unwrap();
+    }
+    for provider in ProviderId::all() {
+        let page = current
+            .page(&NotificationQuery {
+                provider_id: Some(provider.cli_name().into()),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(page.items.len(), 1, "{}", provider.cli_name());
+        assert_eq!(page.items[0].provider_id, provider.cli_name());
+    }
+    for bad in ["invented", "", "codex; DROP TABLE x"] {
         assert!(
             current
                 .page(&NotificationQuery {
@@ -666,12 +852,318 @@ fn unregistered_provider_filters_are_rejected_and_stored_rows_stay_intact() {
             "{bad:?}"
         );
     }
-    let filtered = current
+}
+
+/// Logical identity of an event, independent of which table holds it.
+fn logical_key(e: &NotificationEvent) -> (String, String, JournalEventKind, i64, i64, i64) {
+    (
+        e.provider_id.clone(),
+        e.window_key.clone(),
+        e.kind,
+        e.received_at,
+        e.observed_from,
+        e.observed_to,
+    )
+}
+
+#[test]
+fn legacy_writer_after_rollback_full_lifecycle() {
+    let (_dir, path) = temp_db();
+    // A-B. v0.11 fixture written by v0.11 code.
+    let originals = write_legacy_fixture(&path);
+    // C-D. current migrates and writes Wave 2 records.
+    let current = NotificationJournal::at(path.clone());
+    let records = write_every_category(&current, 10_000);
+    assert!(current.mark_read(records[1].id).unwrap());
+    let before_rollback = current
         .page(&NotificationQuery {
-            provider_id: Some("codex".into()),
+            limit: Some(100),
             ..Default::default()
         })
         .unwrap();
-    assert_eq!(filtered.items.len(), 9);
-    assert!(filtered.items.iter().all(|e| e.provider_id == "codex"));
+    drop(current);
+    // E-F. v0.11 reopens and WRITES (observe + read-state mutations).
+    let legacy = LegacyJournal::at(path.clone());
+    legacy
+        .observe(
+            ProviderId::Claude,
+            "acct-b",
+            "weekly",
+            legacy_quota(85.0, 900_000, Some(950_000)),
+            900_000,
+        )
+        .unwrap();
+    let rollback_row = legacy
+        .observe(
+            ProviderId::Claude,
+            "acct-b",
+            "weekly",
+            legacy_quota(1.0, 951_000, Some(1_500_000)),
+            951_000,
+        )
+        .unwrap()
+        .expect("scheduled reset observed by 0.11.0");
+    let legacy_page = legacy
+        .page(&super::legacy_v0_11_0::NotificationQuery {
+            limit: Some(100),
+            ..Default::default()
+        })
+        .unwrap();
+    assert_eq!(legacy_page.items.len(), originals.len() + 1);
+    let max_record_id = records.iter().map(|r| r.id).max().unwrap();
+    assert!(
+        rollback_row.id > max_record_id,
+        "0.11.0 continued above every record id"
+    );
+    assert!(legacy.mark_read(rollback_row.id).unwrap());
+    assert!(
+        !legacy.mark_read(records[0].id).unwrap(),
+        "record ids are invisible to 0.11.0"
+    );
+    drop(legacy);
+    // G. current reopens and merges both stores.
+    let current = NotificationJournal::at(path.clone());
+    let after = current
+        .page(&NotificationQuery {
+            limit: Some(100),
+            ..Default::default()
+        })
+        .unwrap();
+    assert_eq!(after.items.len(), before_rollback.items.len() + 1);
+    for original in &originals {
+        let seen = after
+            .items
+            .iter()
+            .find(|e| e.id == original.id)
+            .expect("original row kept");
+        assert_eq!(
+            (seen.kind as u8, seen.is_read, seen.received_at),
+            (
+                serde_json::from_value::<JournalEventKind>(
+                    serde_json::to_value(original.kind).unwrap()
+                )
+                .unwrap() as u8,
+                original.is_read,
+                original.received_at,
+            )
+        );
+    }
+    for record in &records {
+        let seen = after
+            .items
+            .iter()
+            .find(|e| e.id == record.id)
+            .expect("current-only row kept");
+        assert_eq!(seen.kind, record.kind);
+        assert_eq!(seen.detail, record.detail);
+        assert_eq!(seen.is_read, record.id == records[1].id);
+    }
+    let merged = after
+        .items
+        .iter()
+        .find(|e| e.id == rollback_row.id)
+        .expect("rollback-era row appears");
+    assert!(merged.is_read && merged.kind == JournalEventKind::ScheduledResetObserved);
+    let ids: Vec<i64> = after.items.iter().map(|e| e.id).collect();
+    let mut unique = ids.clone();
+    unique.sort_unstable();
+    unique.dedup();
+    assert_eq!(unique.len(), ids.len(), "no id collision");
+    assert!(
+        ids.windows(2).all(|w| w[0] > w[1]),
+        "deterministic id order"
+    );
+    let again = current
+        .page(&NotificationQuery {
+            limit: Some(100),
+            ..Default::default()
+        })
+        .unwrap();
+    assert_eq!(again.items, after.items, "paging is stable");
+    let mut keys: Vec<String> = after
+        .items
+        .iter()
+        .map(|e| format!("{:?}", logical_key(e)))
+        .collect();
+    keys.sort();
+    keys.dedup();
+    assert_eq!(keys.len(), after.items.len(), "no duplicate logical event");
+    assert_eq!(
+        after.unread_count, before_rollback.unread_count,
+        "read state preserved (new row already read)"
+    );
+}
+
+#[test]
+fn old_writer_ids_never_collide_and_a_reset_sequence_is_repaired() {
+    let (_dir, path) = temp_db();
+    write_legacy_fixture(&path);
+    let current = NotificationJournal::at(path.clone());
+    let records = write_every_category(&current, 60_000);
+    drop(current);
+    let max_record = records.iter().map(|r| r.id).max().unwrap();
+    // Normal case: SQLite consults sqlite_sequence for the legacy table no
+    // matter who inserts, so 0.11.0 starts above the records.
+    let legacy = LegacyJournal::at(path.clone());
+    for t in 0..3_u8 {
+        legacy
+            .observe(
+                ProviderId::Codex,
+                "acct-z",
+                "session",
+                legacy_quota(90.0 - f64::from(t) * 30.0, 700_000 + i64::from(t), None),
+                700_000 + i64::from(t),
+            )
+            .unwrap();
+    }
+    drop(legacy);
+    let ids: Vec<i64> = Connection::open(&path)
+        .unwrap()
+        .prepare("SELECT id FROM notification_events WHERE received_at >= 700000")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert!(
+        !ids.is_empty() && ids.iter().all(|id| *id > max_record),
+        "{ids:?}"
+    );
+
+    // Records now sit above the legacy table's own max rowid, which is the
+    // only arrangement in which a wiped sequence can make 0.11.0 reuse an id.
+    let current = NotificationJournal::at(path.clone());
+    let upper = write_every_category(&current, 80_000);
+    drop(current);
+    let legacy_max: i64 = Connection::open(&path)
+        .unwrap()
+        .query_row("SELECT MAX(id) FROM notification_events", [], |r| r.get(0))
+        .unwrap();
+    assert!(upper.iter().all(|r| r.id > legacy_max));
+
+    // Hostile case: the sequence row is wiped outside Quotalis, so a 0.11.0
+    // insert reuses a record id at the raw level.
+    Connection::open(&path)
+        .unwrap()
+        .execute(
+            "DELETE FROM sqlite_sequence WHERE name='notification_events'",
+            [],
+        )
+        .unwrap();
+    let legacy = LegacyJournal::at(path.clone());
+    legacy
+        .observe(
+            ProviderId::Codex,
+            "acct-y",
+            "session",
+            legacy_quota(90.0, 800_000, None),
+            800_000,
+        )
+        .unwrap();
+    let collided = legacy
+        .observe(
+            ProviderId::Codex,
+            "acct-y",
+            "session",
+            legacy_quota(0.0, 800_001, None),
+            800_001,
+        )
+        .unwrap()
+        .unwrap();
+    drop(legacy);
+    let raw_collisions: i64 = Connection::open(&path).unwrap().query_row(
+        "SELECT COUNT(*) FROM notification_events e JOIN quotalis_notification_records r ON r.id=e.id", [], |r| r.get(0)).unwrap();
+    assert!(
+        raw_collisions >= 1,
+        "the hostile setup really collides ({} at id {})",
+        raw_collisions,
+        collided.id
+    );
+    let records_before: i64 = Connection::open(&path)
+        .unwrap()
+        .query_row(
+            "SELECT COUNT(*) FROM quotalis_notification_records",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+
+    // Current open repairs: legacy row untouched, record moved above everything.
+    let current = NotificationJournal::at(path.clone());
+    let page = current
+        .page(&NotificationQuery {
+            limit: Some(100),
+            ..Default::default()
+        })
+        .unwrap();
+    let ids: Vec<i64> = page.items.iter().map(|e| e.id).collect();
+    let mut unique = ids.clone();
+    unique.sort_unstable();
+    unique.dedup();
+    assert_eq!(unique.len(), ids.len());
+    let at_collided = current.event(collided.id).unwrap().unwrap();
+    assert_eq!(
+        at_collided.kind,
+        JournalEventKind::UnexpectedQuotaChange,
+        "legacy row keeps its id"
+    );
+    let records_after: i64 = Connection::open(&path)
+        .unwrap()
+        .query_row(
+            "SELECT COUNT(*) FROM quotalis_notification_records",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        records_after, records_before,
+        "no record lost or duplicated"
+    );
+    let raw_collisions: i64 = Connection::open(&path).unwrap().query_row(
+        "SELECT COUNT(*) FROM notification_events e JOIN quotalis_notification_records r ON r.id=e.id", [], |r| r.get(0)).unwrap();
+    assert_eq!(raw_collisions, 0);
+    let total = page.items.len();
+    drop(current);
+    // and the repair is not repeated
+    let current = NotificationJournal::at(path);
+    assert_eq!(
+        current
+            .page(&NotificationQuery {
+                limit: Some(100),
+                ..Default::default()
+            })
+            .unwrap()
+            .items
+            .len(),
+        total
+    );
+}
+
+#[test]
+fn legacy_read_state_mutations_after_rollback_touch_only_legacy_rows() {
+    let (_dir, path) = temp_db();
+    let originals = write_legacy_fixture(&path);
+    let current = NotificationJournal::at(path.clone());
+    let records = write_every_category(&current, 70_000);
+    drop(current);
+    // 0.11.0 supports mark_read / mark_all_read and retention deletes on its
+    // own table; it has no clear/delete-history action.
+    let legacy = LegacyJournal::at(path.clone());
+    let page = legacy
+        .page(&super::legacy_v0_11_0::NotificationQuery::default())
+        .unwrap();
+    let marked = legacy.mark_all_read(page.through_id).unwrap();
+    assert_eq!(marked, 2, "only the two unread legacy rows");
+    assert!(!legacy.mark_read(records[0].id).unwrap());
+    drop(legacy);
+    let current = NotificationJournal::at(path);
+    for original in &originals {
+        assert!(current.event(original.id).unwrap().unwrap().is_read);
+    }
+    for record in &records {
+        let seen = current.event(record.id).unwrap().unwrap();
+        assert!(!seen.is_read, "records stay unread: 0.11.0 cannot see them");
+        assert_eq!(seen.kind, record.kind);
+        assert_eq!(seen.detail, record.detail);
+    }
 }
