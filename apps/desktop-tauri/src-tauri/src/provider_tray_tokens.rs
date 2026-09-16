@@ -1,9 +1,15 @@
 //! Opt-in, bounded background token reads. No log scanning in tray callbacks.
-use chrono::{Datelike, Local, NaiveDate};
+//! What each provider/period can truthfully state lives in
+//! `quotalis_core::token_periods`.
+use chrono::{Local, NaiveDate};
 use quotalis_core::{
-    cost_scanner::{CostScanner, get_daily_token_history},
+    cost_scanner::observe_token_period,
     locale::{LocaleKey, get_text},
     settings::Language,
+    token_periods::{
+        TokenBound, TokenPeriod, TokenPeriodCapability, TokenPeriodReading, resolve_token_reading,
+        token_period_capabilities, token_period_capability,
+    },
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -11,49 +17,37 @@ use std::{
     time::{Duration, Instant},
 };
 use tauri::{AppHandle, Manager};
-#[derive(Clone, Copy)]
-struct TokenReading {
-    total: u64,
-    incomplete: bool,
-}
+
 #[derive(Default)]
 struct Cache {
-    values: HashMap<(String, String, NaiveDate), (Instant, Option<TokenReading>)>,
+    values: HashMap<(String, TokenPeriod, NaiveDate), (Instant, Option<TokenPeriodReading>)>,
     running: HashSet<String>,
 }
 static CACHE: LazyLock<Mutex<Cache>> = LazyLock::new(|| Mutex::new(Cache::default()));
-fn days(range: &str, today: NaiveDate) -> u32 {
-    match range {
-        "today" => 1,
-        "week" => today.weekday().num_days_from_monday() + 1,
-        "month" => today.day(),
-        "year" => today.ordinal(),
-        "lifetime" => {
-            u32::try_from((today - NaiveDate::from_ymd_opt(1970, 1, 1).unwrap()).num_days() + 1)
-                .unwrap_or(1)
-        }
-        _ => 0,
-    }
+const READING_TTL: Duration = Duration::from_secs(300);
+
+/// The configured period, only when this provider can actually state it.
+pub fn supported_period(provider: &str, range: &str) -> Option<TokenPeriod> {
+    TokenPeriod::from_key(range)
+        .filter(|period| token_period_capability(provider, *period).is_some())
 }
+
 pub fn request(app: &AppHandle, provider: &str, range: &str) {
-    if !["codex", "claude"].contains(&provider) || range == "none" {
+    let Some(period) = supported_period(provider, range) else {
         return;
-    }
-    let key = (
-        provider.to_string(),
-        range.to_string(),
-        Local::now().date_naive(),
-    );
+    };
+    let today = Local::now().date_naive();
+    let key = (provider.to_string(), period, today);
     {
         let Ok(mut cache) = CACHE.lock() else {
             return;
         };
-        cache.values.retain(|(_, _, day), _| *day == key.2);
+        cache.values.retain(|(_, _, day), _| *day == today);
         if cache.running.contains(provider)
             || cache
                 .values
                 .get(&key)
-                .is_some_and(|(at, _)| at.elapsed() < Duration::from_secs(300))
+                .is_some_and(|(at, _)| at.elapsed() < READING_TTL)
         {
             return;
         }
@@ -63,30 +57,12 @@ pub fn request(app: &AppHandle, provider: &str, range: &str) {
     tauri::async_runtime::spawn(async move {
         let job_key = key.clone();
         let result = tauri::async_runtime::spawn_blocking(move || {
-            let count = days(&job_key.1, job_key.2);
-            if Local::now().date_naive() != job_key.2 {
-                return None;
-            }
-            if count == 0 {
-                return None;
-            }
-            let scanner = CostScanner::new(count);
-            if !(if job_key.0 == "codex" {
-                scanner.codex_local_activity_available()
-            } else {
-                scanner.claude_local_activity_available()
-            }) {
-                return None;
-            }
-            let (values, incomplete) = get_daily_token_history(&job_key.0, count);
-            let sum = values
-                .iter()
-                .try_fold(0_u64, |acc, (_, v)| acc.checked_add(*v))?;
-            // This API zero-fills missing days. Zero without coverage is unknown.
-            (sum > 0 && Local::now().date_naive() == job_key.2).then_some(TokenReading {
-                total: sum,
-                incomplete: incomplete || job_key.0 == "claude",
-            })
+            let (provider, period, day) = job_key;
+            let observation = observe_token_period(&provider, period, day)?;
+            // A scan that crossed midnight describes a different calendar period.
+            (Local::now().date_naive() == day)
+                .then(|| resolve_token_reading(&provider, period, observation, day))
+                .flatten()
         })
         .await
         .ok()
@@ -104,109 +80,184 @@ pub fn request(app: &AppHandle, provider: &str, range: &str) {
         crate::tray_bridge::update_tray_icon_and_tooltip(&app, &snapshots);
     });
 }
-pub fn label(provider: &str, range: &str, language: Language) -> String {
-    let value = CACHE
+
+/// A token tooltip row. Only `label` may be shortened: cutting digits off
+/// `reading` would state a different number.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TokenLine {
+    pub label: String,
+    pub reading: String,
+}
+
+#[cfg(test)]
+impl TokenLine {
+    fn text(&self) -> String {
+        format!("{}: {}", self.label, self.reading)
+    }
+}
+
+/// Tooltip line for a configured period, or `None` when the provider has no
+/// source for it (an unsupported period is omitted, never shown as zero).
+pub fn label(provider: &str, range: &str, language: Language) -> Option<TokenLine> {
+    let period = supported_period(provider, range)?;
+    let reading = CACHE
         .lock()
         .ok()
-        .and_then(|cache| cached_value(&cache, provider, range, Local::now().date_naive()));
-    format!(
-        "{} {}",
-        get_text(language, LocaleKey::TrayStudioLocalShort),
-        value.map(format_reading).unwrap_or_else(|| "—".into())
-    )
+        .and_then(|cache| cached_value(&cache, provider, period, Local::now().date_naive()));
+    Some(format_line(period, reading, language))
 }
+
 /// Dev QA fixture token line: same format as a real reading, `—` when absent.
-pub fn fixture_label(total: Option<u64>, language: Language) -> String {
-    format!(
-        "{} {}",
-        get_text(language, LocaleKey::TrayStudioLocalShort),
-        total
-            .filter(|total| *total > 0)
-            .map(|total| format_reading(TokenReading {
-                total,
-                incomplete: false
-            }))
-            .unwrap_or_else(|| "—".into())
-    )
+pub fn fixture_label(total: Option<u64>, range: &str, language: Language) -> Option<TokenLine> {
+    let period = TokenPeriod::from_key(range)?;
+    let reading = total.map(|total| TokenPeriodReading {
+        total,
+        bound: TokenBound::Exact,
+    });
+    Some(format_line(period, reading, language))
 }
+
+fn period_key(period: TokenPeriod) -> LocaleKey {
+    match period {
+        TokenPeriod::Today => LocaleKey::TrayStudioToday,
+        TokenPeriod::Week => LocaleKey::TrayStudioWeek,
+        TokenPeriod::Month => LocaleKey::TrayStudioMonth,
+        TokenPeriod::Year => LocaleKey::TrayStudioYear,
+        TokenPeriod::Lifetime => LocaleKey::TrayStudioLifetime,
+    }
+}
+
+fn format_line(
+    period: TokenPeriod,
+    reading: Option<TokenPeriodReading>,
+    language: Language,
+) -> TokenLine {
+    TokenLine {
+        label: format!(
+            "{} · {}",
+            get_text(language, LocaleKey::TrayStudioLocalShort),
+            get_text(language, period_key(period)),
+        ),
+        reading: reading.map(format_reading).unwrap_or_else(|| "—".into()),
+    }
+}
+
 fn cached_value(
     cache: &Cache,
     provider: &str,
-    range: &str,
+    period: TokenPeriod,
     date: NaiveDate,
-) -> Option<TokenReading> {
+) -> Option<TokenPeriodReading> {
     cache
         .values
-        .get(&(provider.into(), range.into(), date))
-        .filter(|(at, _)| at.elapsed() < Duration::from_secs(300))
+        .get(&(provider.into(), period, date))
+        .filter(|(at, _)| at.elapsed() < READING_TTL)
         .and_then(|(_, value)| *value)
 }
-fn format_reading(value: TokenReading) -> String {
-    format!("{}{}", if value.incomplete { "≥" } else { "" }, value.total)
+
+fn format_reading(value: TokenPeriodReading) -> String {
+    format!(
+        "{}{}",
+        if value.bound == TokenBound::LowerBound {
+            "≥"
+        } else {
+            ""
+        },
+        value.total
+    )
 }
+
+/// Periods Tray Studio may offer for a provider, with how exact each can be.
+#[tauri::command]
+pub fn get_tray_token_periods(provider_id: String) -> Vec<TokenPeriodCapability> {
+    token_period_capabilities(&provider_id)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quotalis_core::token_periods::TokenPeriodObservation;
+
     #[test]
-    fn calendar_ranges_include_today() {
-        let d = NaiveDate::from_ymd_opt(2026, 9, 12).unwrap();
-        assert_eq!(days("today", d), 1);
-        assert_eq!(days("week", d), 6);
-        assert_eq!(days("month", d), 12);
-        assert_eq!(days("year", d), 255);
-        assert!(days("lifetime", d) > 20000);
-    }
-    #[test]
-    fn incomplete_counts_are_lower_bounds() {
+    fn lower_bounds_are_marked_and_exact_readings_are_not() {
         assert_eq!(
-            format_reading(TokenReading {
+            format_reading(TokenPeriodReading {
                 total: 123,
-                incomplete: true
+                bound: TokenBound::LowerBound
             }),
             "≥123"
         );
         assert_eq!(
-            format_reading(TokenReading {
+            format_reading(TokenPeriodReading {
                 total: 123,
-                incomplete: false
+                bound: TokenBound::Exact
             }),
             "123"
         );
     }
+
     #[test]
     fn calendar_date_is_part_of_the_cache_identity() {
         let before = NaiveDate::from_ymd_opt(2026, 12, 31).unwrap();
         let after = NaiveDate::from_ymd_opt(2027, 1, 1).unwrap();
+        let reading = TokenPeriodReading {
+            total: 123,
+            bound: TokenBound::Exact,
+        };
         let mut cache = Cache::default();
         cache.values.insert(
-            ("codex".into(), "today".into(), before),
-            (
-                Instant::now(),
-                Some(TokenReading {
-                    total: 123,
-                    incomplete: false,
-                }),
-            ),
+            ("codex".into(), TokenPeriod::Today, before),
+            (Instant::now(), Some(reading)),
         );
         assert_eq!(
-            cached_value(&cache, "codex", "today", before).map(|v| v.total),
-            Some(123)
+            cached_value(&cache, "codex", TokenPeriod::Today, before),
+            Some(reading)
         );
-        assert!(cached_value(&cache, "codex", "today", after).is_none());
+        assert!(cached_value(&cache, "codex", TokenPeriod::Today, after).is_none());
+        assert!(cached_value(&cache, "codex", TokenPeriod::Week, before).is_none());
         cache.values.insert(
-            ("codex".into(), "today".into(), before),
-            (
-                Instant::now() - Duration::from_secs(301),
-                Some(TokenReading {
-                    total: 123,
-                    incomplete: false,
-                }),
-            ),
+            ("codex".into(), TokenPeriod::Today, before),
+            (Instant::now() - Duration::from_secs(301), Some(reading)),
         );
-        assert!(cached_value(&cache, "codex", "today", before).is_none());
+        assert!(cached_value(&cache, "codex", TokenPeriod::Today, before).is_none());
     }
+
     #[test]
-    fn unsupported_source_is_unavailable_not_zero() {
-        assert!(label("gemini", "today", Language::English).ends_with('—'));
+    fn unsupported_sources_and_periods_produce_no_line() {
+        assert_eq!(label("gemini", "today", Language::English), None);
+        assert_eq!(label("codex", "none", Language::English), None);
+        assert_eq!(label("codex", "fortnight", Language::English), None);
+        assert!(supported_period("claude", "lifetime").is_some());
+        assert!(get_tray_token_periods("gemini".into()).is_empty());
+        assert_eq!(get_tray_token_periods("codex".into()).len(), 5);
+    }
+
+    #[test]
+    fn line_names_the_period_and_keeps_unknown_distinct_from_zero() {
+        let unknown = label("codex", "week", Language::English).unwrap();
+        assert!(
+            unknown.label.contains("This week") && unknown.reading == "—",
+            "{unknown:?}"
+        );
+        let today = NaiveDate::from_ymd_opt(2026, 9, 16).unwrap();
+        let claude = resolve_token_reading(
+            "claude",
+            TokenPeriod::Month,
+            TokenPeriodObservation {
+                total: 987,
+                coverage_established: true,
+                earliest_activity: Some(today),
+            },
+            today,
+        );
+        assert_eq!(
+            format_line(TokenPeriod::Month, claude, Language::English).text(),
+            "Local tokens · This month: ≥987"
+        );
+        let arabic = format_line(TokenPeriod::Year, claude, Language::Arabic).text();
+        assert!(
+            arabic.contains("≥987") && !arabic.contains("This"),
+            "{arabic}"
+        );
     }
 }

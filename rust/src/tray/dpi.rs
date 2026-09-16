@@ -31,7 +31,7 @@ pub fn requires_upscale(source_px: u32, scale_percent: u32) -> bool {
     shell_icon_px(scale_percent) > source_px
 }
 
-const _: () = assert!(TRAY_ICON_SOURCE_PX % TRAY_ICON_DESIGN_GRID_PX == 0);
+const _: () = assert!(TRAY_ICON_SOURCE_PX.is_multiple_of(TRAY_ICON_DESIGN_GRID_PX));
 const _: () =
     assert!(TRAY_ICON_SOURCE_PX >= SHELL_SMALL_ICON_BASE_PX * MAX_SUPPORTED_SCALE_PERCENT / 100);
 

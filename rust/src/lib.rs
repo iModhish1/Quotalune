@@ -30,6 +30,7 @@ pub mod sound;
 pub mod spend_contract;
 pub mod surface_coordinator;
 pub mod surface_layout;
+pub mod token_periods;
 
 pub mod status;
 pub mod tray;

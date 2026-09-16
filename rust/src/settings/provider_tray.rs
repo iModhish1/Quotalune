@@ -121,6 +121,22 @@ mod tests {
         }
     }
     #[test]
+    fn every_token_period_survives_persistence() {
+        for range in ["none", "today", "week", "month", "year", "lifetime"] {
+            let saved = HashMap::from([(
+                "codex".to_string(),
+                ProviderTrayConfig {
+                    enabled: true,
+                    token_range: range.into(),
+                    ..Default::default()
+                },
+            )]);
+            let loaded: HashMap<String, ProviderTrayConfig> =
+                serde_json::from_str(&serde_json::to_string(&saved).unwrap()).unwrap();
+            assert_eq!(normalize_provider_tray(loaded)["codex"].token_range, range);
+        }
+    }
+    #[test]
     fn unknown_provider_does_not_get_an_icon() {
         assert!(
             normalize_provider_tray(HashMap::from([(

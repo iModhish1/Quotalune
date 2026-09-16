@@ -31,3 +31,13 @@ export const NOTIFICATION_QA_KINDS = ["info", "warning", "critical", "reset", "p
 export type NotificationQaKind = (typeof NOTIFICATION_QA_KINDS)[number];
 export const sendNotificationQaFixture = (kind: NotificationQaKind, providerId: string): Promise<void> =>
   invoke("send_notification_qa_fixture", { kind, providerId });
+
+/** Mirror of `quotalis_core::token_periods::TokenPeriodCapability`. */
+export type TokenPeriod = "today" | "week" | "month" | "year" | "lifetime";
+export interface TokenPeriodCapability {
+  period: TokenPeriod;
+  source: "codexLocalSessions" | "claudeLocalTranscripts";
+  bestBound: "exact" | "lowerBound";
+}
+export const getTrayTokenPeriods = (providerId: string): Promise<TokenPeriodCapability[]> =>
+  invoke("get_tray_token_periods", { providerId });

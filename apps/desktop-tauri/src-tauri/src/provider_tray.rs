@@ -109,7 +109,7 @@ fn tooltip(
     s: Option<&ProviderUsageSnapshot>,
     c: &ProviderTrayConfig,
     settings: &Settings,
-    token: Option<String>,
+    token: Option<crate::provider_tray_tokens::TokenLine>,
 ) -> String {
     use quotalis_core::locale::{LocaleKey, get_text};
     let t = |key| get_text(settings.ui_language, key);
@@ -128,7 +128,12 @@ fn tooltip(
         header.push(shorten(plan, 12));
     }
     let header = header.join(" · ");
-    let token = token.map(|line| shorten(&line, 40));
+    // Keep the whole reading; shorten only the label in front of it.
+    let token = token.map(|line| {
+        let reading_units = line.reading.encode_utf16().count();
+        let label = shorten(&line.label, 40usize.saturating_sub(reading_units + 2));
+        format!("{label}: {}", line.reading)
+    });
     let ids = if c.tooltip_limit_ids.is_empty() {
         vec![c.limit_id.clone()]
     } else {
@@ -174,7 +179,16 @@ fn tooltip(
     if let Some(token) = token {
         lines.push(token);
     }
-    lines.join("\n")
+    // Final guard: drop whole trailing lines rather than letting the shell cut
+    // a line (or a surrogate pair) at the 128-unit buffer edge.
+    while lines.len() > 1 && lines.join("\n").encode_utf16().count() > TOOLTIP_UTF16_LIMIT {
+        lines.pop();
+    }
+    let joined = lines.join("\n");
+    if joined.encode_utf16().count() > TOOLTIP_UTF16_LIMIT {
+        return shorten(&joined, TOOLTIP_UTF16_LIMIT);
+    }
+    joined
 }
 /// Tray is its own appearance scope: Global follows the main application's
 /// Quotalis mark palette; Override keeps each indicator's explicit color.
@@ -288,23 +302,22 @@ fn effective_snapshots(snapshots: &[ProviderUsageSnapshot]) -> Vec<ProviderUsage
     result
 }
 
-fn token_line(id: &str, c: &ProviderTrayConfig, settings: &Settings) -> Option<String> {
-    if c.token_range == "none" {
-        return None;
-    }
+fn token_line(
+    id: &str,
+    c: &ProviderTrayConfig,
+    settings: &Settings,
+) -> Option<crate::provider_tray_tokens::TokenLine> {
+    crate::provider_tray_tokens::supported_period(id, &c.token_range)?;
     if let Some(fixture) = crate::tray_qa_fixture::active()
         && fixture.provider_id == id
     {
-        return Some(crate::provider_tray_tokens::fixture_label(
+        return crate::provider_tray_tokens::fixture_label(
             fixture.tokens,
+            &c.token_range,
             settings.ui_language,
-        ));
+        );
     }
-    Some(crate::provider_tray_tokens::label(
-        id,
-        &c.token_range,
-        settings.ui_language,
-    ))
+    crate::provider_tray_tokens::label(id, &c.token_range, settings.ui_language)
 }
 
 /// Tauri tray calls synchronously dispatch to the main thread. Never acquire
@@ -558,7 +571,10 @@ mod tests {
             Some(&s),
             &c,
             &settings,
-            Some("Local ≥1234567 tokens and some extra words that overflow".into()),
+            Some(crate::provider_tray_tokens::TokenLine {
+                label: "Local tokens with a deliberately overlong period label".into(),
+                reading: "≥1234567".into(),
+            }),
         );
         let lines: Vec<_> = tip.lines().collect();
         assert_eq!(lines.len(), 5, "{tip}");
@@ -567,7 +583,76 @@ mod tests {
         // A window the provider does not supply is unavailable, never 0%.
         assert!(lines[3].ends_with('—'), "{tip}");
         assert!(!lines[3].contains("0.0%"), "{tip}");
+        // The token reading survives intact even though its label was shortened.
+        assert!(lines[4].ends_with(": ≥1234567"), "{tip}");
         assert!(tip.encode_utf16().count() <= TOOLTIP_UTF16_LIMIT);
+    }
+    #[test]
+    fn worst_case_tooltip_keeps_whole_lines_surrogates_and_readings() {
+        let s = snapshot(
+            serde_json::json!({"providerId":"claude","sourceLabel":"oauth","errorState":"ready","planName":"\u{1F680}\u{1F680}\u{1F680}\u{1F680}\u{1F680}\u{1F680} plan","primaryLabel":"\u{1F680} Session with an extremely long reported window label","primary":{"usedPercent":41.25,"remainingPercent":58.75,"windowMinutes":300},"secondaryLabel":"\u{1F680} Weekly with an extremely long reported window label too","secondary":{"usedPercent":12.5,"remainingPercent":87.5,"windowMinutes":10080},"tertiaryLabel":"\u{1F680} Monthly with yet another extremely long window label","tertiary":{"usedPercent":99.99,"remainingPercent":0.01,"windowMinutes":43200}}),
+        );
+        let c = ProviderTrayConfig {
+            show_as_used: true,
+            precision: 2,
+            tooltip_limit_ids: limits(&s).into_iter().map(|l| l.id).collect(),
+            token_range: "lifetime".into(),
+            ..Default::default()
+        };
+        for language in [
+            quotalis_core::settings::Language::English,
+            quotalis_core::settings::Language::Arabic,
+        ] {
+            let settings = Settings {
+                ui_language: language,
+                ..Settings::default()
+            };
+            let tip = tooltip(
+                "claude",
+                Some(&s),
+                &c,
+                &settings,
+                crate::provider_tray_tokens::fixture_label(
+                    Some(18_446_744_073),
+                    "lifetime",
+                    language,
+                ),
+            );
+            let units = tip.encode_utf16().count();
+            assert!(units <= TOOLTIP_UTF16_LIMIT, "{units}: {tip}");
+            assert!(String::from_utf16(&tip.encode_utf16().collect::<Vec<_>>()).is_ok());
+            let lines: Vec<_> = tip.lines().collect();
+            assert_eq!(lines.len(), 5, "{tip}");
+            for (line, reading) in lines[1..4].iter().zip(["41.25%", "12.50%", "99.99%"]) {
+                assert!(line.contains(reading), "{reading} missing: {tip}");
+            }
+            assert!(lines[4].ends_with("18446744073"), "{tip}");
+        }
+    }
+    #[test]
+    fn persisted_token_period_reaches_the_tooltip_only_when_supported() {
+        let settings = Settings::default();
+        let with = |range: &str| ProviderTrayConfig {
+            token_range: range.into(),
+            ..Default::default()
+        };
+        assert!(token_line("gemini", &with("week"), &settings).is_none());
+        assert!(token_line("codex", &with("none"), &settings).is_none());
+        let codex = token_line("codex", &with("week"), &settings).unwrap();
+        assert!(codex.label.contains("This week"), "{codex:?}");
+        let claude = token_line("claude", &with("lifetime"), &settings).unwrap();
+        assert!(
+            claude.label.contains("All available local history"),
+            "{claude:?}"
+        );
+        let tip = tooltip(
+            "codex",
+            Some(&sample()),
+            &with("week"),
+            &settings,
+            Some(codex),
+        );
+        assert!(tip.lines().last().unwrap().contains("This week"), "{tip}");
     }
     #[test]
     fn arabic_tooltip_stays_within_the_native_limit() {
@@ -586,10 +671,7 @@ mod tests {
             Some(&s),
             &c,
             &settings,
-            Some(crate::provider_tray_tokens::fixture_label(
-                Some(987_654),
-                settings.ui_language,
-            )),
+            crate::provider_tray_tokens::fixture_label(Some(987_654), "week", settings.ui_language),
         );
         assert!(tip.contains("78.8%"), "{tip}");
         assert!(tip.contains("987654"), "{tip}");

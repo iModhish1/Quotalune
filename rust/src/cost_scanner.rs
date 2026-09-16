@@ -1881,6 +1881,70 @@ pub fn get_daily_token_history(provider: &str, days: u32) -> (Vec<(String, u64)>
     (result, incomplete)
 }
 
+/// Evidence for one tray token period from the product's local token sources
+/// (see [`crate::token_periods`]). `None` means the source does not exist on
+/// this machine or the provider has no local token source.
+pub fn observe_token_period(
+    provider: &str,
+    period: crate::token_periods::TokenPeriod,
+    today: NaiveDate,
+) -> Option<crate::token_periods::TokenPeriodObservation> {
+    let days = period.days(today);
+    let start = period.start(today);
+    let mut total = 0_u64;
+    let mut earliest: Option<NaiveDate> = None;
+    let mut add = |day: NaiveDate, tokens: u64| -> Option<()> {
+        if tokens > 0 && day >= start && day <= today {
+            total = total.checked_add(tokens)?;
+            earliest = Some(earliest.map_or(day, |seen| seen.min(day)));
+        }
+        Some(())
+    };
+    let coverage_established = match provider {
+        "codex" => {
+            let scanner = CostScanner::new(days);
+            if !scanner.codex_local_activity_available() {
+                return None;
+            }
+            let (summary, _) = scanner.scan_codex_detailed(None);
+            let cache = JsonlScanner::load_cache(ProviderId::Codex, scanner.cache_root.as_deref());
+            for (day_key, models) in &cache.days {
+                let Some(day) = CostUsageDayRange::parse_day_key(day_key) else {
+                    continue;
+                };
+                let mut one_day = HashMap::new();
+                one_day.insert(day_key.clone(), models.clone());
+                let mut scratch = CostSummary::default();
+                add_codex_days_map_to_summary(
+                    &mut scratch,
+                    &one_day,
+                    &CostUsageDayRange::new(day, day),
+                );
+                add(day, scratch.input_tokens + scratch.output_tokens)?;
+            }
+            summary.history_coverage_established
+        }
+        "claude" => {
+            if !CostScanner::new(days).claude_local_activity_available() {
+                return None;
+            }
+            let activity = get_claude_local_activity(days, None, None);
+            for (day_key, tokens) in activity.daily_tokens {
+                if let Some(day) = CostUsageDayRange::parse_day_key(&day_key) {
+                    add(day, tokens)?;
+                }
+            }
+            false
+        }
+        _ => return None,
+    };
+    Some(crate::token_periods::TokenPeriodObservation {
+        total,
+        coverage_established,
+        earliest_activity: earliest,
+    })
+}
+
 fn add_claude_record_to_daily_tokens(
     daily_tokens: &mut HashMap<String, u64>,
     record: &ClaudeUsageRecord,

@@ -17,3 +17,10 @@ describe("tray studio model",()=>{
  it.each([1,6,12,24,70])("filters a registry of %i providers without a fixed count",(count)=>{const catalog=Array.from({length:count},(_,i)=>({id:`p${i}`,displayName:`Provider ${i}`})) as ProviderCatalogEntry[];expect(filterTrayProviders(catalog,"")).toHaveLength(count);expect(filterTrayProviders(catalog,`provider ${count-1}`).map(p=>p.id)).toContain(`p${count-1}`);expect(filterTrayProviders(catalog,"zzz")).toHaveLength(0);});
  it("summarizes the real tray treatment for the Appearance summary",()=>{const cfg=(color:ProviderTrayConfig["color"],enabled=true)=>({...DEFAULT_PROVIDER_TRAY,enabled,color});expect(trayAppearanceValueKey({trayIconMode:"single",providerTrayConfigs:{}})).toBe("AppearanceTraySingleIcon");expect(trayAppearanceValueKey({trayIconMode:"perProvider"})).toBe("AppearanceTrayProviderAccent");expect(trayAppearanceValueKey({trayIconMode:"single",providerTrayConfigs:{a:cfg("identity"),b:cfg("silver",false)}})).toBe("AppearanceTrayQuotalisPalette");expect(trayAppearanceValueKey({trayIconMode:"single",providerTrayConfigs:{a:cfg("identity"),b:cfg("silver")}})).toBe("AppearanceTrayMixed");});
 });
+import {effectiveTokenRange,trayTokenPeriodOptions} from "./trayStudioModel";
+describe("token period selector truth",()=>{
+ const t=(key:string)=>key as never;
+ const codex=[{period:"today",bestBound:"exact"},{period:"year",bestBound:"exact"},{period:"lifetime",bestBound:"lowerBound"}] as const;
+ it("lists Off plus only supported periods, marking lower bounds",()=>{expect(trayTokenPeriodOptions(codex,t)).toEqual([{value:"none",label:"TrayStudioOff"},{value:"today",label:"TrayStudioToday"},{value:"year",label:"TrayStudioYear"},{value:"lifetime",label:"TrayStudioLifetime · TrayStudioTokenLowerBound"}]);expect(trayTokenPeriodOptions([],t)).toEqual([{value:"none",label:"TrayStudioOff"}]);});
+ it("treats a persisted unsupported period as Off",()=>{expect(effectiveTokenRange("week",codex)).toBe("none");expect(effectiveTokenRange("year",codex)).toBe("year");expect(effectiveTokenRange("today",[])).toBe("none");});
+});

@@ -1,4 +1,4 @@
-import {useState} from "react";
+import {useEffect,useState} from "react";
 import {useLocale} from "../../../hooks/useLocale";
 import {useProviders} from "../../../hooks/useProviders";
 import {ProviderIcon} from "../../../components/providers/ProviderIcon";
@@ -7,13 +7,17 @@ import QuotalisSelect from "../../../components/analytics/QuotalisSelect";
 import {QuotalisRefreshingBadge} from "../../../design-system/QuotalisLoadingStates";
 import type {ProviderCatalogEntry,ProviderTrayConfig} from "../../../types/bridge";
 import type {TabProps} from "../settingsTabs";
-import {DEFAULT_PROVIDER_TRAY,TRAY_STYLE_OPTIONS,filterTrayProviders,trayLimits,trayPercent} from "../trayStudioModel";
+import {DEFAULT_PROVIDER_TRAY,TRAY_STYLE_OPTIONS,effectiveTokenRange,filterTrayProviders,trayLimits,trayPercent,trayTokenPeriodOptions} from "../trayStudioModel";
+import {getTrayTokenPeriods,type TokenPeriodCapability} from "../../../lib/trayQa";
 import {TrayNativePreview} from "./TrayNativePreview";
 import "./TrayStudioTab.css";
 export default function TrayStudioTab({settings,set,saving,catalog}:TabProps&{catalog:ProviderCatalogEntry[]}) {
  const {t,language}=useLocale();const {providers,isRefreshing}=useProviders({refreshOnMount:false});
  const [id,setId]=useState(catalog[0]?.id??"codex");
  const [filter,setFilter]=useState("");
+ const [tokenPeriods,setTokenPeriods]=useState<{provider:string;periods:TokenPeriodCapability[]}|null>(null);
+ useEffect(()=>{let current=true;getTrayTokenPeriods(id).then(periods=>{if(current)setTokenPeriods({provider:id,periods});}).catch(()=>{if(current)setTokenPeriods({provider:id,periods:[]});});return()=>{current=false;};},[id]);
+ const periods=tokenPeriods?.provider===id?tokenPeriods.periods:[];
  const matches=filterTrayProviders(catalog,filter);
  const snapshot=providers.find(p=>p.providerId===id);const configured=settings.providerTrayConfigs?.[id];
  const c:ProviderTrayConfig={...DEFAULT_PROVIDER_TRAY,...(configured??{enabled:settings.trayIconMode==="perProvider"&&settings.enabledProviders.includes(id),limitId:trayLimits(snapshot)[0]?.id??""})};
@@ -46,7 +50,7 @@ export default function TrayStudioTab({settings,set,saving,catalog}:TabProps&{ca
      <Field label={t('TrayStudioUsed')}><Select value={c.showAsUsed?'used':'remaining'} options={[{value:'used',label:t('TrayStudioUsed')},{value:'remaining',label:t('TrayStudioRemaining')}]} onChange={v=>patch({showAsUsed:v==='used'})} disabled={saving}/></Field>
      <Field label={t('TrayStudioHover')}><QuotalisSelect label={t('TrayStudioHover')} multiple={c.tooltipLimitIds} value="" onChange={()=>{}} options={limits.map(w=>({value:w.id,label:w.label,disabled:c.tooltipLimitIds.length>=3&&!c.tooltipLimitIds.includes(w.id)}))} onMultipleChange={ids=>patch({tooltipLimitIds:ids.slice(0,3)})} disabled={saving}/></Field>
      <div className="tray-studio__toggles"><Toggle label={t('TrayStudioName')} checked={c.showName} disabled={saving} onChange={showName=>patch({showName})}/><Toggle label={t('TrayStudioPlan')} checked={c.showPlan} disabled={saving} onChange={showPlan=>patch({showPlan})}/></div>
-     <Field label={t('TrayStudioTokens')} description={t('TrayStudioTokenHelp')}><Select value={c.tokenRange} disabled={saving} onChange={v=>patch({tokenRange:v as ProviderTrayConfig['tokenRange']})} options={([['none','TrayStudioOff'],['today','TrayStudioToday'],['week','TrayStudioWeek'],['month','TrayStudioMonth'],['year','TrayStudioYear'],['lifetime','TrayStudioLifetime']] as const).map(([value,key])=>({value,label:t(key)}))}/></Field>
+     <Field label={t('TrayStudioTokens')} description={t(periods.length?'TrayStudioTokenHelp':'TrayStudioTokenUnsupported')}><Select value={effectiveTokenRange(c.tokenRange,periods)} disabled={saving||!periods.length} onChange={v=>patch({tokenRange:v as ProviderTrayConfig['tokenRange']})} options={trayTokenPeriodOptions(periods,t)}/></Field>
      <Field label={t('TrayStudioColor')} description={followsAppearance?t('TrayStudioFollowsAppearance'):undefined}><Select value={c.color} disabled={saving||followsAppearance} onChange={v=>patch({color:v as ProviderTrayConfig['color']})} options={([['provider','TrayStudioProviderColor'],['identity','TrayStudioAppColor'],['silver','TrayStudioSilver']] as const).map(([value,key])=>({value,label:t(key)}))}/></Field>
      <Field label={t('TrayStudioPrecision')}><Select value={String(c.precision)} disabled={saving} onChange={v=>patch({precision:Number(v)})} options={[0,1,2].map(v=>({value:String(v),label:`${v}`}))}/></Field>
      <Field label={t('TrayStudioStroke')}><input aria-label={t('TrayStudioStroke')} type="range" min="1" max="4" value={c.stroke} onChange={e=>patch({stroke:Number(e.target.value)})} disabled={saving||c.style==="mark"}/></Field>

@@ -30,3 +30,13 @@ export function trayAppearanceValueKey(snapshot:Pick<SettingsSnapshot,"trayIconM
  const [color]=colors;
  return color==="identity"?"AppearanceTrayQuotalisPalette":color==="silver"?"AppearanceTraySilver":"AppearanceTrayProviderAccent";
 }
+
+const TOKEN_PERIOD_LABELS:Record<string,LocaleKey>={today:"TrayStudioToday",week:"TrayStudioWeek",month:"TrayStudioMonth",year:"TrayStudioYear",lifetime:"TrayStudioLifetime"};
+/** Selector options: Off plus only the periods the provider's local source can state. */
+export function trayTokenPeriodOptions(capabilities:readonly {period:string;bestBound:"exact"|"lowerBound"}[],t:(key:LocaleKey)=>string) {
+ return [{value:"none",label:t("TrayStudioOff")},...capabilities.filter(c=>TOKEN_PERIOD_LABELS[c.period]).map(c=>({value:c.period,label:c.bestBound==="lowerBound"?`${t(TOKEN_PERIOD_LABELS[c.period])} · ${t("TrayStudioTokenLowerBound")}`:t(TOKEN_PERIOD_LABELS[c.period])}))];
+}
+/** The period the runtime will actually use: an unsupported persisted choice behaves as Off. */
+export function effectiveTokenRange(range:ProviderTrayConfig["tokenRange"],capabilities:readonly {period:string}[]):ProviderTrayConfig["tokenRange"] {
+ return range!=="none"&&capabilities.some(c=>c.period===range)?range:"none";
+}
