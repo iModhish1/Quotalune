@@ -178,6 +178,15 @@ fn classify(previous: ResetObservation, current: ResetObservation) -> Option<Jou
     }
 }
 
+/// One threshold alert: the configured level that was reached and what was observed.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AlertRecord {
+    pub kind: JournalEventKind,
+    pub threshold: f64,
+    pub used_percent: f64,
+    pub observed_at: i64,
+}
+
 pub struct NotificationJournal {
     path: Option<PathBuf>,
     connection: Mutex<Option<Connection>>,
@@ -314,11 +323,14 @@ impl NotificationJournal {
         provider: ProviderId,
         account: &str,
         window_key: &str,
-        kind: JournalEventKind,
-        threshold: f64,
-        used_percent: f64,
-        observed_at: i64,
+        alert: AlertRecord,
     ) -> Result<NotificationEvent, String> {
+        let AlertRecord {
+            kind,
+            threshold,
+            used_percent,
+            observed_at,
+        } = alert;
         if !kind.is_alert() {
             return Err("Only alert kinds are recorded directly".into());
         }

@@ -875,10 +875,12 @@ impl NotificationManager {
                 provider,
                 account,
                 &window_key,
-                kind,
-                level.clamp(0.0, 100.0),
-                used_percent.clamp(0.0, 100.0),
-                Utc::now().timestamp(),
+                crate::notification_journal::AlertRecord {
+                    kind,
+                    threshold: level.clamp(0.0, 100.0),
+                    used_percent: used_percent.clamp(0.0, 100.0),
+                    observed_at: Utc::now().timestamp(),
+                },
             )
         }) {
             tracing::warn!(%error, "Could not record alert in notification history");

@@ -384,10 +384,12 @@ fn alerts_record_threshold_and_observation_with_semantic_severity() {
             ProviderId::Claude,
             "acct",
             "weekly",
-            JournalEventKind::UsageHighReached,
-            70.0,
-            72.5,
-            2_000,
+            AlertRecord {
+                kind: JournalEventKind::UsageHighReached,
+                threshold: 70.0,
+                used_percent: 72.5,
+                observed_at: 2_000,
+            },
         )
         .unwrap();
     assert_eq!((high.previous_value, high.current_value), (70.0, 72.5));
@@ -399,10 +401,12 @@ fn alerts_record_threshold_and_observation_with_semantic_severity() {
             ProviderId::Claude,
             "",
             "session",
-            JournalEventKind::UsageExhausted,
-            100.0,
-            100.0,
-            2_001,
+            AlertRecord {
+                kind: JournalEventKind::UsageExhausted,
+                threshold: 100.0,
+                used_percent: 100.0,
+                observed_at: 2_001,
+            },
         )
         .unwrap();
     assert_eq!(exhausted.severity, NotificationSeverity::Critical);
@@ -430,7 +434,17 @@ fn alerts_reject_non_alert_kinds_and_invalid_values() {
     ] {
         assert!(
             store
-                .record_alert(ProviderId::Codex, "a", window, kind, threshold, used, 10)
+                .record_alert(
+                    ProviderId::Codex,
+                    "a",
+                    window,
+                    AlertRecord {
+                        kind,
+                        threshold,
+                        used_percent: used,
+                        observed_at: 10
+                    }
+                )
                 .is_err()
         );
     }

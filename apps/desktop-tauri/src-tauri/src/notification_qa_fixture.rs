@@ -13,7 +13,8 @@ use std::{
 
 static LAST_SENT: Mutex<Option<Instant>> = Mutex::new(None);
 
-pub const NOTIFICATION_QA_KINDS: [&str; 6] = [
+#[cfg(test)]
+const NOTIFICATION_QA_KINDS: [&str; 6] = [
     "info",
     "warning",
     "critical",
