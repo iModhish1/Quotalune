@@ -6,6 +6,14 @@
 //! allows the toast, so one logical event is one row. No free-form provider
 //! messages or credentials are accepted: values are bounded numbers and
 //! `detail` is a closed code per kind.
+//!
+//! Rollback compatibility (see docs/validation/NOTIFICATION_HISTORY_SCHEMA_COMPATIBILITY.md):
+//! published Quotalis 0.11.0 opens this same file, rejects `user_version` > 1,
+//! parses `notification_events.kind` into its four observation kinds and reads
+//! both values as non-null numbers. So `notification_events` keeps exactly that
+//! shape and user_version 1; issued-notification records live in the additive
+//! `quotalis_notification_records` table, which 0.11.0 never queries. Both
+//! tables share one id sequence (`sqlite_sequence` of `notification_events`).
 
 use crate::core::ProviderId;
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
@@ -13,7 +21,6 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{path::PathBuf, sync::Mutex, time::Duration};
 
-const SCHEMA_VERSION: i64 = 2;
 const MAX_EVENTS: i64 = 5_000;
 const MAX_BASELINES: i64 = 4_096;
 const RETENTION_SECONDS: i64 = 90 * 86_400;
@@ -237,15 +244,225 @@ pub struct NotificationRecord {
     pub observed_at: i64,
 }
 
-const CREATE_EVENTS_TABLE: &str = "CREATE TABLE notification_events (
+/// `PRAGMA user_version` of the shared history file. Published Quotalis
+/// 0.11.0 refuses any higher value, so it must stay at 1: everything this
+/// version adds lives in additive tables that 0.11.0 never queries.
+const LEGACY_USER_VERSION: i64 = 1;
+/// The short-lived Wave 2B layout (rebuilt events table, nullable values,
+/// `detail`, user_version 2). Converted back to the legacy layout on open.
+const WAVE2B_USER_VERSION: i64 = 2;
+/// Version of the additive Quotalis-owned tables, tracked in their own table
+/// so it never touches the legacy-owned `user_version`.
+const RECORDS_COMPONENT: &str = "notification_records";
+const RECORDS_COMPONENT_VERSION: i64 = 1;
+
+/// Exactly the v0.11.0 legacy schema. 0.11.0 parses `kind` into its four
+/// observation kinds and reads both values as non-null numbers, so only those
+/// rows may ever be written to `notification_events`.
+const LEGACY_SCHEMA: &str = "CREATE TABLE notification_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     provider_id TEXT NOT NULL, account_ref TEXT, window_key TEXT NOT NULL,
     kind TEXT NOT NULL, occurred_at INTEGER, detected_at INTEGER NOT NULL,
     received_at INTEGER NOT NULL, observed_from INTEGER NOT NULL,
-    observed_to INTEGER NOT NULL, previous_value REAL,
-    current_value REAL, detail TEXT, is_read INTEGER NOT NULL DEFAULT 0 CHECK(is_read IN (0,1))
+    observed_to INTEGER NOT NULL, previous_value REAL NOT NULL,
+    current_value REAL NOT NULL, is_read INTEGER NOT NULL DEFAULT 0 CHECK(is_read IN (0,1))
 );
 CREATE INDEX notification_unread ON notification_events(is_read, id);";
+
+const LEGACY_BASELINES: &str = "CREATE TABLE notification_baselines (
+    lane TEXT PRIMARY KEY, observation TEXT NOT NULL, received_at INTEGER NOT NULL
+);";
+
+/// Additive storage for issued notifications (values optional, closed detail codes).
+const RECORDS_SCHEMA: &str = "CREATE TABLE IF NOT EXISTS quotalis_notification_records (
+    id INTEGER PRIMARY KEY,
+    provider_id TEXT NOT NULL, account_ref TEXT, window_key TEXT NOT NULL,
+    kind TEXT NOT NULL, occurred_at INTEGER, detected_at INTEGER NOT NULL,
+    received_at INTEGER NOT NULL, observed_from INTEGER NOT NULL,
+    observed_to INTEGER NOT NULL, previous_value REAL, current_value REAL,
+    detail TEXT, is_read INTEGER NOT NULL DEFAULT 0 CHECK(is_read IN (0,1))
+);
+CREATE INDEX IF NOT EXISTS quotalis_notification_records_unread
+    ON quotalis_notification_records(is_read, id);
+CREATE TABLE IF NOT EXISTS quotalis_storage_version (
+    component TEXT PRIMARY KEY, version INTEGER NOT NULL
+);";
+
+const EVENT_COLUMNS: &str = "id,provider_id,account_ref,window_key,kind,occurred_at,detected_at,received_at,observed_from,observed_to,previous_value,current_value,is_read";
+
+fn kind_sql(kinds: &[JournalEventKind]) -> String {
+    kinds
+        .iter()
+        .map(|kind| {
+            let json = serde_json::to_string(kind).unwrap_or_default();
+            format!("'{}'", json.replace('\'', "''"))
+        })
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+const LEGACY_KINDS: [JournalEventKind; 4] = [
+    JournalEventKind::ScheduledResetObserved,
+    JournalEventKind::UnexpectedQuotaChange,
+    JournalEventKind::BankedResetsIncreased,
+    JournalEventKind::BankedResetsDecreased,
+];
+
+const ALL_KINDS: [JournalEventKind; 13] = [
+    JournalEventKind::ScheduledResetObserved,
+    JournalEventKind::UnexpectedQuotaChange,
+    JournalEventKind::BankedResetsIncreased,
+    JournalEventKind::BankedResetsDecreased,
+    JournalEventKind::UsageHighReached,
+    JournalEventKind::UsageCriticalReached,
+    JournalEventKind::UsageExhausted,
+    JournalEventKind::UsageMilestoneReached,
+    JournalEventKind::SessionDepleted,
+    JournalEventKind::SessionRestored,
+    JournalEventKind::PaceWarning,
+    JournalEventKind::ProviderStatusIssue,
+    JournalEventKind::PricingPeriodChanged,
+];
+
+/// Every readable event, legacy and additive, in one id order. Rows whose kind
+/// this build does not know (a future category) are neither shown nor counted.
+fn union_sql() -> String {
+    format!(
+        "SELECT {EVENT_COLUMNS},NULL AS detail FROM notification_events WHERE kind IN ({legacy})
+         UNION ALL
+         SELECT {EVENT_COLUMNS},detail FROM quotalis_notification_records WHERE kind IN ({all})",
+        legacy = kind_sql(&LEGACY_KINDS),
+        all = kind_sql(&ALL_KINDS),
+    )
+}
+
+/// Test-only interruption points inside the single open/migrate transaction.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MigrationStep {
+    AfterAdditiveTables,
+    AfterRowMove,
+    AfterLegacyRebuild,
+    BeforeCommit,
+}
+
+fn interrupt(fault: Option<MigrationStep>, step: MigrationStep) -> Result<(), String> {
+    if fault == Some(step) {
+        return Err("Notification history migration interrupted".into());
+    }
+    Ok(())
+}
+
+/// Brings any known layout to the compatible layout in ONE immediate
+/// transaction: user_version 1 legacy tables that 0.11.0 reads unchanged, plus
+/// the additive Quotalis tables. Any failure rolls everything back.
+fn prepare_schema(connection: &mut Connection, fault: Option<MigrationStep>) -> Result<(), String> {
+    let version: i64 = connection
+        .query_row("PRAGMA user_version", [], |row| row.get(0))
+        .map_err(db_error)?;
+    if version > WAVE2B_USER_VERSION {
+        return Err("Notification history was created by a newer version".into());
+    }
+    let tx = connection
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(db_error)?;
+    if version == 0 {
+        tx.execute_batch(&format!(
+            "{LEGACY_SCHEMA}\n{LEGACY_BASELINES}\nPRAGMA user_version = {LEGACY_USER_VERSION};"
+        ))
+        .map_err(db_error)?;
+    }
+    tx.execute_batch(RECORDS_SCHEMA).map_err(db_error)?;
+    interrupt(fault, MigrationStep::AfterAdditiveTables)?;
+
+    let component: i64 = tx
+        .query_row(
+            "SELECT COALESCE((SELECT version FROM quotalis_storage_version WHERE component=?1),0)",
+            [RECORDS_COMPONENT],
+            |row| row.get(0),
+        )
+        .map_err(db_error)?;
+    if version == WAVE2B_USER_VERSION || component < RECORDS_COMPONENT_VERSION {
+        let has_detail = version == WAVE2B_USER_VERSION;
+        // Anything 0.11.0 cannot parse leaves the shared table unchanged in id,
+        // timestamps, values and read state: non-legacy kinds (including
+        // unknown ones), missing values and detail codes.
+        let foreign = format!(
+            "kind NOT IN ({legacy}) OR previous_value IS NULL OR current_value IS NULL{detail}",
+            legacy = kind_sql(&LEGACY_KINDS),
+            detail = if has_detail {
+                " OR detail IS NOT NULL"
+            } else {
+                ""
+            },
+        );
+        tx.execute(
+            &format!(
+                "INSERT INTO quotalis_notification_records ({EVENT_COLUMNS},detail)
+                 SELECT {EVENT_COLUMNS},{detail} FROM notification_events WHERE {foreign}",
+                detail = if has_detail { "detail" } else { "NULL" },
+            ),
+            [],
+        )
+        .map_err(db_error)?;
+        tx.execute(
+            &format!("DELETE FROM notification_events WHERE {foreign}"),
+            [],
+        )
+        .map_err(db_error)?;
+        interrupt(fault, MigrationStep::AfterRowMove)?;
+        if has_detail {
+            // SQLite cannot re-add NOT NULL in place: rebuild the legacy table
+            // to its exact 0.11.0 definition, keeping ids and the id high-water mark.
+            let high_water: i64 = tx
+                .query_row(
+                    "SELECT COALESCE((SELECT seq FROM sqlite_sequence WHERE name='notification_events'),0)",
+                    [],
+                    |row| row.get(0),
+                )
+                .map_err(db_error)?;
+            tx.execute_batch(&format!(
+                "ALTER TABLE notification_events RENAME TO quotalis_wave2b_events;
+                 DROP INDEX IF EXISTS notification_unread;
+                 {LEGACY_SCHEMA}
+                 INSERT INTO notification_events ({EVENT_COLUMNS})
+                     SELECT {EVENT_COLUMNS} FROM quotalis_wave2b_events;
+                 DROP TABLE quotalis_wave2b_events;"
+            ))
+            .map_err(db_error)?;
+            bump_sequence(&tx, high_water)?;
+            interrupt(fault, MigrationStep::AfterLegacyRebuild)?;
+            tx.execute_batch(&format!("PRAGMA user_version = {LEGACY_USER_VERSION};"))
+                .map_err(db_error)?;
+        }
+        tx.execute(
+            "INSERT INTO quotalis_storage_version(component,version) VALUES(?1,?2)
+             ON CONFLICT(component) DO UPDATE SET version=excluded.version",
+            params![RECORDS_COMPONENT, RECORDS_COMPONENT_VERSION],
+        )
+        .map_err(db_error)?;
+    }
+    interrupt(fault, MigrationStep::BeforeCommit)?;
+    tx.commit().map_err(db_error)
+}
+
+/// Raises the legacy AUTOINCREMENT high-water mark so ids stay unique and
+/// chronological across both tables, including rows 0.11.0 inserts later.
+fn bump_sequence(tx: &rusqlite::Transaction<'_>, at_least: i64) -> Result<(), String> {
+    let updated = tx
+        .execute(
+            "UPDATE sqlite_sequence SET seq=MAX(seq,?1) WHERE name='notification_events'",
+            [at_least],
+        )
+        .map_err(db_error)?;
+    if updated == 0 && at_least > 0 {
+        tx.execute(
+            "INSERT INTO sqlite_sequence(name,seq) VALUES('notification_events',?1)",
+            [at_least],
+        )
+        .map_err(db_error)?;
+    }
+    Ok(())
+}
 
 pub struct NotificationJournal {
     path: Option<PathBuf>,
@@ -271,6 +488,22 @@ impl NotificationJournal {
         }
     }
 
+    fn open(path: Option<&PathBuf>) -> Result<Connection, String> {
+        let connection = if let Some(path) = path {
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent)
+                    .map_err(|_| "Notification history directory is unavailable")?;
+            }
+            Connection::open(path).map_err(|_| "Notification history cannot be opened")?
+        } else {
+            Connection::open_in_memory().map_err(|_| "Notification history cannot be opened")?
+        };
+        connection
+            .busy_timeout(Duration::from_millis(500))
+            .map_err(db_error)?;
+        Ok(connection)
+    }
+
     fn with_connection<T>(
         &self,
         action: impl FnOnce(&mut Connection) -> Result<T, String>,
@@ -280,51 +513,8 @@ impl NotificationJournal {
             .lock()
             .map_err(|_| "Notification history lock is unavailable")?;
         if guard.is_none() {
-            let mut connection = if let Some(path) = &self.path {
-                if let Some(parent) = path.parent() {
-                    std::fs::create_dir_all(parent)
-                        .map_err(|_| "Notification history directory is unavailable")?;
-                }
-                Connection::open(path).map_err(|_| "Notification history cannot be opened")?
-            } else {
-                Connection::open_in_memory().map_err(|_| "Notification history cannot be opened")?
-            };
-            connection
-                .busy_timeout(Duration::from_millis(500))
-                .map_err(db_error)?;
-            let version: i64 = connection
-                .query_row("PRAGMA user_version", [], |row| row.get(0))
-                .map_err(db_error)?;
-            if version > SCHEMA_VERSION {
-                return Err("Notification history was created by a newer version".into());
-            }
-            if version == 0 {
-                let tx = connection.transaction().map_err(db_error)?;
-                tx.execute_batch(&format!(
-                    "{CREATE_EVENTS_TABLE}
-                CREATE TABLE notification_baselines (
-                    lane TEXT PRIMARY KEY, observation TEXT NOT NULL, received_at INTEGER NOT NULL
-                );
-                PRAGMA user_version = {SCHEMA_VERSION};"
-                ))
-                .map_err(db_error)?;
-                tx.commit().map_err(db_error)?;
-            } else if version == 1 {
-                // v2 makes values optional and adds `detail`. SQLite cannot relax
-                // NOT NULL in place, so rebuild the table inside one transaction;
-                // ids, read state and baselines are preserved.
-                let tx = connection.transaction().map_err(db_error)?;
-                tx.execute_batch(&format!("ALTER TABLE notification_events RENAME TO notification_events_v1;
-                DROP INDEX IF EXISTS notification_unread;
-                {CREATE_EVENTS_TABLE}
-                INSERT INTO notification_events
-                    (id,provider_id,account_ref,window_key,kind,occurred_at,detected_at,received_at,observed_from,observed_to,previous_value,current_value,detail,is_read)
-                    SELECT id,provider_id,account_ref,window_key,kind,occurred_at,detected_at,received_at,observed_from,observed_to,previous_value,current_value,NULL,is_read
-                    FROM notification_events_v1;
-                DROP TABLE notification_events_v1;
-                PRAGMA user_version = {SCHEMA_VERSION};")).map_err(db_error)?;
-                tx.commit().map_err(db_error)?;
-            }
+            let mut connection = Self::open(self.path.as_ref())?;
+            prepare_schema(&mut connection, None)?;
             *guard = Some(connection);
         }
         action(guard.as_mut().expect("initialized notification connection"))
@@ -366,7 +556,10 @@ impl NotificationJournal {
             if previous.is_some_and(|before| observation.observed_at() <= before.observed_at()) { return Ok(None); }
             let event = previous.and_then(|before| classify(before, observation).map(|kind| (before, kind)));
             let inserted = if let Some((before, kind)) = event {
+                // Observation kinds are legacy kinds with two real values: the
+                // exact row shape 0.11.0 reads.
                 let kind_json = serde_json::to_string(&kind).map_err(|_| "Invalid notification event")?;
+                bump_sequence(&tx, max_event_id(&tx)?)?;
                 tx.execute("INSERT INTO notification_events
                     (provider_id,account_ref,window_key,kind,detected_at,received_at,observed_from,observed_to,previous_value,current_value)
                     VALUES (?1,?2,?3,?4,?5,?5,?6,?7,?8,?9)", params![provider.cli_name(), account_ref, window_key, kind_json, received_at, before.observed_at(), observation.observed_at(), before.value(), observation.value()]).map_err(db_error)?;
@@ -423,12 +616,13 @@ impl NotificationJournal {
         self.with_connection(|connection| {
             let tx = connection.transaction_with_behavior(TransactionBehavior::Immediate).map_err(db_error)?;
             let kind_json = serde_json::to_string(&kind).map_err(|_| "Invalid notification event")?;
-            tx.execute("INSERT INTO notification_events
-                (provider_id,account_ref,window_key,kind,occurred_at,detected_at,received_at,observed_from,observed_to,previous_value,current_value,detail)
-                VALUES (?1,?2,?3,?4,?5,?5,?5,?5,?5,?6,?7,?8)", params![provider.cli_name(), account_ref, window_key, kind_json, observed_at, previous_value, current_value, detail]).map_err(db_error)?;
-            let id = tx.last_insert_rowid();
-            tx.execute("DELETE FROM notification_events WHERE received_at < ?1 OR id NOT IN
-                (SELECT id FROM notification_events ORDER BY id DESC LIMIT ?2)", params![observed_at.saturating_sub(RETENTION_SECONDS), MAX_EVENTS]).map_err(db_error)?;
+            let id = max_event_id(&tx)? + 1;
+            tx.execute("INSERT INTO quotalis_notification_records
+                (id,provider_id,account_ref,window_key,kind,occurred_at,detected_at,received_at,observed_from,observed_to,previous_value,current_value,detail)
+                VALUES (?1,?2,?3,?4,?5,?6,?6,?6,?6,?6,?7,?8,?9)", params![id, provider.cli_name(), account_ref, window_key, kind_json, observed_at, previous_value, current_value, detail]).map_err(db_error)?;
+            bump_sequence(&tx, id)?;
+            tx.execute("DELETE FROM quotalis_notification_records WHERE received_at < ?1 OR id NOT IN
+                (SELECT id FROM quotalis_notification_records ORDER BY id DESC LIMIT ?2)", params![observed_at.saturating_sub(RETENTION_SECONDS), MAX_EVENTS]).map_err(db_error)?;
             tx.commit().map_err(db_error)?;
             Ok(NotificationEvent { id, provider_id: provider.cli_name().into(), account_ref, window_key: window_key.into(), kind,
                 occurred_at: Some(observed_at), detected_at: observed_at, received_at: observed_at, observed_from: observed_at, observed_to: observed_at,
@@ -438,21 +632,21 @@ impl NotificationJournal {
 
     pub fn page(&self, query: &NotificationQuery) -> Result<NotificationPage, String> {
         if query.search.len() > 256
-            || query
-                .provider_id
-                .as_ref()
-                .is_some_and(|id| ProviderId::from_cli_name(id).is_none())
+            || query.provider_id.as_ref().is_some_and(|id| {
+                ProviderId::from_cli_name(id).is_none_or(|provider| provider.cli_name() != id)
+            })
         {
             return Err("Invalid notification filter".into());
         }
         let limit = i64::from(query.limit.unwrap_or(50).clamp(1, 100));
+        let events = union_sql();
         self.with_connection(|connection| {
             let tx = connection.transaction().map_err(db_error)?;
-            let (unread_count, through_id): (i64, i64) = tx.query_row("SELECT COALESCE(SUM(is_read=0),0), COALESCE(MAX(id),0) FROM notification_events", [], |row| Ok((row.get(0)?, row.get(1)?))).map_err(db_error)?;
-            let mut statement = tx.prepare("SELECT id,provider_id,account_ref,window_key,kind,occurred_at,detected_at,received_at,observed_from,observed_to,previous_value,current_value,is_read,detail FROM notification_events
+            let (unread_count, through_id): (i64, i64) = tx.query_row(&format!("SELECT COALESCE(SUM(is_read=0),0), COALESCE(MAX(id),0) FROM ({events})"), [], |row| Ok((row.get(0)?, row.get(1)?))).map_err(db_error)?;
+            let mut statement = tx.prepare(&format!("SELECT {EVENT_COLUMNS},detail FROM ({events})
                 WHERE (?1 IS NULL OR id < ?1) AND (?2 IS NULL OR provider_id=?2)
                 AND (?3=0 OR is_read=0) AND instr(lower(provider_id || ' ' || window_key || ' ' || kind),lower(?4))>0
-                ORDER BY id DESC LIMIT ?5").map_err(db_error)?;
+                ORDER BY id DESC LIMIT ?5")).map_err(db_error)?;
             let mut items = statement.query_map(params![query.before_id, query.provider_id, query.unread_only, query.search, limit + 1], event_from_row).map_err(db_error)?.collect::<Result<Vec<_>, _>>().map_err(db_error)?;
             let has_more = items.len() > usize::try_from(limit).unwrap_or(100);
             if has_more { items.pop(); }
@@ -465,9 +659,14 @@ impl NotificationJournal {
         if id <= 0 {
             return Err("Invalid notification ID".into());
         }
+        let events = union_sql();
         self.with_connection(|connection| {
             connection
-                .query_row("SELECT id,provider_id,account_ref,window_key,kind,occurred_at,detected_at,received_at,observed_from,observed_to,previous_value,current_value,is_read,detail FROM notification_events WHERE id=?1", [id], event_from_row)
+                .query_row(
+                    &format!("SELECT {EVENT_COLUMNS},detail FROM ({events}) WHERE id=?1"),
+                    [id],
+                    event_from_row,
+                )
                 .optional()
                 .map_err(db_error)
         })
@@ -478,13 +677,18 @@ impl NotificationJournal {
             return Err("Invalid notification ID".into());
         }
         self.with_connection(|connection| {
-            connection
-                .execute(
-                    "UPDATE notification_events SET is_read=1 WHERE id=?1 AND is_read=0",
-                    [id],
-                )
-                .map(|count| count == 1)
-                .map_err(db_error)
+            let tx = connection.transaction().map_err(db_error)?;
+            let mut changed = 0;
+            for table in ["notification_events", "quotalis_notification_records"] {
+                changed += tx
+                    .execute(
+                        &format!("UPDATE {table} SET is_read=1 WHERE id=?1 AND is_read=0"),
+                        [id],
+                    )
+                    .map_err(db_error)?;
+            }
+            tx.commit().map_err(db_error)?;
+            Ok(changed == 1)
         })
     }
 
@@ -493,14 +697,33 @@ impl NotificationJournal {
             return Err("Invalid notification boundary".into());
         }
         self.with_connection(|connection| {
-            connection
-                .execute(
-                    "UPDATE notification_events SET is_read=1 WHERE id<=?1 AND is_read=0",
-                    [through_id],
-                )
-                .map_err(db_error)
+            let tx = connection.transaction().map_err(db_error)?;
+            let mut changed = 0;
+            for table in ["notification_events", "quotalis_notification_records"] {
+                changed += tx
+                    .execute(
+                        &format!("UPDATE {table} SET is_read=1 WHERE id<=?1 AND is_read=0"),
+                        [through_id],
+                    )
+                    .map_err(db_error)?;
+            }
+            tx.commit().map_err(db_error)?;
+            Ok(changed)
         })
     }
+}
+
+/// Highest id or reserved sequence value across both tables.
+fn max_event_id(tx: &rusqlite::Transaction<'_>) -> Result<i64, String> {
+    tx.query_row(
+        "SELECT MAX(
+            COALESCE((SELECT seq FROM sqlite_sequence WHERE name='notification_events'),0),
+            COALESCE((SELECT MAX(id) FROM notification_events),0),
+            COALESCE((SELECT MAX(id) FROM quotalis_notification_records),0))",
+        [],
+        |row| row.get(0),
+    )
+    .map_err(db_error)
 }
 
 fn event_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<NotificationEvent> {
@@ -548,5 +771,9 @@ fn db_error(_: rusqlite::Error) -> String {
     "Notification history storage failed".into()
 }
 
+#[cfg(test)]
+mod compat_tests;
+#[cfg(test)]
+mod legacy_v0_11_0;
 #[cfg(test)]
 mod tests;

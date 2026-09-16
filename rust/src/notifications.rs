@@ -3225,6 +3225,59 @@ mod tests {
     }
 
     #[test]
+    fn history_migration_never_touches_dedupe_state_or_predictive_keys() {
+        let temp = tempfile::tempdir().expect("create notification state directory");
+        let dedupe = temp.path().join("notification-dedupe.json");
+        let db = temp.path().join("notifications.db");
+        let settings = Settings::default();
+        let key = (
+            ProviderId::Claude,
+            "acct".to_string(),
+            "weekly".to_string(),
+            NotificationType::CriticalUsage,
+        );
+        let mut first = NotificationManager::new();
+        first.check_and_notify(ProviderId::Claude, "acct", "weekly", 95.0, &settings);
+        first.persist_to(&dedupe).expect("persist dedupe state");
+        let before = std::fs::read(&dedupe).expect("read dedupe state");
+
+        // A Wave 2B-layout history file beside it, migrated by the current journal.
+        rusqlite::Connection::open(&db).unwrap().execute_batch(
+            "CREATE TABLE notification_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, provider_id TEXT NOT NULL, account_ref TEXT, window_key TEXT NOT NULL,
+                kind TEXT NOT NULL, occurred_at INTEGER, detected_at INTEGER NOT NULL, received_at INTEGER NOT NULL,
+                observed_from INTEGER NOT NULL, observed_to INTEGER NOT NULL, previous_value REAL, current_value REAL,
+                detail TEXT, is_read INTEGER NOT NULL DEFAULT 0 CHECK(is_read IN (0,1)));
+            CREATE INDEX notification_unread ON notification_events(is_read, id);
+            CREATE TABLE notification_baselines (lane TEXT PRIMARY KEY, observation TEXT NOT NULL, received_at INTEGER NOT NULL);
+            INSERT INTO notification_events (provider_id,window_key,kind,detected_at,received_at,observed_from,observed_to,previous_value,current_value,detail)
+                VALUES ('claude','status','\"providerStatusIssue\"',5,5,5,5,NULL,NULL,'unknown');
+            PRAGMA user_version = 2;",
+        ).unwrap();
+        let journal = NotificationJournal::at(db.clone());
+        assert_eq!(
+            journal
+                .page(&crate::notification_journal::NotificationQuery::default())
+                .unwrap()
+                .items
+                .len(),
+            1
+        );
+        drop(journal);
+
+        assert_eq!(
+            std::fs::read(&dedupe).unwrap(),
+            before,
+            "dedupe file is byte-identical"
+        );
+        let restored = NotificationManager::load_from(&dedupe);
+        assert!(
+            restored.was_sent(&key),
+            "durable dedupe key survives a history migration"
+        );
+    }
+
+    #[test]
     fn corrupt_persisted_dedupe_state_fails_closed_to_an_empty_manager() {
         let temp = tempfile::tempdir().expect("create notification state directory");
         let path = temp.path().join("notification-dedupe.json");
