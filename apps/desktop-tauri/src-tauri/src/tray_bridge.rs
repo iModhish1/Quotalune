@@ -13,7 +13,8 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Manager};
 
 use quotalis_core::tray::{
-    apply_logo_identity_rgba, render_bar_icon_rgba, render_percent_icon_rgba,
+    apply_logo_identity_rgba, dpi::TRAY_ICON_SOURCE_PX, render_bar_icon_rgba_sized,
+    render_percent_icon_rgba_sized,
 };
 
 use crate::shell;
@@ -697,10 +698,12 @@ fn render_tray_icon_for_settings(
     weekly_pct: Option<f64>,
     all_error: bool,
 ) -> (Vec<u8>, u32, u32) {
+    // One raster policy for every tray icon; `tray_scale_percent` zooms the
+    // flyout panel content and deliberately does not resize tray icons.
     let (rgba, width, height) = if settings.menu_bar_shows_percent {
-        render_percent_icon_rgba(session_pct, all_error)
+        render_percent_icon_rgba_sized(session_pct, all_error, TRAY_ICON_SOURCE_PX)
     } else {
-        render_bar_icon_rgba(session_pct, weekly_pct, all_error)
+        render_bar_icon_rgba_sized(session_pct, weekly_pct, all_error, TRAY_ICON_SOURCE_PX)
     };
     (
         apply_logo_identity_rgba(
@@ -1347,6 +1350,41 @@ mod tests {
         assert!(line.starts_with("Claude: 13% • Resets in Jun 10 at 3:00PM"));
         assert!(line.ends_with("..."));
         assert!(line.chars().count() <= 53);
+    }
+
+    #[test]
+    fn main_and_provider_tray_icons_share_one_high_dpi_source_policy() {
+        let settings = Settings::default();
+        let (main, w, h) = render_tray_icon_for_settings(&settings, 40.0, Some(10.0), false);
+        let (_, pw, ph) = quotalis_core::tray::provider::render_provider_icon(
+            "claude",
+            Some(40.0),
+            "ring",
+            [1, 2, 3],
+            2,
+        );
+        assert_eq!((w, h), (TRAY_ICON_SOURCE_PX, TRAY_ICON_SOURCE_PX));
+        assert_eq!((pw, ph), (w, h));
+        assert_eq!(main.len(), (w * h * 4) as usize);
+        for scale in [100, 125, 150, 200, 250, 300] {
+            assert!(
+                !quotalis_core::tray::dpi::requires_upscale(w, scale),
+                "{scale}%"
+            );
+        }
+    }
+
+    #[test]
+    fn flyout_zoom_setting_never_changes_tray_icon_pixels() {
+        let normal = Settings::default();
+        let zoomed = Settings {
+            tray_scale_percent: 200,
+            ..Settings::default()
+        };
+        assert_eq!(
+            render_tray_icon_for_settings(&normal, 72.0, None, false),
+            render_tray_icon_for_settings(&zoomed, 72.0, None, false)
+        );
     }
 
     #[test]

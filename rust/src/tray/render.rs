@@ -7,8 +7,14 @@ use image::{ImageBuffer, Rgba, RgbaImage};
 
 use super::icon::UsageLevel;
 
-/// Side length of the generated tray icon in pixels.
-pub const TRAY_ICON_SIZE: u32 = 32;
+/// Side length of the unsized helpers, which render on the design grid.
+/// Native tray icons use [`super::dpi::TRAY_ICON_SOURCE_PX`] instead.
+pub const TRAY_ICON_SIZE: u32 = super::dpi::TRAY_ICON_DESIGN_GRID_PX;
+
+/// Integer multiple of the design grid for `size` (at least 1).
+fn grid_factor(size: u32) -> u32 {
+    (size / TRAY_ICON_SIZE).max(1)
+}
 
 fn inside_rounded_square(x: u32, y: u32, size: u32, inset: u32, radius: u32) -> bool {
     if x < inset || y < inset || x >= size.saturating_sub(inset) || y >= size.saturating_sub(inset)
@@ -37,7 +43,8 @@ pub fn apply_logo_identity_rgba(
     if width != height || rgba.len() != (width * height * 4) as usize {
         return rgba;
     }
-    let inset = if scale_percent < 96 {
+    let k = grid_factor(width);
+    let inset = k * if scale_percent < 96 {
         3
     } else if scale_percent < 108 {
         2
@@ -60,7 +67,7 @@ pub fn apply_logo_identity_rgba(
                 rgba[offset + 3] = 0;
                 continue;
             }
-            let inner = inside_rounded_square(x, y, width, inset + 1, radius.saturating_sub(1));
+            let inner = inside_rounded_square(x, y, width, inset + k, radius.saturating_sub(k));
             if !inner {
                 rgba[offset] = r;
                 rgba[offset + 1] = g;
@@ -86,8 +93,20 @@ pub fn render_bar_icon_rgba(
     weekly_percent: Option<f64>,
     has_error: bool,
 ) -> (Vec<u8>, u32, u32) {
-    const SZ: u32 = TRAY_ICON_SIZE;
-    let mut img: RgbaImage = ImageBuffer::new(SZ, SZ);
+    render_bar_icon_rgba_sized(session_percent, weekly_percent, has_error, TRAY_ICON_SIZE)
+}
+
+/// [`render_bar_icon_rgba`] drawn natively at `size` (a multiple of the 32px
+/// design grid), so high-DPI sources are rendered, never enlarged.
+pub fn render_bar_icon_rgba_sized(
+    session_percent: f64,
+    weekly_percent: Option<f64>,
+    has_error: bool,
+    size: u32,
+) -> (Vec<u8>, u32, u32) {
+    let k = grid_factor(size);
+    let sz = TRAY_ICON_SIZE * k;
+    let mut img: RgbaImage = ImageBuffer::new(sz, sz);
 
     for pixel in img.pixels_mut() {
         *pixel = Rgba([0, 0, 0, 0]);
@@ -95,8 +114,8 @@ pub fn render_bar_icon_rgba(
 
     let bg_alpha: u8 = if has_error { 180 } else { 255 };
     let bg_color = Rgba([60, 60, 70, bg_alpha]);
-    for y in 2..SZ - 2 {
-        for x in 2..SZ - 2 {
+    for y in 2 * k..sz - 2 * k {
+        for x in 2 * k..sz - 2 * k {
             img.put_pixel(x, y, bg_color);
         }
     }
@@ -116,14 +135,14 @@ pub fn render_bar_icon_rgba(
         }
     };
 
-    let bar_left = 4u32;
-    let bar_right = SZ - 4;
+    let bar_left = 4 * k;
+    let bar_right = sz - 4 * k;
     let bar_width = bar_right - bar_left;
 
-    // pct is clamped to 0–100, scaled by bar_width (≤ SZ = 32), so the result fits u32.
+    // pct is clamped to 0–100 and scaled by bar_width (< sz), so the result fits u32.
     #[allow(
         clippy::cast_possible_truncation,
-        reason = "pct clamped to 0–100 and scaled by bar_width ≤ 32; result is a small pixel count that fits u32"
+        reason = "pct clamped to 0–100 and scaled by bar_width < icon edge; result is a small pixel count that fits u32"
     )]
     let fill_px = |pct: f64| ((pct.clamp(0.0, 100.0) / 100.0) * bar_width as f64) as u32;
 
@@ -144,29 +163,40 @@ pub fn render_bar_icon_rgba(
 
     match weekly_percent {
         Some(weekly) => {
-            draw_bar(8, 15, session_percent); // session bar (top, thicker)
-            draw_bar(18, 23, weekly); // weekly bar (bottom, thinner)
+            draw_bar(8 * k, 15 * k, session_percent); // session bar (top, thicker)
+            draw_bar(18 * k, 23 * k, weekly); // weekly bar (bottom, thinner)
         }
         None => {
-            draw_bar(10, 22, session_percent); // single thick bar (centred)
+            draw_bar(10 * k, 22 * k, session_percent); // single thick bar (centred)
         }
     }
 
-    (img.into_raw(), SZ, SZ)
+    (img.into_raw(), sz, sz)
 }
 
 /// Render a compact numeric percent tray icon as raw RGBA bytes.
 pub fn render_percent_icon_rgba(percent: f64, has_error: bool) -> (Vec<u8>, u32, u32) {
-    const SZ: u32 = TRAY_ICON_SIZE;
-    let mut img: RgbaImage = ImageBuffer::new(SZ, SZ);
+    render_percent_icon_rgba_sized(percent, has_error, TRAY_ICON_SIZE)
+}
+
+/// [`render_percent_icon_rgba`] drawn natively at `size` (a multiple of the
+/// 32px design grid).
+pub fn render_percent_icon_rgba_sized(
+    percent: f64,
+    has_error: bool,
+    size: u32,
+) -> (Vec<u8>, u32, u32) {
+    let k = grid_factor(size);
+    let sz = TRAY_ICON_SIZE * k;
+    let mut img: RgbaImage = ImageBuffer::new(sz, sz);
 
     for pixel in img.pixels_mut() {
         *pixel = Rgba([0, 0, 0, 0]);
     }
 
     let bg_alpha: u8 = if has_error { 180 } else { 255 };
-    for y in 2..SZ - 2 {
-        for x in 2..SZ - 2 {
+    for y in 2 * k..sz - 2 * k {
+        for x in 2 * k..sz - 2 * k {
             img.put_pixel(x, y, Rgba([60, 60, 70, bg_alpha]));
         }
     }
@@ -183,8 +213,8 @@ pub fn render_percent_icon_rgba(percent: f64, has_error: bool) -> (Vec<u8>, u32,
         format!("{pct}%")
     };
     let glyph_width = 3u32;
-    let glyph_gap = 1u32;
-    let scale = if text.len() >= 3 { 2u32 } else { 3u32 };
+    let glyph_gap = k;
+    let scale = k * if text.len() >= 3 { 2u32 } else { 3u32 };
     // text is "100" or at most "NN%", so its length is ≤ 4 and fits u32.
     #[allow(
         clippy::cast_possible_truncation,
@@ -193,8 +223,8 @@ pub fn render_percent_icon_rgba(percent: f64, has_error: bool) -> (Vec<u8>, u32,
     let text_len = text.len() as u32;
     let text_width = text_len * glyph_width * scale + (text_len - 1) * glyph_gap;
     let text_height = 5 * scale;
-    let start_x = (SZ.saturating_sub(text_width)) / 2;
-    let start_y = (SZ.saturating_sub(text_height)) / 2;
+    let start_x = (sz.saturating_sub(text_width)) / 2;
+    let start_y = (sz.saturating_sub(text_height)) / 2;
 
     let (r, g, b) = UsageLevel::from_percent(percent).color();
     let color = if has_error {
@@ -215,7 +245,7 @@ pub fn render_percent_icon_rgba(percent: f64, has_error: bool) -> (Vec<u8>, u32,
         x += glyph_width * scale + glyph_gap;
     }
 
-    (img.into_raw(), SZ, SZ)
+    (img.into_raw(), sz, sz)
 }
 
 fn draw_glyph(img: &mut RgbaImage, ch: char, x: u32, y: u32, scale: u32, color: Rgba<u8>) {
@@ -237,7 +267,7 @@ fn draw_glyph(img: &mut RgbaImage, ch: char, x: u32, y: u32, scale: u32, color: 
                         reason = "row_idx iterates over a fixed [u8; 5] glyph, so it is 0..5 and fits u32"
                     )]
                     let py = y + row_idx as u32 * scale + yy;
-                    if px < TRAY_ICON_SIZE && py < TRAY_ICON_SIZE {
+                    if px < img.width() && py < img.height() {
                         img.put_pixel(px, py, color);
                     }
                 }
@@ -356,6 +386,77 @@ mod tests {
                 .iter()
                 .any(|px| px[3] == 255 && px[0] != 60)
         );
+    }
+
+    /// Pixels a grid-aligned icon covers per design-grid cell must agree with
+    /// the 32px render: the high-DPI source keeps the same layout, rendered at
+    /// full resolution rather than enlarged.
+    fn cell(rgba: &[u8], size: u32, gx: u32, gy: u32) -> [u8; 4] {
+        let k = size / TRAY_ICON_SIZE;
+        let offset = (((gy * k + k / 2) * size + gx * k + k / 2) * 4) as usize;
+        rgba[offset..offset + 4].try_into().unwrap()
+    }
+
+    #[test]
+    fn sized_main_icons_render_natively_at_the_shared_source_size() {
+        let size = crate::tray::dpi::TRAY_ICON_SOURCE_PX;
+        for (small, large) in [
+            (
+                render_bar_icon_rgba(52.0, Some(74.0), false),
+                render_bar_icon_rgba_sized(52.0, Some(74.0), false, size),
+            ),
+            (
+                render_bar_icon_rgba(0.0, None, true),
+                render_bar_icon_rgba_sized(0.0, None, true, size),
+            ),
+            (
+                render_percent_icon_rgba(72.0, false),
+                render_percent_icon_rgba_sized(72.0, false, size),
+            ),
+            (
+                render_percent_icon_rgba(100.0, false),
+                render_percent_icon_rgba_sized(100.0, false, size),
+            ),
+        ] {
+            assert_eq!((large.1, large.2), (size, size));
+            assert_eq!(large.0.len(), (size * size * 4) as usize);
+            for gy in 0..TRAY_ICON_SIZE {
+                for gx in 0..TRAY_ICON_SIZE {
+                    assert_eq!(
+                        cell(&large.0, size, gx, gy),
+                        cell(&small.0, TRAY_ICON_SIZE, gx, gy),
+                        "({gx},{gy})"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn identity_frame_is_computed_at_source_resolution() {
+        let size = crate::tray::dpi::TRAY_ICON_SOURCE_PX;
+        let (rgba, w, h) = render_bar_icon_rgba_sized(40.0, None, false, size);
+        let framed = apply_logo_identity_rgba(rgba, w, h, "silver", 100);
+        let transparent = framed
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .filter(|p| p[3] == 0)
+            .count();
+        // Inset and rim scale with the grid, so the transparent margin is 4x the 32px area.
+        let (small, sw, sh) = render_bar_icon_rgba(40.0, None, false);
+        let small = apply_logo_identity_rgba(small, sw, sh, "silver", 100);
+        let small_transparent = small
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .filter(|p| p[3] == 0)
+            .count();
+        assert!(
+            transparent >= small_transparent * 3,
+            "{transparent} vs {small_transparent}"
+        );
+        assert_eq!(framed[3], 0);
     }
 
     #[test]

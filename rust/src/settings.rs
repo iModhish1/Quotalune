@@ -1306,8 +1306,9 @@ pub struct Settings {
     #[serde(default = "default_window_scale_percent")]
     pub window_scale_percent: u16,
 
-    /// Tray flyout display scale, in the inclusive range 100..=200.
-    /// 100 % is normal size; higher values enlarge the flyout content.
+    /// Tray flyout (TrayPanel) content zoom, in the inclusive range 100..=200.
+    /// 100 % is normal size. It never sizes native tray icons, which follow
+    /// `tray::dpi` so Windows only ever downsamples them.
     #[serde(default = "default_tray_scale_percent")]
     pub tray_scale_percent: u16,
 

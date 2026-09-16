@@ -212,9 +212,10 @@ pub struct ProviderIconSpec<'a> {
     pub identity: &'a str,
 }
 
-/// Source bitmap edge. Windows downsamples the HICON to the shell's small-icon
-/// size (16px at 100% up to 64px at 400%), so this source is never upscaled.
-pub const PROVIDER_ICON_SIZE: u32 = 64;
+/// Provider icons follow the shared tray raster policy in [`super::dpi`].
+pub const PROVIDER_ICON_SIZE: u32 = super::dpi::TRAY_ICON_SOURCE_PX;
+// Provider geometry below is authored in 64px coordinates.
+const _: () = assert!(PROVIDER_ICON_SIZE == 64);
 
 /// Provider geometry is never redrawn: composite the original mark into a measured frame.
 /// Missing/error readings render a neutral broken frame, never a known zero.
@@ -323,7 +324,8 @@ pub fn render_provider_icon_spec(spec: &ProviderIconSpec<'_>) -> (Vec<u8>, u32, 
         && let Some(v) = value
     {
         // Tiny number badge uses the existing legible percent glyph renderer.
-        let (rgba, w, h) = super::render_percent_icon_rgba(v, false);
+        let (rgba, w, h) =
+            super::render_percent_icon_rgba_sized(v, false, super::dpi::TRAY_ICON_SOURCE_PX);
         if let Some(badge) = RgbaImage::from_raw(w, h, rgba) {
             let badge = imageops::resize(&badge, 30, 26, imageops::FilterType::Lanczos3);
             imageops::overlay(&mut img, &badge, 34, 38);
