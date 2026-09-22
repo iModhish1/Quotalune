@@ -767,9 +767,11 @@ async fn run_copilot_device_login(
     if let Some(index) = existing_index {
         data.accounts[index].token = token;
         data.accounts[index].label = label;
+        data.accounts[index].origin = Some(quotalis_core::core::TokenAccountOrigin::DeviceFlow);
         data.set_active(index);
     } else {
-        let mut account = TokenAccount::new(label, token);
+        let mut account = TokenAccount::new(label, token)
+            .with_origin(quotalis_core::core::TokenAccountOrigin::DeviceFlow);
         account.mark_used();
         data.add_account(account);
         data.set_active(data.accounts.len().saturating_sub(1));

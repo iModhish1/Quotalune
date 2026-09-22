@@ -602,6 +602,10 @@ pub struct FetchContext {
     /// API key for providers that require authentication
     pub api_key: Option<String>,
 
+    /// Proven acquisition path of the supplied token, if known. Never infer
+    /// device authorization from an untagged legacy token or its display label.
+    pub token_origin: Option<super::TokenAccountOrigin>,
+
     /// Optional provider workspace/project scope from persisted settings.
     pub workspace_id: Option<String>,
 
@@ -632,6 +636,7 @@ impl Default for FetchContext {
             verbose: false,
             manual_cookie_header: None,
             api_key: None,
+            token_origin: None,
             workspace_id: None,
             api_region: None,
             gateway_url: None,

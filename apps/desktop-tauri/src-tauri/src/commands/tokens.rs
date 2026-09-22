@@ -127,7 +127,7 @@ pub fn add_token_account(
         .unwrap_or_else(|| id.display_name().to_string());
     let store = TokenAccountStore::new();
     let mut data = store.load_provider(id).map_err(|e| e.to_string())?;
-    data.add_account(TokenAccount::new(label, token.trim()));
+    data.add_account(TokenAccount::from_user_input(id, label, token.trim()));
     store.save_provider(id, &data).map_err(|e| e.to_string())?;
     let active = data.clamped_active_index();
     Ok(build_provider_token_accounts(

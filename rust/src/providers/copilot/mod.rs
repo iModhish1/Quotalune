@@ -59,8 +59,8 @@ impl Provider for CopilotProvider {
     async fn fetch_usage(&self, ctx: &FetchContext) -> Result<ProviderFetchResult, ProviderError> {
         tracing::debug!("Fetching GitHub Copilot usage via GitHub OAuth");
 
-        match self.api.fetch_usage(ctx.api_key.as_deref()).await {
-            Ok(usage) => Ok(ProviderFetchResult::new(usage, "oauth")),
+        match self.api.fetch_usage_from_context(ctx).await {
+            Ok((usage, source)) => Ok(ProviderFetchResult::new(usage, source.label())),
             Err(e) => {
                 tracing::warn!("Copilot API fetch failed: {}", e);
                 Err(e)
@@ -69,7 +69,11 @@ impl Provider for CopilotProvider {
     }
 
     fn available_sources(&self) -> Vec<SourceMode> {
-        vec![SourceMode::Auto, SourceMode::OAuth]
+        vec![SourceMode::Auto, SourceMode::OAuth, SourceMode::Cli]
+    }
+
+    fn supports_cli(&self) -> bool {
+        true
     }
 
     fn supports_oauth(&self) -> bool {

@@ -172,6 +172,9 @@ async fn collect_provider_diagnostic(
             .get(provider_id.cli_name())
             .map(ToOwned::to_owned),
         api_key: api_keys.get(provider_id.cli_name()).map(ToOwned::to_owned),
+        token_origin: api_keys
+            .get(provider_id.cli_name())
+            .map(|_| crate::core::TokenAccountOrigin::ApiKey),
         workspace_id: settings
             .provider_config(provider_id)
             .and_then(|config| config.workspace_id.clone()),

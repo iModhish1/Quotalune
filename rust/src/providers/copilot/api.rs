@@ -4,7 +4,10 @@
 //! path is app-managed device OAuth/token accounts; legacy API key and Windows
 //! Credential Manager tokens remain supported as fallbacks.
 
-use crate::core::{NamedRateWindow, ProviderError, RateWindow, UsageSnapshot};
+use crate::core::{
+    FetchContext, NamedRateWindow, ProviderError, RateWindow, SourceMode, TokenAccountOrigin,
+    UsageSnapshot,
+};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::{Map, Value};
@@ -37,6 +40,61 @@ pub struct CopilotApi {
     client: reqwest::Client,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum CopilotCredentialSource {
+    ApiKey,
+    DeviceFlow,
+    Cli,
+    Legacy,
+}
+
+impl CopilotCredentialSource {
+    pub(super) fn label(self) -> &'static str {
+        match self {
+            Self::ApiKey => "api-key",
+            Self::DeviceFlow => "device-flow",
+            Self::Cli => "cli",
+            Self::Legacy => "stored-token",
+        }
+    }
+}
+
+/// Resolve only the selected source. Closures make the forbidden fallbacks
+/// testable without running gh or reading Windows Credential Manager.
+fn resolve_token(
+    mode: SourceMode,
+    supplied: Option<&str>,
+    origin: Option<TokenAccountOrigin>,
+    cli: impl FnOnce() -> Option<String>,
+    legacy: impl FnOnce() -> Option<String>,
+) -> Result<(String, CopilotCredentialSource), ProviderError> {
+    if mode == SourceMode::Web {
+        return Err(ProviderError::UnsupportedSource(mode));
+    }
+    if mode != SourceMode::Cli {
+        if let Some(token) = normalize_token(supplied) {
+            let source = match origin {
+                Some(TokenAccountOrigin::ApiKey) => CopilotCredentialSource::ApiKey,
+                Some(TokenAccountOrigin::DeviceFlow) => CopilotCredentialSource::DeviceFlow,
+                None => CopilotCredentialSource::Legacy,
+            };
+            return Ok((token, source));
+        }
+        if mode == SourceMode::OAuth {
+            return Err(ProviderError::AuthRequired);
+        }
+    }
+    if let Some(token) = cli().and_then(|token| normalize_token(Some(&token))) {
+        return Ok((token, CopilotCredentialSource::Cli));
+    }
+    if mode == SourceMode::Auto
+        && let Some(token) = legacy().and_then(|token| normalize_token(Some(&token)))
+    {
+        return Ok((token, CopilotCredentialSource::Legacy));
+    }
+    Err(ProviderError::AuthRequired)
+}
+
 impl CopilotApi {
     pub fn new() -> Self {
         let client = crate::core::credentialed_http_client_builder()
@@ -51,6 +109,26 @@ impl CopilotApi {
     /// Fetch usage information from the default GitHub host.
     pub async fn fetch_usage(&self, api_key: Option<&str>) -> Result<UsageSnapshot, ProviderError> {
         self.fetch_usage_for_host(api_key, None).await
+    }
+
+    pub(super) async fn fetch_usage_from_context(
+        &self,
+        ctx: &FetchContext,
+    ) -> Result<(UsageSnapshot, CopilotCredentialSource), ProviderError> {
+        let (token, source) = resolve_token(
+            ctx.source_mode,
+            ctx.api_key.as_deref(),
+            ctx.token_origin,
+            || load_gh_cli_token(None),
+            || {
+                CREDENTIAL_TARGETS
+                    .iter()
+                    .find_map(|target| self.try_load_credential(target))
+            },
+        )?;
+        self.fetch_usage_with_token(&token, None)
+            .await
+            .map(|usage| (usage, source))
     }
 
     /// Fetch usage information from Copilot API, optionally targeting an
@@ -781,6 +859,81 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn explicit_copilot_token_preserves_origin_without_running_cli_or_legacy_lookup() {
+        for (origin, expected) in [
+            (
+                Some(TokenAccountOrigin::ApiKey),
+                CopilotCredentialSource::ApiKey,
+            ),
+            (
+                Some(TokenAccountOrigin::DeviceFlow),
+                CopilotCredentialSource::DeviceFlow,
+            ),
+            (None, CopilotCredentialSource::Legacy),
+        ] {
+            for mode in [SourceMode::Auto, SourceMode::OAuth] {
+                let (token, source) = resolve_token(
+                    mode,
+                    Some("fixture-token"),
+                    origin,
+                    || panic!("Must not run gh for an explicit token"),
+                    || panic!("Must not read legacy credentials for an explicit token"),
+                )
+                .unwrap();
+                assert_eq!(token, "fixture-token");
+                assert_eq!(source, expected);
+            }
+        }
+    }
+
+    #[test]
+    fn selected_copilot_cli_ignores_supplied_key_and_never_falls_back_to_legacy_store() {
+        let (_, source) = resolve_token(
+            SourceMode::Cli,
+            Some("unrelated-key"),
+            Some(TokenAccountOrigin::ApiKey),
+            || Some("cli-token".into()),
+            || panic!("CLI may not consume Credential Manager fallback"),
+        )
+        .unwrap();
+        assert_eq!(source, CopilotCredentialSource::Cli);
+        assert!(
+            resolve_token(
+                SourceMode::Cli,
+                Some("unrelated-key"),
+                None,
+                || None,
+                || panic!("Missing CLI may not fall back")
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn selected_copilot_owned_token_without_key_fails_before_any_ambient_lookup() {
+        assert!(matches!(
+            resolve_token(
+                SourceMode::OAuth,
+                None,
+                None,
+                || panic!("Owned token verification may not run gh"),
+                || panic!("Owned token verification may not read legacy credentials")
+            ),
+            Err(ProviderError::AuthRequired)
+        ));
+        assert!(matches!(
+            resolve_token(
+                SourceMode::Web,
+                None,
+                None,
+                || panic!("Web is unsupported"),
+                || panic!("Web is unsupported")
+            ),
+            Err(ProviderError::UnsupportedSource(SourceMode::Web))
+        ));
+    }
 
     fn parse_snapshot(json: &str) -> UsageSnapshot {
         let response: CopilotUsageResponse = serde_json::from_str(json).unwrap();

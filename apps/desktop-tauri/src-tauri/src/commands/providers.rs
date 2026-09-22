@@ -17,7 +17,10 @@ pub(crate) fn build_fetch_context(
 ) -> FetchContext {
     let cookie_source = settings.cookie_source(id);
     let stored_cookie = cookies.get(id.cli_name()).map(|s| s.to_string());
-    let stored_api_key = api_keys.get(id.cli_name()).map(|s| s.to_string());
+    let stored_api_key = api_keys
+        .get(id.cli_name())
+        .filter(|_| !matches!(settings.usage_source(id), "cli" | "web"))
+        .map(|s| s.to_string());
     let token_override = token_accounts
         .get(&id)
         .filter(|_| !matches!(settings.usage_source(id), "cli" | "web"))
@@ -33,6 +36,15 @@ pub(crate) fn build_fetch_context(
     let active_token_api_key = active_token_env.and_then(|env| env.values().next().cloned());
     let usage_source = SourceMode::parse(settings.usage_source(id)).unwrap_or_default();
     // Selected token-account key overrides a stored provider apiKey (upstream #2271 / #1183).
+    let token_origin = if active_token_api_key.is_some() {
+        token_override
+            .as_ref()
+            .and_then(|value| value.account.origin)
+    } else {
+        stored_api_key
+            .as_ref()
+            .map(|_| quotalis_core::core::TokenAccountOrigin::ApiKey)
+    };
     let api_key = active_token_api_key.or(stored_api_key);
     let has_kimi_code_api_key =
         id == ProviderId::Kimi && api_key.as_deref().is_some_and(|key| !key.trim().is_empty());
@@ -129,6 +141,7 @@ pub(crate) fn build_fetch_context(
         source_mode,
         manual_cookie_header: cookie_header,
         api_key,
+        token_origin,
         workspace_id: (!workspace_id.is_empty()).then_some(workspace_id),
         api_region: (!api_region.is_empty()).then_some(api_region),
         gateway_url,

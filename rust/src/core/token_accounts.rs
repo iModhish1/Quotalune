@@ -452,6 +452,15 @@ impl TokenAccountSupport {
     }
 }
 
+/// How Quotalis acquired an owned token. Legacy records deliberately remain
+/// unknown; a label or token shape cannot prove an OAuth device exchange.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TokenAccountOrigin {
+    ApiKey,
+    DeviceFlow,
+}
+
 /// A single token account for a provider
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TokenAccount {
@@ -466,6 +475,8 @@ pub struct TokenAccount {
     /// When this account was last used (Unix timestamp in seconds)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_used: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub origin: Option<TokenAccountOrigin>,
 }
 
 impl TokenAccount {
@@ -477,7 +488,27 @@ impl TokenAccount {
             token: token.into(),
             added_at: Utc::now().timestamp(),
             last_used: None,
+            origin: None,
         }
+    }
+
+    pub fn with_origin(mut self, origin: TokenAccountOrigin) -> Self {
+        self.origin = Some(origin);
+        self
+    }
+
+    /// Shared acquisition boundary for manually entered desktop/CLI credentials.
+    /// Cookie-backed accounts are not relabeled as API keys.
+    pub fn from_user_input(
+        provider: ProviderId,
+        label: impl Into<String>,
+        token: impl Into<String>,
+    ) -> Self {
+        let mut account = Self::new(label, token);
+        if TokenAccountSupport::env_override(provider, &account.token).is_some() {
+            account.origin = Some(TokenAccountOrigin::ApiKey);
+        }
+        account
     }
 
     /// Mark this account as used
@@ -757,6 +788,42 @@ pub const MAX_ACCOUNTS_PER_FETCH: usize = 6;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn manual_acquisition_tags_keys_but_not_browser_cookies() {
+        for id in [
+            ProviderId::Copilot,
+            ProviderId::OpenRouter,
+            ProviderId::Grok,
+        ] {
+            assert_eq!(
+                TokenAccount::from_user_input(id, "Fixture", "fixture-token").origin,
+                Some(TokenAccountOrigin::ApiKey)
+            );
+        }
+        assert_eq!(
+            TokenAccount::from_user_input(ProviderId::Cursor, "Fixture", "session=fixture").origin,
+            None
+        );
+    }
+
+    #[test]
+    fn token_origin_round_trips_and_legacy_records_stay_unknown() {
+        let legacy = TokenAccount::new("Device flow-looking label", "fixture-token");
+        let json = serde_json::to_value(&legacy).unwrap();
+        assert!(json.get("origin").is_none());
+        assert_eq!(
+            serde_json::from_value::<TokenAccount>(json).unwrap().origin,
+            None
+        );
+        for origin in [TokenAccountOrigin::ApiKey, TokenAccountOrigin::DeviceFlow] {
+            let account = legacy.clone().with_origin(origin);
+            let restored: TokenAccount =
+                serde_json::from_value(serde_json::to_value(account).unwrap()).unwrap();
+            assert_eq!(restored.origin, Some(origin));
+            assert_eq!(restored.id, legacy.id);
+        }
+    }
 
     #[test]
     fn test_token_account_support() {

@@ -290,6 +290,7 @@ async fn hooks_watch_observation(
         verbose,
         manual_cookie_header: None,
         api_key: None,
+        token_origin: None,
         workspace_id: (!workspace.is_empty()).then(|| workspace.to_string()),
         api_region: (!region.is_empty()).then(|| region.to_string()),
         gateway_url: (!gateway.is_empty()).then(|| gateway.to_string()),
@@ -302,6 +303,10 @@ async fn hooks_watch_observation(
         ctx.api_key = ApiKeys::load()
             .get(provider_id.cli_name())
             .map(|s| s.to_string());
+        ctx.token_origin = ctx
+            .api_key
+            .as_ref()
+            .map(|_| crate::core::TokenAccountOrigin::ApiKey);
     }
 
     let provider = instantiate_provider(provider_id);

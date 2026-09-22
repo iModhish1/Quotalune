@@ -132,7 +132,7 @@ async fn add_account(provider_name: &str, label: &str, token: &str) -> anyhow::R
         anyhow::bail!("An account with label '{}' already exists.", label);
     }
 
-    let account = TokenAccount::new(label, token);
+    let account = TokenAccount::from_user_input(provider, label, token);
     data.add_account(account);
     store.save_provider(provider, &data)?;
 

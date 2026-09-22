@@ -317,6 +317,7 @@ async fn fetch_guard_outcome(
         verbose: false,
         manual_cookie_header: None,
         api_key: None,
+        token_origin: None,
         workspace_id: None,
         api_region: None,
         gateway_url: None,

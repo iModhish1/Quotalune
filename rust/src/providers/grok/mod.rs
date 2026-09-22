@@ -83,11 +83,7 @@ impl GrokProvider {
         .or_else(|| credentials.login_method());
         Ok(result_from_billing(
             billing,
-            if kind == GrokAuthKind::Cli {
-                "grok-cli"
-            } else {
-                "grok-oauth"
-            },
+            credentials.source_label(kind),
             credentials.email.clone(),
             credentials.team_id.clone(),
             plan,
@@ -327,6 +323,7 @@ enum GrokAuthKind {
 
 #[derive(Debug, Clone)]
 struct GrokCredentials {
+    supplied_token: bool,
     access_token: String,
     auth_mode: Option<String>,
     email: Option<String>,
@@ -335,8 +332,18 @@ struct GrokCredentials {
 }
 
 impl GrokCredentials {
+    fn source_label(&self, kind: GrokAuthKind) -> &'static str {
+        if self.supplied_token {
+            "grok-api-key"
+        } else if kind == GrokAuthKind::Cli {
+            "grok-cli"
+        } else {
+            "grok-oauth"
+        }
+    }
     fn from_bearer(token: &str) -> Self {
         Self {
+            supplied_token: true,
             access_token: token.trim().to_string(),
             auth_mode: Some("oidc".into()),
             email: None,
@@ -385,6 +392,7 @@ impl GrokCredentials {
             return Err(ProviderError::AuthRequired);
         }
         Ok(Self {
+            supplied_token: false,
             access_token,
             auth_mode: text_field(entry, "auth_mode"),
             email: text_field(entry, "email"),
@@ -738,6 +746,22 @@ mod tests {
           "https://accounts.x.ai/sign-in": {"key": "cli-token", "auth_mode": "session"},
           "https://auth.x.ai::abc": {"key": "oauth-token", "auth_mode": "oidc"}
         }"#;
+        assert_eq!(
+            GrokCredentials::from_bearer("fixture-key").source_label(GrokAuthKind::OAuth),
+            "grok-api-key"
+        );
+        assert_eq!(
+            GrokCredentials::parse_for_kind(auth, GrokAuthKind::Cli)
+                .unwrap()
+                .source_label(GrokAuthKind::Cli),
+            "grok-cli"
+        );
+        assert_eq!(
+            GrokCredentials::parse_for_kind(auth, GrokAuthKind::OAuth)
+                .unwrap()
+                .source_label(GrokAuthKind::OAuth),
+            "grok-oauth"
+        );
         assert_eq!(
             GrokCredentials::parse_for_kind(auth, GrokAuthKind::Cli)
                 .unwrap()

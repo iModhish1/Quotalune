@@ -90,7 +90,11 @@ fn persist_connection_key(id: ProviderId, key: &str) -> Result<(), String> {
         let mut data = store
             .load_provider(id)
             .map_err(|_| "Protected key storage unavailable")?;
-        data.add_account(TokenAccount::new(id.display_name().to_string(), key.trim()));
+        data.add_account(TokenAccount::from_user_input(
+            id,
+            id.display_name().to_string(),
+            key.trim(),
+        ));
         data.set_active(data.accounts.len() - 1);
         store
             .save_provider(id, &data)
@@ -438,6 +442,11 @@ pub(crate) fn method_from_source_label(id: ProviderId, label: &str) -> Option<Co
     let lower = label.to_ascii_lowercase();
     let candidate = if id == ProviderId::Cursor && lower == "cursor-app" {
         ConnectionMethod::LocalScanner
+    } else if lower == "device-flow" {
+        ConnectionMethod::DeviceFlow
+    } else if id == ProviderId::Copilot && lower == "oauth" {
+        // Historical transport label does not prove how the token was acquired.
+        return None;
     } else if lower.contains("web") || lower.contains("cookie") {
         ConnectionMethod::BrowserSession
     } else if lower.contains("cli") {
@@ -637,7 +646,15 @@ pub async fn verify_provider_connection(
         .get(&id)
         .and_then(|data| data.active_account())
         .map(|a| a.id);
-    let ctx = build_fetch_context(id, &settings, &cookies, &ApiKeys::load(), &accounts);
+    // CLI/browser/local selections cannot silently authenticate using an older
+    // Quotalis API key. Device flow uses only its owned active token account.
+    let api_keys = if method.is_none() || method == Some(ConnectionMethod::ApiKey) {
+        ApiKeys::load()
+    } else {
+        ApiKeys::default()
+    };
+    let ctx = build_fetch_context(id, &settings, &cookies, &api_keys, &accounts);
+    validate_selected_token(method, &ctx)?;
     let task = tokio::spawn(async move { fetch_provider_snapshot(id, ctx, active_account).await });
     begin_verification(id, task.abort_handle())?;
     let snapshot_result = tokio::select! {
@@ -715,6 +732,31 @@ pub async fn verify_provider_connection(
     })?;
 
     Ok(verification)
+}
+
+fn validate_selected_token(
+    method: Option<ConnectionMethod>,
+    ctx: &FetchContext,
+) -> Result<(), String> {
+    use quotalis_core::core::TokenAccountOrigin;
+    if let Some(method @ (ConnectionMethod::ApiKey | ConnectionMethod::DeviceFlow)) = method {
+        let expected = if method == ConnectionMethod::ApiKey {
+            TokenAccountOrigin::ApiKey
+        } else {
+            TokenAccountOrigin::DeviceFlow
+        };
+        if ctx
+            .api_key
+            .as_deref()
+            .is_none_or(|key| key.trim().is_empty())
+            || ctx.token_origin != Some(expected)
+        {
+            return Err(
+                "Configure the selected credential before verifying this connection".into(),
+            );
+        }
+    }
+    Ok(())
 }
 
 fn configure_source(settings: &mut Settings, id: ProviderId, method: ConnectionMethod) {
@@ -914,6 +956,60 @@ mod tests {
     use super::*;
 
     #[test]
+    fn selected_token_method_requires_matching_provenance_before_fetch() {
+        use quotalis_core::core::TokenAccountOrigin;
+        for (method, origin) in [
+            (ConnectionMethod::ApiKey, TokenAccountOrigin::ApiKey),
+            (ConnectionMethod::DeviceFlow, TokenAccountOrigin::DeviceFlow),
+        ] {
+            let mut ctx = FetchContext::default();
+            assert!(validate_selected_token(Some(method), &ctx).is_err());
+            ctx.api_key = Some("fixture-token".into());
+            assert!(validate_selected_token(Some(method), &ctx).is_err());
+            ctx.token_origin = Some(origin);
+            assert!(validate_selected_token(Some(method), &ctx).is_ok());
+            ctx.token_origin = Some(if origin == TokenAccountOrigin::ApiKey {
+                TokenAccountOrigin::DeviceFlow
+            } else {
+                TokenAccountOrigin::ApiKey
+            });
+            assert!(validate_selected_token(Some(method), &ctx).is_err());
+        }
+    }
+
+    #[test]
+    fn persisted_cli_source_excludes_both_active_accounts_and_legacy_api_keys() {
+        use quotalis_core::core::TokenAccountOrigin;
+        for id in [ProviderId::Copilot, ProviderId::Grok] {
+            let mut settings = Settings::default();
+            let cookies = ManualCookies::default();
+            let mut keys = ApiKeys::default();
+            keys.set(id.cli_name(), "fixture-legacy-key", None);
+            let mut data = ProviderAccountData::new();
+            data.add_account(
+                TokenAccount::new("Fixture", "fixture-active-token")
+                    .with_origin(TokenAccountOrigin::DeviceFlow),
+            );
+            let accounts = HashMap::from([(id, data)]);
+
+            configure_source(&mut settings, id, ConnectionMethod::CliSession);
+            let ctx = build_fetch_context(id, &settings, &cookies, &keys, &accounts);
+            assert_eq!(ctx.source_mode, SourceMode::Cli);
+            assert!(ctx.api_key.is_none());
+            assert!(ctx.token_origin.is_none());
+            assert!(ctx.manual_cookie_header.is_none());
+
+            configure_source(&mut settings, id, ConnectionMethod::DeviceFlow);
+            let ctx = build_fetch_context(id, &settings, &cookies, &keys, &accounts);
+            assert_eq!(ctx.api_key.as_deref(), Some("fixture-active-token"));
+            assert_eq!(ctx.token_origin, Some(TokenAccountOrigin::DeviceFlow));
+            // A legacy API key must not change the active account's origin.
+            assert!(validate_selected_token(Some(ConnectionMethod::DeviceFlow), &ctx).is_ok());
+            assert!(validate_selected_token(Some(ConnectionMethod::ApiKey), &ctx).is_err());
+        }
+    }
+
+    #[test]
     fn real_missing_cookie_is_not_a_simulated_observation() {
         let outcome = missing_browser_session(ProviderId::Perplexity);
         assert!(!outcome.simulated);
@@ -1012,10 +1108,20 @@ mod tests {
             method_from_source_label(ProviderId::Claude, "OAuth"),
             Some(ConnectionMethod::CliSession)
         );
-        assert_eq!(
-            method_from_source_label(ProviderId::Copilot, "OAuth"),
-            Some(ConnectionMethod::DeviceFlow)
-        );
+        assert_eq!(method_from_source_label(ProviderId::Copilot, "OAuth"), None);
+        for (provider, label, expected) in [
+            (ProviderId::Copilot, "api-key", ConnectionMethod::ApiKey),
+            (
+                ProviderId::Copilot,
+                "device-flow",
+                ConnectionMethod::DeviceFlow,
+            ),
+            (ProviderId::Copilot, "cli", ConnectionMethod::CliSession),
+            (ProviderId::Grok, "grok-api-key", ConnectionMethod::ApiKey),
+            (ProviderId::Grok, "grok-cli", ConnectionMethod::CliSession),
+        ] {
+            assert_eq!(method_from_source_label(provider, label), Some(expected));
+        }
         assert_eq!(
             method_from_source_label(ProviderId::Claude, "web"),
             Some(ConnectionMethod::BrowserSession)

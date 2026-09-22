@@ -227,6 +227,7 @@ fn build_usage_fetch_context(args: &UsageArgs, source_mode: SourceMode) -> Fetch
         verbose: false,
         manual_cookie_header: None,
         api_key: None,
+        token_origin: None,
         workspace_id: None,
         api_region: None,
         gateway_url: None,
@@ -310,8 +311,11 @@ async fn fetch_provider_result(
         .fetch_status
         .then(|| fetch_provider_status(provider_id.cli_name()));
     let mut ctx = command.ctx.clone();
-    if ctx.api_key.is_none() {
-        ctx.api_key = resolve_cli_api_key(provider_id, command.account.as_deref())?;
+    if ctx.api_key.is_none()
+        && let Some((key, origin)) = resolve_cli_api_key(provider_id, command.account.as_deref())?
+    {
+        ctx.api_key = Some(key);
+        ctx.token_origin = origin;
     }
     let result = provider.fetch_usage(&ctx).await?;
     let status = if let Some(fut) = status_future {
@@ -329,13 +333,26 @@ async fn fetch_provider_result(
 fn resolve_cli_api_key(
     provider_id: ProviderId,
     account_ref: Option<&str>,
-) -> anyhow::Result<Option<String>> {
-    if TokenAccountSupport::is_supported(provider_id)
-        && let Ok(data) = TokenAccountStore::new().load_provider(provider_id)
-        && !data.accounts.is_empty()
-    {
+) -> anyhow::Result<Option<(String, Option<crate::core::TokenAccountOrigin>)>> {
+    let data = TokenAccountSupport::is_supported(provider_id)
+        .then(|| TokenAccountStore::new().load_provider(provider_id).ok())
+        .flatten();
+    select_cli_api_key(provider_id, account_ref, data.as_ref(), || {
+        ApiKeys::load()
+            .get(provider_id.cli_name())
+            .map(ToOwned::to_owned)
+    })
+}
+
+fn select_cli_api_key(
+    provider_id: ProviderId,
+    account_ref: Option<&str>,
+    data: Option<&crate::core::ProviderAccountData>,
+    stored_key: impl FnOnce() -> Option<String>,
+) -> anyhow::Result<Option<(String, Option<crate::core::TokenAccountOrigin>)>> {
+    if let Some(data) = data.filter(|data| !data.accounts.is_empty()) {
         let account = if let Some(account_ref) = account_ref {
-            find_token_account(&data, account_ref)?
+            find_token_account(data, account_ref)?
         } else {
             data.active_account().ok_or_else(|| {
                 anyhow::anyhow!("No active token account for {}", provider_id.display_name())
@@ -344,13 +361,15 @@ fn resolve_cli_api_key(
         if let Some(env) = TokenAccountSupport::env_override(provider_id, &account.token)
             && let Some(key) = env.into_values().next()
         {
-            return Ok(Some(key));
+            return Ok(Some((key, account.origin)));
         }
     }
 
-    Ok(ApiKeys::load()
-        .get(provider_id.cli_name())
-        .map(|s| s.to_string()))
+    if account_ref.is_some() {
+        anyhow::bail!("The selected account does not provide an API credential");
+    }
+
+    Ok(stored_key().map(|key| (key, Some(crate::core::TokenAccountOrigin::ApiKey))))
 }
 
 fn find_token_account<'a>(
@@ -741,6 +760,76 @@ fn render_progress_bar(percent: f64, width: usize, use_color: bool) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cli_key_selection_preserves_active_named_and_legacy_account_origins() {
+        use crate::core::{ProviderAccountData, TokenAccount, TokenAccountOrigin};
+        let mut data = ProviderAccountData::new();
+        data.add_account(TokenAccount::from_user_input(
+            ProviderId::Copilot,
+            "Manual",
+            "manual-fixture",
+        ));
+        data.add_account(
+            TokenAccount::new("Device", "device-fixture")
+                .with_origin(TokenAccountOrigin::DeviceFlow),
+        );
+        data.add_account(TokenAccount::new("Legacy", "legacy-fixture"));
+        data.set_active(1);
+        for (requested, token, origin) in [
+            (None, "device-fixture", Some(TokenAccountOrigin::DeviceFlow)),
+            (
+                Some("Manual"),
+                "manual-fixture",
+                Some(TokenAccountOrigin::ApiKey),
+            ),
+            (
+                Some("2"),
+                "device-fixture",
+                Some(TokenAccountOrigin::DeviceFlow),
+            ),
+            (Some("Legacy"), "legacy-fixture", None),
+        ] {
+            assert_eq!(
+                select_cli_api_key(ProviderId::Copilot, requested, Some(&data), || panic!(
+                    "Selected account must not read an unrelated stored key"
+                ))
+                .unwrap(),
+                Some((token.into(), origin))
+            );
+        }
+        assert!(
+            select_cli_api_key(
+                ProviderId::Copilot,
+                Some("missing"),
+                Some(&data),
+                || panic!("Unknown account must not fall back")
+            )
+            .is_err()
+        );
+        assert!(
+            select_cli_api_key(ProviderId::Copilot, Some("missing"), None, || panic!(
+                "Absent account store must not fall back"
+            ))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn cli_stored_api_key_has_known_origin_and_missing_key_stays_missing() {
+        use crate::core::TokenAccountOrigin;
+        assert_eq!(
+            select_cli_api_key(ProviderId::Copilot, None, None, || Some(
+                "stored-fixture".into()
+            ))
+            .unwrap(),
+            Some(("stored-fixture".into(), Some(TokenAccountOrigin::ApiKey)))
+        );
+        assert_eq!(
+            select_cli_api_key(ProviderId::Copilot, None, None, || None).unwrap(),
+            None
+        );
+    }
     use crate::core::{ProviderAccountData, TokenAccount, TokenAccountSupport};
 
     fn fetch_result(usage: UsageSnapshot) -> ProviderFetchResult {
