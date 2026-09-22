@@ -184,7 +184,9 @@ fn cancellation_stops_the_owned_cli_process_tree() {
     let cancel_from_watcher = cancellation.clone();
     let descendant_for_watcher = descendant_path.clone();
     let watcher = std::thread::spawn(move || {
-        let deadline = Instant::now() + Duration::from_secs(3);
+        // This watcher starts before the wrapper is launched. Budget both
+        // executable loads; the descendant's own handshake allows 3 seconds.
+        let deadline = Instant::now() + Duration::from_secs(6);
         while !descendant_for_watcher.exists() && Instant::now() < deadline {
             std::thread::sleep(Duration::from_millis(10));
         }
@@ -192,7 +194,9 @@ fn cancellation_stops_the_owned_cli_process_tree() {
             descendant_for_watcher.exists(),
             "fixture descendant started"
         );
+        let canceled_at = Instant::now();
         cancel_from_watcher.cancel();
+        canceled_at
     });
 
     let start = Instant::now();
@@ -202,13 +206,17 @@ fn cancellation_stops_the_owned_cli_process_tree() {
         cancellation,
         |_| {},
     );
-    watcher.join().unwrap();
+    let canceled_at = watcher.join().unwrap();
 
     assert!(
         matches!(result.outcome, LoginOutcome::Canceled),
         "{result:?}"
     );
-    assert!(start.elapsed() < Duration::from_secs(5));
+    assert!(start.elapsed() < Duration::from_secs(10));
+    assert!(
+        canceled_at.elapsed() < CLEANUP_AND_SCHEDULING_ALLOWANCE,
+        "cancellation must finish within the cleanup budget, independently of fixture startup"
+    );
     assert_process_stopped(&pid_path);
     assert_process_stopped(&descendant_path);
 }
