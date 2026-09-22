@@ -333,6 +333,7 @@ pub enum ProbeFailure {
     Timeout,
     Cancelled,
     Launch,
+    Capture,
 }
 
 struct SupervisedProcess {
@@ -461,17 +462,17 @@ fn read_available<R: Read>(stream: &mut R, buffer: &mut [u8]) -> io::Result<usiz
 fn drain_stream<R: Read + std::os::windows::io::AsRawHandle>(
     stream: &mut R,
     retained: &mut Vec<u8>,
-) {
+) -> io::Result<()> {
     drain_stream_impl(stream, retained)
 }
 
 #[cfg(unix)]
-fn drain_stream<R: Read>(stream: &mut R, retained: &mut Vec<u8>) {
+fn drain_stream<R: Read>(stream: &mut R, retained: &mut Vec<u8>) -> io::Result<()> {
     drain_stream_impl(stream, retained)
 }
 
 #[cfg(any(windows, unix))]
-fn drain_stream_impl<R>(stream: &mut R, retained: &mut Vec<u8>)
+fn drain_stream_impl<R>(stream: &mut R, retained: &mut Vec<u8>) -> io::Result<()>
 where
     R: Read + ReadAvailable,
 {
@@ -479,16 +480,28 @@ where
     let mut chunk = [0_u8; 4096];
     while drained < 32 * 1024 {
         match ReadAvailable::read_available(stream, &mut chunk) {
-            Ok(0) | Err(_) => break,
+            Ok(0) => break,
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    io::ErrorKind::WouldBlock | io::ErrorKind::BrokenPipe
+                ) =>
+            {
+                break;
+            }
+            Err(error) => return Err(error),
             Ok(count) => {
                 drained += count;
-                if retained.len() < OUTPUT_CAP {
-                    let room = OUTPUT_CAP - retained.len();
+                // One extra byte detects truncation for secret reads, where
+                // using a partial credential would be unsafe.
+                if retained.len() < OUTPUT_CAP + 1 {
+                    let room = OUTPUT_CAP + 1 - retained.len();
                     retained.extend_from_slice(&chunk[..count.min(room)]);
                 }
             }
         }
     }
+    Ok(())
 }
 
 #[cfg(any(windows, unix))]
@@ -533,12 +546,20 @@ fn scrub_environment(command: &mut Command) {
         .env("GIT_TERMINAL_PROMPT", "0");
 }
 
-fn run_probe_blocking(
+// Intentionally neither Debug nor Serialize: a credential command's output
+// must never enter diagnostics or an IPC payload.
+struct CapturedOutput {
+    exit_code: Option<i32>,
+    stdout: Vec<u8>,
+    stderr: Vec<u8>,
+}
+
+fn run_capture_blocking(
     program: PathBuf,
     args: Vec<OsString>,
     timeout: Duration,
     cancel: watch::Receiver<bool>,
-) -> Result<ProbeOutput, ProbeFailure> {
+) -> Result<CapturedOutput, ProbeFailure> {
     if *cancel.borrow() {
         return Err(ProbeFailure::Cancelled);
     }
@@ -563,22 +584,82 @@ fn run_probe_blocking(
             process.stop();
             return Err(ProbeFailure::Timeout);
         }
-        drain_stream(&mut stdout, &mut out);
-        drain_stream(&mut stderr, &mut err);
+        drain_stream(&mut stdout, &mut out).map_err(|_| ProbeFailure::Capture)?;
+        drain_stream(&mut stderr, &mut err).map_err(|_| ProbeFailure::Capture)?;
         match process.child.try_wait() {
             Ok(Some(status)) => {
-                drain_stream(&mut stdout, &mut out);
-                drain_stream(&mut stderr, &mut err);
-                return Ok(ProbeOutput {
+                drain_stream(&mut stdout, &mut out).map_err(|_| ProbeFailure::Capture)?;
+                drain_stream(&mut stderr, &mut err).map_err(|_| ProbeFailure::Capture)?;
+                return Ok(CapturedOutput {
                     exit_code: status.code(),
-                    stdout: UserFacingText::sanitize(&String::from_utf8_lossy(&out)),
-                    stderr: UserFacingText::sanitize(&String::from_utf8_lossy(&err)),
+                    stdout: out,
+                    stderr: err,
                 });
             }
             Ok(None) => std::thread::sleep(Duration::from_millis(10)),
             Err(_) => return Err(ProbeFailure::Launch),
         }
     }
+}
+
+fn run_probe_blocking(
+    program: PathBuf,
+    args: Vec<OsString>,
+    timeout: Duration,
+    cancel: watch::Receiver<bool>,
+) -> Result<ProbeOutput, ProbeFailure> {
+    let mut captured = run_capture_blocking(program, args, timeout, cancel)?;
+    captured.stdout.truncate(OUTPUT_CAP);
+    captured.stderr.truncate(OUTPUT_CAP);
+    Ok(ProbeOutput {
+        exit_code: captured.exit_code,
+        stdout: UserFacingText::sanitize(&String::from_utf8_lossy(&captured.stdout)),
+        stderr: UserFacingText::sanitize(&String::from_utf8_lossy(&captured.stderr)),
+    })
+}
+
+struct CancelOnDrop(watch::Sender<bool>);
+
+impl Drop for CancelOnDrop {
+    fn drop(&mut self) {
+        let _send_result = self.0.send(true);
+    }
+}
+
+fn credential_stdout(output: CapturedOutput) -> Option<String> {
+    if output.exit_code != Some(0) || output.stdout.len() > OUTPUT_CAP {
+        return None;
+    }
+    // Do not sanitize a secret into a different credential. Reject invalid
+    // encoding; discard stderr regardless of exit status.
+    String::from_utf8(output.stdout).ok()
+}
+
+async fn read_resolved_credential(
+    resolved: ResolvedExecutable,
+    args: &[&str],
+    timeout: Duration,
+) -> Option<String> {
+    let (tx, rx) = watch::channel(false);
+    let _cancel_on_drop = CancelOnDrop(tx);
+    let mut all_args = resolved.prefix_args;
+    all_args.extend(args.iter().map(OsString::from));
+    let output = tokio::task::spawn_blocking(move || {
+        run_capture_blocking(resolved.program, all_args, timeout, rx)
+    })
+    .await
+    .ok()?
+    .ok()?;
+    credential_stdout(output)
+}
+
+/// Read a credential from a curated CLI, with bounded in-memory capture and
+/// process-tree cleanup even when the awaiting provider fetch is dropped.
+/// Never fall back to PATH, expose stderr, or put output in a probe report.
+pub(crate) async fn read_cli_credential(provider: ProviderId, args: &[&str]) -> Option<String> {
+    let dependency = cli_dependency(provider)?;
+    let resolved = resolve_cli_command(dependency, &DiscoveryRoots::system())?;
+    read_resolved_credential(resolved, args, PROBE_TIMEOUT).await
 }
 
 /// Run `program args...` non-interactively with a timeout and a cancellation
@@ -1077,7 +1158,10 @@ mod tests {
 
     #[cfg(windows)]
     fn system_cmd() -> PathBuf {
-        PathBuf::from(std::env::var_os("SystemRoot").expect("SystemRoot")).join("System32/cmd.exe")
+        // cmd parses a forward slash in its own executable path as a switch.
+        PathBuf::from(std::env::var_os("SystemRoot").expect("SystemRoot"))
+            .join("System32")
+            .join("cmd.exe")
     }
 
     #[cfg(windows)]
@@ -1132,6 +1216,143 @@ mod tests {
         );
     }
 
+    #[test]
+    fn credential_capture_rejects_failed_truncated_or_invalid_output_without_sanitizing() {
+        let captured = |exit_code, stdout| CapturedOutput {
+            exit_code,
+            stdout,
+            stderr: b"never use stderr as a credential".to_vec(),
+        };
+        assert_eq!(
+            credential_stdout(captured(Some(0), b"Bearer fixture.secret\r\n".to_vec())),
+            Some("Bearer fixture.secret\r\n".into())
+        );
+        assert!(credential_stdout(captured(Some(1), b"fixture".to_vec())).is_none());
+        assert!(credential_stdout(captured(None, b"fixture".to_vec())).is_none());
+        assert!(credential_stdout(captured(Some(0), vec![b'x'; OUTPUT_CAP + 1])).is_none());
+        assert!(credential_stdout(captured(Some(0), vec![0xff])).is_none());
+    }
+
+    #[test]
+    fn dropping_credential_guard_signals_cancellation() {
+        let (tx, rx) = watch::channel(false);
+        let guard = CancelOnDrop(tx);
+        assert!(!*rx.borrow());
+        drop(guard);
+        assert!(*rx.borrow());
+    }
+
+    #[cfg(windows)]
+    fn fixture_command() -> ResolvedExecutable {
+        ResolvedExecutable {
+            program: system_cmd(),
+            prefix_args: vec![],
+            display_path: system_cmd(),
+        }
+    }
+
+    #[cfg(windows)]
+    #[tokio::test]
+    async fn credential_process_keeps_secret_out_of_probe_sanitization_and_rejects_overflow() {
+        let value = read_resolved_credential(
+            fixture_command(),
+            &["/d", "/c", "echo Bearer fixture.secret"],
+            Duration::from_secs(5),
+        )
+        .await;
+        assert_eq!(
+            value.as_deref().map(str::trim),
+            Some("Bearer fixture.secret")
+        );
+        let value = read_resolved_credential(
+            fixture_command(),
+            &[
+                "/d",
+                "/c",
+                "for /L %i in (1,1,3000) do @echo fixture.secret",
+            ],
+            Duration::from_secs(5),
+        )
+        .await;
+        assert!(value.is_none(), "never accept a truncated token");
+    }
+
+    #[cfg(windows)]
+    #[tokio::test]
+    async fn dropped_credential_future_kills_its_started_process() {
+        let temp = tempfile::tempdir().unwrap();
+        let started = temp.path().join("started.txt");
+        let escaped = temp.path().join("escaped.txt");
+        let script = temp.path().join("credential.cmd");
+        let ping = system_cmd().parent().unwrap().join("ping.exe");
+        std::fs::write(
+            &script,
+            format!(
+                "@echo off\r\necho started>\"{}\"\r\n\"{}\" -n 4 127.0.0.1 >nul\r\necho escaped>\"{}\"\r\n",
+                started.display(), ping.display(), escaped.display()
+            ),
+        ).unwrap();
+        let script_arg = script.to_string_lossy().into_owned();
+        let task = tokio::spawn(async move {
+            read_resolved_credential(
+                fixture_command(),
+                &["/d", "/s", "/c", &script_arg],
+                Duration::from_secs(20),
+            )
+            .await
+        });
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !started.exists() && Instant::now() < deadline {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        let did_start = started.exists();
+        task.abort();
+        assert!(task.await.unwrap_err().is_cancelled());
+        assert!(did_start, "fixture never reached the cancellation boundary");
+        tokio::time::sleep(Duration::from_secs(4)).await;
+        assert!(
+            !escaped.exists(),
+            "credential process survived future cancellation"
+        );
+    }
+
+    #[cfg(windows)]
+    #[tokio::test]
+    async fn credential_timeout_discards_partial_stdout() {
+        let temp = tempfile::tempdir().unwrap();
+        let script = temp.path().join("timeout.cmd");
+        let marker = temp.path().join("started.txt");
+        let ping = system_cmd().parent().unwrap().join("ping.exe");
+        std::fs::write(
+            &script,
+            format!(
+                "@echo started>\"{}\"\r\n@echo fixture.secret\r\n@\"{}\" -n 30 127.0.0.1 >nul\r\n",
+                marker.display(),
+                ping.display()
+            ),
+        )
+        .unwrap();
+        let started = Instant::now();
+        let result = read_resolved_credential(
+            fixture_command(),
+            &["/d", "/s", "/c", &script.to_string_lossy()],
+            Duration::from_millis(300),
+        )
+        .await;
+        assert!(result.is_none());
+        assert!(marker.exists(), "timeout fixture must actually start");
+        assert!(started.elapsed() >= Duration::from_millis(300));
+        assert!(started.elapsed() < Duration::from_secs(5));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn unexpected_pipe_read_error_is_not_treated_as_complete_output() {
+        let mut not_a_pipe = tempfile::tempfile().unwrap();
+        let mut retained = b"incomplete-credential".to_vec();
+        assert!(drain_stream(&mut not_a_pipe, &mut retained).is_err());
+    }
+
     #[cfg(windows)]
     #[tokio::test]
     async fn pre_cancelled_probe_never_spawns() {
@@ -1161,16 +1382,19 @@ mod tests {
     async fn probe_environment_does_not_inherit_path_or_node_options() {
         for variable in ["PATH", "NODE_OPTIONS"] {
             let (_tx, rx) = watch::channel(false);
+            // `set PATH` also matches cmd's own PATHEXT. Test the exact
+            // variable, and require a successful fixture execution.
+            let check = format!("if defined {variable} (exit /b 1) else (echo absent)");
             let out = run_probe(
                 &system_cmd(),
-                &["/d", "/c", "set", variable],
+                &["/d", "/c", &check],
                 Duration::from_secs(5),
                 rx,
             )
             .await
             .unwrap();
-            assert_eq!(out.exit_code, Some(1), "{variable}: {out:?}");
-            assert!(out.stdout.trim().is_empty(), "{variable}: {}", out.stdout);
+            assert_eq!(out.exit_code, Some(0), "{variable}: {out:?}");
+            assert_eq!(out.stdout.trim(), "absent", "{variable}: {}", out.stdout);
         }
     }
 
@@ -1280,6 +1504,8 @@ mod tests {
         };
         let (_tx, rx) = watch::channel(false);
         let out = run_probe(&program, args, PROBE_TIMEOUT, rx).await.unwrap();
+        assert_eq!(out.exit_code, Some(0));
+        assert!(!out.stdout.trim().is_empty());
         assert!(!out.stdout.contains("abc.def"));
         assert!(!out.stdout.contains("JaneDoe") && !out.stdout.contains("/home/jane"));
         assert!(out.stdout.len() <= OUTPUT_CAP);

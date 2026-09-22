@@ -5,16 +5,12 @@
 //! Credential Manager tokens remain supported as fallbacks.
 
 use crate::core::{
-    FetchContext, NamedRateWindow, ProviderError, RateWindow, SourceMode, TokenAccountOrigin,
-    UsageSnapshot,
+    FetchContext, NamedRateWindow, ProviderError, ProviderId, RateWindow, SourceMode,
+    TokenAccountOrigin, UsageSnapshot,
 };
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::{Map, Value};
-use std::process::Command;
-
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
 
 const DEFAULT_GITHUB_HOST: &str = "github.com";
 const COPILOT_USAGE_PATH: &str = "/copilot_internal/user";
@@ -61,11 +57,11 @@ impl CopilotCredentialSource {
 
 /// Resolve only the selected source. Closures make the forbidden fallbacks
 /// testable without running gh or reading Windows Credential Manager.
-fn resolve_token(
+async fn resolve_token<F: std::future::Future<Output = Option<String>>>(
     mode: SourceMode,
     supplied: Option<&str>,
     origin: Option<TokenAccountOrigin>,
-    cli: impl FnOnce() -> Option<String>,
+    cli: impl FnOnce() -> F,
     legacy: impl FnOnce() -> Option<String>,
 ) -> Result<(String, CopilotCredentialSource), ProviderError> {
     if mode == SourceMode::Web {
@@ -84,7 +80,7 @@ fn resolve_token(
             return Err(ProviderError::AuthRequired);
         }
     }
-    if let Some(token) = cli().and_then(|token| normalize_token(Some(&token))) {
+    if let Some(token) = cli().await.and_then(|token| normalize_token(Some(&token))) {
         return Ok((token, CopilotCredentialSource::Cli));
     }
     if mode == SourceMode::Auto
@@ -125,7 +121,8 @@ impl CopilotApi {
                     .iter()
                     .find_map(|target| self.try_load_credential(target))
             },
-        )?;
+        )
+        .await?;
         self.fetch_usage_with_token(&token, None)
             .await
             .map(|usage| (usage, source))
@@ -140,7 +137,7 @@ impl CopilotApi {
         api_key: Option<&str>,
         github_host: Option<&str>,
     ) -> Result<UsageSnapshot, ProviderError> {
-        let token = self.load_token(api_key, github_host)?;
+        let token = self.load_token(api_key, github_host).await?;
         self.fetch_usage_with_token(&token, github_host).await
     }
 
@@ -218,7 +215,7 @@ impl CopilotApi {
             .map_err(|e| ProviderError::Parse(e.to_string()))
     }
 
-    fn load_token(
+    async fn load_token(
         &self,
         api_key: Option<&str>,
         github_host: Option<&str>,
@@ -228,7 +225,7 @@ impl CopilotApi {
             return Ok(key);
         }
 
-        if let Some(token) = load_gh_cli_token(github_host) {
+        if let Some(token) = load_gh_cli_token(github_host).await {
             tracing::debug!("Using Copilot token from GitHub CLI auth");
             return Ok(token);
         }
@@ -752,32 +749,18 @@ fn normalize_token(raw: Option<&str>) -> Option<String> {
     }
 }
 
-fn load_gh_cli_token(github_host: Option<&str>) -> Option<String> {
+async fn load_gh_cli_token(github_host: Option<&str>) -> Option<String> {
     let host = github_host
         .map(str::trim)
         .filter(|host| !host.is_empty())
         .unwrap_or(DEFAULT_GITHUB_HOST);
-    let mut command = Command::new("gh");
-    command.args(["auth", "token", "--hostname", host]);
-    hide_windows_console(&mut command);
-    let output = command.output().ok()?;
-
-    if !output.status.success() {
-        return None;
-    }
-
-    let token = String::from_utf8(output.stdout).ok()?;
+    let token = crate::cli_dependencies::read_cli_credential(
+        ProviderId::Copilot,
+        &["auth", "token", "--hostname", host],
+    )
+    .await?;
     normalize_token(Some(&token))
 }
-
-#[cfg(windows)]
-fn hide_windows_console(command: &mut Command) {
-    const CREATE_NO_WINDOW: u32 = 0x08000000;
-    command.creation_flags(CREATE_NO_WINDOW);
-}
-
-#[cfg(not(windows))]
-fn hide_windows_console(_command: &mut Command) {}
 
 fn parse_iso_date(s: &str) -> Option<DateTime<Utc>> {
     if let Ok(dt) = DateTime::parse_from_rfc3339(s) {
@@ -860,8 +843,8 @@ where
 mod tests {
     use super::*;
 
-    #[test]
-    fn explicit_copilot_token_preserves_origin_without_running_cli_or_legacy_lookup() {
+    #[tokio::test]
+    async fn explicit_copilot_token_preserves_origin_without_running_cli_or_legacy_lookup() {
         for (origin, expected) in [
             (
                 Some(TokenAccountOrigin::ApiKey),
@@ -878,9 +861,10 @@ mod tests {
                     mode,
                     Some("fixture-token"),
                     origin,
-                    || panic!("Must not run gh for an explicit token"),
+                    || async { panic!("Must not run gh for an explicit token") },
                     || panic!("Must not read legacy credentials for an explicit token"),
                 )
+                .await
                 .unwrap();
                 assert_eq!(token, "fixture-token");
                 assert_eq!(source, expected);
@@ -888,15 +872,16 @@ mod tests {
         }
     }
 
-    #[test]
-    fn selected_copilot_cli_ignores_supplied_key_and_never_falls_back_to_legacy_store() {
+    #[tokio::test]
+    async fn selected_copilot_cli_ignores_supplied_key_and_never_falls_back_to_legacy_store() {
         let (_, source) = resolve_token(
             SourceMode::Cli,
             Some("unrelated-key"),
             Some(TokenAccountOrigin::ApiKey),
-            || Some("cli-token".into()),
+            || async { Some("cli-token".into()) },
             || panic!("CLI may not consume Credential Manager fallback"),
         )
+        .await
         .unwrap();
         assert_eq!(source, CopilotCredentialSource::Cli);
         assert!(
@@ -904,23 +889,25 @@ mod tests {
                 SourceMode::Cli,
                 Some("unrelated-key"),
                 None,
-                || None,
+                || async { None },
                 || panic!("Missing CLI may not fall back")
             )
+            .await
             .is_err()
         );
     }
 
-    #[test]
-    fn selected_copilot_owned_token_without_key_fails_before_any_ambient_lookup() {
+    #[tokio::test]
+    async fn selected_copilot_owned_token_without_key_fails_before_any_ambient_lookup() {
         assert!(matches!(
             resolve_token(
                 SourceMode::OAuth,
                 None,
                 None,
-                || panic!("Owned token verification may not run gh"),
+                || async { panic!("Owned token verification may not run gh") },
                 || panic!("Owned token verification may not read legacy credentials")
-            ),
+            )
+            .await,
             Err(ProviderError::AuthRequired)
         ));
         assert!(matches!(
@@ -928,9 +915,10 @@ mod tests {
                 SourceMode::Web,
                 None,
                 None,
-                || panic!("Web is unsupported"),
+                || async { panic!("Web is unsupported") },
                 || panic!("Web is unsupported")
-            ),
+            )
+            .await,
             Err(ProviderError::UnsupportedSource(SourceMode::Web))
         ));
     }
