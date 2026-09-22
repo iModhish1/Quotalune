@@ -163,3 +163,21 @@ Full-suite validation exposed a synthetic CLI cancellation test whose 3-second w
 Final automated results for this source increment: frontend **1568 / 228 files**, desktop **564 passed / one existing ignored**, core **1860 passed**, CLI **one**, doctests **zero**. TypeScript and production build passed; Vite retains its existing large-chunk advisory. Rust suite includes locale parity and matrix synchronization. Secret scan **4255 files clean**, no new skip/focus markers, formatting and diff checks passed. Clippy completion is recorded in `.local/wave3-reporting-clippy.log`; the canonical post-commit Dev build is recorded separately after source commits.
 
 Logs: `.local/wave3-reporting-full-front.log`, `wave3-reporting-full-rust.log`, `wave3-reporting-tsc.log`, `wave3-reporting-build.log`, `wave3-reporting-clippy.log`. The cross-wave tracker is `CROSS_WAVE_REGRESSION_MATRIX.md`; all 22 required interactions remain open at their full scope. Wave 3 capability completeness, live auth and native acceptance remain PARTIAL/deferred. Release gate remains CLOSED and Personal unchanged.
+# Credential cancellation repair — 2026-09-22
+
+Independent source review of `04776618` found that `save_provider_connection_key`
+reserved an operation without testing cancellation, and browser import checked
+cancellation before an unprotected storage write. Both now place the entire
+protected-store read/modify/write inside the existing `Operation::commit_if_active`
+boundary. Cancellation accepted first prevents access; a write that commits first
+finishes its reservation so a later cancel cannot claim it stopped that write.
+No new credential store or destructive cleanup was introduced.
+
+Focused evidence: six operation-registry tests, then all 18 `commands::connection`
+tests passed. Three new cases cover cancellation before storage access, commit
+before cancellation and failed-save retry ownership. Independent read-only review
+found no new lock inversion or actionable defect in the three-file repair.
+These are concurrency-contract tests plus source wiring review, not command-level
+DPAPI fault injection or live browser authentication. No owner credentials used.
+Copilot/Grok selected-source classification and invalid browser offerings remain
+separate open findings; this packet does not establish Wave 3 PASS.

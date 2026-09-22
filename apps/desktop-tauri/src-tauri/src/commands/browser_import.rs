@@ -110,7 +110,7 @@ pub fn import_browser_cookies(
             Err("Simulated browser session unavailable".into())
         };
     }
-    let _operation = super::connection::begin_live_connection(pid)?;
+    let operation = super::connection::begin_live_connection(pid)?;
 
     let settings = Settings::load();
     let domain = super::providers::provider_cookie_domain(pid, &settings)
@@ -138,18 +138,18 @@ pub fn import_browser_cookies(
         ));
     }
 
-    if *_operation.cancellation().borrow() {
-        return Err("Connection operation canceled".into());
-    }
     let cookie_header = CookieExtractor::build_cookie_header(&cookies);
     validate_single_line_secret(&cookie_header, "Cookie header", MAX_COOKIE_HEADER_LEN)?;
 
-    // Persist as manual cookie.
-    let mut manual = ManualCookies::load();
-    manual.set(pid.cli_name(), &cookie_header);
-    manual
-        .save()
-        .map_err(|_| "Protected session storage unavailable")?;
+    // Extraction can finish after Close. Make the protected-store transaction
+    // atomic with accepted cancellation, including its read/modify/write.
+    operation.commit_if_active(|| {
+        let mut manual = ManualCookies::load();
+        manual.set(pid.cli_name(), &cookie_header);
+        manual
+            .save()
+            .map_err(|_| "Protected session storage unavailable".to_string())
+    })?;
 
     Ok(get_manual_cookies())
 }

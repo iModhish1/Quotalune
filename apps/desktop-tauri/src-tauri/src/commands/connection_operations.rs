@@ -170,4 +170,66 @@ mod tests {
         assert!(peak.load(std::sync::atomic::Ordering::SeqCst) <= 3);
         assert_eq!(active.load(std::sync::atomic::Ordering::SeqCst), 0);
     }
+
+    #[test]
+    fn canceled_credential_transaction_never_reads_or_writes_the_store() {
+        let registry = OperationRegistry::default();
+        for provider in [ProviderId::Copilot, ProviderId::Claude] {
+            let operation = registry.begin(provider).unwrap();
+            // Simulates cancellation while key preparation/browser extraction
+            // is in flight, before entering the protected-store transaction.
+            assert!(registry.cancel(provider));
+            let result = operation.commit_if_active(|| -> Result<(), String> {
+                panic!("A canceled operation must not even open the credential store")
+            });
+            assert_eq!(result.unwrap_err(), "Connection operation canceled");
+            drop(operation);
+            assert!(registry.begin(provider).is_ok());
+        }
+    }
+
+    #[test]
+    fn credential_commit_winning_the_race_cannot_report_successful_cancellation() {
+        let registry = OperationRegistry::default();
+        let writes = std::sync::atomic::AtomicUsize::new(0);
+        std::thread::scope(|scope| {
+            let operation = registry.begin(ProviderId::Copilot).unwrap();
+            let (entered, committing) = std::sync::mpsc::channel();
+            let (release, resume) = std::sync::mpsc::channel();
+            let registry = &registry;
+            let writes = &writes;
+            let writer = scope.spawn(move || {
+                operation.commit_if_active(|| {
+                    entered.send(()).unwrap();
+                    resume.recv().unwrap();
+                    writes.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                    Ok(())
+                })
+            });
+            committing.recv().unwrap();
+            let cancel = scope.spawn(|| registry.cancel(ProviderId::Copilot));
+            release.send(()).unwrap();
+            writer.join().unwrap().unwrap();
+            // Cancellation cannot claim to have stopped an already committed
+            // write. There is no check-then-write window outside the mutex.
+            assert!(!cancel.join().unwrap());
+        });
+        assert_eq!(writes.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert!(registry.0.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn failed_credential_commit_releases_slot_and_allows_retry() {
+        let registry = OperationRegistry::default();
+        let operation = registry.begin(ProviderId::Copilot).unwrap();
+        assert!(
+            operation
+                .commit_if_active(|| Err::<(), _>("Protected storage unavailable".to_string()))
+                .is_err()
+        );
+        let retry = registry.begin(ProviderId::Copilot).unwrap();
+        drop(operation);
+        assert!(registry.begin(ProviderId::Copilot).is_err());
+        assert!(retry.commit_if_active(|| Ok(())).is_ok());
+    }
 }

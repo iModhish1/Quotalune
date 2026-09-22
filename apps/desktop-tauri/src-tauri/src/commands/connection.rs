@@ -72,7 +72,13 @@ pub fn save_provider_connection_key(provider_id: String, key: String) -> Result<
     if active_fixture(id).is_some() {
         return Ok(());
     }
-    let _operation = begin_live_connection(id)?;
+    let operation = begin_live_connection(id)?;
+    // Serialize the complete read/modify/write with cancellation. A Close that
+    // wins this boundary must not leave a new key in protected storage.
+    operation.commit_if_active(|| persist_connection_key(id, &key))
+}
+
+fn persist_connection_key(id: ProviderId, key: &str) -> Result<(), String> {
     let token_store = quotalis_core::core::TokenAccountSupport::for_provider(id).is_some_and(|s| {
         matches!(
             s.injection,
