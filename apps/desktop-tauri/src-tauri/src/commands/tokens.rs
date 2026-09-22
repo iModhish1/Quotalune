@@ -119,6 +119,7 @@ pub fn add_token_account(
     token: String,
 ) -> Result<ProviderTokenAccountsBridge, String> {
     let id = super::parse_provider_arg(&provider_id)?;
+    let _operation = super::connection::begin_live_connection(id)?;
     let support = TokenAccountSupport::for_provider(id)
         .ok_or_else(|| format!("Provider {provider_id} does not support token accounts"))?;
     super::validate_single_line_secret(&token, "Token", super::MAX_COOKIE_HEADER_LEN)?;
@@ -144,6 +145,7 @@ pub fn remove_token_account(
     account_id: String,
 ) -> Result<ProviderTokenAccountsBridge, String> {
     let id = super::parse_provider_arg(&provider_id)?;
+    let _operation = super::connection::begin_live_connection(id)?;
     let support = TokenAccountSupport::for_provider(id)
         .ok_or_else(|| format!("Provider {provider_id} does not support token accounts"))?;
     let uuid = uuid::Uuid::parse_str(&account_id).map_err(|e| e.to_string())?;
@@ -168,6 +170,7 @@ pub fn set_active_token_account(
     account_id: String,
 ) -> Result<ProviderTokenAccountsBridge, String> {
     let id = super::parse_provider_arg(&provider_id)?;
+    let _operation = super::connection::begin_live_connection(id)?;
     let support = TokenAccountSupport::for_provider(id)
         .ok_or_else(|| format!("Provider {provider_id} does not support token accounts"))?;
     let uuid = uuid::Uuid::parse_str(&account_id).map_err(|e| e.to_string())?;

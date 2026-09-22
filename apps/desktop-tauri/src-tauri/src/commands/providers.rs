@@ -20,6 +20,7 @@ pub(crate) fn build_fetch_context(
     let stored_api_key = api_keys.get(id.cli_name()).map(|s| s.to_string());
     let token_override = token_accounts
         .get(&id)
+        .filter(|_| !matches!(settings.usage_source(id), "cli" | "web"))
         .and_then(|data| data.active_account())
         .cloned()
         .map(|account| TokenAccountOverride::from_account(id, account));
@@ -101,10 +102,11 @@ pub(crate) fn build_fetch_context(
         && cookie_source != "off"
         && !instantiate_provider(id).supports_cli()
     {
-        if cookie_header
-            .as_deref()
-            .map(str::trim)
-            .is_none_or(|s| s.is_empty())
+        if matches!(cookie_source, "auto" | "browser" | "web")
+            && cookie_header
+                .as_deref()
+                .map(str::trim)
+                .is_none_or(|s| s.is_empty())
         {
             cookie_header = provider_cookie_domain(id, settings).and_then(|domain| {
                 quotalis_core::browser::cookies::get_cookie_header(domain)
@@ -370,27 +372,19 @@ fn spawn_provider_refreshes(
         let token_account_id = inputs
             .token_accounts
             .get(&id)
+            .filter(|_| !matches!(inputs.settings.usage_source(id), "cli" | "web"))
             .and_then(ProviderAccountData::active_account)
             .map(|account| account.id);
 
         handles.push(tokio::spawn(async move {
-            let Ok(_permit) = fetch_permits.acquire_owned().await else {
+            let Ok(_permit) = fetch_permits.clone().acquire_owned().await else {
                 return;
             };
-            refresh_provider(app_handle, id, ctx, generation, token_account_id).await;
-        }));
-    }
-
-    // ADR 0003 multi-account lanes: when Codex is enabled, refresh every
-    // account snapshot (ambient + managed) on the same cycle, bounded by the
-    // shared fetch semaphore. The ambient account still publishes the single
-    // "codex" provider snapshot used by tray/menu; the lanes fill the account
-    // snapshot store consumed by the Settings accounts panel.
-    if inputs.enabled_ids.contains(&ProviderId::Codex) {
-        let app_handle = app.clone();
-        let fetch_permits = Arc::clone(&fetch_permits);
-        handles.push(tokio::spawn(async move {
-            super::codex_accounts::refresh_codex_account_lanes(app_handle, fetch_permits).await;
+            refresh_provider(app_handle.clone(), id, ctx, generation, token_account_id).await;
+            drop(_permit);
+            if id == ProviderId::Codex {
+                super::codex_accounts::refresh_codex_account_lanes(app_handle, fetch_permits).await;
+            }
         }));
     }
 
@@ -404,7 +398,18 @@ async fn refresh_provider(
     generation: u64,
     token_account_id: Option<uuid::Uuid>,
 ) {
-    let snapshot = fetch_provider_snapshot(id, ctx, token_account_id).await;
+    let Ok(operation) = super::connection::begin_live_connection(id) else {
+        return;
+    };
+    let mut cancellation = operation.cancellation();
+    let _permit = tokio::select! {
+        permit = super::connection_operations::IO_PERMITS.acquire() => match permit { Ok(p) => p, Err(_) => return },
+        () = super::connection_operations::cancelled(&mut cancellation) => return,
+    };
+    let snapshot = tokio::select! {
+        snapshot = fetch_provider_snapshot(id, ctx, token_account_id) => snapshot,
+        () = super::connection_operations::cancelled(&mut cancellation) => return,
+    };
 
     let state = app.state::<Mutex<AppState>>();
     let published = if let Ok(mut guard) = state.lock() {
@@ -617,7 +622,7 @@ fn is_claude_timeout_failure(error: Option<&str>) -> bool {
     error.eq_ignore_ascii_case("timeout") || error.to_ascii_lowercase().contains("timed out")
 }
 
-async fn fetch_provider_snapshot(
+pub(crate) async fn fetch_provider_snapshot(
     id: ProviderId,
     ctx: FetchContext,
     token_account_id: Option<uuid::Uuid>,

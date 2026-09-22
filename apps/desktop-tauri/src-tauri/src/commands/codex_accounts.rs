@@ -84,6 +84,10 @@ pub(crate) async fn refresh_codex_account_lanes(
     app: tauri::AppHandle,
     fetch_permits: Arc<tokio::sync::Semaphore>,
 ) {
+    let Ok(operation) = super::connection::begin_live_connection(ProviderId::Codex) else {
+        return;
+    };
+    let cancellation = operation.cancellation();
     let accounts = match load_codex_accounts() {
         Ok(accounts) => accounts,
         Err(e) => {
@@ -98,19 +102,25 @@ pub(crate) async fn refresh_codex_account_lanes(
     let mut handles = Vec::with_capacity(accounts.len());
     for account in accounts {
         let permits = Arc::clone(&fetch_permits);
+        let mut cancellation = cancellation.clone();
         handles.push(tokio::spawn(async move {
-            let Ok(_permit) = permits.acquire_owned().await else {
-                return None;
+            let _permit = tokio::select! {
+                permit = permits.acquire_owned() => permit.ok()?,
+                () = super::connection_operations::cancelled(&mut cancellation) => return None,
+            };
+            let _io = tokio::select! {
+                permit = super::connection_operations::IO_PERMITS.acquire() => permit.ok()?,
+                () = super::connection_operations::cancelled(&mut cancellation) => return None,
             };
             let api = CodexAccountApi::new();
             let home_path = account.codex_home_path.clone();
             let email_hint = account.email_hint.clone();
-            match tokio::time::timeout(
-                std::time::Duration::from_secs(DEFAULT_FETCH_TIMEOUT_SECONDS),
-                api.fetch_snapshot(&home_path, email_hint.as_deref(), true),
-            )
-            .await
-            {
+            let result = tokio::select! {
+                result = tokio::time::timeout(std::time::Duration::from_secs(DEFAULT_FETCH_TIMEOUT_SECONDS),
+                    api.fetch_snapshot(&home_path, email_hint.as_deref(), true)) => result,
+                () = super::connection_operations::cancelled(&mut cancellation) => return None,
+            };
+            match result {
                 Ok(Ok(snapshot)) => Some((account.id, snapshot)),
                 Ok(Err(e)) => {
                     tracing::debug!(
@@ -134,6 +144,9 @@ pub(crate) async fn refresh_codex_account_lanes(
             snapshots.insert(id, snapshot);
         }
     }
+    if *cancellation.borrow() {
+        return;
+    }
     if let Err(e) = SnapshotStore::new().save(&snapshots) {
         tracing::warn!("codex account lanes: failed to persist snapshots: {e}");
     }
@@ -147,6 +160,7 @@ pub fn codex_accounts_list() -> Result<Vec<CodexAccount>, String> {
 
 #[tauri::command]
 pub async fn codex_account_add(app: tauri::AppHandle) -> Result<CodexAccount, String> {
+    let _operation = super::connection::begin_live_connection(ProviderId::Codex)?;
     let manager = CodexAccountManager::new();
     let account = tauri::async_runtime::spawn_blocking(move || manager.add_managed_account(None))
         .await
@@ -161,6 +175,7 @@ pub async fn codex_account_add(app: tauri::AppHandle) -> Result<CodexAccount, St
 
 #[tauri::command]
 pub fn codex_account_remove(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    let _operation = super::connection::begin_live_connection(ProviderId::Codex)?;
     let manager = CodexAccountManager::new();
     let accounts = load_codex_accounts()?;
     let target = accounts
@@ -186,6 +201,7 @@ pub async fn codex_account_switch(
     app: tauri::AppHandle,
     id: String,
 ) -> Result<CodexSwitchResult, String> {
+    let _operation = super::connection::begin_live_connection(ProviderId::Codex)?;
     let manager = CodexAccountManager::new();
     let accounts = load_codex_accounts()?;
     let target = accounts
@@ -222,6 +238,7 @@ pub async fn codex_account_fetch(
     app: tauri::AppHandle,
     id: String,
 ) -> Result<quotalis_core::codex_accounts::AccountUsageSnapshot, String> {
+    let _operation = super::connection::begin_live_connection(ProviderId::Codex)?;
     let accounts = load_codex_accounts()?;
     let target = accounts
         .iter()
@@ -265,6 +282,7 @@ pub async fn codex_account_restart_desktop(
     backup_destination: Option<String>,
     restore_source: Option<String>,
 ) -> Result<(), String> {
+    let _operation = super::connection::begin_live_connection(ProviderId::Codex)?;
     tauri::async_runtime::spawn_blocking(move || {
         let session_root = session_root.map(PathBuf::from);
         let backup_destination = backup_destination.map(PathBuf::from);

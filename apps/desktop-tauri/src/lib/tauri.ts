@@ -334,17 +334,19 @@ export function removeManualCookie(
   return invoke<CookieInfoBridge[]>("remove_manual_cookie", { providerId });
 }
 
-export function listDetectedBrowsers(): Promise<DetectedBrowserBridge[]> {
-  return invoke<DetectedBrowserBridge[]>("list_detected_browsers");
+export function listDetectedBrowsers(providerId?: string): Promise<DetectedBrowserBridge[]> {
+  return invoke<DetectedBrowserBridge[]>("list_detected_browsers", { providerId });
 }
 
 export function importBrowserCookies(
   providerId: string,
   browserType: string,
+  profileId?: string,
 ): Promise<CookieInfoBridge[]> {
   return invoke<CookieInfoBridge[]>("import_browser_cookies", {
     providerId,
     browserType,
+    profileId,
   });
 }
 

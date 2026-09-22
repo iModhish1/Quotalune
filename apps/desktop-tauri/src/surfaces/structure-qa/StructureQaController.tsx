@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getProviderCatalog, isDevChannel } from "../../lib/tauri";
 import { TrayNotificationQaPanel } from "./TrayNotificationQaPanel";
+import { ProviderConnectionQaPanel } from "./ProviderConnectionQaPanel";
 import { updateSettings } from "../../lib/tauri";
 import { showTopArc, updateSurfaceSettings } from "../../lib/surfaceBridge";
 import { useStructureQaFixture } from "../../hooks/useStructureQaFixture";
@@ -178,6 +179,7 @@ export default function StructureQaController() {
       </fieldset>
 
       <TrayNotificationQaPanel providerIds={providerIds} />
+      <ProviderConnectionQaPanel providerIds={providerIds} />
 
       <button type="button" onClick={resetAll}>{t("StructureQaReset")}</button>
       {qa.error && <p role="alert">{qa.error}</p>}

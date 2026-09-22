@@ -741,6 +741,8 @@ export interface SessionEquivalentForecastSnapshot {
 export type ProviderStateKind =
   | "ready"
   | "needsAuthentication"
+  | "rateLimited"
+  | "permissionDenied"
   | "expiredSession"
   | "localRuntimeOffline"
   | "unknown";
@@ -895,6 +897,7 @@ export interface DetectedBrowserBridge {
   browserType: string;
   displayName: string;
   profileCount: number;
+  profiles?: { id: string; ordinal: number }[];
 }
 
 export interface AppInfoBridge {

@@ -15,6 +15,8 @@ export type ProviderStateKind =
   | "needsAuthentication"
   | "expiredSession"
   | "localRuntimeOffline"
+  | "rateLimited"
+  | "permissionDenied"
   | "unknown";
 
 export interface ProviderStateDescriptor {
@@ -39,6 +41,16 @@ const STATE_DESCRIPTORS: Record<ProviderStateKind, ProviderStateDescriptor> = {
     kind: "localRuntimeOffline",
     isProblem: true,
     labelKey: "ProviderIssueLocalRuntimeOffline",
+  },
+  rateLimited: {
+    kind: "rateLimited",
+    isProblem: true,
+    labelKey: "ProviderIssueRateLimited",
+  },
+  permissionDenied: {
+    kind: "permissionDenied",
+    isProblem: true,
+    labelKey: "ProviderIssuePermissionDenied",
   },
   unknown: {
     kind: "unknown",

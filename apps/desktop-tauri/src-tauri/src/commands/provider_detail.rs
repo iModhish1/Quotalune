@@ -92,7 +92,11 @@ pub(crate) fn build_provider_detail(provider_id: &str) -> Result<ProviderDetail,
     } else {
         metadata.dashboard_url.map(|s| s.to_string())
     };
-    let can_connect = super::system::provider_login_transport(id).is_some();
+    // Every provider with a real connection method gets the unified flow;
+    // auto-detected and deprecated providers keep detection-only surfaces.
+    let can_connect = super::system::provider_login_transport(id).is_some()
+        || quotalis_core::connection_capabilities::connection_capabilities(id).status
+            != quotalis_core::connection_capabilities::SupportStatus::Unsupported;
     let auth_capability = provider_auth_capability_for(id, dashboard_url.as_deref());
 
     Ok(ProviderDetail {
@@ -231,6 +235,7 @@ pub fn revoke_provider_credentials(provider_id: String) -> Result<(), String> {
     // caller can follow up with a fresh login or import. Missing entries are
     // silently ignored; only I/O errors propagate.
     let id = parse_provider_arg(&provider_id)?;
+    let _operation = super::connection::begin_live_connection(id)?;
     let provider_id = id.cli_name();
 
     let mut keys = ApiKeys::load();
@@ -290,12 +295,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn connection_capability_comes_from_the_login_registry() {
+    fn connection_capability_includes_supported_onboarding_methods() {
         assert!(build_provider_detail("codex").unwrap().can_connect);
         assert!(build_provider_detail("copilot").unwrap().can_connect);
         assert!(build_provider_detail("vertexai").unwrap().can_connect);
-        assert!(!build_provider_detail("mistral").unwrap().can_connect);
-        assert!(!build_provider_detail("sub2api").unwrap().can_connect);
+        assert!(build_provider_detail("mistral").unwrap().can_connect);
+        assert!(build_provider_detail("sub2api").unwrap().can_connect);
     }
 
     #[test]
@@ -336,10 +341,8 @@ mod tests {
             let detail = build_provider_detail(id.cli_name()).unwrap();
             assert_eq!(
                 detail.can_connect,
-                matches!(
-                    detail.auth_capability,
-                    ProviderAuthCapability::DeviceFlow | ProviderAuthCapability::SupervisedCli
-                )
+                quotalis_core::connection_capabilities::connection_capabilities(*id).status
+                    != quotalis_core::connection_capabilities::SupportStatus::Unsupported
             );
         }
     }

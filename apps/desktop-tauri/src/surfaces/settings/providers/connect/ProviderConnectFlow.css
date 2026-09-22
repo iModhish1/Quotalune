@@ -1,0 +1,27 @@
+.provider-connect__backdrop{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:color-mix(in srgb,#05080d 55%,transparent);padding:16px}
+.provider-connect{width:min(560px,100%);max-height:min(90vh,760px);overflow:auto;border-radius:18px;border:1px solid var(--qa-hairline-strong);background:var(--qa-material-raised,#0d1521);color:var(--qa-ink-primary,inherit);box-shadow:0 24px 60px rgba(0,0,0,.45);padding:20px 22px;display:grid;gap:16px}
+.provider-connect__header{display:flex;align-items:center;justify-content:space-between;gap:12px}.provider-connect__header h2{margin:0;font-size:18px}
+.provider-connect__close{width:32px;height:32px;border-radius:50%;border:1px solid var(--qa-hairline-strong);background:transparent;color:inherit;font-size:18px}
+.provider-connect__steps{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0;padding:0;list-style:none;font-size:12px;color:var(--qa-ink-secondary)}
+.provider-connect__steps li[aria-current=step]{color:var(--qa-accent);font-weight:650}
+.provider-connect__methods{display:grid;gap:10px}
+.provider-connect__method{display:grid;gap:4px;text-align:start;padding:12px 14px;border-radius:12px;border:1px solid var(--qa-hairline-strong);background:var(--qa-material-sunken,#0a1118);color:inherit}
+.provider-connect__method[aria-checked=true]{border-color:var(--qa-accent)}.provider-connect__method span{font-size:12px;color:var(--qa-ink-secondary)}.provider-connect__method small{color:var(--qa-ink-muted,#8a96a8)}
+.provider-connect h3,.provider-connect h4{margin:0 0 8px;font-size:14px}
+.provider-connect__checklist,.provider-connect__instructions{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.provider-connect__checklist li{display:flex;justify-content:space-between;gap:12px;padding:8px 10px;border-radius:10px;border:1px solid var(--qa-hairline-strong)}
+.provider-connect__checklist li[data-satisfied=true]{border-color:color-mix(in srgb,var(--qa-success,#4ac28a) 60%,transparent)}
+.provider-connect__checklist li[data-satisfied=false]{border-color:color-mix(in srgb,var(--qa-warning,#d9a441) 60%,transparent)}
+.provider-connect__instructions li{padding-inline-start:14px;position:relative}.provider-connect__instructions li::before{content:"•";position:absolute;inset-inline-start:0}
+.provider-connect__actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.provider-connect__confirm{margin-top:12px;padding:12px;border-radius:12px;border:1px solid var(--qa-warning,#d9a441);background:color-mix(in srgb,var(--qa-warning,#d9a441) 8%,transparent)}
+.provider-connect__confirm dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;font-size:13px}.provider-connect__confirm dt{color:var(--qa-ink-secondary)}.provider-connect__confirm code{overflow-wrap:anywhere}
+.provider-connect__secret{display:grid;gap:6px;font-size:13px}.provider-connect__secret input{min-height:36px;border-radius:10px;border:1px solid var(--qa-hairline-strong);background:var(--qa-material-sunken,#0a1118);color:inherit;padding:0 10px;font-family:var(--qa-font-mono,monospace)}
+.provider-connect__link{background:none;border:0;padding:0;color:var(--qa-accent);text-decoration:underline;cursor:pointer;font:inherit}
+.provider-connect__hint{font-size:12px;color:var(--qa-ink-secondary)}
+.provider-connect__error,.provider-connect__outcome{padding:8px 10px;border-radius:10px;border:1px solid var(--qa-danger,#e0665c);color:var(--qa-danger,#e0665c);margin:0}
+.provider-connect__outcome[data-state=rateLimited],.provider-connect__outcome[data-state=timedOut],.provider-connect__outcome[data-state=offline]{border-color:var(--qa-warning,#d9a441);color:var(--qa-warning,#d9a441)}
+.provider-connect__success dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0}.provider-connect__success dt{color:var(--qa-ink-secondary)}
+.provider-connect__footer{display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--qa-hairline-strong);padding-top:12px}
+.provider-connect :focus-visible{outline:2px solid var(--qa-accent);outline-offset:2px}
+@media (prefers-color-scheme:light){.provider-connect__backdrop{background:color-mix(in srgb,#1c2430 35%,transparent)}}

@@ -46,6 +46,8 @@ const STATUS_TO_KEY: Record<ProviderSidebarStatus, LocaleKey> = {
   authRequired: "ProviderIssueAuthRequired",
   offline: "ProviderIssueLocalRuntimeOffline",
   unavailable: "DashboardValueUnavailable",
+  rateLimited: "ProviderStatusRateLimited",
+  permissionDenied: "ProviderIssuePermissionDenied",
 };
 
 /**

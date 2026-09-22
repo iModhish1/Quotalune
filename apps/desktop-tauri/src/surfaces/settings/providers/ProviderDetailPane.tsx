@@ -45,6 +45,9 @@ import { ProviderIssueNotice } from "./sections/ProviderIssueNotice";
 import { CredentialStorageSection } from "./sections/CredentialStorageSection";
 import { CredentialsDispatcher } from "./sections/CredentialsDispatcher";
 import { WayfinderGatewaySection } from "./sections/WayfinderGatewaySection";
+import { ProviderConnectFlow } from "./connect/ProviderConnectFlow";
+import { ConnectionStatusLine } from "./connect/ConnectionStatusLine";
+import { getProviderConnectionCapabilities, type ProviderConnectionCapabilities } from "../../../lib/providerConnection";
 
 interface Props {
   providerId: string | null;
@@ -82,6 +85,14 @@ export function ProviderDetailPane({
   const loginPhaseRef = useRef<ProviderLoginPhaseName | null>(null);
   const [loginPhase, setLoginPhase] = useState<ProviderLoginPhaseName | null>(null);
   const [canceling, setCanceling] = useState(false);
+  const [connectOpen, setConnectOpen] = useState(false);
+  const [capabilities, setCapabilities] = useState<ProviderConnectionCapabilities[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    getProviderConnectionCapabilities().then((all) => { if (alive) setCapabilities(all); }).catch(() => { if (alive) setCapabilities([]); });
+    return () => { alive = false; };
+  }, []);
+  useEffect(() => { setConnectOpen(false); }, [providerId]);
   useEffect(() => {
     setChallenge(null); setLoginPhase(null); setCanceling(false);
     return () => {
@@ -254,6 +265,10 @@ export function ProviderDetailPane({
     }
   };
 
+  const providerCapabilities = capabilities?.find((c) => c.provider === detail.id) ?? null;
+  const openConnectFlow = () => {
+    if (providerCapabilities && providerCapabilities.methods.length > 0) setConnectOpen(true);
+  };
   const handleSwitchAccount = async () => {
     const actionProviderId = detail.id;
     const sequence = ++actionSequenceRef.current;
@@ -325,8 +340,17 @@ export function ProviderDetailPane({
 
   return (
     <div className="provider-detail">
-      <IdentitySection provider={detail} subtitle={subtitle} t={t} onConnect={handleSwitchAccount} busy={busy} />
+      <IdentitySection provider={detail} subtitle={subtitle} t={t} onConnect={openConnectFlow} busy={busy} />
       <ProviderConnectionSummary capability={detail.authCapability}/>
+      <ConnectionStatusLine providerId={detail.id} />
+      {connectOpen && providerCapabilities && (
+        <ProviderConnectFlow
+          key={detail.id}
+          capabilities={providerCapabilities}
+          onClose={() => setConnectOpen(false)}
+          onConnected={() => { dispatch({ type: "BUMP_CREDENTIAL_REVISION" }); void refreshProviders().catch(() => {}); }}
+        />
+      )}
 
       {detail.lastError && (
         <ProviderIssueNotice detail={detail} t={t} />
@@ -357,7 +381,7 @@ export function ProviderDetailPane({
           provider={detail}
           busy={busy}
           onRefresh={handleRefresh}
-          onConnect={handleSwitchAccount}
+          onConnect={openConnectFlow}
           onOpenDashboard={handleOpenDashboard}
           onOpenStatusPage={handleOpenStatusPage}
           onBuyCredits={handleBuyCredits}

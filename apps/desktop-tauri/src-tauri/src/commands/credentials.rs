@@ -80,6 +80,7 @@ pub fn set_api_key(
     label: Option<String>,
 ) -> Result<Vec<ApiKeyInfoBridge>, String> {
     let canonical_provider = canonical_provider_arg(&provider_id)?;
+    let _operation = super::connection::begin_live_connection(parse_provider_arg(&provider_id)?)?;
     if !quotalis_core::settings::get_api_key_providers()
         .iter()
         .any(|p| p.id.cli_name() == canonical_provider)
@@ -100,6 +101,7 @@ pub fn set_api_key(
 #[tauri::command]
 pub fn remove_api_key(provider_id: String) -> Result<Vec<ApiKeyInfoBridge>, String> {
     let canonical_provider = canonical_provider_arg(&provider_id)?;
+    let _operation = super::connection::begin_live_connection(parse_provider_arg(&provider_id)?)?;
     let mut keys = ApiKeys::load();
     keys.remove(&canonical_provider);
     keys.save().map_err(|e| e.to_string())?;
@@ -126,6 +128,7 @@ pub fn set_manual_cookie(
     cookie_header: String,
 ) -> Result<Vec<CookieInfoBridge>, String> {
     let id = parse_provider_arg(&provider_id)?;
+    let _operation = super::connection::begin_live_connection(id)?;
     if id.cookie_domain().is_none() {
         return Err(format!(
             "Provider '{}' does not support manual cookie storage",
@@ -143,6 +146,7 @@ pub fn set_manual_cookie(
 #[tauri::command]
 pub fn remove_manual_cookie(provider_id: String) -> Result<Vec<CookieInfoBridge>, String> {
     let canonical_provider = canonical_provider_arg(&provider_id)?;
+    let _operation = super::connection::begin_live_connection(parse_provider_arg(&provider_id)?)?;
     let mut cookies = ManualCookies::load();
     cookies.remove(&canonical_provider);
     cookies.save().map_err(|e| e.to_string())?;

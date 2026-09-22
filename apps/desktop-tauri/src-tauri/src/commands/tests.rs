@@ -1435,3 +1435,37 @@ fn bootstrap_payload_exposes_every_provider_variant() {
     assert!(encoded.contains("\"providers\""));
     assert!(encoded.contains("\"settings\""));
 }
+
+#[test]
+fn explicit_browser_or_cli_source_does_not_consume_an_unrelated_token_account() {
+    for source in ["web", "cli"] {
+        let mut settings = Settings::default();
+        settings.set_usage_source(ProviderId::Claude, source);
+        settings.set_cookie_source(
+            ProviderId::Claude,
+            if source == "web" { "manual" } else { "off" },
+        );
+        let mut accounts = ProviderAccountData::new();
+        accounts.add_account(TokenAccount::new("fixture", "must-not-be-selected"));
+        let mut all = HashMap::new();
+        all.insert(ProviderId::Claude, accounts);
+        let mut cookies = ManualCookies::default();
+        cookies.set("claude", "sessionKey=fixture-chosen");
+        let ctx = super::build_fetch_context(
+            ProviderId::Claude,
+            &settings,
+            &cookies,
+            &ApiKeys::default(),
+            &all,
+        );
+        assert!(ctx.api_key.is_none());
+        if source == "web" {
+            assert_eq!(
+                ctx.manual_cookie_header.as_deref(),
+                Some("sessionKey=fixture-chosen")
+            );
+        } else {
+            assert!(ctx.manual_cookie_header.is_none());
+        }
+    }
+}

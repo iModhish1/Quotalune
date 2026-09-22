@@ -45,6 +45,7 @@ export function CookieSection({ providerId, cookieDomain }: Props) {
   const [browsers, setBrowsers] = useState<DetectedBrowserBridge[]>([]);
   const [browsersLoaded, setBrowsersLoaded] = useState(false);
   const [browserType, setBrowserType] = useState("");
+  const [profile, setProfile] = useState("");
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
@@ -78,7 +79,7 @@ export function CookieSection({ providerId, cookieDomain }: Props) {
 
   useEffect(() => {
     if (cookieDomain === null) return;
-    listDetectedBrowsers()
+    listDetectedBrowsers(providerId)
       .then((list) => {
         setBrowsers(list);
         setBrowsersLoaded(true);
@@ -111,11 +112,11 @@ export function CookieSection({ providerId, cookieDomain }: Props) {
     setImportError(null);
     setImportStatus(null);
     try {
-      const next = await importBrowserCookies(providerId, browserType);
+      const next = await importBrowserCookies(providerId, browserType, profile || undefined);
       setSaved(next.find((c) => c.providerId === providerId) ?? null);
       setImportStatus(t("BrowserCookieImportSuccess"));
     } catch (err: unknown) {
-      setImportError(err instanceof Error ? err.message : String(err));
+      setImportError(t("ConnectIssueBrowserSessionMissing"));
     } finally {
       setBusy(false);
     }
@@ -196,13 +197,18 @@ export function CookieSection({ providerId, cookieDomain }: Props) {
                     : t("BrowserCookieProfilePlural")
                 })`,
               }))}
-              onChange={setBrowserType}
+              onChange={(value) => { setBrowserType(value); setProfile(""); }}
               disabled={busy}
             />
+            {!!browsers.find((b) => b.browserType === browserType)?.profiles?.length && <Select
+              value={profile}
+              options={[{value: "", label: t("ConnectBrowserChooseProfile")}, ...(browsers.find((b) => b.browserType === browserType)?.profiles ?? []).map((p) => ({value: p.id, label: `${t("BrowserCookieProfileSingular")} ${p.ordinal}`}))]}
+              onChange={setProfile} disabled={busy}
+            />}
             <button
               type="button"
               className="credential-btn credential-btn--primary"
-              disabled={busy || !browserType}
+              disabled={busy || !browserType || (!!browsers.find((b) => b.browserType === browserType)?.profiles?.length && !profile)}
               onClick={() => void handleImport()}
             >
               {t("BrowserCookieImportFromBrowser")}

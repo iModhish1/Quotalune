@@ -256,6 +256,7 @@ pub async fn trigger_provider_login(
     login_request_id: Option<String>,
 ) -> Result<(), String> {
     let id = parse_provider_arg(&provider_id)?;
+    let _operation = super::connection::begin_live_connection(id)?;
     let transport = provider_login_transport(id).ok_or_else(|| {
         format!(
             "Quotalis cannot start a sign-in flow for '{}'; configure its credentials in Provider settings or open its dashboard.",
