@@ -1234,3 +1234,7 @@ remain open; this is not whole-product QA or release acceptance.
   language and native structure QA matrix remain open — see
   `docs/validation/CLAUDE_EXECUTION_SEQUENCE.md` for the full remaining
   sequence. Not whole-product QA or release acceptance.
+
+## Wave 3 continuation — 2026-09-22
+
+Preserved inherited dirty onboarding implementation and added capability-derived flow, profile-scoped cookie import, protected-key routing, cancellation/fixture/source isolation and CLI execution hardening. Automated gates and exact remaining evidence limits are recorded in `docs/validation/WAVE3_IMPLEMENTATION_REPORT.md`. Native closure remains DEFERRED — ENVIRONMENT BLOCKED. Release gate CLOSED; no Personal promotion. This is not whole-product completion.

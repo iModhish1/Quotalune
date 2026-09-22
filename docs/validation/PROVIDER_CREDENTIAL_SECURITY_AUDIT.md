@@ -1,0 +1,41 @@
+# Wave 3 credential security audit
+
+Scope: inherited onboarding work based on `d066226d9edb`, reviewed and repaired locally. No real credentials were entered, imported or used for live provider verification. Personal was not launched or modified. Native Windows UI evidence is deferred; this document describes code and automated evidence.
+
+## Credential ownership
+
+| Material | Storage / owner | Onboarding behavior |
+|---|---|---|
+| API key | Existing `ApiKeys` or `TokenAccountStore` protected files | Masked draft; save to the adapter-consumed store, select newly added token account; clear draft after success/failure |
+| Imported cookie | `ManualCookies`, protected file | Select one browser profile before extraction, only provider domain (including regional selection), never return cookie values |
+| Managed device token | Existing Copilot device-flow/token-account code | Provider-owned verification URL/code; existing expiry, poll/cancel and protected storage |
+| CLI session | Official CLI owns external session files | No rewriting these files on disconnect; supervised process with timeout and owned process tree |
+| Settings/history | Metadata only | Source selection / enablement, no key/cookie fields added to Settings; notification journal denies unapproved free text |
+
+Windows protection reuses `secure_file`/DPAPI. Regression tests write only temporary fixture files, assert plaintext absence, and decrypt for exact roundtrip. This does not certify non-Windows protection or a real account exchange.
+
+## Repairs from review
+
+1. Arbitrary PATH/home shims no longer execute during detection/login. Only protected installation roots qualify; a user-controlled npm manifest is not provenance. Package root escape is rejected.
+2. Detection and login scrub inherited environment, use argument arrays, bounded output, timeout and cancellation. Windows owned Job objects contain descendant processes before they run. A pre-canceled probe cannot spawn.
+3. Nonzero version exits remain Broken even if stdout resembles a version. Authentication-file presence is not usage verification.
+4. Automated npm/winget execution is disabled. Curated package identifiers and official links remain documentation; no silent installer fallback exists.
+5. Shared per-provider reservation coordinates verify/detect/login/refresh/credential mutations. Three global I/O permits bound onboarding and account refreshes; canceled tasks retain ownership until cleanup.
+6. Codex account refresh lanes now enter the same simulation/operation guard before loading credentials, obey cancellation and suppress persistence after cancellation.
+7. Explicit source choice excludes unused token overrides and their account UUID. Ambient/manual-browser observations must not be labeled as another stored account.
+8. Settings completion and disconnect use the existing shared settings-patch transaction lock to avoid cross-provider lost updates.
+9. Browser import selects exactly one opaque profile ID; ambiguous/unknown profiles are rejected before opening cookie databases. No profile paths or account emails are exposed by discovery.
+10. UI errors are localized generic messages, never raw credential-bearing IPC errors. Key drafts are cleared on failure and method switch. Output redaction covers keys, cookies, bearer/refresh tokens, private home paths, email and control sequences.
+11. Dev fixtures short-circuit key saving, cookie importing, verification and disconnect. Other real mutations are refused while that provider is simulated or Demo is active. Fixture setters reject non-Dev channels.
+
+## Boundaries requiring explicit follow-up evidence
+
+- Native screenshots, real WebView2 keyboard interaction and actual provider authentication are not verified in this environment.
+- Installation layouts outside protected roots use manual instructions. Executable signer/package hash verification and a trusted installer pipeline are not implemented.
+- Browser cookie decryption is Windows/browser-version dependent; local profile-selection tests are not proof of decryption against a real browser. Expiry/reauth is derived from provider response.
+- Local application sessions may require an external sign-in and network access; no generic OAuth is manufactured.
+- Disconnect disables Quotalis monitoring and removes its selected owned credential copy. External browser/CLI sign-in and provider-side revocation are not performed.
+
+## Evidence files
+
+`cli_dependencies::tests`, `login::tests`, `connection_security::tests`, `connection_state::tests`, shell `commands::connection`, `connection_operations`, browser profile tests, and `ProviderConnectFlow.test.tsx`. Final counts and commands are recorded in `WAVE3_IMPLEMENTATION_REPORT.md`; local raw logs are under `.local/wave3-*.log` and contain fixture-only test output. Release gate remains CLOSED.

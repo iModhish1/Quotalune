@@ -576,3 +576,15 @@ structures; large-provider-count structure fixtures. See
 `docs/validation/STRUCTURE_SYSTEM_AUDIT.md` and
 `docs/validation/LOADING_STATE_MATRIX.md` for the exact scoping. Remaining
 sequence: `docs/validation/CLAUDE_EXECUTION_SEQUENCE.md`.
+
+WAVE3 (2026-09-22) — Provider onboarding continuation. Base d066226d9edb;
+existing uncommitted Wave3 implementation preserved and reconciled. User spec:
+CLI/cookies/API keys/device OAuth/local sources, one derived capability model,
+connection verification and state, cancellation/single-flight, protected credentials,
+all-provider fixtures/stress, security audit, native-QA handoff and verified Dev build.
+Accepted Waves1/2 remain intact unless integration demonstrates a regression.
+Native screenshot/UIA/CDP work remains explicitly deferred; do not retry known
+blocked paths. No publishing, Personal promotion or Personal credential access.
+Execution: reconcile → repair identified security/lifecycle defects → complete
+production flow/status/disconnect and fixture isolation → all-provider regression
+and full gates → coherent commits → canonical verified Dev build. Release gate CLOSED.

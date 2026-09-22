@@ -489,3 +489,7 @@ dialog, unified loading-visual language, native structure QA matrix. Full
 detail: `docs/validation/STRUCTURE_SYSTEM_AUDIT.md`,
 `docs/validation/LOADING_STATE_MATRIX.md`,
 `docs/validation/CLAUDE_EXECUTION_SEQUENCE.md`.
+
+## Wave 3 continuation — 2026-09-22
+
+Preserved inherited dirty onboarding implementation and added capability-derived flow, profile-scoped cookie import, protected-key routing, cancellation/fixture/source isolation and CLI execution hardening. Automated gates and exact remaining evidence limits are recorded in `docs/validation/WAVE3_IMPLEMENTATION_REPORT.md`. Native closure remains DEFERRED — ENVIRONMENT BLOCKED. Release gate CLOSED; no Personal promotion. This is not whole-product completion.

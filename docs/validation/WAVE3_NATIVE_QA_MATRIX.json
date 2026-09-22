@@ -1,0 +1,571 @@
+{
+  "schemaVersion": 1,
+  "wave": "3",
+  "purpose": "Deterministic native proof cases for provider onboarding (Providers page, connect flow, CLI, browser session, API key, device/CLI sign-in, success). Every entry is READY, none is PASS: this environment cannot capture QuotalisDev pixels (BACKGROUND_ONLY screenshots, no CDP through the hardened launcher, UIA cannot address WebView2 content). See docs/validation/WAVE3_NATIVE_QA_HANDOFF.md.",
+  "status": "READY",
+  "controls": {
+    "providers": "Settings -> Providers (real registry, real connect flow).",
+    "connectionFixture": "Main window URL ?window=structure-qa -> 'Provider connection fixture' -> provider + scenario -> Apply fixture. Backend: set_provider_connection_qa_fixture (commands/connection.rs). In memory only; refused outside the Dev channel; no credentials, settings or history written.",
+    "language": "?window=structure-qa -> Locale fieldset.",
+    "syntheticProviders": "?window=structure-qa -> Structure fixture provider count (24 / 70)."
+  },
+  "entries": [
+    {
+      "id": "W3-PAGE-SEARCH",
+      "area": "providers",
+      "setup": "Settings -> Providers; type 'open' then 'zzz' in the provider search.",
+      "fixture": null,
+      "expectedEvidence": "native/providers/search.png",
+      "passCriteria": "List filters as you type; 'zzz' shows the no-match message; clearing restores the full list; focus stays in the field.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-PAGE-REGISTRY-COUNT",
+      "area": "providers",
+      "setup": "Settings -> Providers with search cleared.",
+      "fixture": null,
+      "expectedEvidence": "native/providers/registry-count.png",
+      "passCriteria": "Row count equals PROVIDER_CONNECTION_CAPABILITY_MATRIX.json providerCount (deprecated providers hidden unless enabled, per existing catalog rule); no duplicated or blank rows.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-PAGE-SYNTHETIC-70",
+      "area": "providers",
+      "setup": "?window=structure-qa -> Structure fixture provider count 70; then open Providers and search.",
+      "fixture": null,
+      "expectedEvidence": "native/providers/synthetic-70.png",
+      "passCriteria": "Search/filter stays responsive (no visible stall > ~200 ms per keystroke); synthetic providers never appear in the real Providers registry list.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-PAGE-CONNECTED",
+      "area": "providers",
+      "setup": "Provider connection fixture: claude / connected; open Claude in Providers.",
+      "fixture": {
+        "providerId": "claude",
+        "scenario": "connected"
+      },
+      "expectedEvidence": "native/providers/connected.png",
+      "passCriteria": "Status line reads Connected · Connected via <method> · Last verified <time>; no secret or path visible.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-PAGE-NOT-CONNECTED",
+      "area": "providers",
+      "setup": "Provider connection fixture: openrouter / disconnected.",
+      "fixture": {
+        "providerId": "openrouter",
+        "scenario": "disconnected"
+      },
+      "expectedEvidence": "native/providers/not-connected.png",
+      "passCriteria": "Not connected; Connect action present; no fake green state.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-PAGE-ACTION-REQUIRED",
+      "area": "providers",
+      "setup": "Fixture: perplexity / cookieExpired.",
+      "fixture": {
+        "providerId": "perplexity",
+        "scenario": "cookieExpired"
+      },
+      "expectedEvidence": "native/providers/action-required.png",
+      "passCriteria": "Shows 'Your session expired. Sign in again' (not 'Provider unavailable').",
+      "status": "READY"
+    },
+    {
+      "id": "W3-PAGE-CLI-MISSING",
+      "area": "providers",
+      "setup": "Fixture: codex / cliMissing.",
+      "fixture": {
+        "providerId": "codex",
+        "scenario": "cliMissing"
+      },
+      "expectedEvidence": "native/providers/cli-missing.png",
+      "passCriteria": "Shows 'The official CLI is not installed'.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-PAGE-BROWSER-MISSING",
+      "area": "providers",
+      "setup": "Fixture: cursor / cookieMissing.",
+      "fixture": {
+        "providerId": "cursor",
+        "scenario": "cookieMissing"
+      },
+      "expectedEvidence": "native/providers/browser-missing.png",
+      "passCriteria": "Shows 'Sign in to the provider in your browser'.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-PAGE-EXPIRED",
+      "area": "providers",
+      "setup": "Fixture: claude / cookieExpired.",
+      "fixture": {
+        "providerId": "claude",
+        "scenario": "cookieExpired"
+      },
+      "expectedEvidence": "native/providers/expired.png",
+      "passCriteria": "Session-expired wording distinct from rejected credentials.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-PAGE-OFFLINE",
+      "area": "providers",
+      "setup": "Fixture: antigravity / offline.",
+      "fixture": {
+        "providerId": "antigravity",
+        "scenario": "offline"
+      },
+      "expectedEvidence": "native/providers/offline.png",
+      "passCriteria": "Offline wording; not an auth error.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-PAGE-RATE-LIMITED",
+      "area": "providers",
+      "setup": "Fixture: openrouter / rateLimited.",
+      "fixture": {
+        "providerId": "openrouter",
+        "scenario": "rateLimited"
+      },
+      "expectedEvidence": "native/providers/rate-limited.png",
+      "passCriteria": "Rate-limited wording; never 'Authentication failed'.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-PAGE-TIMEOUT",
+      "area": "providers",
+      "setup": "Fixture: deepseek / timeout.",
+      "fixture": {
+        "providerId": "deepseek",
+        "scenario": "timeout"
+      },
+      "expectedEvidence": "native/providers/timeout.png",
+      "passCriteria": "Timed-out wording explicitly not a credential problem.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-PAGE-STALE",
+      "area": "providers",
+      "setup": "Fixture: gemini / stale.",
+      "fixture": {
+        "providerId": "gemini",
+        "scenario": "stale"
+      },
+      "expectedEvidence": "native/providers/stale.png",
+      "passCriteria": "'Connected, data is stale' with an older Last verified time.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-PAGE-ARABIC",
+      "area": "providers",
+      "setup": "?window=structure-qa Language = Arabic; open Providers and the Claude connect flow.",
+      "fixture": {
+        "providerId": "claude",
+        "scenario": "connected"
+      },
+      "expectedEvidence": "native/providers/arabic.png",
+      "passCriteria": "Arabic labels, RTL layout, provider names/commands/domains isolated LTR, no tofu.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-PAGE-LIGHT",
+      "area": "providers",
+      "setup": "Color mode Light; open Providers and the connect dialog.",
+      "fixture": {
+        "providerId": "claude",
+        "scenario": "connected"
+      },
+      "expectedEvidence": "native/providers/light.png",
+      "passCriteria": "Dialog, method cards, checklist and inputs legible on light surfaces (no dark-only panels).",
+      "status": "READY"
+    },
+    {
+      "id": "W3-CLI-SUPPORTED",
+      "area": "cli",
+      "setup": "Real Dev machine with the Codex CLI installed; open Codex -> Connect -> Official CLI.",
+      "fixture": null,
+      "expectedEvidence": "native/cli/supported.png",
+      "passCriteria": "Checklist shows Installed + version; Next enabled.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-CLI-MISSING",
+      "area": "cli",
+      "setup": "Fixture: codex / cliMissing; Connect -> Official CLI.",
+      "fixture": {
+        "providerId": "codex",
+        "scenario": "cliMissing"
+      },
+      "expectedEvidence": "native/cli/missing.png",
+      "passCriteria": "Not installed; Install… and Open official instructions offered; Next disabled.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-CLI-OLD",
+      "area": "cli",
+      "setup": "Fixture: codex / cliOld.",
+      "fixture": {
+        "providerId": "codex",
+        "scenario": "cliOld"
+      },
+      "expectedEvidence": "native/cli/old.png",
+      "passCriteria": "Installed, but too old with installed -> required versions; no install/auto-update performed.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-CLI-UNAUTHENTICATED",
+      "area": "cli",
+      "setup": "Fixture: codex / cliUnauthenticated.",
+      "fixture": {
+        "providerId": "codex",
+        "scenario": "cliUnauthenticated"
+      },
+      "expectedEvidence": "native/cli/unauthenticated.png",
+      "passCriteria": "Installed + Not signed in; Sign in step offered.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-CLI-AUTHENTICATED",
+      "area": "cli",
+      "setup": "Fixture: codex / cliReady.",
+      "fixture": {
+        "providerId": "codex",
+        "scenario": "cliReady"
+      },
+      "expectedEvidence": "native/cli/authenticated.png",
+      "passCriteria": "Installed + Signed in.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-CLI-INSTALL-CONFIRM",
+      "area": "cli",
+      "setup": "Fixture: codex / cliMissing; click Install….",
+      "fixture": {
+        "providerId": "codex",
+        "scenario": "cliMissing"
+      },
+      "expectedEvidence": "native/cli/install-confirm.png",
+      "passCriteria": "Confirmation names the tool, official source (npm @openai/codex), exact command and admin expectation; default focus is Cancel.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-CLI-INSTALL-SUCCESS-FIXTURE",
+      "area": "cli",
+      "setup": "Fixture: codex / cliReady (fixture short-circuits install); confirm install.",
+      "fixture": {
+        "providerId": "codex",
+        "scenario": "cliReady"
+      },
+      "expectedEvidence": "native/cli/install-success.png",
+      "passCriteria": "Installed successfully, then re-detected state shown; no real package manager ran.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-CLI-INSTALL-FAILURE-FIXTURE",
+      "area": "cli",
+      "setup": "Fixture: codex / permissionDenied; confirm install.",
+      "fixture": {
+        "providerId": "codex",
+        "scenario": "permissionDenied"
+      },
+      "expectedEvidence": "native/cli/install-failure.png",
+      "passCriteria": "Sanitized permission message; no raw command output.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-CLI-CANCEL",
+      "area": "cli",
+      "setup": "Real install of a curated CLI on a disposable Dev VM only; click Cancel installation mid-run.",
+      "fixture": null,
+      "expectedEvidence": "native/cli/cancel.png",
+      "passCriteria": "Installation cancelled; no orphan npm/winget process in Task Manager.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-CLI-TIMEOUT",
+      "area": "cli",
+      "setup": "Fixture: codex / timeout; confirm install.",
+      "fixture": {
+        "providerId": "codex",
+        "scenario": "timeout"
+      },
+      "expectedEvidence": "native/cli/timeout.png",
+      "passCriteria": "Installation timed out message.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-COOKIE-PROFILE",
+      "area": "cookie",
+      "setup": "Real Dev machine with Edge or Chrome; Perplexity -> Connect -> Browser session -> Next.",
+      "fixture": null,
+      "expectedEvidence": "native/cookie/profile.png",
+      "passCriteria": "Browser list shows browser + profile count only; no cookie names or values.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-COOKIE-NO-SESSION",
+      "area": "cookie",
+      "setup": "Fixture: perplexity / cookieMissing; Check connection.",
+      "fixture": {
+        "providerId": "perplexity",
+        "scenario": "cookieMissing"
+      },
+      "expectedEvidence": "native/cookie/no-session.png",
+      "passCriteria": "'Sign in to the provider in your browser'.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-COOKIE-VALID",
+      "area": "cookie",
+      "setup": "Fixture: perplexity / cookieValid; Check connection.",
+      "fixture": {
+        "providerId": "perplexity",
+        "scenario": "cookieValid"
+      },
+      "expectedEvidence": "native/cookie/valid.png",
+      "passCriteria": "Connected via Browser session.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-COOKIE-EXPIRED",
+      "area": "cookie",
+      "setup": "Fixture: perplexity / cookieExpired.",
+      "fixture": {
+        "providerId": "perplexity",
+        "scenario": "cookieExpired"
+      },
+      "expectedEvidence": "native/cookie/expired.png",
+      "passCriteria": "Session expired wording.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-COOKIE-MULTI-PROFILE",
+      "area": "cookie",
+      "setup": "Real Dev machine with two browser profiles.",
+      "fixture": null,
+      "expectedEvidence": "native/cookie/multi-profile.png",
+      "passCriteria": "Profile count reflects both; chosen browser used for import.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-COOKIE-DOMAIN",
+      "area": "cookie",
+      "setup": "Perplexity connect flow requirements step.",
+      "fixture": null,
+      "expectedEvidence": "native/cookie/domain.png",
+      "passCriteria": "Exactly 'perplexity.ai' named; explanation that only that site's session is read and stays local.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-COOKIE-DISCONNECT",
+      "area": "cookie",
+      "setup": "After a Dev cookie import, use the existing revoke/remove action.",
+      "fixture": null,
+      "expectedEvidence": "native/cookie/disconnect.png",
+      "passCriteria": "Quotalis' protected copy removed; browser still signed in to the site.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-KEY-EMPTY",
+      "area": "apiKey",
+      "setup": "OpenRouter -> Connect.",
+      "fixture": {
+        "providerId": "openrouter",
+        "scenario": "disconnected"
+      },
+      "expectedEvidence": "native/apikey/empty.png",
+      "passCriteria": "Empty masked field with guidance; Save disabled.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-KEY-MASKED",
+      "area": "apiKey",
+      "setup": "Type any throwaway text.",
+      "fixture": null,
+      "expectedEvidence": "native/apikey/masked.png",
+      "passCriteria": "Characters masked by default.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-KEY-REVEAL",
+      "area": "apiKey",
+      "setup": "Click Reveal.",
+      "fixture": null,
+      "expectedEvidence": "native/apikey/reveal.png",
+      "passCriteria": "Value shown only after explicit Reveal; Hide restores masking. Use a throwaway non-secret string.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-KEY-MALFORMED",
+      "area": "apiKey",
+      "setup": "Save a key containing a newline via paste.",
+      "fixture": null,
+      "expectedEvidence": "native/apikey/malformed.png",
+      "passCriteria": "Rejected by single-line secret validation with a sanitized message.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-KEY-UNAUTHORIZED",
+      "area": "apiKey",
+      "setup": "Fixture: openrouter / apiKeyInvalid; Check connection.",
+      "fixture": {
+        "providerId": "openrouter",
+        "scenario": "apiKeyInvalid"
+      },
+      "expectedEvidence": "native/apikey/unauthorized.png",
+      "passCriteria": "'The provider rejected the credentials'.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-KEY-PERMISSION",
+      "area": "apiKey",
+      "setup": "Fixture: openrouter / permissionDenied.",
+      "fixture": {
+        "providerId": "openrouter",
+        "scenario": "permissionDenied"
+      },
+      "expectedEvidence": "native/apikey/permission.png",
+      "passCriteria": "Permission wording distinct from rejected key.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-KEY-RATE-LIMITED",
+      "area": "apiKey",
+      "setup": "Fixture: openrouter / rateLimited.",
+      "fixture": {
+        "providerId": "openrouter",
+        "scenario": "rateLimited"
+      },
+      "expectedEvidence": "native/apikey/rate-limited.png",
+      "passCriteria": "Rate-limited wording.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-KEY-NETWORK",
+      "area": "apiKey",
+      "setup": "Fixture: openrouter / offline.",
+      "fixture": {
+        "providerId": "openrouter",
+        "scenario": "offline"
+      },
+      "expectedEvidence": "native/apikey/network.png",
+      "passCriteria": "Offline/network wording, never 'invalid key'.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-KEY-SUCCESS",
+      "area": "apiKey",
+      "setup": "Fixture: openrouter / apiKeyValid; Check connection.",
+      "fixture": {
+        "providerId": "openrouter",
+        "scenario": "apiKeyValid"
+      },
+      "expectedEvidence": "native/apikey/success.png",
+      "passCriteria": "Connected via API key, verified windows count, reset availability, Last verified; no key visible.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-KEY-DISCONNECT",
+      "area": "apiKey",
+      "setup": "After saving a Dev throwaway key, remove it.",
+      "fixture": null,
+      "expectedEvidence": "native/apikey/disconnect.png",
+      "passCriteria": "Key removed from protected storage; status returns to Not connected.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-OAUTH-START",
+      "area": "oauth",
+      "setup": "Copilot -> Connect -> Sign in with the provider -> Start sign-in (Dev account only).",
+      "fixture": null,
+      "expectedEvidence": "native/oauth/start.png",
+      "passCriteria": "GitHub device-code challenge shown; system browser opens github.com.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-OAUTH-PENDING",
+      "area": "oauth",
+      "setup": "Fixture: copilot / oauthPending.",
+      "fixture": {
+        "providerId": "copilot",
+        "scenario": "oauthPending"
+      },
+      "expectedEvidence": "native/oauth/pending.png",
+      "passCriteria": "Signing in state with Cancel.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-OAUTH-CANCEL",
+      "area": "oauth",
+      "setup": "Start device sign-in, click Cancel sign-in.",
+      "fixture": null,
+      "expectedEvidence": "native/oauth/cancel.png",
+      "passCriteria": "Canceled phase; no lingering pending state after reopening the dialog.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-OAUTH-STATE-MISMATCH",
+      "area": "oauth",
+      "setup": "Fixture: copilot / oauthStateMismatch.",
+      "fixture": {
+        "providerId": "copilot",
+        "scenario": "oauthStateMismatch"
+      },
+      "expectedEvidence": "native/oauth/state-mismatch.png",
+      "passCriteria": "Error state; not Connected. (No loopback OAuth exists; this fixture represents a rejected/foreign completion.)",
+      "status": "READY"
+    },
+    {
+      "id": "W3-OAUTH-TIMEOUT",
+      "area": "oauth",
+      "setup": "Start device sign-in and wait past the flow timeout without approving.",
+      "fixture": null,
+      "expectedEvidence": "native/oauth/timeout.png",
+      "passCriteria": "Timed out phase.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-OAUTH-SUCCESS",
+      "area": "oauth",
+      "setup": "Fixture: copilot / oauthSuccess.",
+      "fixture": {
+        "providerId": "copilot",
+        "scenario": "oauthSuccess"
+      },
+      "expectedEvidence": "native/oauth/success.png",
+      "passCriteria": "Connected via Sign in with the provider.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-OAUTH-REAUTH",
+      "area": "oauth",
+      "setup": "Fixture: claude / cookieExpired, then Connect -> Official CLI sign-in.",
+      "fixture": {
+        "providerId": "claude",
+        "scenario": "cookieExpired"
+      },
+      "expectedEvidence": "native/oauth/reauth.png",
+      "passCriteria": "Re-authentication path offered without deleting non-secret provider settings.",
+      "status": "READY"
+    },
+    {
+      "id": "W3-SUCCESS-DETAIL",
+      "area": "success",
+      "setup": "Fixture: claude / connected; open connect flow and Check connection.",
+      "fixture": {
+        "providerId": "claude",
+        "scenario": "connected"
+      },
+      "expectedEvidence": "native/success/detail.png",
+      "passCriteria": "Success lists method, plan (fixture), usage windows verified, reset availability, last verified; no secrets, emails or home paths.",
+      "status": "READY"
+    }
+  ],
+  "currentImplementationNotes": [
+    "Automated installation is disabled in production. Install fixtures exercise only in-memory outcomes, never a real installer.",
+    "Device/CLI login cannot launch while fixture is active. Use fixture verification states or clear the fixture and use a disposable authorized Dev account.",
+    "Native cases are prepared, not executed. No screenshot or performance claims are implied."
+  ]
+}
