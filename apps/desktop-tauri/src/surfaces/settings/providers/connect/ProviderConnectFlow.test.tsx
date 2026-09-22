@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConnectionVerification, ProviderConnectionCapabilities } from "../../../../lib/providerConnection";
 
@@ -22,6 +22,38 @@ import { ProviderConnectFlow } from "./ProviderConnectFlow";
 
 const connected = (providerId: string, method: ConnectionVerification["method"]): ConnectionVerification => ({ providerId, state: "connected", issue: null, method, verifiedAt: "2026-09-16T10:00:00Z", plan: "Pro", windowCount: 2, resetsKnown: true, durationMs: 40 });
 const row = (id: string) => matrix.providers.find((p) => p.provider === id)!;
+
+describe("Dev simulated sign-in", () => {
+  it("shows a non-actionable challenge, cancels, retries and then verifies", async () => {
+    ipc.getProviderConnectionQaFixture.mockResolvedValue({ providerId: "copilot", scenario: "oauthPending" });
+    let finishLogin!: () => void;
+    const cancel = vi.fn(async () => { finishLogin(); return true; });
+    tauri.startProviderLogin.mockImplementation((_id: string, options: { onChallenge: (value: object) => void; onPhase: (value: object) => void }) => {
+      options.onChallenge({ providerId: "copilot", requestId: "qa", userCode: "QA-DEMO", verificationUri: "", simulated: true });
+      options.onPhase({ phase: "waiting" });
+      return { requestId: "qa", cancel, completion: new Promise<void>(resolve => { finishLogin = resolve; }) };
+    });
+    const onConnected = vi.fn();
+    render(<ProviderConnectFlow capabilities={row("copilot")} onClose={vi.fn()} onConnected={onConnected} />);
+    fireEvent.click(screen.getByRole("radio", { name: /ConnectMethodDeviceFlow/ }));
+    fireEvent.click(screen.getByRole("button", { name: "ConnectDeviceStart" }));
+    expect(await screen.findByText("QA-DEMO")).toBeInTheDocument();
+    // Only the disabled Start action remains, with no verification-link action.
+    expect(screen.getAllByRole("button", { name: "ConnectDeviceStart" })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "ConnectDeviceStart" })).toBeDisabled();
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "ConnectDeviceCancel" })); });
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(screen.queryByText("QA-DEMO")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "ConnectDeviceStart" }));
+    await act(async () => { finishLogin(); });
+    ipc.verifyProviderConnection.mockResolvedValue({ ...connected("copilot", "deviceFlow"), plan: "QA Fixture Plan" });
+    fireEvent.click(screen.getByRole("button", { name: "ConnectNext" }));
+    fireEvent.click(screen.getByRole("button", { name: "ConnectVerifyAction" }));
+    await waitFor(() => expect(onConnected).toHaveBeenCalledOnce());
+    expect(screen.getByText("QA Fixture Plan")).toBeInTheDocument();
+    expect(tauri.openExternalUrl).not.toHaveBeenCalled();
+  });
+});
 
 beforeEach(() => {
   Object.values(ipc).forEach((f) => f.mockReset());

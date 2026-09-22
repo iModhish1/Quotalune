@@ -10,21 +10,23 @@ export function ProviderLoginChallengeNotice({ challenge }: { challenge: Provide
   const [error, setError] = useState<string | null>(null);
   if (!challenge) return null;
   const copy = async () => {
+    if (challenge.simulated) return;
     setError(null);
     try { await navigator.clipboard.writeText(challenge.userCode); setCopiedCode(challenge.userCode); }
-    catch (failure) { setError(String(failure)); }
+    catch { setError(t("ConnectIssueError")); }
   };
   const open = async () => {
+    if (challenge.simulated || challenge.verificationUri !== "https://github.com/login/device") return;
     setError(null);
     try { await openExternalUrl(challenge.verificationUri); }
-    catch (failure) { setError(String(failure)); }
+    catch { setError(t("ConnectIssueError")); }
   };
   return <aside className="settings-status" role="status">
-    <p>{t("ProviderDeviceCodeHelp")}</p>
+    <p>{t(challenge.simulated ? "ProviderQaTitle" : "ProviderDeviceCodeHelp")}</p>
     <strong><bdi dir="ltr">{challenge.userCode}</bdi></strong>
     <p><bdi dir="ltr">{challenge.verificationUri}</bdi></p>
-    <div className="provider-detail-actions"><button type="button" onClick={() => void copy()}>{t(copiedCode === challenge.userCode ? "V2Copied" : "V2CopyCode")}</button>
-      <button type="button" onClick={() => void open()}>{t("V2OpenVerification")}</button></div>
+    {!challenge.simulated && <div className="provider-detail-actions"><button type="button" onClick={() => void copy()}>{t(copiedCode === challenge.userCode ? "V2Copied" : "V2CopyCode")}</button>
+      <button type="button" disabled={challenge.verificationUri !== "https://github.com/login/device"} onClick={() => void open()}>{t("V2OpenVerification")}</button></div>}
     {error && <p role="alert">{error}</p>}
   </aside>;
 }

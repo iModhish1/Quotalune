@@ -6,6 +6,11 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: mocks.invoke }));
 vi.mock("@tauri-apps/api/event", () => ({ listen: mocks.listen }));
 beforeEach(() => { vi.clearAllMocks(); mocks.listen.mockResolvedValue(mocks.stop); });
 
+it("preserves captured simulation provenance in the completion contract", async () => {
+  mocks.invoke.mockResolvedValue({ simulated: true, phase: "completed" });
+  await expect(startProviderLogin("copilot").completion).resolves.toEqual({ simulated: true, phase: "completed" });
+});
+
 it("subscribes before login and delivers only this request's public challenge", async () => {
   const receive = vi.fn();
   mocks.invoke.mockImplementation(async (_command, args) => {

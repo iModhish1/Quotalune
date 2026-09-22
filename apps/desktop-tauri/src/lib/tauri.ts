@@ -485,6 +485,7 @@ export interface ProviderLoginChallenge {
   requestId: string;
   userCode: string;
   verificationUri: string;
+  simulated?: boolean;
 }
 
 export type ProviderLoginPhaseName =
@@ -509,8 +510,13 @@ export interface ProviderLoginOptions {
 
 export interface ProviderLoginHandle {
   requestId: string;
-  completion: Promise<void>;
+  completion: Promise<ProviderLoginCompletion>;
   cancel: () => Promise<boolean>;
+}
+
+export interface ProviderLoginCompletion {
+  simulated: boolean;
+  phase: ProviderLoginPhaseName;
 }
 
 /** Start one request-scoped login and expose its completion and cancel controls. */
@@ -567,10 +573,10 @@ export function startProviderLogin(
     try {
       if (cancelRequested) {
         options.onPhase?.({ providerId, requestId, phase: "canceled" });
-        return;
+        return { simulated: false, phase: "canceled" as const };
       }
       started = true;
-      await invoke<void>("trigger_provider_login", {
+      return await invoke<ProviderLoginCompletion>("trigger_provider_login", {
         providerId,
         loginRequestId: requestId,
       });
@@ -613,7 +619,7 @@ export function triggerProviderLogin(
   providerId: string,
   onChallenge?: (challenge: ProviderLoginChallenge) => void,
   onPhase?: (phase: ProviderLoginPhase) => void,
-): Promise<void> {
+): Promise<ProviderLoginCompletion> {
   return startProviderLogin(providerId, { onChallenge, onPhase }).completion;
 }
 

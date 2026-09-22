@@ -29,6 +29,28 @@ pub(crate) fn begin_live_connection(id: ProviderId) -> Result<Operation<'static>
     Ok(operation)
 }
 
+/// Reserve before choosing the transport: an explicit Dev fixture is captured
+/// under the same exclusion as real work. Demo without a fixture still fails
+/// closed. Simulated login must never fall through to a real transport.
+pub(crate) fn begin_login_connection(
+    id: ProviderId,
+) -> Result<(Operation<'static>, Option<ProviderConnectionQaFixture>), String> {
+    let operation = OPERATIONS.begin(id)?;
+    let fixture = active_fixture(id);
+    select_login_route(fixture, || Settings::load().demo_mode_enabled)
+        .map(|fixture| (operation, fixture))
+}
+
+fn select_login_route(
+    fixture: Option<ProviderConnectionQaFixture>,
+    demo_mode: impl FnOnce() -> bool,
+) -> Result<Option<ProviderConnectionQaFixture>, String> {
+    if fixture.is_none() && demo_mode() {
+        return Err("Real connection changes are unavailable during simulation".into());
+    }
+    Ok(fixture)
+}
+
 #[tauri::command]
 pub fn cancel_provider_connection_operation(provider_id: String) -> Result<bool, String> {
     let id = provider(&provider_id)?;
@@ -373,6 +395,7 @@ pub fn cancel_cli_install(provider_id: String) -> Result<bool, String> {
 #[serde(rename_all = "camelCase")]
 pub struct ConnectionVerification {
     pub provider_id: String,
+    pub simulated: bool,
     pub state: ConnectionState,
     pub issue: Option<ConnectionIssue>,
     pub method: Option<ConnectionMethod>,
@@ -381,6 +404,21 @@ pub struct ConnectionVerification {
     pub window_count: usize,
     pub resets_known: bool,
     pub duration_ms: Option<u128>,
+}
+
+fn missing_browser_session(id: ProviderId) -> ConnectionVerification {
+    ConnectionVerification {
+        provider_id: id.cli_name().to_string(),
+        simulated: false,
+        state: ConnectionState::ActionRequired,
+        issue: Some(ConnectionIssue::BrowserSessionMissing),
+        method: Some(ConnectionMethod::BrowserSession),
+        verified_at: None,
+        plan: None,
+        window_count: 0,
+        resets_known: false,
+        duration_ms: None,
+    }
 }
 
 /// "Connected via" is derived from the snapshot's own source evidence, never
@@ -439,6 +477,7 @@ pub(crate) fn verification_from_snapshot(
             .count();
     ConnectionVerification {
         provider_id: id.cli_name().to_string(),
+        simulated: false,
         state,
         issue,
         method,
@@ -479,6 +518,7 @@ fn fixture_verification(id: ProviderId, scenario: &str) -> ConnectionVerificatio
     };
     ConnectionVerification {
         provider_id: id.cli_name().to_string(),
+        simulated: true,
         state,
         issue,
         method: method.filter(|_| state != S::Idle),
@@ -568,7 +608,7 @@ pub async fn verify_provider_connection(
     // Manual browser onboarding never falls back to reading other profiles.
     let cookies = ManualCookies::load();
     if method == Some(ConnectionMethod::BrowserSession) && cookies.get(id.cli_name()).is_none() {
-        return Ok(fixture_verification(id, "cookieMissing"));
+        return Ok(missing_browser_session(id));
     }
     let active_account = accounts
         .get(&id)
@@ -591,6 +631,7 @@ pub async fn verify_provider_connection(
             finish_verification(id);
             return Ok(ConnectionVerification {
                 provider_id: id.cli_name().to_string(),
+                simulated: false,
                 state: ConnectionState::Idle,
                 issue: None,
                 method: None,
@@ -847,6 +888,41 @@ pub fn get_provider_connection_status(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn real_missing_cookie_is_not_a_simulated_observation() {
+        let outcome = missing_browser_session(ProviderId::Perplexity);
+        assert!(!outcome.simulated);
+        assert_eq!(outcome.method, Some(ConnectionMethod::BrowserSession));
+        assert_eq!(outcome.issue, Some(ConnectionIssue::BrowserSessionMissing));
+        assert_eq!(outcome.verified_at, None);
+        assert_eq!(outcome.duration_ms, None);
+        assert!(fixture_verification(ProviderId::Perplexity, "cookieMissing").simulated);
+    }
+
+    #[test]
+    fn login_route_is_fixture_first_and_demo_fails_closed() {
+        let fixture = ProviderConnectionQaFixture {
+            provider_id: "copilot".into(),
+            scenario: "oauthSuccess".into(),
+        };
+        assert_eq!(
+            select_login_route(Some(fixture.clone()), || panic!(
+                "fixture must not read settings"
+            ))
+            .unwrap(),
+            Some(fixture)
+        );
+        assert!(select_login_route(None, || true).is_err());
+        assert_eq!(select_login_route(None, || false).unwrap(), None);
+        let registry = super::super::connection_operations::OperationRegistry::default();
+        {
+            let _operation = registry.begin(ProviderId::Copilot).unwrap();
+            assert!(select_login_route(None, || true).is_err());
+            assert!(registry.begin(ProviderId::Copilot).is_err());
+        }
+        assert!(registry.begin(ProviderId::Copilot).is_ok());
+    }
 
     fn snapshot(json: serde_json::Value) -> ProviderUsageSnapshot {
         serde_json::from_value(json).unwrap()

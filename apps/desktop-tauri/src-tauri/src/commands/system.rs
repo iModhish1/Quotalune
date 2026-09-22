@@ -254,9 +254,9 @@ pub async fn trigger_provider_login(
     app: tauri::AppHandle,
     provider_id: String,
     login_request_id: Option<String>,
-) -> Result<(), String> {
+) -> Result<ProviderLoginCompletion, String> {
     let id = parse_provider_arg(&provider_id)?;
-    let _operation = super::connection::begin_live_connection(id)?;
+    let (operation, fixture) = super::connection::begin_login_connection(id)?;
     let transport = provider_login_transport(id).ok_or_else(|| {
         format!(
             "Quotalis cannot start a sign-in flow for '{}'; configure its credentials in Provider settings or open its dashboard.",
@@ -280,15 +280,43 @@ pub async fn trigger_provider_login(
     };
 
     emit_provider_login_phase(&app, id, &request_id, ProviderLoginPhase::Starting, None);
-    let result = match transport {
-        ProviderLoginTransport::Device => {
-            run_copilot_device_login(&app, &request_id, control.clone()).await
+    let simulated = fixture.is_some();
+    let result = if let Some(fixture) = fixture {
+        if transport == ProviderLoginTransport::Device {
+            // This is intentionally not an actionable verification URL. Even
+            // older clients cannot use a synthetic challenge to open GitHub.
+            let _ = app.emit(
+                "provider-login-challenge",
+                serde_json::json!({
+                    "providerId": id.cli_name(), "requestId": request_id,
+                    "userCode": "QA-DEMO", "verificationUri": "",
+                    "simulated": true,
+                }),
+            );
         }
-        ProviderLoginTransport::Cli => {
-            run_cli_provider_login(&app, id, &request_id, 120, control.cancellation()).await
+        emit_provider_login_phase(&app, id, &request_id, ProviderLoginPhase::Waiting, None);
+        run_fixture_provider_login(
+            &fixture.scenario,
+            control.cancellation(),
+            operation.cancellation(),
+            std::time::Duration::from_millis(700),
+        )
+        .await
+    } else {
+        match transport {
+            ProviderLoginTransport::Device => {
+                run_copilot_device_login(&app, &request_id, control.clone()).await
+            }
+            ProviderLoginTransport::Cli => {
+                run_cli_provider_login(&app, id, &request_id, 120, control.cancellation()).await
+            }
         }
     };
-    let result = control.finish_result(result);
+    let result = if simulated {
+        finish_fixture_login(&operation, &control, result)
+    } else {
+        control.finish_result(result)
+    };
     registry.finish(id, &request_id);
 
     let (phase, message) = match &result {
@@ -304,11 +332,29 @@ pub async fn trigger_provider_login(
     emit_provider_login_phase(&app, id, &request_id, phase, message);
 
     match result {
-        ProviderLoginRunResult::Completed | ProviderLoginRunResult::Canceled => Ok(()),
+        ProviderLoginRunResult::Completed | ProviderLoginRunResult::Canceled => {
+            Ok(ProviderLoginCompletion { simulated, phase })
+        }
         ProviderLoginRunResult::TimedOut(message) | ProviderLoginRunResult::Failed(message) => {
             Err(message)
         }
     }
+}
+
+#[derive(Serialize)]
+pub struct ProviderLoginCompletion {
+    simulated: bool,
+    phase: ProviderLoginPhase,
+}
+
+fn finish_fixture_login(
+    operation: &super::connection_operations::Operation<'_>,
+    control: &ProviderLoginControl,
+    result: ProviderLoginRunResult,
+) -> ProviderLoginRunResult {
+    operation
+        .commit_if_active(|| Ok(control.finish_result(result)))
+        .unwrap_or(ProviderLoginRunResult::Canceled)
 }
 
 #[tauri::command]
@@ -521,6 +567,32 @@ enum ProviderLoginRunResult {
     Canceled,
 }
 
+/// In-memory transport for the Dev QA controller. No AppHandle, credential
+/// store, browser opener, HTTP client or process runner enters this function.
+/// Pending stays cancellable and bounded; success never changes live state.
+async fn run_fixture_provider_login(
+    scenario: &str,
+    cancellation: login::LoginCancellation,
+    mut operation_cancel: tokio::sync::watch::Receiver<bool>,
+    step_delay: std::time::Duration,
+) -> ProviderLoginRunResult {
+    let delay = if scenario == "oauthPending" {
+        std::time::Duration::from_secs(120)
+    } else {
+        step_delay
+    };
+    tokio::select! {
+        biased;
+        () = wait_for_login_cancellation(&cancellation) => ProviderLoginRunResult::Canceled,
+        () = super::connection_operations::cancelled(&mut operation_cancel) => ProviderLoginRunResult::Canceled,
+        () = tokio::time::sleep(delay) => match scenario {
+            "oauthSuccess" | "cliReady" | "connected" => ProviderLoginRunResult::Completed,
+            "timeout" | "oauthPending" => ProviderLoginRunResult::TimedOut("Simulated sign-in timeout".into()),
+            _ => ProviderLoginRunResult::Failed("Simulated sign-in failure".into()),
+        },
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum ProviderLoginTransport {
     Cli,
@@ -725,6 +797,112 @@ async fn wait_for_login_cancellation(cancellation: &login::LoginCancellation) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn fixture_login_outcomes_are_explicit_and_unknown_fails_closed() {
+        for (scenario, expected) in [
+            ("oauthSuccess", "completed"),
+            ("cliReady", "completed"),
+            ("connected", "completed"),
+            ("timeout", "timedOut"),
+            ("offline", "failed"),
+            ("oauthStateMismatch", "failed"),
+            ("cliUnauthenticated", "failed"),
+            ("unknown", "failed"),
+        ] {
+            let (_sender, receiver) = tokio::sync::watch::channel(false);
+            let result = run_fixture_provider_login(
+                scenario,
+                login::LoginCancellation::new(),
+                receiver,
+                std::time::Duration::ZERO,
+            )
+            .await;
+            let actual = match result {
+                ProviderLoginRunResult::Completed => "completed",
+                ProviderLoginRunResult::TimedOut(_) => "timedOut",
+                ProviderLoginRunResult::Failed(_) => "failed",
+                ProviderLoginRunResult::Canceled => "canceled",
+            };
+            assert_eq!(actual, expected, "{scenario}");
+        }
+    }
+
+    #[tokio::test]
+    async fn fixture_login_supports_request_cancel_operation_cancel_and_retry() {
+        let registry = ProviderLoginRegistry::default();
+        for iteration in 0..50 {
+            let request = format!("fixture-{iteration}");
+            let control = registry.start(ProviderId::Copilot, &request).unwrap();
+            let (sender, receiver) = tokio::sync::watch::channel(false);
+            let cancellation = control.cancellation();
+            let running = run_fixture_provider_login(
+                "oauthPending",
+                cancellation,
+                receiver,
+                std::time::Duration::ZERO,
+            );
+            let cancel = async {
+                tokio::task::yield_now().await;
+                if iteration % 2 == 0 {
+                    assert!(registry.cancel(ProviderId::Copilot, &request).unwrap());
+                } else {
+                    sender.send_replace(true);
+                }
+            };
+            let (result, ()) = tokio::time::timeout(std::time::Duration::from_secs(1), async {
+                tokio::join!(running, cancel)
+            })
+            .await
+            .unwrap();
+            assert!(matches!(
+                control.finish_result(result),
+                ProviderLoginRunResult::Canceled
+            ));
+            registry.finish(ProviderId::Copilot, &request);
+        }
+        assert!(registry.active.lock().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn fixture_login_precancel_cannot_report_success() {
+        let cancellation = login::LoginCancellation::new();
+        cancellation.cancel();
+        let (_sender, receiver) = tokio::sync::watch::channel(false);
+        assert!(matches!(
+            run_fixture_provider_login(
+                "oauthSuccess",
+                cancellation,
+                receiver,
+                std::time::Duration::ZERO
+            )
+            .await,
+            ProviderLoginRunResult::Canceled
+        ));
+    }
+
+    #[test]
+    fn fixture_login_terminal_delivery_is_linearized_with_operation_cancel() {
+        let registry = super::super::connection_operations::OperationRegistry::default();
+        let operation = registry.begin(ProviderId::Copilot).unwrap();
+        let control = ProviderLoginControl::new();
+        // Work has finished, but cancellation wins before terminal delivery.
+        let result = ProviderLoginRunResult::Completed;
+        assert!(registry.cancel(ProviderId::Copilot));
+        assert!(matches!(
+            finish_fixture_login(&operation, &control, result),
+            ProviderLoginRunResult::Canceled
+        ));
+        drop(operation);
+        let operation = registry.begin(ProviderId::Copilot).unwrap();
+        let control = ProviderLoginControl::new();
+        assert!(matches!(
+            finish_fixture_login(&operation, &control, ProviderLoginRunResult::Completed),
+            ProviderLoginRunResult::Completed
+        ));
+        // Completion wins: a subsequent cancellation must not be accepted.
+        assert!(!registry.cancel(ProviderId::Copilot));
+    }
 
     /// Quotalis rebrand regression guard (owner spec section 30/31): the
     /// About screen renders whatever this bridge command returns verbatim

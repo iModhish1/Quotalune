@@ -286,11 +286,12 @@ export function ProviderDetailPane({
         onPhase: next => { if (isCurrent()) {loginPhaseRef.current = next.phase; setLoginPhase(next.phase);} },
       });
       loginHandle.current = attempt;
-      await attempt.completion;
+      const outcome = await attempt.completion;
       // The event callback can update the ref while completion is pending.
       const latestPhase = (): ProviderLoginPhaseName | null => loginPhaseRef.current;
-      if (latestPhase() === "canceled") return;
+      if (outcome.phase === "canceled" || latestPhase() === "canceled") return;
       if (isCurrent()) {loginPhaseRef.current = "completed"; setLoginPhase("completed");}
+      if (outcome.simulated) return;
       if (!isCurrent()) return;
       dispatch({ type: "BUMP_CREDENTIAL_REVISION" });
       await refreshProviders();
@@ -348,7 +349,7 @@ export function ProviderDetailPane({
           key={detail.id}
           capabilities={providerCapabilities}
           onClose={() => setConnectOpen(false)}
-          onConnected={() => { dispatch({ type: "BUMP_CREDENTIAL_REVISION" }); void refreshProviders().catch(() => {}); }}
+          onConnected={(verification) => { if (verification.simulated) return; dispatch({ type: "BUMP_CREDENTIAL_REVISION" }); void refreshProviders().catch(() => {}); }}
         />
       )}
 

@@ -285,7 +285,7 @@ export function ProviderConnectFlow({ capabilities, onClose, onConnected }: Prop
           <div className="provider-connect__configure">
             <h3>{t("ConnectStepConfigure")}</h3>
             <p>{t("ConnectDeviceIntro")}</p>
-            {challenge && <div role="status"><code dir="ltr">{challenge.userCode}</code><button type="button" className="btn btn--ghost" onClick={() => { if (challenge.verificationUri === "https://github.com/login/device") openDocs(challenge.verificationUri); }}>{t("ConnectDeviceStart")}</button></div>}
+            {challenge && <div role="status"><code dir="ltr">{challenge.userCode}</code>{challenge.simulated && <span>{t("ProviderQaTitle")}</span>}{!challenge.simulated && <button type="button" className="btn btn--ghost" onClick={() => { if (challenge.verificationUri === "https://github.com/login/device") openDocs(challenge.verificationUri); }}>{t("ConnectDeviceStart")}</button>}</div>}
             {loginPhase && <p role="status">{t(LOGIN_PHASE_KEY[loginPhase])}</p>}
             <div className="provider-connect__actions">
               <button type="button" className="btn btn--primary" onClick={() => void signIn()} disabled={busy}>{t("ConnectDeviceStart")}</button>
