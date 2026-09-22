@@ -26,7 +26,7 @@ This report distinguishes completed code/automated checks from native and live-a
 | 20 | cancellation | Pre-cancel, owned Windows process tree, task cancellation and serialized final publication. |
 | 21 | command safety | Argument arrays, protected roots, no arbitrary shell interpolation, scrubbed environment. |
 | 22 | output sanitization | Bounded/sanitized stdout/stderr; no raw provider output in UI. |
-| 23 | supported providers | 32 browser-session offers; see generated matrix. |
+| 23 | supported providers | 28 browser-session offers after transport audit; see generated matrix. |
 | 24 | browsers/profiles | Chrome/Edge/Brave/Arc/Firefox/Chromium metadata; explicit single profile selected by opaque ID. |
 | 25 | domain minimization | Provider domain (regional domain where applicable) before extraction; no merged browser accounts. |
 | 26 | import | Existing CookieExtractor into protected ManualCookies; fixture import short-circuits without browser/store access. |
@@ -198,11 +198,11 @@ passed/1existingignored; core1868; CLI1; doctests0. Logs:
 The full Rust run includes locale and capability matrix parity. TypeScript and
 production build passed; existing large frontend chunk advisories remain.
 
-Open security follow-up: the adapter's old `gh auth token` subprocess still uses
-raw PATH/blocking output rather than the trusted bounded dependency runner. This
-was not introduced by the provenance change, but remains a Wave 3 completion
-requirement. Native/live-account testing, final provider-wide stress and complete
-reporting-capability audit remain open. Release stays closed.
+The provenance checkpoint identified the adapter's old raw `gh auth token`
+subprocess as a separate security follow-up. It is addressed in the bounded
+credential-reader checkpoint below. Native/live-account testing, final
+provider-wide stress and complete reporting-capability audit remain open.
+Release stays closed.
 
 Browser-offer follow-up: adapter inspection found Codex explicitly rejects Web,
 Gemini reads CLI credentials, Kiro routes its historical Web value to CLI, and
@@ -230,5 +230,48 @@ before cancellation and failed-save retry ownership. Independent read-only revie
 found no new lock inversion or actionable defect in the three-file repair.
 These are concurrency-contract tests plus source wiring review, not command-level
 DPAPI fault injection or live browser authentication. No owner credentials used.
-Copilot/Grok selected-source classification and invalid browser offerings remain
-separate open findings; this packet does not establish Wave 3 PASS.
+Copilot/Grok selected-source classification and invalid browser offerings were
+separate findings at the cancellation checkpoint and were subsequently repaired
+as described above. These packets do not establish Wave 3 PASS.
+
+## Bounded CLI credential reader — 2026-09-22
+
+Both Copilot usage entry points now resolve GitHub CLI through the existing
+curated installation resolver. The process runs off the async executor, with a
+15-second deadline, scrubbed environment, bounded capture and owned process tree.
+Dropping the fetch future signals cancellation; the supervisor performs cleanup.
+Explicit owned credentials still avoid all CLI/legacy reads, and explicit CLI
+still cannot fall back to an unrelated stored key. Unsupported CLI layouts fail
+closed and retain the existing manual setup instructions.
+
+Credential stdout is private in-memory capture, with no Debug/Serialize interface.
+It does not pass through diagnostic sanitization or IPC. Nonzero exit, oversized
+stdout, invalid UTF-8 and unexpected pipe read errors reject the result; stderr
+is discarded. Ordinary diagnostic probes continue to return capped, sanitized
+text. No new dependency, credential store, UI or live-account action was added.
+
+New Windows process fixtures exposed a preexisting test-helper defect: the slash
+in `System32/cmd.exe` was interpreted by cmd as a switch. Correct path components
+and positive startup/output assertions now prevent false success. The exact-PATH
+test also distinguishes cmd's own PATHEXT. Timeout requires actual startup and
+elapsed deadline; cancellation requires startup and absence of a delayed marker.
+Two empty test-created directories (`rust/Bearer`, `rust/fixture.secret`) remain
+locally because command-policy review rejected their optional cleanup. They are
+not tracked or included in the product build.
+
+Evidence: 19 supervisor tests and 22 Copilot tests; full workspace desktop569
+passed/1existingignored, core1874, CLI1, doctests0. Logs:
+`.local/wave3-gh-supervisor.log`, `.local/wave3-gh-copilot.log`,
+`.local/wave3-gh-full-rust.log`. Independent read-only review first required
+startup-aware timeout proof and rejection of unexpected read errors; both were
+repaired and re-reviewed without new actionable findings. Reviewed blob hashes:
+`cli_dependencies.rs` = `06594caa8dbb03851120d42697e4471842e60808`;
+`copilot/api.rs` = `f42cb5dc1deda3817b7e24a2759640b65bc3e9f3`.
+The final Clippy-only edit names the ignored cancellation-send result instead of
+using `let _`; final supervisor blob is `40ebc142d234df8a1c59d42266227c227e2495e2`.
+Formatting/diff checks and secret scan (4258 files) pass; no new skip/focus markers.
+Full workspace Clippy passes (`.local/wave3-gh-clippy.log`). Exact post-commit Dev
+build identity is recorded under `.local/wave3-gh-*` after the documentation commit.
+Frontend remains the previously tested 1568/228 candidate; no frontend source
+changed in this packet. The canonical Dev build rebuilds its production assets.
+This is automated process evidence, not native UI or live GitHub authentication.

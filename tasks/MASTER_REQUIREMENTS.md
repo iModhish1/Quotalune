@@ -599,3 +599,9 @@ Wave 3 reporting now requires observed response evidence; no legacy reset/cost g
 
 ### Historical inventory and connection-method checkpoint — 2026-09-22
 All three historical ledgers have been read completely. ALL_WAVES_RECONCILIATION_MATRIX.md now preserves the original phases, numbered families and superseded decisions with current implementation/test anchors and explicit acceptance gaps; CROSS_WAVE_REGRESSION_MATRIX.md remains the interaction gate. Credential cancellation and unsupported browser offerings are repaired. The current source also preserves actual API-key/device/CLI provenance across desktop and CLI, with independent review and full tests (frontend1568/228, desktop569+1existingignored, core1868, CLI1). No native/live-auth or full Wave3 PASS is claimed. Next: harden the preexisting raw Copilot gh-token fetch through the trusted bounded runner; finish remaining provider scenario/capability/stress work, then Product Completion and release gates. Personal and published v0.11.0 remain unchanged.
+
+### Bounded credential subprocess checkpoint — 2026-09-22
+
+- Source commit `f974936e`: Copilot uses the curated, bounded supervisor for CLI credential reads; secret output stays outside diagnostics, future drop cancels the process, and incomplete output fails closed.
+- Windows fixture helper and positive-startup assertions corrected; 19 supervisor tests pass. Full Rust: desktop569/1existingignored, core1874, CLI1, doctests0. Clippy/fmt/diff/4258-file secret scan pass. Independent findings repaired and re-reviewed; no live credentials used.
+- Exact final Dev HEAD/hash follows in `.local/wave3-gh-dev-build.log`; no native UI or release PASS is inferred. Remaining method/scenario coverage, Product Completion, native/security/OSS/RC gates retain their prior status. Personal/v0.11.0 unchanged.

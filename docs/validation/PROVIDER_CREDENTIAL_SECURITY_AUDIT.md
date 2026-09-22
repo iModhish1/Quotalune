@@ -51,7 +51,16 @@ device flow, and selected CLI does not consume stored Quotalis API keys.
 
 This is bounded source/test evidence, not live DPAPI/browser authentication or a
 whole-product security PASS. Older writers may discard optional origin metadata;
-the credential remains readable, but origin becomes unknown. Copilot's existing
-raw `gh auth token` process path still needs trusted executable/bounded-process
-hardening independently of the already-hardened CLI dependency probe. See
-WAVE3_IMPLEMENTATION_REPORT.md for exact tests and remaining gates.
+the credential remains readable, but origin becomes unknown.
+
+The subsequent bounded-reader repair removes Copilot's raw `gh auth token`
+process path from both API entry points. It reuses curated resolution, process
+containment and environment scrubbing, adds cancellation on async-future drop,
+and keeps secret capture private and separate from sanitized diagnostic reports.
+Failed, truncated, invalid-UTF-8 and unexpected-read-error outputs fail closed.
+Six new tests exercise the capture contract and real synthetic Windows process
+success/timeout/drop behavior. Existing test helpers were repaired so positive
+startup and output assertions are mandatory. Independent review findings were
+closed; no live account or owner credential was accessed. This is not an audit
+of every other adapter subprocess. See WAVE3_IMPLEMENTATION_REPORT.md for exact
+tests and the remaining native, provider-wide and release gates.

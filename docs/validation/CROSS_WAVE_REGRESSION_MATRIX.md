@@ -1,6 +1,6 @@
 # Cross-wave regression matrix — active acceptance tracker
 
-Scope: the 22 minimum interactions in historical appendix A66, plus defects found during integration. This is an acceptance tracker, not a declaration that the whole product passed. Historical screenshots do not validate the current source. The complete historical-wave inventory remains a separate open deliverable.
+Scope: the 22 minimum interactions in historical appendix A66, plus defects found during integration. This is an acceptance tracker, not a declaration that the whole product passed. Historical screenshots do not validate the current source. The historical-wave inventory is recorded in `ALL_WAVES_RECONCILIATION_MATRIX.md`; its broader acceptance remains open.
 
 Status **PARTIAL** means implementation or component evidence exists, but the complete interaction has not been established. No row below is a current native PASS. Paths are repository-relative. The frontend checkpoint for this increment is `.local/wave3-reporting-full-front.log` (1568 tests / 228 files); Rust results and exact candidate identity are recorded in `WAVE3_IMPLEMENTATION_REPORT.md` when complete. A suite pass supports only assertions the tests actually exercise.
 
