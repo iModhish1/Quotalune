@@ -39,3 +39,19 @@ Windows protection reuses `secure_file`/DPAPI. Regression tests write only tempo
 ## Evidence files
 
 `cli_dependencies::tests`, `login::tests`, `connection_security::tests`, `connection_state::tests`, shell `commands::connection`, `connection_operations`, browser profile tests, and `ProviderConnectFlow.test.tsx`. Final counts and commands are recorded in `WAVE3_IMPLEMENTATION_REPORT.md`; local raw logs are under `.local/wave3-*.log` and contain fixture-only test output. Release gate remains CLOSED.
+# Current credential provenance and cancellation checkpoint
+
+The Wave 3 continuation makes onboarding key/browser-import read/modify/write
+atomic with accepted cancellation through the existing operation registry.
+No separate plaintext store was introduced. Protected token records now retain
+optional acquisition origin for manually entered keys versus completed GitHub
+device authorization; legacy origin remains unknown. CLI and desktop creation
+share this rule. Explicit verification cannot reinterpret an unrelated key as
+device flow, and selected CLI does not consume stored Quotalis API keys.
+
+This is bounded source/test evidence, not live DPAPI/browser authentication or a
+whole-product security PASS. Older writers may discard optional origin metadata;
+the credential remains readable, but origin becomes unknown. Copilot's existing
+raw `gh auth token` process path still needs trusted executable/bounded-process
+hardening independently of the already-hardened CLI dependency probe. See
+WAVE3_IMPLEMENTATION_REPORT.md for exact tests and remaining gates.

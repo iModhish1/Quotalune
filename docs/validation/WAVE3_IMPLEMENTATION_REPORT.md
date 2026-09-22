@@ -165,6 +165,45 @@ Final automated results for this source increment: frontend **1568 / 228 files**
 Logs: `.local/wave3-reporting-full-front.log`, `wave3-reporting-full-rust.log`, `wave3-reporting-tsc.log`, `wave3-reporting-build.log`, `wave3-reporting-clippy.log`. The cross-wave tracker is `CROSS_WAVE_REGRESSION_MATRIX.md`; all 22 required interactions remain open at their full scope. Wave 3 capability completeness, live auth and native acceptance remain PARTIAL/deferred. Release gate remains CLOSED and Personal unchanged.
 # Credential cancellation repair — 2026-09-22
 
+## Selected credential provenance repair
+
+Copilot previously labeled every successful response `oauth`, causing explicit
+API-key and CLI verification to be rejected as device flow. Grok's supplied
+bearer had the same problem via the generic OAuth-to-CLI mapping. Copilot now
+resolves a typed credential source before transport and exports an unambiguous
+source label. Explicit CLI ignores supplied/legacy keys and cannot fall back to
+Credential Manager. Explicit owned-token mode fails before ambient lookup when
+missing. Grok distinguishes a supplied bearer from credentials loaded from its
+CLI auth file. Persisted CLI/Web selections exclude legacy API keys in the shared
+desktop fetch context as well as in verification.
+
+Protected token accounts gain optional `origin` (`apiKey` / `deviceFlow`); old
+accounts remain unknown and are never upgraded from their label/token shape.
+Manual desktop/CLI creation shares one constructor; successful real GitHub device
+flow tags its own token. Verification requires a configured token with the chosen
+origin before fetching. Existing unknown accounts remain usable in normal reads;
+explicit method verification requires reacquisition rather than a guessed claim.
+Older readers ignore the additive field; older writers may drop it, which returns
+origin to unknown on current reopen without deleting the credential. This is not
+a claim of full cross-version credential-store rollback testing.
+
+Independent review found two omissions in CLI acquisition/consumption. Both were
+fixed and the bounded second review found no further actionable defect. New tests
+cover no-ambient-lookup branches, known/legacy origins, active/name/index account
+selection, absent selected-account refusal, stored-key fallback, and key-versus-
+cookie acquisition. Complete source tests: frontend1568/228 files; desktop569
+passed/1existingignored; core1868; CLI1; doctests0. Logs:
+`.local/wave3-method-full-front.log`, `wave3-method-full-rust.log`,
+`wave3-method-tsc.log`, `wave3-method-build.log`, `wave3-method-clippy.log`.
+The full Rust run includes locale and capability matrix parity. TypeScript and
+production build passed; existing large frontend chunk advisories remain.
+
+Open security follow-up: the adapter's old `gh auth token` subprocess still uses
+raw PATH/blocking output rather than the trusted bounded dependency runner. This
+was not introduced by the provenance change, but remains a Wave 3 completion
+requirement. Native/live-account testing, final provider-wide stress and complete
+reporting-capability audit remain open. Release stays closed.
+
 Browser-offer follow-up: adapter inspection found Codex explicitly rejects Web,
 Gemini reads CLI credentials, Kiro routes its historical Web value to CLI, and
 Antigravity reads local application state. Their retained cookie-domain metadata
