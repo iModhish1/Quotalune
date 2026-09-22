@@ -764,7 +764,8 @@ fn configure_source(settings: &mut Settings, id: ProviderId, method: ConnectionM
         ConnectionMethod::BrowserSession => ("web", "manual"),
         ConnectionMethod::ApiKey | ConnectionMethod::DeviceFlow => ("oauth", "off"),
         ConnectionMethod::CliSession => ("cli", "off"),
-        ConnectionMethod::LocalScanner | ConnectionMethod::LocalGateway => ("auto", "off"),
+        ConnectionMethod::LocalScanner => ("cli", "off"),
+        ConnectionMethod::LocalGateway => ("auto", "off"),
     };
     settings.set_usage_source(id, source);
     settings.set_cookie_source(id, cookie);
@@ -1006,6 +1007,34 @@ mod tests {
             // A legacy API key must not change the active account's origin.
             assert!(validate_selected_token(Some(ConnectionMethod::DeviceFlow), &ctx).is_ok());
             assert!(validate_selected_token(Some(ConnectionMethod::ApiKey), &ctx).is_err());
+        }
+    }
+
+    #[test]
+    fn persisted_local_selection_excludes_unrelated_owned_credentials() {
+        for id in [
+            ProviderId::Cursor,
+            ProviderId::Windsurf,
+            ProviderId::JetBrains,
+            ProviderId::Antigravity,
+        ] {
+            let mut settings = Settings::default();
+            configure_source(&mut settings, id, ConnectionMethod::LocalScanner);
+            // The normal refresh path uses this same persisted value to
+            // exclude a stored account UUID as well as its credential.
+            assert_eq!(settings.usage_source(id), "cli");
+            let mut cookies = ManualCookies::default();
+            cookies.set(id.cli_name(), "fixture-cookie");
+            let mut keys = ApiKeys::default();
+            keys.set(id.cli_name(), "fixture-key", None);
+            let mut data = ProviderAccountData::new();
+            data.add_account(TokenAccount::new("Unrelated", "fixture-account-token"));
+            let ctx =
+                build_fetch_context(id, &settings, &cookies, &keys, &HashMap::from([(id, data)]));
+            assert_eq!(ctx.source_mode, SourceMode::Cli);
+            assert!(ctx.api_key.is_none());
+            assert!(ctx.manual_cookie_header.is_none());
+            assert!(ctx.token_origin.is_none());
         }
     }
 

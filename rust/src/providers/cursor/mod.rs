@@ -1,6 +1,6 @@
 //! Cursor provider implementation
 //!
-//! Fetches usage data from Cursor's API using browser cookies
+//! Fetches usage data from Cursor's API using its local app session or browser cookies.
 
 mod api;
 mod app_auth;
@@ -15,6 +15,52 @@ use crate::core::{
 };
 
 pub use api::CursorApi;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CursorSessionSource {
+    App,
+    Browser,
+}
+
+impl CursorSessionSource {
+    fn label(self) -> &'static str {
+        match self {
+            Self::App => "cursor-app",
+            Self::Browser => "web",
+        }
+    }
+}
+
+/// Keep source selection injectable so tests never open the owner's browser or
+/// Cursor profile. A source label describes the credential actually accepted.
+async fn fetch_selected_session<T, L, W>(
+    mode: SourceMode,
+    has_manual_cookie: bool,
+    local: impl FnOnce() -> L,
+    web: impl FnOnce() -> W,
+) -> Result<(T, CursorSessionSource), ProviderError>
+where
+    L: std::future::Future<Output = Result<Option<T>, ProviderError>>,
+    W: std::future::Future<Output = Result<T, ProviderError>>,
+{
+    // Cookie-off/local onboarding is represented as Cli by the existing shell
+    // settings contract. It must never open a browser or use manual cookies.
+    if mode == SourceMode::Cli {
+        return local()
+            .await?
+            .map(|value| (value, CursorSessionSource::App))
+            .ok_or(ProviderError::AuthRequired);
+    }
+    if mode == SourceMode::Auto
+        && !has_manual_cookie
+        && let Ok(Some(value)) = local().await
+    {
+        return Ok((value, CursorSessionSource::App));
+    }
+    web()
+        .await
+        .map(|value| (value, CursorSessionSource::Browser))
+}
 
 /// Cursor provider for fetching AI usage limits
 pub struct CursorProvider {
@@ -47,50 +93,49 @@ impl CursorProvider {
         ctx: &FetchContext,
     ) -> Result<
         (
-            api::CursorUsageResult,
-            Option<token_cost::CursorTokenCostReport>,
+            (
+                api::CursorUsageResult,
+                Option<token_cost::CursorTokenCostReport>,
+            ),
+            CursorSessionSource,
         ),
         ProviderError,
     > {
-        let cookie_header = if let Some(cookie_header) = ctx.manual_cookie_header.as_deref() {
-            cookie_header.to_string()
-        } else {
-            // Upstream 0.50.0 #2398: Automatic mode prefers the signed-in
-            // Cursor app's read-only local session over browser cookies.
-            // A rejected app session (stale token, account mismatch)
-            // surfaces in the log and falls back to the browser import.
-            if ctx.source_mode == SourceMode::Auto
-                && let Some(app_result) = self.fetch_via_app_session().await
-            {
-                return Ok(app_result);
-            }
-            crate::providers::browser_cookie_header(&["cursor.com", "cursor.sh"])?
-        };
-
-        self.fetch_usage_and_token_report(&cookie_header).await
+        fetch_selected_session(
+            ctx.source_mode,
+            ctx.manual_cookie_header.is_some(),
+            || self.fetch_via_app_session(),
+            || async {
+                let cookie_header = if let Some(cookie_header) = ctx.manual_cookie_header.as_deref()
+                {
+                    cookie_header.to_string()
+                } else {
+                    crate::providers::browser_cookie_header(&["cursor.com", "cursor.sh"])?
+                };
+                self.fetch_usage_and_token_report(&cookie_header).await
+            },
+        )
+        .await
     }
 
-    /// One usage pass with the app's local session; `None` means the app
-    /// session was unavailable or rejected (caller falls back to cookies).
+    /// One usage pass with the app's local session. Absence is separate from
+    /// rejection, transport and response errors; only Auto may try cookies.
     async fn fetch_via_app_session(
         &self,
-    ) -> Option<(
-        api::CursorUsageResult,
-        Option<token_cost::CursorTokenCostReport>,
-    )> {
-        let app_cookie = app_auth::preferred_auto_cookie_header()?;
-        let usage = match self.api.fetch_usage_with_cookie_header(&app_cookie).await {
-            Ok(usage) => usage,
-            Err(err) => {
-                tracing::debug!(
-                    "Cursor app session rejected ({err}); falling back to browser cookies"
-                );
-                return None;
-            }
+    ) -> Result<
+        Option<(
+            api::CursorUsageResult,
+            Option<token_cost::CursorTokenCostReport>,
+        )>,
+        ProviderError,
+    > {
+        let Some(app_cookie) = app_auth::preferred_auto_cookie_header() else {
+            return Ok(None);
         };
+        let usage = self.api.fetch_usage_with_cookie_header(&app_cookie).await?;
         app_auth::store_validated_app_session(&app_cookie);
         let token_report = self.fetch_token_report_best_effort(&app_cookie).await;
-        Some((usage, token_report))
+        Ok(Some((usage, token_report)))
     }
 
     async fn fetch_usage_and_token_report(
@@ -166,6 +211,7 @@ impl CursorProvider {
         cost: Option<CostSnapshot>,
         token_report: Option<&token_cost::CursorTokenCostReport>,
         include_credits: bool,
+        source: CursorSessionSource,
     ) -> ProviderFetchResult {
         // On-demand / plan cost follows the shared optional-usage setting
         // (`FetchContext.include_credits` ↔ upstream showOptionalCreditsAndExtraUsage).
@@ -176,7 +222,7 @@ impl CursorProvider {
         } else {
             None
         };
-        let mut result = ProviderFetchResult::new(usage, "web");
+        let mut result = ProviderFetchResult::new(usage, source.label());
         if let Some(c) = cost {
             result = result.with_cost(c);
         }
@@ -204,12 +250,11 @@ impl Provider for CursorProvider {
         tracing::debug!("Fetching Cursor usage via web API");
 
         match ctx.source_mode {
-            // Cli is only ever set by the shell for "no cookie yet"; treat it as
-            // web so empty-manual users get browser cookie attempt (or AuthRequired)
-            // instead of "Source mode 'Cli' not supported" (#212).
+            // Cli represents the shell's cookie-off/local selection. Missing
+            // local auth returns AuthRequired, without browser discovery.
             SourceMode::Auto | SourceMode::Web | SourceMode::Cli => {
                 match self.fetch_web_usage(ctx).await {
-                    Ok((result, token_report)) => {
+                    Ok(((result, token_report), source)) => {
                         let api::CursorUsageResult {
                             primary,
                             secondary,
@@ -235,6 +280,7 @@ impl Provider for CursorProvider {
                             cost,
                             token_report.as_ref(),
                             ctx.include_credits,
+                            source,
                         ))
                     }
                     Err(e) => {
@@ -262,29 +308,107 @@ mod tests {
     use crate::core::FetchContext;
 
     #[tokio::test]
-    async fn cli_mode_does_not_return_unsupported_source() {
-        let provider = CursorProvider::new();
-        let ctx = FetchContext {
-            source_mode: SourceMode::Cli,
-            manual_cookie_header: None,
-            ..FetchContext::default()
-        };
-        let err = provider
-            .fetch_usage(&ctx)
+    async fn local_selection_never_reads_browser_or_manual_cookies() {
+        for has_manual_cookie in [false, true] {
+            let result = fetch_selected_session(
+                SourceMode::Cli,
+                has_manual_cookie,
+                || async { Ok(Some("local-fixture")) },
+                || async { panic!("explicit local selection may not read browser cookies") },
+            )
             .await
-            .expect_err("no cookies on this machine");
-        // Must not be UnsupportedSource — that was the user-visible #212 bug.
-        assert!(
-            !matches!(err, ProviderError::UnsupportedSource(_)),
-            "unexpected UnsupportedSource: {err}"
-        );
-        assert!(
-            matches!(
-                err,
-                ProviderError::NoCookies | ProviderError::AuthRequired | ProviderError::Other(_)
-            ),
-            "expected cookie/auth style error, got: {err}"
-        );
+            .unwrap();
+            assert_eq!(result, ("local-fixture", CursorSessionSource::App));
+        }
+        let err = fetch_selected_session::<&str, _, _>(
+            SourceMode::Cli,
+            false,
+            || async { Ok(None) },
+            || async { panic!("missing/rejected local session may not fall back to browser") },
+        )
+        .await
+        .unwrap_err();
+        assert!(matches!(err, ProviderError::AuthRequired));
+    }
+
+    #[tokio::test]
+    async fn automatic_selection_reports_the_source_that_actually_succeeded() {
+        let local = fetch_selected_session(
+            SourceMode::Auto,
+            false,
+            || async { Ok(Some("local-fixture")) },
+            || async { panic!("valid local session needs no browser fallback") },
+        )
+        .await
+        .unwrap();
+        assert_eq!(local, ("local-fixture", CursorSessionSource::App));
+        let fallback = fetch_selected_session(
+            SourceMode::Auto,
+            false,
+            || async { Ok(None) },
+            || async { Ok("browser-fixture") },
+        )
+        .await
+        .unwrap();
+        assert_eq!(fallback, ("browser-fixture", CursorSessionSource::Browser));
+    }
+
+    #[tokio::test]
+    async fn explicit_local_selection_preserves_failures_without_browser_fallback() {
+        // A builder error exercises the Network variant without network I/O.
+        let network_error = reqwest::Client::new()
+            .get("invalid URL")
+            .build()
+            .unwrap_err();
+        for error in [
+            ProviderError::Network(network_error),
+            ProviderError::Other("Cursor API returned 503".into()),
+            ProviderError::Parse("fixture malformed response".into()),
+            ProviderError::AuthRequired,
+        ] {
+            let expected = std::mem::discriminant(&error);
+            let result = fetch_selected_session::<&str, _, _>(
+                SourceMode::Cli,
+                false,
+                || async { Err(error) },
+                || async { panic!("local failure must not read browser cookies") },
+            )
+            .await
+            .unwrap_err();
+            assert_eq!(std::mem::discriminant(&result), expected);
+        }
+    }
+
+    #[tokio::test]
+    async fn automatic_selection_retains_browser_fallback_after_local_failure() {
+        let result = fetch_selected_session(
+            SourceMode::Auto,
+            false,
+            || async { Err(ProviderError::Other("Cursor API returned 503".into())) },
+            || async { Ok("browser-fixture") },
+        )
+        .await
+        .unwrap();
+        assert_eq!(result, ("browser-fixture", CursorSessionSource::Browser));
+    }
+
+    #[tokio::test]
+    async fn browser_and_manual_selections_do_not_read_local_profile() {
+        for (mode, has_manual_cookie) in [
+            (SourceMode::Web, false),
+            (SourceMode::Web, true),
+            (SourceMode::Auto, true),
+        ] {
+            let result = fetch_selected_session(
+                mode,
+                has_manual_cookie,
+                || async { panic!("browser selection must not read local profile") },
+                || async { Ok("browser-fixture") },
+            )
+            .await
+            .unwrap();
+            assert_eq!(result, ("browser-fixture", CursorSessionSource::Browser));
+        }
     }
 
     #[tokio::test]
@@ -315,14 +439,27 @@ mod tests {
         let usage = UsageSnapshot::new(RateWindow::new(16.0));
         let cost = CostSnapshot::new(3.5, "USD", "On-demand (billing cycle)").with_limit(10.0);
 
-        let shown =
-            CursorProvider::build_fetch_result(usage.clone(), Some(cost.clone()), None, true);
+        let shown = CursorProvider::build_fetch_result(
+            usage.clone(),
+            Some(cost.clone()),
+            None,
+            true,
+            CursorSessionSource::App,
+        );
+        assert_eq!(shown.source_label, "cursor-app");
         assert!(
             shown.cost.is_some(),
             "include_credits=true keeps on-demand cost"
         );
 
-        let hidden = CursorProvider::build_fetch_result(usage, Some(cost), None, false);
+        let hidden = CursorProvider::build_fetch_result(
+            usage,
+            Some(cost),
+            None,
+            false,
+            CursorSessionSource::Browser,
+        );
+        assert_eq!(hidden.source_label, "web");
         assert!(
             hidden.cost.is_none(),
             "include_credits=false hides on-demand extra usage"
