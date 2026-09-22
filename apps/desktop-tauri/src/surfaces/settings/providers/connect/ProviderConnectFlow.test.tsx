@@ -94,7 +94,8 @@ describe("CLI requirements", () => {
     ipc.getCliInstallPlan.mockResolvedValue({ program: "npm", args: ["install", "-g", "@openai/codex"], requiresAdmin: false, packageManager: "npm", package: "@openai/codex" });
     ipc.installCliDependency.mockResolvedValue({ outcome: { kind: "succeeded" }, detection: { providerId: "codex", tool: "OpenAI Codex CLI", status: { kind: "installed" }, path: null, version: "1.2.3", session: "notSignedIn", installAvailable: true, docsUrl: "https://github.com/openai/codex", signInHint: "codex login" } });
     render(<ProviderConnectFlow capabilities={row("codex")} onClose={vi.fn()} />);
-    fireEvent.click(screen.getByRole("radio", { name: /ConnectMethodCliSession/ }));
+    // Codex has one supported method; the real flow skips method selection.
+    expect(screen.queryByRole("radio")).toBeNull();
     expect(await screen.findByText("ConnectCliMissing")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ConnectNext" })).toBeDisabled();
     expect(ipc.installCliDependency).not.toHaveBeenCalled();

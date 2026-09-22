@@ -38,13 +38,6 @@
           "helpUrl": "https://github.com/openai/codex",
           "method": "cliSession",
           "rank": "recommended"
-        },
-        {
-          "browserDomain": "chatgpt.com",
-          "envVar": null,
-          "helpUrl": "https://chatgpt.com/codex/settings/usage",
-          "method": "browserSession",
-          "rank": "alternative"
         }
       ],
       "planSource": "Provider-reported plan when present; never inferred from a credential",
@@ -260,13 +253,6 @@
           "helpUrl": "https://github.com/google-gemini/gemini-cli",
           "method": "cliSession",
           "rank": "recommended"
-        },
-        {
-          "browserDomain": "aistudio.google.com",
-          "envVar": null,
-          "helpUrl": "https://aistudio.google.com",
-          "method": "browserSession",
-          "rank": "alternative"
         }
       ],
       "planSource": "Provider-reported plan when present; never inferred from a credential",
@@ -303,18 +289,11 @@
       "localSessionReader": true,
       "methods": [
         {
-          "browserDomain": "antigravity.ai",
-          "envVar": null,
-          "helpUrl": null,
-          "method": "browserSession",
-          "rank": "recommended"
-        },
-        {
           "browserDomain": null,
           "envVar": null,
           "helpUrl": null,
           "method": "localScanner",
-          "rank": "alternative"
+          "rank": "recommended"
         }
       ],
       "planSource": "Provider-reported plan when present; never inferred from a credential",
@@ -328,7 +307,7 @@
         "resetTimes": "inspectProviderResponse"
       },
       "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
-      "status": "supported",
+      "status": "autoDetected",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
       "tokenSource": null,
@@ -522,13 +501,6 @@
           "helpUrl": "https://kiro.dev/",
           "method": "cliSession",
           "rank": "recommended"
-        },
-        {
-          "browserDomain": "kiro.dev",
-          "envVar": null,
-          "helpUrl": "https://kiro.dev/account",
-          "method": "browserSession",
-          "rank": "alternative"
         }
       ],
       "planSource": "Provider-reported plan when present; never inferred from a credential",

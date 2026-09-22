@@ -429,7 +429,15 @@ pub fn connection_capabilities(provider: ProviderId) -> ProviderConnectionCapabi
                 .or(metadata.dashboard_url),
         });
     }
-    if let Some(domain) = provider.cookie_domain() {
+    // A historical cookie domain is not proof of a browser transport. Some
+    // adapters retain domains but only read CLI/local state; LongCat declares
+    // its working Web source without overriding supports_web().
+    if let Some(domain) = provider.cookie_domain()
+        && (instance.supports_web()
+            || instance
+                .available_sources()
+                .contains(&crate::core::SourceMode::Web))
+    {
         methods.push(MethodOffer {
             method: ConnectionMethod::BrowserSession,
             rank: if methods.is_empty() {
@@ -672,6 +680,37 @@ mod tests {
         assert_eq!(
             connection_capabilities(ProviderId::KimiK2).status,
             SupportStatus::Deprecated
+        );
+    }
+
+    #[test]
+    fn browser_offers_require_a_real_web_transport_not_just_a_domain() {
+        let invalid: Vec<_> = all_connection_capabilities()
+            .into_iter()
+            .filter(|capability| capability.supports(ConnectionMethod::BrowserSession))
+            .filter(|capability| {
+                let adapter = instantiate_provider(capability.provider);
+                !adapter.supports_web()
+                    && !adapter
+                        .available_sources()
+                        .contains(&crate::core::SourceMode::Web)
+            })
+            .map(|capability| capability.provider.cli_name())
+            .collect();
+        assert!(
+            invalid.is_empty(),
+            "Browser offers without a web adapter: {invalid:?}"
+        );
+        for provider in [
+            ProviderId::Codex,
+            ProviderId::Gemini,
+            ProviderId::Kiro,
+            ProviderId::Antigravity,
+        ] {
+            assert!(!connection_capabilities(provider).supports(ConnectionMethod::BrowserSession));
+        }
+        assert!(
+            connection_capabilities(ProviderId::LongCat).supports(ConnectionMethod::BrowserSession)
         );
     }
 

@@ -165,6 +165,18 @@ Final automated results for this source increment: frontend **1568 / 228 files**
 Logs: `.local/wave3-reporting-full-front.log`, `wave3-reporting-full-rust.log`, `wave3-reporting-tsc.log`, `wave3-reporting-build.log`, `wave3-reporting-clippy.log`. The cross-wave tracker is `CROSS_WAVE_REGRESSION_MATRIX.md`; all 22 required interactions remain open at their full scope. Wave 3 capability completeness, live auth and native acceptance remain PARTIAL/deferred. Release gate remains CLOSED and Personal unchanged.
 # Credential cancellation repair — 2026-09-22
 
+Browser-offer follow-up: adapter inspection found Codex explicitly rejects Web,
+Gemini reads CLI credentials, Kiro routes its historical Web value to CLI, and
+Antigravity reads local application state. Their retained cookie-domain metadata
+had incorrectly exposed browser onboarding. Offers now require the adapter's web
+support or declared Web source in addition to a domain. LongCat's real Web source
+remains offered even though it uses the default `supports_web` implementation.
+Direct browser import rejects unsupported providers before discovery/extraction.
+The generated 70-provider matrix and readable rows are updated. Eight capability
+tests and 93 production-flow component tests passed; the initial failing transport
+assertion is retained in `.local/wave3-browser-transport-red.log`. These checks do
+not prove other declared web adapters work with a live account.
+
 Independent source review of `04776618` found that `save_provider_connection_key`
 reserved an operation without testing cancellation, and browser import checked
 cancellation before an unprotected storage write. Both now place the entire

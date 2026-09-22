@@ -103,6 +103,11 @@ pub fn import_browser_cookies(
 
     // Resolve the provider to get its cookie domain.
     let pid = parse_provider_arg(&provider_id)?;
+    if !quotalis_core::connection_capabilities::connection_capabilities(pid)
+        .supports(quotalis_core::connection_capabilities::ConnectionMethod::BrowserSession)
+    {
+        return Err("This provider does not support browser sessions".into());
+    }
     if let Some(fixture) = super::connection::active_fixture(pid) {
         return if matches!(fixture.scenario.as_str(), "cookieValid" | "connected") {
             Ok(Vec::new()) // simulation: no browser read, no credential store access
