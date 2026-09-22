@@ -285,7 +285,6 @@ const API_KEY_MULTI_ACCOUNT_PROVIDERS: &[ProviderId] = &[
     ProviderId::Groq,
     ProviderId::Fireworks,
     ProviderId::DeepInfra,
-    ProviderId::Mistral,
     ProviderId::Venice,
     ProviderId::NanoGPT,
     ProviderId::OpenAIApi,
@@ -294,6 +293,10 @@ const API_KEY_MULTI_ACCOUNT_PROVIDERS: &[ProviderId] = &[
     ProviderId::LiteLLM,
     ProviderId::LLMProxy,
 ];
+
+/// Providers whose browser-session cookie headers can be stored and monitored
+/// as separate accounts without treating those cookies as API keys.
+const COOKIE_HEADER_MULTI_ACCOUNT_PROVIDERS: &[ProviderId] = &[ProviderId::Mistral];
 
 /// Providers with inherited multi-account support (Codex token accounts).
 const INHERITED_MULTI_ACCOUNT_PROVIDERS: &[ProviderId] = &[ProviderId::Codex];
@@ -322,6 +325,12 @@ pub fn account_capabilities(provider: ProviderId) -> AccountCapabilities {
 
     if API_KEY_MULTI_ACCOUNT_PROVIDERS.contains(&provider) {
         caps.supports_api_key = true;
+        caps.supports_multiple_stored_accounts = true;
+        caps.supports_concurrent_monitoring = true;
+        caps.supports_account_switching = true;
+        caps.supports_costs = true;
+    } else if COOKIE_HEADER_MULTI_ACCOUNT_PROVIDERS.contains(&provider) {
+        caps.supports_browser_session = true;
         caps.supports_multiple_stored_accounts = true;
         caps.supports_concurrent_monitoring = true;
         caps.supports_account_switching = true;
@@ -562,6 +571,14 @@ mod tests {
         assert!(openrouter.supports_api_key);
         assert!(openrouter.supports_multiple_stored_accounts);
         assert!(!is_single_session(ProviderId::OpenRouter));
+
+        let mistral = account_capabilities(ProviderId::Mistral);
+        assert!(!mistral.supports_api_key);
+        assert!(mistral.supports_browser_session);
+        assert!(mistral.supports_multiple_stored_accounts);
+        assert!(mistral.supports_concurrent_monitoring);
+        assert!(mistral.supports_account_switching);
+        assert!(mistral.supports_costs);
 
         let codex = account_capabilities(ProviderId::Codex);
         assert!(codex.supports_multiple_stored_accounts);

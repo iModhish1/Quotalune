@@ -1065,18 +1065,11 @@
       "localSessionReader": false,
       "methods": [
         {
-          "browserDomain": null,
-          "envVar": "ALIBABA_CODING_PLAN_API_KEY",
-          "helpUrl": "https://modelstudio.console.alibabacloud.com/ap-southeast-1/?tab=coding-plan#/efm/detail",
-          "method": "apiKey",
-          "rank": "recommended"
-        },
-        {
           "browserDomain": "modelstudio.console.alibabacloud.com",
           "envVar": null,
           "helpUrl": "https://modelstudio.console.alibabacloud.com",
           "method": "browserSession",
-          "rank": "alternative"
+          "rank": "recommended"
         }
       ],
       "planSource": "Provider-reported plan when present; never inferred from a credential",
@@ -1318,18 +1311,11 @@
       "localSessionReader": false,
       "methods": [
         {
-          "browserDomain": null,
-          "envVar": null,
-          "helpUrl": "https://admin.mistral.ai/organization/usage",
-          "method": "apiKey",
-          "rank": "recommended"
-        },
-        {
           "browserDomain": "admin.mistral.ai",
           "envVar": null,
           "helpUrl": "https://admin.mistral.ai/organization/usage",
           "method": "browserSession",
-          "rank": "alternative"
+          "rank": "recommended"
         }
       ],
       "planSource": "Provider-reported plan when present; never inferred from a credential",

@@ -715,6 +715,23 @@ fn test_t3_chat_is_cookie_configured_not_api_key_configured() {
 }
 
 #[test]
+fn test_alibaba_and_mistral_are_cookie_configured_not_api_key_configured() {
+    let providers = get_api_key_providers();
+    for provider in [ProviderId::Alibaba, ProviderId::Mistral] {
+        assert!(
+            !providers.iter().any(|candidate| candidate.id == provider),
+            "{provider} stores browser cookies, not API keys"
+        );
+        assert!(matches!(
+            crate::core::TokenAccountSupport::for_provider(provider)
+                .expect("cookie-backed providers retain stored token support")
+                .injection,
+            crate::core::TokenInjection::CookieHeader
+        ));
+    }
+}
+
+#[test]
 fn test_refresh_interval_options() {
     let options = get_refresh_interval_options();
     assert!(!options.is_empty());

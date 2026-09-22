@@ -155,7 +155,7 @@ Each provider has different authentication methods:
 | Ollama | Browser cookies |
 | OpenRouter | API key |
 | JetBrains AI | Local IDE config |
-| Alibaba | API key / browser cookies |
+| Alibaba | Browser cookies |
 | NanoGPT | API key |
 | Infini | API key |
 | Perplexity | Browser cookies |

@@ -640,7 +640,12 @@ mod tests {
                     ConnectionMethod::CliSession => assert!(c.cli.is_some()),
                     ConnectionMethod::ApiKey => assert!(
                         get_api_key_providers().iter().any(|p| p.id == c.provider)
-                            || TokenAccountSupport::for_provider(c.provider).is_some()
+                            || TokenAccountSupport::for_provider(c.provider).is_some_and(
+                                |support| matches!(
+                                    support.injection,
+                                    TokenInjection::Environment { .. }
+                                )
+                            )
                             || account_capabilities(c.provider).supports_api_key
                     ),
                     ConnectionMethod::LocalScanner => {
@@ -681,6 +686,29 @@ mod tests {
             connection_capabilities(ProviderId::KimiK2).status,
             SupportStatus::Deprecated
         );
+    }
+
+    #[test]
+    fn alibaba_and_mistral_offer_only_recommended_browser_sessions() {
+        for (provider, domain) in [
+            (ProviderId::Alibaba, "modelstudio.console.alibabacloud.com"),
+            (ProviderId::Mistral, "admin.mistral.ai"),
+        ] {
+            let capability = connection_capabilities(provider);
+            assert_eq!(capability.methods.len(), 1, "{provider}");
+            assert_eq!(
+                capability.recommended(),
+                Some(ConnectionMethod::BrowserSession),
+                "{provider}"
+            );
+            assert_eq!(capability.methods[0].browser_domain, Some(domain));
+            assert!(matches!(
+                TokenAccountSupport::for_provider(provider)
+                    .expect("cookie-backed providers retain stored token support")
+                    .injection,
+                TokenInjection::CookieHeader
+            ));
+        }
     }
 
     #[test]

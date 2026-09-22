@@ -143,17 +143,6 @@ pub struct ProviderConfigInfo {
 pub fn get_api_key_providers() -> Vec<ProviderConfigInfo> {
     vec![
         ProviderConfigInfo {
-            id: ProviderId::Alibaba,
-            name: "Alibaba Coding Plan",
-            requires_api_key: true,
-            api_key_env_var: Some("ALIBABA_CODING_PLAN_API_KEY"),
-            api_key_help: Some("Get your Coding Plan API key from Alibaba Model Studio / Bailian"),
-            config_file_path: Some("~/.codexbar/config.json"),
-            dashboard_url: Some(
-                "https://modelstudio.console.alibabacloud.com/ap-southeast-1/?tab=coding-plan#/efm/detail",
-            ),
-        },
-        ProviderConfigInfo {
             id: ProviderId::Amp,
             name: "Amp (Sourcegraph)",
             requires_api_key: true,
