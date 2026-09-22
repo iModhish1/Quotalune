@@ -124,6 +124,24 @@ describe("CLI requirements", () => {
 });
 
 describe("API key and verification", () => {
+  it.each([
+    ["spend", "MonetarySpendHeading"],
+    ["balance", "DashboardBalance"],
+    ["credits", "DashboardCredits"],
+    [null, null],
+  ] as const)("shows only the verified monetary kind: %s", async (quantity, label) => {
+    ipc.verifyProviderConnection.mockResolvedValue({ ...connected("openrouter", "apiKey"), monetaryQuantity: quantity });
+    render(<ProviderConnectFlow capabilities={row("openrouter")} onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "ConnectNext" }));
+    fireEvent.click(await screen.findByRole("button", { name: "ConnectVerifyAction" }));
+    await screen.findByText("ConnectStateConnected");
+    for (const key of ["MonetarySpendHeading", "DashboardBalance", "DashboardCredits"]) {
+      expect(screen.queryByText(key) !== null).toBe(key === label);
+    }
+    expect(screen.queryByText("ConnectSuccessMonetary") !== null).toBe(quantity !== null);
+    expect(screen.getByRole("dialog").textContent).not.toMatch(/\$|USD|0\.00/);
+  });
+
   it("masks the key, reveals on demand, saves through protected storage and never echoes it", async () => {
     ipc.verifyProviderConnection.mockResolvedValue(connected("openrouter", "apiKey"));
     const onConnected = vi.fn();

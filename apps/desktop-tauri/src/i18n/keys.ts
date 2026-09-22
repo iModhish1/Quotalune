@@ -1914,6 +1914,7 @@ export const ALL_LOCALE_KEYS = [
   "ConnectSuccessResetsKnown",
   "ConnectSuccessResetsUnknown",
   "ConnectSuccessVerifiedAt",
+  "ConnectSuccessMonetary",
   "ConnectBack",
   "ConnectNext",
   "ConnectDone",

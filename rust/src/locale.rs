@@ -2337,6 +2337,7 @@ locale_keys! {
     ConnectSuccessResetsKnown,
     ConnectSuccessResetsUnknown,
     ConnectSuccessVerifiedAt,
+    ConnectSuccessMonetary,
     ConnectBack,
     ConnectNext,
     ConnectDone,

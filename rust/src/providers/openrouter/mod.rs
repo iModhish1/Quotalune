@@ -390,8 +390,7 @@ impl OpenRouterProvider {
             return;
         };
 
-        let mut window = RateWindow::new(0.0);
-        window.reset_description = Some(format!("${spend:.2} {period}"));
+        let window = RateWindow::informational(format!("${spend:.2} {period}"));
         *usage = usage.clone().with_extra_rate_window(id, label, window);
     }
 }
@@ -499,6 +498,35 @@ mod tests {
         let mut usage = UsageSnapshot::new(RateWindow::new(0.0));
         OpenRouterProvider::add_key_quota(&mut usage, &key_data);
         usage.secondary.map(|window| window.used_percent)
+    }
+
+    #[test]
+    fn spend_only_rows_never_assert_a_zero_percent_quota() {
+        let mut usage = UsageSnapshot::new(RateWindow::informational("Credits"));
+        for (value, id) in [(Some(0.0), "daily"), (Some(12.0), "weekly")] {
+            OpenRouterProvider::add_spend_window(&mut usage, value, id, id, id);
+        }
+        assert_eq!(usage.extra_rate_windows.len(), 2);
+        assert!(
+            usage
+                .extra_rate_windows
+                .iter()
+                .all(|row| row.window.is_informational)
+        );
+        assert_eq!(
+            usage.extra_rate_windows[0]
+                .window
+                .reset_description
+                .as_deref(),
+            Some("$0.00 daily")
+        );
+        assert_eq!(
+            usage.extra_rate_windows[1]
+                .window
+                .reset_description
+                .as_deref(),
+            Some("$12.00 weekly")
+        );
     }
 
     #[test]

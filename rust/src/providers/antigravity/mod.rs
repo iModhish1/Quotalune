@@ -456,7 +456,10 @@ impl AntigravityProvider {
             .and_then(|config| config.quota_info.as_ref())
             .map(rate_window_from_quota);
 
-        let primary = primary.unwrap_or_else(|| RateWindow::new(0.0));
+        let primary = primary.unwrap_or_else(|| RateWindow {
+            is_informational: true,
+            ..RateWindow::new(0.0)
+        });
         let mut snapshot = UsageSnapshot::new(primary);
 
         if let Some(sec) = secondary {
@@ -819,7 +822,12 @@ fn model_window_id(config: &ModelConfig) -> String {
 }
 
 fn rate_window_from_quota(quota: &QuotaInfo) -> RateWindow {
-    let remaining = quota.remaining_fraction.unwrap_or(1.0);
+    let Some(remaining) = quota.remaining_fraction else {
+        // Preserve the row and any reset description without asserting 0% used.
+        let mut window = RateWindow::informational("Usage unavailable");
+        window.reset_description = quota.reset_time.clone();
+        return window;
+    };
     let used_percent = (1.0 - remaining) * 100.0;
     RateWindow::with_details(used_percent, None, None, quota.reset_time.clone())
 }

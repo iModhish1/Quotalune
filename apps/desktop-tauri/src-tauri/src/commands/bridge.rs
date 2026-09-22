@@ -359,10 +359,17 @@ impl ProviderUsageSnapshot {
             extra_rate_windows: usage
                 .extra_rate_windows
                 .iter()
-                .map(|extra| NamedRateWindowSnapshot {
-                    id: extra.id.clone(),
-                    title: extra.title.clone(),
-                    window: RateWindowSnapshot::from_rate_window(&extra.window),
+                .map(|extra| {
+                    let mut window = RateWindowSnapshot::from_rate_window(&extra.window);
+                    // The shared presentation contract uses informational rows
+                    // for values without an observed quota percentage. Keep the
+                    // row visible, but do not turn unknown usage into known zero.
+                    window.is_informational |= !extra.usage_known;
+                    NamedRateWindowSnapshot {
+                        id: extra.id.clone(),
+                        title: extra.title.clone(),
+                        window,
+                    }
                 })
                 .collect(),
             cost: result.cost.as_ref().map(|c| CostSnapshotBridge {

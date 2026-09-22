@@ -290,18 +290,28 @@ pub enum SupportStatus {
     Unsupported,
 }
 
-/// What a successful connection can report. `usage` is structural for every
-/// adapter; the rest are declared per provider by existing registries.
+/// Evidence needed before a reporting feature can be claimed. A shared
+/// snapshot field is not proof that a particular adapter/account populates it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ReportingEvidence {
+    InspectProviderResponse,
+    ClassifyProviderResponse,
+}
+
+/// Structural reporting contract, separate from observed verification data.
+/// Never import optimistic legacy account flags here: they assume resets for
+/// every provider and conflate credits with monetary costs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReportingCapabilities {
-    pub usage: bool,
-    pub reset_windows: bool,
-    pub costs: bool,
+    pub quota_windows: ReportingEvidence,
+    pub reset_times: ReportingEvidence,
+    pub monetary_observations: ReportingEvidence,
     /// Local token history (Codex sessions, Claude transcripts) exists for this provider.
     pub local_tokens: bool,
-    /// Plan names arrive as free text when the provider sends one; never guaranteed.
-    pub plan_when_provided: bool,
+    /// Plan names require response evidence; never inferred from credentials.
+    pub plan_name: ReportingEvidence,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -479,11 +489,11 @@ pub fn connection_capabilities(provider: ProviderId) -> ProviderConnectionCapabi
         cli: cli_dependency(provider),
         verification,
         reporting: ReportingCapabilities {
-            usage: account.supports_usage,
-            reset_windows: account.supports_reset_windows,
-            costs: account.supports_costs || metadata.supports_credits,
+            quota_windows: ReportingEvidence::InspectProviderResponse,
+            reset_times: ReportingEvidence::InspectProviderResponse,
+            monetary_observations: ReportingEvidence::ClassifyProviderResponse,
             local_tokens: token_source(provider.cli_name()).is_some(),
-            plan_when_provided: true,
+            plan_name: ReportingEvidence::InspectProviderResponse,
         },
         dashboard_url: metadata.dashboard_url,
         status_page_url: metadata.status_page_url,
@@ -526,7 +536,7 @@ pub fn capability_matrix_json() -> serde_json::Value {
                 "adapterSource": {"factory": "quotalis_core::core::instantiate_provider", "id": c.provider.cli_name()},
                 "supportedQuotaWindows": null,
                 "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
-                "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+                "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
                 "tokenSource": token_source(c.provider.cli_name()).map(|_| "device-local scanner"),
                 "planSource": "Provider-reported plan when present; never inferred from a credential",
                 "liveVerification": "NOT VERIFIED",
@@ -551,7 +561,7 @@ pub fn capability_matrix_json() -> serde_json::Value {
         })
         .collect();
     serde_json::json!({
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "source": "quotalis_core::connection_capabilities::capability_matrix_json (derived from the live registry; regenerate with QUOTALIS_WRITE_CAPABILITY_MATRIX=1 cargo test -p quotalis_core capability_matrix_json_is_current)",
         "providerCount": rows.len(),
         "providers": rows,
@@ -727,11 +737,29 @@ mod tests {
         let gemini = connection_capabilities(ProviderId::Gemini);
         assert!(codex.reporting.local_tokens && claude.reporting.local_tokens);
         assert!(!gemini.reporting.local_tokens);
-        assert!(
-            all_connection_capabilities()
-                .iter()
-                .all(|c| c.reporting.usage)
-        );
+        for provider in all_connection_capabilities() {
+            assert_eq!(
+                provider.reporting.quota_windows,
+                ReportingEvidence::InspectProviderResponse
+            );
+            assert_eq!(
+                provider.reporting.reset_times,
+                ReportingEvidence::InspectProviderResponse
+            );
+            assert_eq!(
+                provider.reporting.monetary_observations,
+                ReportingEvidence::ClassifyProviderResponse
+            );
+            let json = serde_json::to_value(provider.reporting).unwrap();
+            assert!(
+                json.get("costs").is_none(),
+                "credits never imply spend support"
+            );
+            assert!(
+                json.get("resetWindows").is_none(),
+                "no blanket reset promise"
+            );
+        }
     }
 
     #[test]

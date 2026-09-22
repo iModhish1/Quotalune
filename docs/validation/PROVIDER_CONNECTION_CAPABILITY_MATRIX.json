@@ -51,13 +51,13 @@
       "provider": "codex",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": true,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.openai.com",
       "supportedQuotaWindows": null,
@@ -114,13 +114,13 @@
       "provider": "claude",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": true,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.claude.com/",
       "supportedQuotaWindows": null,
@@ -162,13 +162,13 @@
       "provider": "cursor",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -210,13 +210,13 @@
       "provider": "factory",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.factory.ai",
       "supportedQuotaWindows": null,
@@ -273,13 +273,13 @@
       "provider": "gemini",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.cloud.google.com",
       "supportedQuotaWindows": null,
@@ -321,13 +321,13 @@
       "provider": "antigravity",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -391,13 +391,13 @@
       "provider": "copilot",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://www.githubstatus.com/",
       "supportedQuotaWindows": null,
@@ -432,13 +432,13 @@
       "provider": "zai",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -473,13 +473,13 @@
       "provider": "minimax",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -535,13 +535,13 @@
       "provider": "kiro",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://health.aws.amazon.com",
       "supportedQuotaWindows": null,
@@ -591,13 +591,13 @@
       "provider": "vertexai",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.cloud.google.com",
       "supportedQuotaWindows": null,
@@ -632,13 +632,13 @@
       "provider": "augment",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.augmentcode.com",
       "supportedQuotaWindows": null,
@@ -673,13 +673,13 @@
       "provider": "opencode",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -721,13 +721,13 @@
       "provider": "kimi",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -762,13 +762,13 @@
       "provider": "kimik2",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "deprecated",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -810,13 +810,13 @@
       "provider": "amp",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://sourcegraphstatus.com",
       "supportedQuotaWindows": null,
@@ -851,13 +851,13 @@
       "provider": "warp",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -899,13 +899,13 @@
       "provider": "ollama",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -940,13 +940,13 @@
       "provider": "azureopenai",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.azure.com",
       "supportedQuotaWindows": null,
@@ -981,13 +981,13 @@
       "provider": "t3chat",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -1022,13 +1022,13 @@
       "provider": "openrouter",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.openrouter.ai",
       "supportedQuotaWindows": null,
@@ -1063,13 +1063,13 @@
       "provider": "jetbrains",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "autoDetected",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -1111,13 +1111,13 @@
       "provider": "alibaba",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -1152,13 +1152,13 @@
       "provider": "alibabatokenplan",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.aliyun.com",
       "supportedQuotaWindows": null,
@@ -1193,13 +1193,13 @@
       "provider": "nanogpt",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -1234,13 +1234,13 @@
       "provider": "infini",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -1275,13 +1275,13 @@
       "provider": "perplexity",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -1316,13 +1316,13 @@
       "provider": "abacus",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -1364,13 +1364,13 @@
       "provider": "mistral",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.mistral.ai",
       "supportedQuotaWindows": null,
@@ -1405,13 +1405,13 @@
       "provider": "opencodego",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -1446,13 +1446,13 @@
       "provider": "kilo",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -1487,13 +1487,13 @@
       "provider": "bedrock",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://health.aws.amazon.com/health/status",
       "supportedQuotaWindows": null,
@@ -1528,13 +1528,13 @@
       "provider": "codebuff",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -1569,13 +1569,13 @@
       "provider": "deepseek",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.deepseek.com",
       "supportedQuotaWindows": null,
@@ -1610,13 +1610,13 @@
       "provider": "deepinfra",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.deepinfra.com",
       "supportedQuotaWindows": null,
@@ -1651,13 +1651,13 @@
       "provider": "aiand",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -1692,13 +1692,13 @@
       "provider": "windsurf",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "autoDetected",
       "statusPageUrl": "https://status.windsurf.com",
       "supportedQuotaWindows": null,
@@ -1733,13 +1733,13 @@
       "provider": "manus",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -1774,13 +1774,13 @@
       "provider": "mimo",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -1829,13 +1829,13 @@
       "provider": "doubao",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -1870,13 +1870,13 @@
       "provider": "commandcode",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -1911,13 +1911,13 @@
       "provider": "crof",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -1952,13 +1952,13 @@
       "provider": "stepfun",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -1993,13 +1993,13 @@
       "provider": "venice",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -2034,13 +2034,13 @@
       "provider": "openaiapi",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.openai.com",
       "supportedQuotaWindows": null,
@@ -2103,13 +2103,13 @@
       "provider": "grok",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.x.ai",
       "supportedQuotaWindows": null,
@@ -2144,13 +2144,13 @@
       "provider": "elevenlabs",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.elevenlabs.io",
       "supportedQuotaWindows": null,
@@ -2185,13 +2185,13 @@
       "provider": "deepgram",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.deepgram.com",
       "supportedQuotaWindows": null,
@@ -2226,13 +2226,13 @@
       "provider": "groq",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.groq.com",
       "supportedQuotaWindows": null,
@@ -2267,13 +2267,13 @@
       "provider": "llmproxy",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -2308,13 +2308,13 @@
       "provider": "chutes",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -2349,13 +2349,13 @@
       "provider": "litellm",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -2390,13 +2390,13 @@
       "provider": "poe",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -2431,13 +2431,13 @@
       "provider": "devin",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -2472,13 +2472,13 @@
       "provider": "zed",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -2513,13 +2513,13 @@
       "provider": "crossmodel",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "deprecated",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -2554,13 +2554,13 @@
       "provider": "qoder",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -2595,13 +2595,13 @@
       "provider": "codebuddy",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -2636,13 +2636,13 @@
       "provider": "sakana",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -2677,13 +2677,13 @@
       "provider": "sub2api",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -2718,13 +2718,13 @@
       "provider": "wayfinder",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -2759,13 +2759,13 @@
       "provider": "zenmux",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -2800,13 +2800,13 @@
       "provider": "clinepass",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -2841,13 +2841,13 @@
       "provider": "longcat",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -2882,13 +2882,13 @@
       "provider": "neuralwatt",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -2923,13 +2923,13 @@
       "provider": "zoommate",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://www.zoomstatus.com/",
       "supportedQuotaWindows": null,
@@ -2964,13 +2964,13 @@
       "provider": "qwen-cloud",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.alibabacloud.com",
       "supportedQuotaWindows": null,
@@ -3005,13 +3005,13 @@
       "provider": "notion",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": false,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.notion.so",
       "supportedQuotaWindows": null,
@@ -3046,13 +3046,13 @@
       "provider": "xai",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": "https://status.x.ai",
       "supportedQuotaWindows": null,
@@ -3087,13 +3087,13 @@
       "provider": "fireworks",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
       "reporting": {
-        "costs": true,
         "localTokens": false,
-        "planWhenProvided": true,
-        "resetWindows": true,
-        "usage": true
+        "monetaryObservations": "classifyProviderResponse",
+        "planName": "inspectProviderResponse",
+        "quotaWindows": "inspectProviderResponse",
+        "resetTimes": "inspectProviderResponse"
       },
-      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
       "status": "supported",
       "statusPageUrl": null,
       "supportedQuotaWindows": null,
@@ -3101,6 +3101,6 @@
       "verification": "usageFetch"
     }
   ],
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "source": "quotalis_core::connection_capabilities::capability_matrix_json (derived from the live registry; regenerate with QUOTALIS_WRITE_CAPABILITY_MATRIX=1 cargo test -p quotalis_core capability_matrix_json_is_current)"
 }

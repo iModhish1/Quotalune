@@ -9,7 +9,7 @@ export type InstallPolicy = { kind: "winget"; id: string } | { kind: "npm"; pack
 export interface CliDependencySummary { managedLogin?: boolean; tool: string; executables: string[]; install: InstallPolicy; installRequiresAdmin: boolean; docsUrl: string; sessionDetection: "authFile" | "statusCommand" | "usageFetch"; minVersion: string | null }
 export type VerificationStrategy = "usageFetch" | "localDetection" | "gatewayProbe";
 export type SupportStatus = "supported" | "deprecated" | "autoDetected" | "unsupported";
-export interface ReportingCapabilities { usage: boolean; resetWindows: boolean; costs: boolean; localTokens: boolean; planWhenProvided: boolean }
+export interface ReportingCapabilities { quotaWindows: "inspectProviderResponse"; resetTimes: "inspectProviderResponse"; monetaryObservations: "classifyProviderResponse"; localTokens: boolean; planName: "inspectProviderResponse" }
 export interface ProviderConnectionCapabilities {
   provider: string; displayName: string; status: SupportStatus; methods: MethodOffer[]; cli: CliDependencySummary | null;
   verification: VerificationStrategy; reporting: ReportingCapabilities; dashboardUrl: string | null; statusPageUrl: string | null;
@@ -24,7 +24,7 @@ export interface CliInstallResult { outcome: InstallOutcome; detection: CliDetec
 
 export type ConnectionState = "idle" | "detecting" | "requirementsMissing" | "readyToAuthenticate" | "authenticating" | "verifying" | "connected" | "refreshing" | "actionRequired" | "rateLimited" | "offline" | "timedOut" | "error" | "disconnecting";
 export type ConnectionIssue = "cliMissing" | "cliTooOld" | "cliBroken" | "cliUnauthenticated" | "browserSessionMissing" | "sessionExpired" | "credentialsRejected" | "permissionDenied" | "rateLimited" | "offline" | "timedOut" | "sourceUnreadable" | "unsupported" | "error";
-export interface ConnectionVerification { providerId: string; simulated?: boolean; state: ConnectionState; issue: ConnectionIssue | null; method: ConnectionMethod | null; verifiedAt: string | null; plan: string | null; windowCount: number; resetsKnown: boolean; durationMs: number | null }
+export interface ConnectionVerification { providerId: string; simulated?: boolean; state: ConnectionState; issue: ConnectionIssue | null; method: ConnectionMethod | null; verifiedAt: string | null; plan: string | null; windowCount: number; resetsKnown: boolean; monetaryQuantity?: "spend" | "balance" | "credits" | null; durationMs: number | null }
 export interface ProviderConnectionStatus { providerId: string; enabled: boolean; state: ConnectionState; issue: ConnectionIssue | null; method: ConnectionMethod | null; lastVerified: string | null; stale: boolean }
 export interface ProviderConnectionQaFixture { providerId: string; scenario: ConnectionQaScenario }
 export const CONNECTION_QA_SCENARIOS = ["disconnected", "cliMissing", "cliOld", "cliReady", "cliUnauthenticated", "cookieMissing", "cookieValid", "cookieExpired", "apiKeyInvalid", "apiKeyValid", "oauthPending", "oauthSuccess", "oauthStateMismatch", "offline", "rateLimited", "timeout", "permissionDenied", "connected", "stale"] as const;

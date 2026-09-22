@@ -137,6 +137,11 @@ fn antigravity_extra_windows_preserve_usage_known() {
     assert!(gemini.usage_known);
     assert!(!claude.usage_known);
     assert_eq!(claude.window.used_percent, 0.0);
+    assert!(
+        claude.window.is_informational,
+        "unknown usage must not become a quota percentage"
+    );
+    assert!(!gemini.window.is_informational);
 }
 
 #[test]
@@ -160,6 +165,26 @@ fn test_parse_user_status_standard() {
             .iter()
             .any(|window| window.title == "Gemini 2.5 Flash")
     );
+}
+
+#[test]
+fn absent_quota_is_not_reported_as_zero_but_an_observed_zero_is_preserved() {
+    for json in [
+        serde_json::json!({"userStatus": {}}),
+        serde_json::json!({"userStatus": {"cascadeModelConfigData": {"clientModelConfigs": []}}}),
+        serde_json::json!({"userStatus": {"cascadeModelConfigData": {"clientModelConfigs": [{"label":"Claude", "quotaInfo":{"remainingFraction":null}}]}}}),
+    ] {
+        let response = serde_json::from_value(json).unwrap();
+        let snapshot = AntigravityProvider::new()
+            .parse_user_status(response)
+            .unwrap();
+        assert!(snapshot.primary.is_informational);
+    }
+    let snapshot = AntigravityProvider::new()
+        .parse_user_status(make_response(vec![("Claude", 1.0)]))
+        .unwrap();
+    assert!(!snapshot.primary.is_informational);
+    assert_eq!(snapshot.primary.used_percent, 0.0);
 }
 
 #[test]

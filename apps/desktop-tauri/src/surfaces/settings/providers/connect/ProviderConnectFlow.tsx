@@ -355,6 +355,7 @@ export function ProviderConnectFlow({ capabilities, onClose, onConnected }: Prop
               {result.plan && <><dt>{t("ConnectSuccessPlan")}</dt><dd><bdi>{result.plan}</bdi></dd></>}
               <dt>{t("ConnectSuccessWindows")}</dt><dd>{result.windowCount}</dd>
               <dt>{t("ConnectSuccessResets")}</dt><dd>{t(result.resetsKnown ? "ConnectSuccessResetsKnown" : "ConnectSuccessResetsUnknown")}</dd>
+              {result.monetaryQuantity && <><dt>{t("ConnectSuccessMonetary")}</dt><dd>{t(({ spend: "MonetarySpendHeading", balance: "DashboardBalance", credits: "DashboardCredits" } as const)[result.monetaryQuantity])}</dd></>}
               {result.verifiedAt && <><dt>{t("ConnectSuccessVerifiedAt")}</dt><dd dir="ltr">{result.verifiedAt}</dd></>}
             </dl>
           </div>

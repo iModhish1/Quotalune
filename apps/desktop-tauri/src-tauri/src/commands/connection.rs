@@ -12,6 +12,7 @@ use quotalis_core::connection_capabilities::{
     install_plan,
 };
 use quotalis_core::connection_state::{ConnectionIssue, ConnectionState, classify_fetch_outcome};
+use quotalis_core::dashboard_data::{MonetaryQuantityKind, classify_monetary_observation};
 #[cfg(test)]
 use quotalis_core::{connection_state::TIMEOUT_ERROR, core::ProviderStateKind};
 use serde::{Deserialize, Serialize};
@@ -403,6 +404,8 @@ pub struct ConnectionVerification {
     pub plan: Option<String>,
     pub window_count: usize,
     pub resets_known: bool,
+    /// Classified response evidence only; no amount, price, or inferred spend.
+    pub monetary_quantity: Option<&'static str>,
     pub duration_ms: Option<u128>,
 }
 
@@ -417,6 +420,7 @@ fn missing_browser_session(id: ProviderId) -> ConnectionVerification {
         plan: None,
         window_count: 0,
         resets_known: false,
+        monetary_quantity: None,
         duration_ms: None,
     }
 }
@@ -459,22 +463,33 @@ pub(crate) fn verification_from_snapshot(
     let method = method_from_source_label(id, &snapshot.source_label);
     let (state, issue) =
         classify_fetch_outcome(snapshot.error_state, snapshot.error.as_deref(), method);
-    let windows = usize::from(!snapshot.primary.is_informational)
-        + snapshot
-            .secondary
-            .iter()
-            .filter(|w| !w.is_informational)
-            .count()
-        + snapshot
-            .tertiary
-            .iter()
-            .filter(|w| !w.is_informational)
-            .count()
-        + snapshot
-            .extra_rate_windows
-            .iter()
-            .filter(|w| !w.window.is_informational)
-            .count();
+    let connected = state == ConnectionState::Connected;
+    let windows: Vec<_> = std::iter::once(&snapshot.primary)
+        .chain(snapshot.secondary.iter())
+        .chain(snapshot.model_specific.iter())
+        .chain(snapshot.tertiary.iter())
+        .chain(snapshot.extra_rate_windows.iter().map(|row| &row.window))
+        .filter(|window| {
+            connected
+                && !window.is_informational
+                && window.used_percent.is_finite()
+                && (0.0..=100.0).contains(&window.used_percent)
+        })
+        .collect();
+    let resets_known = windows.iter().any(|window| {
+        window
+            .resets_at
+            .as_deref()
+            .is_some_and(|timestamp| chrono::DateTime::parse_from_rfc3339(timestamp).is_ok())
+    });
+    let monetary_quantity = snapshot
+        .cost
+        .as_ref()
+        .filter(|cost| connected && cost.used.is_finite())
+        .and_then(|cost| {
+            let (quantity, _) = classify_monetary_observation(id.cli_name(), &cost.period);
+            (quantity != MonetaryQuantityKind::Unknown).then(|| quantity.as_str())
+        });
     ConnectionVerification {
         provider_id: id.cli_name().to_string(),
         simulated: false,
@@ -486,8 +501,9 @@ pub(crate) fn verification_from_snapshot(
             .plan_name
             .clone()
             .filter(|_| state == ConnectionState::Connected),
-        window_count: windows,
-        resets_known: snapshot.primary.resets_at.is_some(),
+        window_count: windows.len(),
+        resets_known,
+        monetary_quantity,
         duration_ms: snapshot.fetch_duration_ms,
     }
 }
@@ -533,6 +549,7 @@ fn fixture_verification(id: ProviderId, scenario: &str) -> ConnectionVerificatio
         plan: (state == S::Connected).then(|| "QA Fixture Plan".to_string()),
         window_count: usize::from(state == S::Connected) * 2,
         resets_known: state == S::Connected,
+        monetary_quantity: None,
         duration_ms: Some(12),
     }
 }
@@ -639,6 +656,7 @@ pub async fn verify_provider_connection(
                 plan: None,
                 window_count: 0,
                 resets_known: false,
+                monetary_quantity: None,
                 duration_ms: None,
             });
         }
@@ -1066,6 +1084,119 @@ mod tests {
         let v = verification_from_snapshot(ProviderId::OpenRouter, &snap);
         assert_eq!(v.issue, Some(ConnectionIssue::CredentialsRejected));
         assert!(v.plan.is_none() && v.verified_at.is_none());
+        assert_eq!(v.window_count, 0);
+        assert!(!v.resets_known);
+        assert!(v.monetary_quantity.is_none());
+    }
+
+    #[test]
+    fn verification_checks_all_quota_rows_and_valid_reset_timestamps() {
+        let mut snap = snapshot(serde_json::json!({
+            "providerId": "claude", "sourceLabel": "OAuth", "errorState": "ready", "updatedAt": "2026-09-22T00:00:00Z",
+            "primary": {"usedPercent": 0, "isInformational": true, "resetsAt": "2026-09-23T00:00:00Z"},
+            "secondary": {"usedPercent": 50, "resetsAt": "invalid"},
+            "modelSpecific": {"usedPercent": 30},
+            "tertiary": {"usedPercent": 20},
+            "extraRateWindows": [{"id":"additional", "title":"Additional", "window":{"usedPercent":10,"resetsAt":"2026-09-24T00:00:00Z"}}]
+        }));
+        let verified = verification_from_snapshot(ProviderId::Claude, &snap);
+        assert_eq!(
+            verified.window_count, 4,
+            "model-specific quota must not disappear"
+        );
+        assert!(
+            verified.resets_known,
+            "an extra-row reset is still a reported reset"
+        );
+        snap.extra_rate_windows.clear();
+        assert!(
+            !verification_from_snapshot(ProviderId::Claude, &snap).resets_known,
+            "informational/invalid timestamps are not quota resets"
+        );
+        snap.secondary.as_mut().unwrap().used_percent = f64::NAN;
+        snap.tertiary.as_mut().unwrap().used_percent = 101.0;
+        assert_eq!(
+            verification_from_snapshot(ProviderId::Claude, &snap).window_count,
+            1
+        );
+    }
+
+    #[test]
+    fn verified_monetary_kind_comes_from_the_shared_observation_classifier() {
+        for (id, source, period, expected) in [
+            (ProviderId::Claude, "OAuth", "Monthly", Some("spend")),
+            (ProviderId::Codex, "OAuth", "Credits", Some("credits")),
+            (
+                ProviderId::Codex,
+                "OAuth",
+                "Monthly credits",
+                Some("credits"),
+            ),
+            (ProviderId::Codex, "OAuth", "unrecognized", None),
+            (ProviderId::Devin, "api", "Balance", Some("balance")),
+            (ProviderId::Gemini, "cli", "Anything", None),
+        ] {
+            let mut snap = snapshot(
+                serde_json::json!({"providerId":id.cli_name(), "sourceLabel":source, "errorState":"ready", "updatedAt":"2026-09-22T00:00:00Z", "primary":{"usedPercent":0}, "cost":{"used":0,"period":period}}),
+            );
+            assert_eq!(
+                verification_from_snapshot(id, &snap).monetary_quantity,
+                expected,
+                "{id:?}"
+            );
+            snap.cost.as_mut().unwrap().used = f64::NAN;
+            assert_eq!(
+                verification_from_snapshot(id, &snap).monetary_quantity,
+                None
+            );
+            snap.cost = None;
+            assert_eq!(
+                verification_from_snapshot(id, &snap).monetary_quantity,
+                None
+            );
+        }
+    }
+
+    #[test]
+    fn verification_bridge_excludes_spend_and_unknown_usage_but_keeps_known_zero() {
+        use quotalis_core::core::{
+            NamedRateWindow, RateWindow, UsageSnapshot, instantiate_provider,
+        };
+        let mut usage = UsageSnapshot::new(RateWindow::informational("Available credits"));
+        usage.extra_rate_windows = vec![
+            NamedRateWindow::new(
+                "spend",
+                "Daily spend",
+                RateWindow::informational("$12 today"),
+            ),
+            NamedRateWindow::new("unknown", "Unreported model", RateWindow::new(0.0))
+                .with_usage_known(false),
+            NamedRateWindow::new("zero", "Reported model", RateWindow::new(0.0)),
+        ];
+        let result = quotalis_core::core::ProviderFetchResult {
+            usage,
+            cost: None,
+            wayfinder_usage: None,
+            source_label: "local".into(),
+        };
+        let provider = instantiate_provider(ProviderId::Antigravity);
+        let snap = ProviderUsageSnapshot::from_fetch_result(
+            ProviderId::Antigravity,
+            provider.metadata(),
+            &result,
+            None,
+        );
+        assert_eq!(
+            snap.extra_rate_windows.len(),
+            3,
+            "retain informational and unknown rows for presentation"
+        );
+        assert!(snap.extra_rate_windows[1].window.is_informational);
+        assert!(!snap.extra_rate_windows[2].window.is_informational);
+        assert_eq!(
+            verification_from_snapshot(ProviderId::Antigravity, &snap).window_count,
+            1
+        );
     }
 
     #[tokio::test]
