@@ -7,7 +7,7 @@ The active objective is the owner's MASTER GOAL MODE EXECUTION and historical-wa
 | Phase | Required outcome | Current evidence and next action |
 |---|---|---|
 | A — reconciliation | Preserve inherited work and establish actual source state | Preserved Claude's dirty Wave 3 implementation from `d066226d9edb`; integrated in `881d675d`, `2b21f848`, `7533a844`. No reset or history rewrite. |
-| B — provider onboarding | Derived capability model, working supported onboarding, protected credentials, cancellation and isolated QA | All 70 provider method rows modeled; flow and security repairs tested. Remaining code closure includes simulated login transport, capability evidence precision and full per-provider scenario coverage. See `WAVE3_IMPLEMENTATION_REPORT.md`. Live-account acceptance is distinct from fixture coverage. |
+| B — provider onboarding | Derived capability model, working supported onboarding, protected credentials, cancellation and isolated QA | All 70 provider method rows modeled; simulated login transport, cancellation and evidence-propagation repairs tested. Remaining closure includes full provider-specific reporting/scenario coverage. See `WAVE3_IMPLEMENTATION_REPORT.md`. Live-account acceptance is distinct from fixture coverage. |
 | C — product completion | Backgrounds, navigation, studios, page consistency, responsive/accessibility/performance | OPEN. Audit current implementations against the product-completion sections of the master request; do not replace finished systems gratuitously or drop older owner requirements. |
 | D — native closure | Fresh Dev Windows evidence for Waves 1–4 | ENVIRONMENT BLOCKED historically; no new native PASS. Do not retry prohibited capture/CDP/UIA routes without actual new capability. Continue independent code work. |
 | E — security and OSS | Cross-wave privacy, dependencies, licenses and rollback | OPEN. Wave 3 focused checks are not a whole-product audit. |
@@ -21,7 +21,7 @@ The active objective is the owner's MASTER GOAL MODE EXECUTION and historical-wa
 
 At that checkpoint: frontend 1557 tests / 227 files, desktop 555 passed / one existing real-history test ignored, core 1858, CLI one, doctests zero. Clippy, formatting, TypeScript, production build, locale parity (1960 keys), secret scan and diff checks passed. Counts are observations, not acceptance targets.
 
-## Current packet
+## Previous packet — simulated sign-in
 
 Close the Dev sign-in simulation gap using the existing production login command and request-scoped phase events. Preserve the real transport branch; a fixture must select an in-memory transport before any credential/browser/process/network access. Simulated device codes must be unmistakable and non-actionable. Exercise pending cancellation, retry, timeout, failure and success without accessing owner accounts.
 
@@ -36,3 +36,13 @@ The packet passed focused and full tests after review repairs: frontend 1564/228
 - No weakening safety or test gates to finish Goal mode.
 - Any final native blocker prevents publication; it does not excuse unfinished independent code work.
 - Goal remains ACTIVE until full requirement-by-requirement completion or the strict external-blocker threshold is met.
+
+## Current packet — reporting evidence and unknown quota
+
+Static capability schema 2 no longer turns legacy optimistic flags into reset/cost promises. The connection result inspects the verified response, includes model-specific/secondary/extra rows, validates reset timestamps and uses the existing monetary classifier. A monetary type is shown only when classified; no amount or price is inferred.
+
+Independent review exposed preexisting OpenRouter spend-only rows and Antigravity unknown quota being counted as known percentages. The adapters and bridge now preserve their informational status; known zero remains valid. Antigravity empty responses no longer create a known-zero primary. Regression evidence includes a failing pre-repair OpenRouter test and actual snapshot-to-bridge-to-verification coverage. A full-suite cancellation-test startup failure was corrected by measuring cancellation latency separately from the two executable loads; production cancellation behavior was not changed.
+
+Latest automated checkpoint: frontend 1568 tests / 228 files; desktop 564 passed / one existing ignored; core 1860 passed; CLI one; doctests zero. TypeScript and production build passed. Full Rust suite includes locale and matrix-drift checks. Remaining final static checks and post-commit Dev provenance are recorded in WAVE3_IMPLEMENTATION_REPORT.md/local build logs after completion. These checks are not native or live-provider acceptance.
+
+`CROSS_WAVE_REGRESSION_MATRIX.md` now tracks all 22 mandatory appendix interactions plus the observed adapter/bridge defect. All broader interactions remain explicitly PARTIAL until their complete evidence exists. `ALL_WAVES_RECONCILIATION_MATRIX.md` is still open: the historical ledger has been partially read/indexed, not fully source-reconciled. Next: complete that reconciliation and the remaining provider-specific reporting/scenario audit, then product completion. No historical requirement was closed based on old PASS prose.
