@@ -8,8 +8,13 @@ pub mod analytics_sources;
 pub mod browser;
 pub mod claude_activity_index;
 pub mod cli;
+pub mod cli_dependencies;
 pub mod codex_accounts;
 pub mod codex_workspaces;
+pub mod connection_capabilities;
+#[cfg(test)]
+mod connection_security;
+pub mod connection_state;
 pub mod core;
 pub mod cost_scanner;
 pub mod dashboard_data;

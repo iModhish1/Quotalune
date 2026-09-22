@@ -34,6 +34,10 @@ pub enum ProviderStateKind {
     ExpiredSession,
     /// A local runtime backing this provider is not running.
     LocalRuntimeOffline,
+    /// The provider explicitly rejected the request as too frequent (HTTP 429).
+    RateLimited,
+    /// Credentials are valid but lack permission for the usage endpoint (HTTP 403).
+    PermissionDenied,
     /// Anything else: parse failures, network/timeout, unknown responses.
     Unknown,
 }
@@ -65,6 +69,16 @@ impl ProviderError {
             ProviderError::OAuth(_) => ProviderStateKind::NeedsAuthentication,
             ProviderError::AuthRequired | ProviderError::NoCookies => {
                 ProviderStateKind::NeedsAuthentication
+            }
+            ProviderError::Network(error)
+                if error.status() == Some(reqwest::StatusCode::TOO_MANY_REQUESTS) =>
+            {
+                ProviderStateKind::RateLimited
+            }
+            ProviderError::Network(error)
+                if error.status() == Some(reqwest::StatusCode::FORBIDDEN) =>
+            {
+                ProviderStateKind::PermissionDenied
             }
             ProviderError::Network(_)
             | ProviderError::Timeout

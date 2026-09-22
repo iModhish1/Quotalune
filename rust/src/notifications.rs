@@ -1199,7 +1199,10 @@ impl NotificationManager {
                 ProviderStateKind::NeedsAuthentication => "needsAuthentication",
                 ProviderStateKind::ExpiredSession => "expiredSession",
                 ProviderStateKind::LocalRuntimeOffline => "localRuntimeOffline",
-                ProviderStateKind::Unknown | ProviderStateKind::Ready => "unknown",
+                ProviderStateKind::PermissionDenied => "permissionDenied",
+                ProviderStateKind::RateLimited
+                | ProviderStateKind::Unknown
+                | ProviderStateKind::Ready => "unknown",
             }),
         );
         self.send_status_notification(provider, kind, settings);
@@ -1254,9 +1257,10 @@ impl NotificationManager {
             ProviderStateKind::NeedsAuthentication => LocaleKey::NotificationStatusAuthBody,
             ProviderStateKind::ExpiredSession => LocaleKey::NotificationStatusExpiredBody,
             ProviderStateKind::LocalRuntimeOffline => LocaleKey::NotificationStatusOfflineBody,
-            ProviderStateKind::Unknown | ProviderStateKind::Ready => {
-                LocaleKey::NotificationStatusUnavailableBody
-            }
+            ProviderStateKind::PermissionDenied => LocaleKey::NotificationStatusPermissionBody,
+            ProviderStateKind::RateLimited
+            | ProviderStateKind::Unknown
+            | ProviderStateKind::Ready => LocaleKey::NotificationStatusUnavailableBody,
         };
         (
             Self::notification_title(NotificationType::StatusIssue, language),

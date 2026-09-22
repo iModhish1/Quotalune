@@ -85,7 +85,7 @@ where
     F: Fn(LoginPhase) + Send + 'static,
 {
     run_cli_login(
-        "claude",
+        crate::core::ProviderId::Claude,
         &["auth", "login"],
         timeout_secs,
         cancellation,
@@ -110,7 +110,14 @@ pub async fn run_codex_login_cancellable<F>(
 where
     F: Fn(LoginPhase) + Send + 'static,
 {
-    run_cli_login("codex", &["login"], timeout_secs, cancellation, on_phase).await
+    run_cli_login(
+        crate::core::ProviderId::Codex,
+        &["login"],
+        timeout_secs,
+        cancellation,
+        on_phase,
+    )
+    .await
 }
 
 /// Run the Google Cloud application-default login used by Vertex AI.
@@ -130,7 +137,7 @@ where
     F: Fn(LoginPhase) + Send + 'static,
 {
     run_cli_login(
-        "gcloud",
+        crate::core::ProviderId::VertexAI,
         &["auth", "application-default", "login"],
         timeout_secs,
         cancellation,
@@ -145,7 +152,7 @@ where
     F: Fn(LoginPhase) + Send + 'static,
 {
     run_cli_login(
-        "gh",
+        crate::core::ProviderId::Copilot,
         &["auth", "login", "-w"],
         timeout_secs,
         LoginCancellation::new(),
@@ -170,15 +177,8 @@ pub async fn run_kiro_login_cancellable<F>(
 where
     F: Fn(LoginPhase) + Send + 'static,
 {
-    // Use Kiro's own binary resolver which checks well-known Windows install
-    // locations in addition to PATH.
-    let binary_path = match crate::providers::kiro::find_kiro_cli() {
-        Some(p) => p,
-        None => return missing_binary_result("kiro-cli"),
-    };
-
-    run_cli_login_path(
-        &binary_path,
+    run_cli_login(
+        crate::core::ProviderId::Kiro,
         &["login"],
         timeout_secs,
         cancellation,
@@ -187,9 +187,10 @@ where
     .await
 }
 
-/// Generic CLI login runner (resolves binary via PATH)
+/// Use the same provenance gate for login and detection. No PATH shell shim or
+/// inherited environment can bypass the dependency checks during sign-in.
 async fn run_cli_login<F>(
-    binary: &str,
+    provider: crate::core::ProviderId,
     args: &[&str],
     timeout_secs: u64,
     cancellation: LoginCancellation,
@@ -198,29 +199,16 @@ async fn run_cli_login<F>(
 where
     F: Fn(LoginPhase) + Send + 'static,
 {
-    let binary_path = match which::which(binary) {
-        Ok(p) => p,
-        Err(_) => return missing_binary_result(binary),
+    if cancellation.is_canceled() {
+        return LoginResult {
+            outcome: LoginOutcome::Canceled,
+            output: String::new(),
+            auth_link: None,
+        };
+    }
+    let Some(command) = crate::cli_dependencies::trusted_cli_command(provider, args) else {
+        return missing_binary_result(provider.cli_name());
     };
-
-    run_cli_login_path(&binary_path, args, timeout_secs, cancellation, on_phase).await
-}
-
-/// Generic CLI login runner (uses a pre-resolved binary path).
-/// The one blocking worker polls bounded, nonblocking reads; it never creates
-/// pipe reader threads or waits for EOF from a browser/CLI descendant.
-async fn run_cli_login_path<F>(
-    binary_path: &std::path::Path,
-    args: &[&str],
-    timeout_secs: u64,
-    cancellation: LoginCancellation,
-    on_phase: F,
-) -> LoginResult
-where
-    F: Fn(LoginPhase) + Send + 'static,
-{
-    let mut command = Command::new(binary_path);
-    command.args(args);
     match tokio::task::spawn_blocking(move || {
         supervise_login_cancellable(
             command,
@@ -232,7 +220,7 @@ where
     .await
     {
         Ok(result) => result,
-        Err(error) => launch_failed_result(format!("login worker failed: {error}")),
+        Err(_) => launch_failed_result("Login worker failed".into()),
     }
 }
 

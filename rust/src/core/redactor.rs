@@ -55,7 +55,7 @@ fn api_key_regex() -> &'static Regex {
     static REGEX: OnceLock<Regex> = OnceLock::new();
     REGEX.get_or_init(|| {
         Regex::new(
-            r"(?i)\b(?:sk|ghp|gho|github_pat|zai|nanogpt|openrouter|fk)-[A-Za-z0-9_\-]{8,}\b",
+            r"(?i)\b(?:sk|ghp|gho|ghu|ghs|github_pat|zai|nanogpt|openrouter|fk)[-_][A-Za-z0-9_\-]{8,}\b",
         )
         .expect("Invalid API key regex")
     })
@@ -76,6 +76,18 @@ impl SecretRedactor {
     }
 }
 
+/// Bare `name=value` / `name: value` secrets as printed by CLIs and logs,
+/// outside any URL or JSON structure (those have their own patterns).
+fn kv_secret_regex() -> &'static Regex {
+    static REGEX: OnceLock<Regex> = OnceLock::new();
+    REGEX.get_or_init(|| {
+        Regex::new(
+            r#"(?i)\b((?:refresh_token|access_token|id_token|api_key|apikey|client_secret|password|sessionkey|authorization)\s*[=:]\s*)(?:(?:basic|bearer)\s+)?[^\s&;,"']+"#,
+        )
+        .expect("Invalid key-value secret regex")
+    })
+}
+
 fn profile_path_regex() -> &'static Regex {
     static REGEX: OnceLock<Regex> = OnceLock::new();
     REGEX.get_or_init(|| {
@@ -94,6 +106,7 @@ pub struct UserFacingText;
 impl UserFacingText {
     pub fn sanitize(input: &str) -> String {
         let redacted = SecretRedactor::redact(input);
+        let redacted = kv_secret_regex().replace_all(&redacted, "${1}[REDACTED]");
         let redacted = email_regex().replace_all(&redacted, EMAIL_PLACEHOLDER);
         let redacted = profile_path_regex().replace_all(&redacted, "~");
         redacted

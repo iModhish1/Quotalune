@@ -99,6 +99,7 @@ impl JournalEventKind {
                 "needsAuthentication",
                 "expiredSession",
                 "localRuntimeOffline",
+                "permissionDenied",
                 "unknown",
             ],
             Self::PricingPeriodChanged => &["peak", "offPeak", "standard"],

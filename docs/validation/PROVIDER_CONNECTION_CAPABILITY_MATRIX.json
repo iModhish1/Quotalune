@@ -1,0 +1,3106 @@
+{
+  "providerCount": 70,
+  "providers": [
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "codex"
+      },
+      "cli": {
+        "automatedInstallAvailable": false,
+        "docsUrl": "https://github.com/openai/codex",
+        "executables": [
+          "codex"
+        ],
+        "install": {
+          "kind": "npm",
+          "package": "@openai/codex"
+        },
+        "installRequiresAdmin": false,
+        "managedLogin": true,
+        "minVersion": null,
+        "sessionDetection": "authFile",
+        "tool": "OpenAI Codex CLI"
+      },
+      "dashboardUrl": "https://chatgpt.com/codex/settings/usage",
+      "displayName": "Codex",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "codex",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": null,
+          "helpUrl": "https://github.com/openai/codex",
+          "method": "cliSession",
+          "rank": "recommended"
+        },
+        {
+          "browserDomain": "chatgpt.com",
+          "envVar": null,
+          "helpUrl": "https://chatgpt.com/codex/settings/usage",
+          "method": "browserSession",
+          "rank": "alternative"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "codex",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": true,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.openai.com",
+      "supportedQuotaWindows": null,
+      "tokenSource": "device-local scanner",
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "claude"
+      },
+      "cli": {
+        "automatedInstallAvailable": false,
+        "docsUrl": "https://docs.anthropic.com/en/docs/claude-code",
+        "executables": [
+          "claude"
+        ],
+        "install": {
+          "kind": "npm",
+          "package": "@anthropic-ai/claude-code"
+        },
+        "installRequiresAdmin": false,
+        "managedLogin": true,
+        "minVersion": null,
+        "sessionDetection": "authFile",
+        "tool": "Claude Code"
+      },
+      "dashboardUrl": "https://claude.ai/settings/usage",
+      "displayName": "Claude",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "claude",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": null,
+          "helpUrl": "https://docs.anthropic.com/en/docs/claude-code",
+          "method": "cliSession",
+          "rank": "recommended"
+        },
+        {
+          "browserDomain": "claude.ai",
+          "envVar": null,
+          "helpUrl": "https://claude.ai/settings/usage",
+          "method": "browserSession",
+          "rank": "alternative"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "claude",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": true,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.claude.com/",
+      "supportedQuotaWindows": null,
+      "tokenSource": "device-local scanner",
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "cursor"
+      },
+      "cli": null,
+      "dashboardUrl": "https://cursor.com/dashboard/usage",
+      "displayName": "Cursor",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "cursor",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": true,
+      "methods": [
+        {
+          "browserDomain": "cursor.com",
+          "envVar": null,
+          "helpUrl": "https://cursor.com/dashboard/usage",
+          "method": "browserSession",
+          "rank": "recommended"
+        },
+        {
+          "browserDomain": null,
+          "envVar": null,
+          "helpUrl": "https://cursor.com/dashboard/usage",
+          "method": "localScanner",
+          "rank": "alternative"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "cursor",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "factory"
+      },
+      "cli": null,
+      "dashboardUrl": "https://app.factory.ai",
+      "displayName": "Droid",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "factory",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "FACTORY_API_KEY",
+          "helpUrl": "https://app.factory.ai/settings/api-keys",
+          "method": "apiKey",
+          "rank": "recommended"
+        },
+        {
+          "browserDomain": "app.factory.ai",
+          "envVar": null,
+          "helpUrl": "https://app.factory.ai",
+          "method": "browserSession",
+          "rank": "alternative"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "factory",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.factory.ai",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "gemini"
+      },
+      "cli": {
+        "automatedInstallAvailable": false,
+        "docsUrl": "https://github.com/google-gemini/gemini-cli",
+        "executables": [
+          "gemini"
+        ],
+        "install": {
+          "kind": "npm",
+          "package": "@google/gemini-cli"
+        },
+        "installRequiresAdmin": false,
+        "managedLogin": false,
+        "minVersion": null,
+        "sessionDetection": "authFile",
+        "tool": "Gemini CLI"
+      },
+      "dashboardUrl": "https://aistudio.google.com",
+      "displayName": "Gemini",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "gemini",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": null,
+          "helpUrl": "https://github.com/google-gemini/gemini-cli",
+          "method": "cliSession",
+          "rank": "recommended"
+        },
+        {
+          "browserDomain": "aistudio.google.com",
+          "envVar": null,
+          "helpUrl": "https://aistudio.google.com",
+          "method": "browserSession",
+          "rank": "alternative"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "gemini",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.cloud.google.com",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "antigravity"
+      },
+      "cli": null,
+      "dashboardUrl": null,
+      "displayName": "Antigravity",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "antigravity",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": true,
+      "methods": [
+        {
+          "browserDomain": "antigravity.ai",
+          "envVar": null,
+          "helpUrl": null,
+          "method": "browserSession",
+          "rank": "recommended"
+        },
+        {
+          "browserDomain": null,
+          "envVar": null,
+          "helpUrl": null,
+          "method": "localScanner",
+          "rank": "alternative"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "antigravity",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "copilot"
+      },
+      "cli": {
+        "automatedInstallAvailable": false,
+        "docsUrl": "https://cli.github.com/",
+        "executables": [
+          "gh"
+        ],
+        "install": {
+          "id": "GitHub.cli",
+          "kind": "winget"
+        },
+        "installRequiresAdmin": false,
+        "managedLogin": false,
+        "minVersion": null,
+        "sessionDetection": "statusCommand",
+        "tool": "GitHub CLI"
+      },
+      "dashboardUrl": "https://github.com/settings/copilot",
+      "displayName": "GitHub Copilot",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "copilot",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": null,
+          "helpUrl": "https://github.com/features/copilot",
+          "method": "deviceFlow",
+          "rank": "recommended"
+        },
+        {
+          "browserDomain": null,
+          "envVar": null,
+          "helpUrl": "https://cli.github.com/",
+          "method": "cliSession",
+          "rank": "alternative"
+        },
+        {
+          "browserDomain": null,
+          "envVar": "GITHUB_TOKEN",
+          "helpUrl": "https://github.com/settings/copilot",
+          "method": "apiKey",
+          "rank": "alternative"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "copilot",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://www.githubstatus.com/",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "zai"
+      },
+      "cli": null,
+      "dashboardUrl": "https://z.ai/manage-apikey/coding-plan/personal/my-plan",
+      "displayName": "z.ai",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "zai",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "Z_AI_API_KEY or ZAI_API_TOKEN",
+          "helpUrl": "https://z.ai/manage-apikey/coding-plan/personal/my-plan",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "zai",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "minimax"
+      },
+      "cli": null,
+      "dashboardUrl": "https://platform.minimax.io/user-center/payment/coding-plan?cycle_type=3",
+      "displayName": "MiniMax",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "minimax",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": "platform.minimax.io",
+          "envVar": null,
+          "helpUrl": "https://platform.minimax.io/user-center/payment/coding-plan?cycle_type=3",
+          "method": "browserSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "minimax",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "kiro"
+      },
+      "cli": {
+        "automatedInstallAvailable": false,
+        "docsUrl": "https://kiro.dev/",
+        "executables": [
+          "kiro-cli"
+        ],
+        "install": {
+          "kind": "manualOnly"
+        },
+        "installRequiresAdmin": false,
+        "managedLogin": true,
+        "minVersion": null,
+        "sessionDetection": "usageFetch",
+        "tool": "Kiro CLI"
+      },
+      "dashboardUrl": "https://kiro.dev/account",
+      "displayName": "Kiro",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "kiro",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": null,
+          "helpUrl": "https://kiro.dev/",
+          "method": "cliSession",
+          "rank": "recommended"
+        },
+        {
+          "browserDomain": "kiro.dev",
+          "envVar": null,
+          "helpUrl": "https://kiro.dev/account",
+          "method": "browserSession",
+          "rank": "alternative"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "kiro",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://health.aws.amazon.com",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "vertexai"
+      },
+      "cli": {
+        "automatedInstallAvailable": false,
+        "docsUrl": "https://cloud.google.com/sdk/docs/install",
+        "executables": [
+          "gcloud"
+        ],
+        "install": {
+          "id": "Google.CloudSDK",
+          "kind": "winget"
+        },
+        "installRequiresAdmin": true,
+        "managedLogin": true,
+        "minVersion": null,
+        "sessionDetection": "authFile",
+        "tool": "Google Cloud CLI"
+      },
+      "dashboardUrl": "https://console.cloud.google.com/vertex-ai",
+      "displayName": "Vertex AI",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "vertexai",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": null,
+          "helpUrl": "https://cloud.google.com/sdk/docs/install",
+          "method": "cliSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "vertexai",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.cloud.google.com",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "augment"
+      },
+      "cli": null,
+      "dashboardUrl": "https://app.augmentcode.com/account",
+      "displayName": "Augment",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "augment",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": "app.augmentcode.com",
+          "envVar": null,
+          "helpUrl": "https://app.augmentcode.com/account",
+          "method": "browserSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "augment",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.augmentcode.com",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "opencode"
+      },
+      "cli": null,
+      "dashboardUrl": "https://opencode.ai",
+      "displayName": "OpenCode",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "opencode",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": "opencode.ai",
+          "envVar": null,
+          "helpUrl": "https://opencode.ai",
+          "method": "browserSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "opencode",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "kimi"
+      },
+      "cli": null,
+      "dashboardUrl": "https://kimi.moonshot.cn",
+      "displayName": "Kimi",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "kimi",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "KIMI_CODE_API_KEY",
+          "helpUrl": "https://platform.moonshot.cn/console/api-keys",
+          "method": "apiKey",
+          "rank": "recommended"
+        },
+        {
+          "browserDomain": "kimi.moonshot.cn",
+          "envVar": null,
+          "helpUrl": "https://kimi.moonshot.cn",
+          "method": "browserSession",
+          "rank": "alternative"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "kimi",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "kimik2"
+      },
+      "cli": null,
+      "dashboardUrl": "https://platform.moonshot.ai/console/account",
+      "displayName": "Moonshot / Kimi Open Platform",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "kimik2",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": "platform.moonshot.cn",
+          "envVar": null,
+          "helpUrl": "https://platform.moonshot.ai/console/account",
+          "method": "browserSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "kimik2",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "deprecated",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "amp"
+      },
+      "cli": null,
+      "dashboardUrl": "https://ampcode.com/settings/usage",
+      "displayName": "Amp",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "amp",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "SRC_ACCESS_TOKEN",
+          "helpUrl": "https://sourcegraph.com/cody/manage",
+          "method": "apiKey",
+          "rank": "recommended"
+        },
+        {
+          "browserDomain": "sourcegraph.com",
+          "envVar": null,
+          "helpUrl": "https://ampcode.com/settings/usage",
+          "method": "browserSession",
+          "rank": "alternative"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "amp",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://sourcegraphstatus.com",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "warp"
+      },
+      "cli": null,
+      "dashboardUrl": "https://docs.warp.dev/reference/cli/api-keys",
+      "displayName": "Warp",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "warp",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "WARP_API_KEY",
+          "helpUrl": "https://docs.warp.dev/reference/cli/api-keys",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "warp",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "ollama"
+      },
+      "cli": null,
+      "dashboardUrl": "https://ollama.com/settings",
+      "displayName": "Ollama",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "ollama",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "OLLAMA_API_KEY / OLLAMA_KEY",
+          "helpUrl": "https://ollama.com/settings",
+          "method": "apiKey",
+          "rank": "recommended"
+        },
+        {
+          "browserDomain": "ollama.com",
+          "envVar": null,
+          "helpUrl": "https://ollama.com/settings",
+          "method": "browserSession",
+          "rank": "alternative"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "ollama",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "azureopenai"
+      },
+      "cli": null,
+      "dashboardUrl": "https://ai.azure.com",
+      "displayName": "Azure OpenAI",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "azureopenai",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT + AZURE_OPENAI_DEPLOYMENT",
+          "helpUrl": "https://ai.azure.com",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "azureopenai",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.azure.com",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "t3chat"
+      },
+      "cli": null,
+      "dashboardUrl": "https://t3.chat/settings/customization",
+      "displayName": "T3 Chat",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "t3chat",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": "t3.chat",
+          "envVar": null,
+          "helpUrl": "https://t3.chat/settings/customization",
+          "method": "browserSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "t3chat",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "openrouter"
+      },
+      "cli": null,
+      "dashboardUrl": "https://openrouter.ai/settings/credits",
+      "displayName": "OpenRouter",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "openrouter",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "OPENROUTER_API_KEY",
+          "helpUrl": "https://openrouter.ai/settings/credits",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "openrouter",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.openrouter.ai",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "jetbrains"
+      },
+      "cli": null,
+      "dashboardUrl": "https://www.jetbrains.com/ai/",
+      "displayName": "JetBrains AI",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "jetbrains",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": true,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": null,
+          "helpUrl": "https://www.jetbrains.com/ai/",
+          "method": "localScanner",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "jetbrains",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "autoDetected",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "localDetection"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "alibaba"
+      },
+      "cli": null,
+      "dashboardUrl": "https://modelstudio.console.alibabacloud.com",
+      "displayName": "Alibaba",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "alibaba",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "ALIBABA_CODING_PLAN_API_KEY",
+          "helpUrl": "https://modelstudio.console.alibabacloud.com/ap-southeast-1/?tab=coding-plan#/efm/detail",
+          "method": "apiKey",
+          "rank": "recommended"
+        },
+        {
+          "browserDomain": "modelstudio.console.alibabacloud.com",
+          "envVar": null,
+          "helpUrl": "https://modelstudio.console.alibabacloud.com",
+          "method": "browserSession",
+          "rank": "alternative"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "alibaba",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "alibabatokenplan"
+      },
+      "cli": null,
+      "dashboardUrl": "https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/token-plan",
+      "displayName": "Alibaba Token Plan",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "alibabatokenplan",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": "bailian.console.aliyun.com",
+          "envVar": null,
+          "helpUrl": "https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/token-plan",
+          "method": "browserSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "alibabatokenplan",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.aliyun.com",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "nanogpt"
+      },
+      "cli": null,
+      "dashboardUrl": "https://nano-gpt.com/usage",
+      "displayName": "NanoGPT",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "nanogpt",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "NANOGPT_API_KEY",
+          "helpUrl": "https://nano-gpt.com/api",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "nanogpt",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "infini"
+      },
+      "cli": null,
+      "dashboardUrl": "https://cloud.infini-ai.com",
+      "displayName": "Infini",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "infini",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "INFINI_API_KEY",
+          "helpUrl": "https://cloud.infini-ai.com",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "infini",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "perplexity"
+      },
+      "cli": null,
+      "dashboardUrl": "https://www.perplexity.ai/account/usage",
+      "displayName": "Perplexity",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "perplexity",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": "perplexity.ai",
+          "envVar": null,
+          "helpUrl": "https://www.perplexity.ai/account/usage",
+          "method": "browserSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "perplexity",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "abacus"
+      },
+      "cli": null,
+      "dashboardUrl": "https://apps.abacus.ai/app/billing",
+      "displayName": "Abacus AI",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "abacus",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": "apps.abacus.ai",
+          "envVar": null,
+          "helpUrl": "https://apps.abacus.ai/app/billing",
+          "method": "browserSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "abacus",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "mistral"
+      },
+      "cli": null,
+      "dashboardUrl": "https://admin.mistral.ai/organization/usage",
+      "displayName": "Mistral",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "mistral",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": null,
+          "helpUrl": "https://admin.mistral.ai/organization/usage",
+          "method": "apiKey",
+          "rank": "recommended"
+        },
+        {
+          "browserDomain": "admin.mistral.ai",
+          "envVar": null,
+          "helpUrl": "https://admin.mistral.ai/organization/usage",
+          "method": "browserSession",
+          "rank": "alternative"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "mistral",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.mistral.ai",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "opencodego"
+      },
+      "cli": null,
+      "dashboardUrl": "https://opencode.ai",
+      "displayName": "OpenCode Go",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "opencodego",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": "opencode.ai",
+          "envVar": null,
+          "helpUrl": "https://opencode.ai",
+          "method": "browserSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "opencodego",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "kilo"
+      },
+      "cli": null,
+      "dashboardUrl": "https://app.kilo.ai/usage",
+      "displayName": "Kilo",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "kilo",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "KILO_API_KEY",
+          "helpUrl": "https://app.kilo.ai/usage",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "kilo",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "bedrock"
+      },
+      "cli": null,
+      "dashboardUrl": "https://console.aws.amazon.com/bedrock",
+      "displayName": "AWS Bedrock",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "bedrock",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "AWS_ACCESS_KEY_ID:AWS_SECRET_ACCESS_KEY[:AWS_SESSION_TOKEN] or AWS_PROFILE",
+          "helpUrl": "https://console.aws.amazon.com/bedrock",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "bedrock",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://health.aws.amazon.com/health/status",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "codebuff"
+      },
+      "cli": null,
+      "dashboardUrl": "https://www.codebuff.com/usage",
+      "displayName": "Codebuff",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "codebuff",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "CODEBUFF_API_KEY",
+          "helpUrl": "https://www.codebuff.com/usage",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "codebuff",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "deepseek"
+      },
+      "cli": null,
+      "dashboardUrl": "https://platform.deepseek.com/usage",
+      "displayName": "DeepSeek",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "deepseek",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "DEEPSEEK_API_KEY",
+          "helpUrl": "https://platform.deepseek.com/usage",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "deepseek",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.deepseek.com",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "deepinfra"
+      },
+      "cli": null,
+      "dashboardUrl": "https://deepinfra.com/dash",
+      "displayName": "DeepInfra",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "deepinfra",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "DEEPINFRA_API_KEY",
+          "helpUrl": "https://deepinfra.com/dash",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "deepinfra",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.deepinfra.com",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "aiand"
+      },
+      "cli": null,
+      "dashboardUrl": "https://console.aiand.com",
+      "displayName": "ai&",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "aiand",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "AIAND_API_KEY",
+          "helpUrl": "https://console.aiand.com",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "aiand",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "windsurf"
+      },
+      "cli": null,
+      "dashboardUrl": "https://windsurf.com/subscription",
+      "displayName": "Windsurf",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "windsurf",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": true,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": null,
+          "helpUrl": "https://windsurf.com/subscription",
+          "method": "localScanner",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "windsurf",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "autoDetected",
+      "statusPageUrl": "https://status.windsurf.com",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "localDetection"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "manus"
+      },
+      "cli": null,
+      "dashboardUrl": "https://manus.im",
+      "displayName": "Manus",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "manus",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": "manus.im",
+          "envVar": null,
+          "helpUrl": "https://manus.im",
+          "method": "browserSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "manus",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "mimo"
+      },
+      "cli": null,
+      "dashboardUrl": "https://platform.xiaomimimo.com/#/console/balance",
+      "displayName": "Xiaomi MiMo",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "mimo",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": "platform.xiaomimimo.com",
+          "envVar": null,
+          "helpUrl": "https://platform.xiaomimimo.com/#/console/balance",
+          "method": "browserSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "mimo",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "doubao"
+      },
+      "cli": {
+        "automatedInstallAvailable": false,
+        "docsUrl": "https://www.volcengine.com/docs/82379",
+        "executables": [
+          "arkcli"
+        ],
+        "install": {
+          "kind": "manualOnly"
+        },
+        "installRequiresAdmin": false,
+        "managedLogin": false,
+        "minVersion": null,
+        "sessionDetection": "usageFetch",
+        "tool": "Volcengine Ark CLI"
+      },
+      "dashboardUrl": "https://console.volcengine.com/ark/region:ark+cn-beijing/usage",
+      "displayName": "Doubao",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "doubao",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "ARK_API_KEY or VOLCENGINE_ACCESS_KEY_ID + VOLCENGINE_SECRET_ACCESS_KEY",
+          "helpUrl": "https://console.volcengine.com/ark/region:ark+cn-beijing/usage",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "doubao",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "commandcode"
+      },
+      "cli": null,
+      "dashboardUrl": "https://commandcode.ai",
+      "displayName": "Command Code",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "commandcode",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": "commandcode.ai",
+          "envVar": null,
+          "helpUrl": "https://commandcode.ai",
+          "method": "browserSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "commandcode",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "crof"
+      },
+      "cli": null,
+      "dashboardUrl": "https://crof.ai",
+      "displayName": "Crof",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "crof",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "CROF_API_KEY",
+          "helpUrl": "https://crof.ai",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "crof",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "stepfun"
+      },
+      "cli": null,
+      "dashboardUrl": "https://platform.stepfun.com/dashboard",
+      "displayName": "StepFun",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "stepfun",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "STEPFUN_OASIS_TOKEN",
+          "helpUrl": "https://platform.stepfun.com/dashboard",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "stepfun",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "venice"
+      },
+      "cli": null,
+      "dashboardUrl": "https://venice.ai/settings/api",
+      "displayName": "Venice",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "venice",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "VENICE_API_KEY",
+          "helpUrl": "https://venice.ai/settings/api",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "venice",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "openaiapi"
+      },
+      "cli": null,
+      "dashboardUrl": "https://platform.openai.com/usage",
+      "displayName": "OpenAI",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "openaiapi",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "OPENAI_ADMIN_KEY / OPENAI_API_KEY",
+          "helpUrl": "https://platform.openai.com/usage",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "openaiapi",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.openai.com",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "grok"
+      },
+      "cli": {
+        "automatedInstallAvailable": false,
+        "docsUrl": "https://x.ai/",
+        "executables": [
+          "grok"
+        ],
+        "install": {
+          "kind": "manualOnly"
+        },
+        "installRequiresAdmin": false,
+        "managedLogin": false,
+        "minVersion": null,
+        "sessionDetection": "authFile",
+        "tool": "Grok CLI"
+      },
+      "dashboardUrl": "https://grok.com/?_s=usage",
+      "displayName": "Grok",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "grok",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": null,
+          "helpUrl": "https://x.ai/",
+          "method": "cliSession",
+          "rank": "recommended"
+        },
+        {
+          "browserDomain": null,
+          "envVar": null,
+          "helpUrl": "https://grok.com/settings/subscription",
+          "method": "apiKey",
+          "rank": "alternative"
+        },
+        {
+          "browserDomain": "grok.com",
+          "envVar": null,
+          "helpUrl": "https://grok.com/?_s=usage",
+          "method": "browserSession",
+          "rank": "alternative"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "grok",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.x.ai",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "elevenlabs"
+      },
+      "cli": null,
+      "dashboardUrl": "https://elevenlabs.io/app/settings/api-keys",
+      "displayName": "ElevenLabs",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "elevenlabs",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "ELEVENLABS_API_KEY",
+          "helpUrl": "https://elevenlabs.io/app/settings/api-keys",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "elevenlabs",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.elevenlabs.io",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "deepgram"
+      },
+      "cli": null,
+      "dashboardUrl": "https://console.deepgram.com/usage",
+      "displayName": "Deepgram",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "deepgram",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "DEEPGRAM_API_KEY",
+          "helpUrl": "https://console.deepgram.com/usage",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "deepgram",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.deepgram.com",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "groq"
+      },
+      "cli": null,
+      "dashboardUrl": "https://console.groq.com/settings/metrics",
+      "displayName": "Groq",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "groq",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "GROQ_API_KEY",
+          "helpUrl": "https://console.groq.com/settings/metrics",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "groq",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.groq.com",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "llmproxy"
+      },
+      "cli": null,
+      "dashboardUrl": null,
+      "displayName": "LLM Proxy",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "llmproxy",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "LLM_PROXY_API_KEY + LLM_PROXY_BASE_URL",
+          "helpUrl": null,
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "llmproxy",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "chutes"
+      },
+      "cli": null,
+      "dashboardUrl": "https://chutes.ai",
+      "displayName": "Chutes",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "chutes",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "CHUTES_API_KEY",
+          "helpUrl": "https://chutes.ai",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "chutes",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "litellm"
+      },
+      "cli": null,
+      "dashboardUrl": null,
+      "displayName": "LiteLLM",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "litellm",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "LITELLM_API_KEY + LITELLM_BASE_URL",
+          "helpUrl": null,
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "litellm",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "poe"
+      },
+      "cli": null,
+      "dashboardUrl": "https://poe.com/settings/subscription",
+      "displayName": "Poe",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "poe",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "POE_API_KEY",
+          "helpUrl": "https://poe.com/settings/subscription",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "poe",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "devin"
+      },
+      "cli": null,
+      "dashboardUrl": "https://app.devin.ai/settings/billing",
+      "displayName": "Devin",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "devin",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "DEVIN_BEARER_TOKEN + DEVIN_ORG",
+          "helpUrl": "https://app.devin.ai/settings/billing",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "devin",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "zed"
+      },
+      "cli": null,
+      "dashboardUrl": "https://zed.dev/account",
+      "displayName": "Zed",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "zed",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "ZED_CREDENTIALS",
+          "helpUrl": "https://zed.dev/account",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "zed",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "crossmodel"
+      },
+      "cli": null,
+      "dashboardUrl": "https://crossmodel.ai",
+      "displayName": "CrossModel",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "crossmodel",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "CROSSMODEL_API_KEY",
+          "helpUrl": "https://crossmodel.ai",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "crossmodel",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "deprecated",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "qoder"
+      },
+      "cli": null,
+      "dashboardUrl": "https://qoder.com/account/usage",
+      "displayName": "Qoder",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "qoder",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": "qoder.com",
+          "envVar": null,
+          "helpUrl": "https://qoder.com/account/usage",
+          "method": "browserSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "qoder",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "codebuddy"
+      },
+      "cli": null,
+      "dashboardUrl": "https://www.codebuddy.cn/profile/plans-usage",
+      "displayName": "CodeBuddy",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "codebuddy",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": "codebuddy.cn",
+          "envVar": null,
+          "helpUrl": "https://www.codebuddy.cn/profile/plans-usage",
+          "method": "browserSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "codebuddy",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "sakana"
+      },
+      "cli": null,
+      "dashboardUrl": "https://console.sakana.ai/billing",
+      "displayName": "Sakana AI",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "sakana",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": "console.sakana.ai",
+          "envVar": null,
+          "helpUrl": "https://console.sakana.ai/billing",
+          "method": "browserSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "sakana",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "sub2api"
+      },
+      "cli": null,
+      "dashboardUrl": null,
+      "displayName": "sub2api",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "sub2api",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "SUB2API_API_KEY",
+          "helpUrl": null,
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "sub2api",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "wayfinder"
+      },
+      "cli": null,
+      "dashboardUrl": null,
+      "displayName": "Wayfinder",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "wayfinder",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": null,
+          "helpUrl": null,
+          "method": "localGateway",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "wayfinder",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "gatewayProbe"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "zenmux"
+      },
+      "cli": null,
+      "dashboardUrl": "https://zenmux.ai/platform/management",
+      "displayName": "ZenMux",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "zenmux",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "ZENMUX_MANAGEMENT_API_KEY",
+          "helpUrl": "https://zenmux.ai/platform/management",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "zenmux",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "clinepass"
+      },
+      "cli": null,
+      "dashboardUrl": "https://app.cline.bot/dashboard/subscription?personal=true",
+      "displayName": "ClinePass",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "clinepass",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "CLINEPASS_API_KEY",
+          "helpUrl": "https://app.cline.bot/dashboard/subscription?personal=true",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "clinepass",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "longcat"
+      },
+      "cli": null,
+      "dashboardUrl": "https://longcat.chat/platform/",
+      "displayName": "LongCat",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "longcat",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": "longcat.chat",
+          "envVar": null,
+          "helpUrl": "https://longcat.chat/platform/",
+          "method": "browserSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "longcat",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "neuralwatt"
+      },
+      "cli": null,
+      "dashboardUrl": "https://portal.neuralwatt.com/dashboard",
+      "displayName": "Neuralwatt",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "neuralwatt",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "NEURALWATT_API_KEY",
+          "helpUrl": "https://portal.neuralwatt.com/dashboard",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "neuralwatt",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "zoommate"
+      },
+      "cli": null,
+      "dashboardUrl": "https://zoommate.zoom.us/#/?settings=credit-usage",
+      "displayName": "ZoomMate",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "zoommate",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": "zoommate.zoom.us",
+          "envVar": null,
+          "helpUrl": "https://zoommate.zoom.us/#/?settings=credit-usage",
+          "method": "browserSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "zoommate",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://www.zoomstatus.com/",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "qwen-cloud"
+      },
+      "cli": null,
+      "dashboardUrl": "https://home.qwencloud.com/billing/subscription/token-plan-individual",
+      "displayName": "Qwen Cloud",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "qwen-cloud",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": "qwencloud.com",
+          "envVar": null,
+          "helpUrl": "https://home.qwencloud.com/billing/subscription/token-plan-individual",
+          "method": "browserSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "qwen-cloud",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.alibabacloud.com",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "notion"
+      },
+      "cli": null,
+      "dashboardUrl": "https://app.notion.com/",
+      "displayName": "Notion AI",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "notion",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": "app.notion.com",
+          "envVar": null,
+          "helpUrl": "https://app.notion.com/",
+          "method": "browserSession",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "notion",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": false,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.notion.so",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "xai"
+      },
+      "cli": null,
+      "dashboardUrl": "https://console.x.ai",
+      "displayName": "xAI",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "xai",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "XAI_MANAGEMENT_API_KEY",
+          "helpUrl": "https://console.x.ai",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "xai",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": "https://status.x.ai",
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    },
+    {
+      "adapterSource": {
+        "factory": "quotalis_core::core::instantiate_provider",
+        "id": "fireworks"
+      },
+      "cli": null,
+      "dashboardUrl": "https://app.fireworks.ai",
+      "displayName": "Fireworks",
+      "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
+      "iconSource": {
+        "key": "fireworks",
+        "registry": "apps/desktop-tauri/src/components/providers/providerIcons.ts"
+      },
+      "liveVerification": "NOT VERIFIED",
+      "localSessionReader": false,
+      "methods": [
+        {
+          "browserDomain": null,
+          "envVar": "FIREWORKS_API_KEY",
+          "helpUrl": "https://app.fireworks.ai",
+          "method": "apiKey",
+          "rank": "recommended"
+        }
+      ],
+      "planSource": "Provider-reported plan when present; never inferred from a credential",
+      "provider": "fireworks",
+      "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
+      "reporting": {
+        "costs": true,
+        "localTokens": false,
+        "planWhenProvided": true,
+        "resetWindows": true,
+        "usage": true
+      },
+      "resetSource": "Provider response when populated; legacy reporting flag is not live proof",
+      "status": "supported",
+      "statusPageUrl": null,
+      "supportedQuotaWindows": null,
+      "tokenSource": null,
+      "verification": "usageFetch"
+    }
+  ],
+  "schemaVersion": 1,
+  "source": "quotalis_core::connection_capabilities::capability_matrix_json (derived from the live registry; regenerate with QUOTALIS_WRITE_CAPABILITY_MATRIX=1 cargo test -p quotalis_core capability_matrix_json_is_current)"
+}
