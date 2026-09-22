@@ -82,7 +82,7 @@ This report distinguishes completed code/automated checks from native and live-a
 | 76 | actual provider rows | 70 |
 | 77 | fixture verified count | 70 method-rendering rows; every provider through synthetic state classification. This is not full real-auth verification. |
 | 78 | live verified count | 0 |
-| 79 | credential-required count | All real credential-dependent flows require authorized disposable test accounts; 66 active non-local-only rows. Two deprecated and two local-only rows are separately classified. |
+| 79 | credential-required count | All real credential-dependent flows require authorized disposable test accounts; 65 active non-local-only rows. Two deprecated and three local-only rows are separately classified. |
 | 80 | unsupported count | 0 empty-method unsupported rows; 2 deprecated; CLI install layouts and dynamic metadata limitations remain explicit. |
 | 81 | Wave3 handoff | docs/validation/WAVE3_NATIVE_QA_HANDOFF.md |
 | 82 | matrix | docs/validation/WAVE3_NATIVE_QA_MATRIX.json (prepared cases; none passed natively). |
@@ -275,3 +275,52 @@ build identity is recorded under `.local/wave3-gh-*` after the documentation com
 Frontend remains the previously tested 1568/228 candidate; no frontend source
 changed in this packet. The canonical Dev build rebuilds its production assets.
 This is automated process evidence, not native UI or live GitHub authentication.
+
+## Local-session source isolation — 2026-09-22
+
+Source inspection found Cursor's local onboarding was routed to browser-cookie
+discovery and successful local-app requests were always labeled `web`. Its local
+selection now reads only the local app session, fails with authentication required
+when absent/rejected, and reports `cursor-app` on success. Auto can retain its
+existing browser fallback; explicit browser/manual selections do not read the
+local profile. Persisting LocalScanner as the existing `cli`/cookie-off setting
+also keeps ordinary refreshes from attaching an unrelated Quotalis token-account
+credential/UUID. This is supported by all four local-scanner adapters; no new
+source enum or broad settings migration was introduced.
+
+The old Cursor test depended on the machine having no real cookies. It is replaced
+by injected transport tests that never open owner profiles. Initial failures are
+in `.local/wave3-cursor-source-red.log` and `wave3-cursor-persistence-red.log`.
+Independent review found that the existing local-session helper swallowed network,
+server and parse errors. It now returns a typed result: only absence becomes
+`Ok(None)`; explicit local selection preserves failures and cannot read cookies.
+Auto retains its previous fallback behavior. Eight injected Cursor tests pass,
+including network/server/parse/auth failures with no real profile or network I/O.
+Re-review found no remaining actionable defect in these two Rust files.
+
+Final Rust: desktop570/1existingignored, core1878, CLI1, doctests0;
+`.local/wave3-cursor-final-rust.log`. Full Clippy passes in
+`.local/wave3-cursor-final-clippy.log`. The full frontend suite passes 1639 tests
+across 229 files (`.local/wave3-registry-full-front.log`). The 71 new registry
+scenarios exercise recommended-method failure, timeout and successful retry for
+68 active providers plus render/close for two deprecated providers. These use
+mocked IPC, do not perform real authentication, and do not establish adapter or
+disconnect support. Existing device-flow tests cover actual flow state separately.
+
+Compatibility: the source-setting correction applies to new/reverified connections;
+existing `auto/off` selections are not migrated. Rollback must retain Cursor's
+no-browser Cli guard or disable its polling before reverting. The last canonical
+Dev build at `0cb25e4b4d89` passed with source/proof SHA256
+`84fa886be3db33ac1066572c2ef3d80ede56e2d9788ca47e67685a99c441c9f8`;
+it predates this repair. A fresh post-commit build is required. No native UI or
+live-account evidence is claimed; broader Wave 3 and release gates remain open.
+
+Concrete next adapter audit findings (not yet repaired at this checkpoint):
+Amp offers API-key onboarding while rejecting OAuth and labeling its key-backed
+request `web`; its CLI probe can fabricate 0% from configuration presence and its
+parser supplies unobserved 500/Pro defaults. Alibaba and Mistral offer keys despite
+their current adapters implementing only browser-session usage. These findings
+must be repaired before capability/onboarding Code PASS; component IPC fixtures
+cannot establish adapter-level support. Do not remove a real feature merely to
+make tests pass, or invent a missing remote endpoint. Preserve existing credentials
+while making the offered methods and observed reporting truthful.
