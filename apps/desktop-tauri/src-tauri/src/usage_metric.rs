@@ -124,14 +124,19 @@ fn automatic_window(
 }
 
 fn average_window(snapshot: &ProviderUsageSnapshot) -> Option<RateWindowSnapshot> {
-    if snapshot.primary.is_informational {
-        return snapshot.secondary.clone();
+    match (
+        non_informational(Some(&snapshot.primary)),
+        non_informational(snapshot.secondary.as_ref()),
+    ) {
+        (Some(primary), Some(secondary)) => Some(derived_window(
+            (primary.used_percent + secondary.used_percent) / 2.0,
+            None,
+        )),
+        // Keep the remaining observation, including its reset and duration,
+        // when there is no second known quota to average with it.
+        (Some(known), None) | (None, Some(known)) => Some(known.clone()),
+        (None, None) => None,
     }
-    let secondary = snapshot.secondary.as_ref()?;
-    Some(derived_window(
-        (snapshot.primary.used_percent + secondary.used_percent) / 2.0,
-        None,
-    ))
 }
 
 fn cost_window(snapshot: &ProviderUsageSnapshot) -> Option<RateWindowSnapshot> {
@@ -284,5 +289,57 @@ mod tests {
         assert_eq!(value["providerId"], "codex");
         assert_eq!(value["selectedMetric"]["usedPercent"], 60.0);
         assert!(value.get("snapshot").is_none());
+    }
+
+    #[test]
+    fn average_uses_only_observed_windows_and_preserves_known_zero() {
+        let mut settings = Settings::default();
+        settings.set_provider_metric(ProviderId::Gemini, MetricPreference::Average);
+        for known_percent in [0.0, 60.0] {
+            for unknown_primary in [false, true] {
+                let known = RateWindowSnapshot {
+                    window_minutes: Some(10080),
+                    resets_at: Some("2026-10-01T00:00:00Z".to_string()),
+                    ..window(known_percent)
+                };
+                let unknown = RateWindowSnapshot {
+                    is_informational: true,
+                    ..window(0.0)
+                };
+                let mut snapshot = snapshot();
+                snapshot.provider_id = "gemini".to_string();
+                (snapshot.primary, snapshot.secondary) = if unknown_primary {
+                    (unknown, Some(known))
+                } else {
+                    (known, Some(unknown))
+                };
+                let presentation =
+                    crate::commands::ProviderUsagePresentationSnapshot::new(snapshot, &settings);
+                let value = serde_json::to_value(presentation).unwrap();
+                let selected = &value["selectedMetric"];
+                assert_eq!(selected["usedPercent"], known_percent);
+                assert_eq!(selected["isInformational"], false);
+                assert_eq!(selected["windowMinutes"], 10080);
+                assert_eq!(selected["resetsAt"], "2026-10-01T00:00:00Z");
+            }
+        }
+    }
+
+    #[test]
+    fn average_with_only_unknown_windows_remains_unavailable() {
+        let mut snapshot = snapshot();
+        snapshot.provider_id = "gemini".to_string();
+        snapshot.primary = RateWindowSnapshot {
+            is_informational: true,
+            ..window(0.0)
+        };
+        snapshot.secondary = Some(snapshot.primary.clone());
+        assert!(average_window(&snapshot).is_none());
+        let mut settings = Settings::default();
+        settings.set_provider_metric(ProviderId::Gemini, MetricPreference::Average);
+        let presentation =
+            crate::commands::ProviderUsagePresentationSnapshot::new(snapshot, &settings);
+        let value = serde_json::to_value(presentation).unwrap();
+        assert_eq!(value["selectedMetric"]["isInformational"], true);
     }
 }

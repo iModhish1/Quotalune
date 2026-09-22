@@ -44,12 +44,14 @@ pub(crate) fn parse_response(json: &serde_json::Value) -> Result<UsageSnapshot, 
 
     let quota = instance
         .get("codingPlanQuotaInfo")
+        .filter(|value| value.is_object())
         .ok_or_else(|| ProviderError::Parse("codingPlanQuotaInfo missing".into()))?;
 
     let plan_name = instance
         .get("instanceName")
         .and_then(|v| v.as_str())
-        .unwrap_or("Coding Plan");
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
 
     let ms_to_dt = |key: &str| -> Option<DateTime<Utc>> {
         quota
@@ -58,80 +60,66 @@ pub(crate) fn parse_response(json: &serde_json::Value) -> Result<UsageSnapshot, 
             .and_then(|ms| Utc.timestamp_opt(ms / 1000, 0).single())
     };
 
-    let pct = |used_key: &str, total_key: &str| -> f64 {
-        let used = quota.get(used_key).and_then(|v| v.as_f64()).unwrap_or(0.0);
-        let total = quota.get(total_key).and_then(|v| v.as_f64()).unwrap_or(1.0);
-        if total > 0.0 {
-            (used / total * 100.0).clamp(0.0, 100.0)
-        } else {
-            0.0
-        }
-    };
-
-    let detail = |used_key: &str, total_key: &str| -> Option<String> {
+    let quota_pair = |used_key: &str, total_key: &str| -> Option<(f64, String)> {
         let used = quota.get(used_key).and_then(|v| v.as_f64())?;
         let total = quota.get(total_key).and_then(|v| v.as_f64())?;
-        // Token counts are whole numbers; the fractional part is rounding
-        // noise from JSON float parsing.
-        #[expect(
-            clippy::cast_possible_truncation,
-            reason = "token counts are whole numbers; fractional part is rounding noise"
-        )]
-        let used_tokens = used as i64;
-        #[expect(
-            clippy::cast_possible_truncation,
-            reason = "token counts are whole numbers; fractional part is rounding noise"
-        )]
-        let total_tokens = total as i64;
-        Some(format!(
-            "{} / {} tokens",
-            fmt_tokens(used_tokens),
-            fmt_tokens(total_tokens)
-        ))
+        let percent = used / total * 100.0;
+        if !used.is_finite()
+            || !total.is_finite()
+            || used < 0.0
+            || total <= 0.0
+            || !percent.is_finite()
+        {
+            return None;
+        }
+        // Quota field names do not establish a token unit. Retain reported
+        // counts without assigning an unproven unit or truncating fractions.
+        Some((percent.clamp(0.0, 100.0), format!("{used} / {total}")))
     };
-
-    let five_hour = RateWindow::with_details(
-        pct("per5HourUsedQuota", "per5HourTotalQuota"),
+    let window = |used_key, total_key, minutes, reset: Option<DateTime<Utc>>| {
+        let pair = quota_pair(used_key, total_key);
+        let mut window = RateWindow::with_details(
+            pair.as_ref().map_or(0.0, |(percent, _)| *percent),
+            if pair.is_some() || reset.is_some() {
+                minutes
+            } else {
+                None
+            },
+            reset,
+            pair.as_ref().map(|(_, detail)| detail.clone()),
+        );
+        // Shared bridge, history and verification gates treat this placeholder
+        // as unknown. A reported zero with a valid denominator remains known.
+        window.is_informational = pair.is_none();
+        window
+    };
+    let five_hour = window(
+        "per5HourUsedQuota",
+        "per5HourTotalQuota",
         Some(300),
         ms_to_dt("per5HourQuotaNextRefreshTime"),
-        detail("per5HourUsedQuota", "per5HourTotalQuota"),
     );
-    let weekly = RateWindow::with_details(
-        pct("perWeekUsedQuota", "perWeekTotalQuota"),
+    let weekly = window(
+        "perWeekUsedQuota",
+        "perWeekTotalQuota",
         Some(7 * 24 * 60),
         ms_to_dt("perWeekQuotaNextRefreshTime"),
-        detail("perWeekUsedQuota", "perWeekTotalQuota"),
     );
     let monthly_reset = ms_to_dt("perBillMonthQuotaNextRefreshTime");
-    let monthly = RateWindow::with_details(
-        pct("perBillMonthUsedQuota", "perBillMonthTotalQuota"),
-        RateWindow::monthly_window_minutes(monthly_reset).or(Some(30 * 24 * 60)),
+    let monthly = window(
+        "perBillMonthUsedQuota",
+        "perBillMonthTotalQuota",
+        RateWindow::monthly_window_minutes(monthly_reset),
         monthly_reset,
-        detail("perBillMonthUsedQuota", "perBillMonthTotalQuota"),
     );
 
-    Ok(UsageSnapshot::new(five_hour)
+    let mut usage = UsageSnapshot::new(five_hour)
         .with_secondary(weekly)
-        .with_tertiary(monthly)
-        .with_login_method(plan_name))
-}
-
-fn fmt_tokens(n: i64) -> String {
-    let negative = n < 0;
-    let magnitude = (n as i128).unsigned_abs();
-    let digits = magnitude.to_string();
-    let mut out = String::with_capacity(digits.len() + digits.len() / 3 + 1);
-    for (i, ch) in digits.chars().rev().enumerate() {
-        if i > 0 && i % 3 == 0 {
-            out.push(',');
-        }
-        out.push(ch);
+        .with_tertiary(monthly);
+    if let Some(plan) = plan_name {
+        usage = usage.with_login_method(plan);
     }
-    let mut result: String = out.chars().rev().collect();
-    if negative {
-        result.insert(0, '-');
-    }
-    result
+    Ok(usage)
 }
 
 #[cfg(test)]
@@ -172,8 +160,10 @@ mod tests {
         let usage = parse_response(&sample_response()).unwrap();
 
         assert!((usage.primary.used_percent - 0.0).abs() < 0.01);
+        assert!(!usage.primary.is_informational, "reported zero is known");
         assert_eq!(usage.primary.window_minutes, Some(300));
         assert!(usage.primary.resets_at.is_some());
+        assert_eq!(usage.primary.reset_description.as_deref(), Some("0 / 6000"));
 
         let weekly = usage.secondary.unwrap();
         assert!((weekly.used_percent - 4.487).abs() < 0.01);
@@ -219,6 +209,74 @@ mod tests {
     }
 
     #[test]
+    fn missing_or_invalid_quota_pair_is_unavailable_not_zero() {
+        for (used, total) in [
+            (serde_json::Value::Null, serde_json::json!(6000)),
+            (serde_json::json!(0), serde_json::Value::Null),
+            (serde_json::json!(-1), serde_json::json!(6000)),
+            (serde_json::json!(0), serde_json::json!(0)),
+            (serde_json::json!(1), serde_json::json!(-1)),
+            (serde_json::json!(1e308), serde_json::json!(1e-308)),
+        ] {
+            let mut json = sample_response();
+            let quota = json
+                .pointer_mut("/data/DataV2/data/data/codingPlanInstanceInfos/0/codingPlanQuotaInfo")
+                .unwrap();
+            quota["per5HourUsedQuota"] = used;
+            quota["per5HourTotalQuota"] = total;
+            let usage = parse_response(&json).unwrap();
+            assert!(usage.primary.is_informational);
+            assert!(usage.primary.reset_description.is_none());
+            assert!(
+                usage.primary.resets_at.is_some(),
+                "independent reset evidence survives"
+            );
+            assert!(
+                !usage.secondary.unwrap().is_informational,
+                "valid weekly evidence survives"
+            );
+        }
+    }
+
+    #[test]
+    fn empty_quota_has_no_plan_or_invented_billing_duration() {
+        let mut json = sample_response();
+        let instance = json
+            .pointer_mut("/data/DataV2/data/data/codingPlanInstanceInfos/0")
+            .unwrap();
+        instance.as_object_mut().unwrap().remove("instanceName");
+        instance["codingPlanQuotaInfo"] = serde_json::json!({});
+        let usage = parse_response(&json).unwrap();
+        assert!(usage.login_method.is_none());
+        assert!(usage.primary.is_informational);
+        assert!(usage.secondary.unwrap().is_informational);
+        let monthly = usage.tertiary.unwrap();
+        assert!(monthly.is_informational);
+        assert!(monthly.window_minutes.is_none());
+        assert!(monthly.resets_at.is_none());
+    }
+
+    #[test]
+    fn quota_shape_must_be_an_object_and_counts_keep_their_precision() {
+        let mut json = sample_response();
+        let quota = json
+            .pointer_mut("/data/DataV2/data/data/codingPlanInstanceInfos/0/codingPlanQuotaInfo")
+            .unwrap();
+        quota["per5HourUsedQuota"] = serde_json::json!(3.5);
+        quota["per5HourTotalQuota"] = serde_json::json!(10);
+        let usage = parse_response(&json).unwrap();
+        assert_eq!(usage.primary.used_percent, 35.0);
+        assert_eq!(usage.primary.reset_description.as_deref(), Some("3.5 / 10"));
+        *json
+            .pointer_mut("/data/DataV2/data/data/codingPlanInstanceInfos/0/codingPlanQuotaInfo")
+            .unwrap() = serde_json::Value::Null;
+        assert!(matches!(
+            parse_response(&json),
+            Err(ProviderError::Parse(_))
+        ));
+    }
+
+    #[test]
     fn no_authority_response_maps_to_auth_required() {
         let json = serde_json::json!({
             "code": "200",
@@ -228,23 +286,5 @@ mod tests {
             parse_response(&json),
             Err(ProviderError::AuthRequired)
         ));
-    }
-
-    #[test]
-    fn fmt_tokens_formats_correctly() {
-        assert_eq!(fmt_tokens(6000), "6,000");
-        assert_eq!(fmt_tokens(90000), "90,000");
-        assert_eq!(fmt_tokens(25), "25");
-        assert_eq!(fmt_tokens(1000000), "1,000,000");
-    }
-
-    #[test]
-    fn fmt_tokens_handles_negative_values() {
-        assert_eq!(fmt_tokens(-100), "-100");
-        assert_eq!(fmt_tokens(-1000), "-1,000");
-        assert_eq!(fmt_tokens(-1000000), "-1,000,000");
-        assert_eq!(fmt_tokens(-1), "-1");
-        assert_eq!(fmt_tokens(0), "0");
-        assert_eq!(fmt_tokens(i64::MIN), "-9,223,372,036,854,775,808");
     }
 }

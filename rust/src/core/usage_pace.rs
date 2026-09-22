@@ -95,6 +95,11 @@ impl UsagePace {
         now: Option<DateTime<Utc>>,
         default_window_minutes: u32,
     ) -> Option<Self> {
+        // A reported reset is independent evidence; it cannot make an unknown
+        // quota suitable for consumption or reserve calculations.
+        if window.is_informational || !window.used_percent.is_finite() {
+            return None;
+        }
         let now = now.unwrap_or_else(Utc::now);
         let resets_at = window.resets_at?;
         let minutes = window.window_minutes.unwrap_or(default_window_minutes);
@@ -267,6 +272,31 @@ mod tests {
 
         assert!(pace.stage.is_ahead());
         assert!(pace.delta_percent > 0.0);
+    }
+
+    #[test]
+    fn unknown_usage_has_no_pace_even_with_an_observed_future_reset() {
+        let now = Utc::now();
+        let known_zero =
+            RateWindow::with_details(0.0, Some(10080), Some(now + Duration::days(3)), None);
+        assert!(UsagePace::weekly(&known_zero, Some(now), 10080).is_some());
+        let unknown = RateWindow {
+            is_informational: true,
+            ..known_zero
+        };
+        assert!(UsagePace::weekly(&unknown, Some(now), 10080).is_none());
+    }
+
+    #[test]
+    fn non_finite_usage_has_no_pace() {
+        let now = Utc::now();
+        for used_percent in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            let window = RateWindow {
+                used_percent,
+                ..RateWindow::with_details(0.0, Some(10080), Some(now + Duration::days(3)), None)
+            };
+            assert!(UsagePace::weekly(&window, Some(now), 10080).is_none());
+        }
     }
 
     #[test]

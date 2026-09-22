@@ -1117,6 +1117,34 @@ pub(super) fn parse_metric_preference(s: &str) -> Option<MetricPreference> {
 mod tests {
     use super::*;
 
+    #[test]
+    fn unknown_quota_keeps_reported_reset_without_pace_or_reserve() {
+        let reset = chrono::Utc::now() + chrono::Duration::days(3);
+        let weekly = RateWindow {
+            is_informational: true,
+            ..RateWindow::with_details(0.0, Some(10080), Some(reset), None)
+        };
+        let usage =
+            quotalis_core::core::UsageSnapshot::new(RateWindow::informational("Quota unavailable"))
+                .with_secondary(weekly);
+        let result = ProviderFetchResult::new(usage, "web");
+        let provider = instantiate_provider(ProviderId::Alibaba);
+        let snapshot = ProviderUsageSnapshot::from_fetch_result(
+            ProviderId::Alibaba,
+            provider.metadata(),
+            &result,
+            None,
+        );
+        assert!(snapshot.pace.is_none());
+        let weekly = snapshot.secondary.unwrap();
+        assert!(weekly.is_informational);
+        assert_eq!(weekly.resets_at, Some(reset.to_rfc3339()));
+        assert_eq!(weekly.window_minutes, Some(10080));
+        assert!(weekly.reserve_percent.is_none());
+        assert!(weekly.reserve_eta_seconds.is_none());
+        assert!(!weekly.reserve_will_last_to_reset);
+    }
+
     fn snapshot_window_with(
         used_percent: f64,
         window_minutes: Option<u32>,
