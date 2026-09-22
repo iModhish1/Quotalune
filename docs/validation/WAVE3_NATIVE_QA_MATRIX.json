@@ -565,7 +565,7 @@
   ],
   "currentImplementationNotes": [
     "Automated installation is disabled in production. Install fixtures exercise only in-memory outcomes, never a real installer.",
-    "Device/CLI login cannot launch while fixture is active. Use fixture verification states or clear the fixture and use a disposable authorized Dev account.",
+    "Device/CLI sign-in uses an in-memory transport while a fixture is active. Pending is cancellable and bounded to 120 seconds; success/failure/timeout are explicit scenarios. QA-DEMO is non-actionable, with no browser/clipboard/credential/process activity. Clear the fixture before using a disposable authorized Dev account.",
     "Native cases are prepared, not executed. No screenshot or performance claims are implied."
   ]
 }

@@ -126,7 +126,7 @@ This report distinguishes completed code/automated checks from native and live-a
 | Provider privacy | PASS for fixture-based code checks; no real credentials accessed |
 | Localization | PASS automated; visual RTL remains deferred |
 | Accessibility | PARTIAL — DOM tests pass; native proof deferred |
-| Dev fixtures | PARTIAL — state/method fixtures ready; no simulated external login transport |
+| Dev fixtures | PARTIAL — in-memory sign-in transport and consumer isolation tested; native/live evidence remains pending |
 | Wave 3 code | PARTIAL — remaining acceptance limits are explicit above |
 | Wave 3 native | DEFERRED — ENVIRONMENT BLOCKED |
 | Dev safety | Channel isolation required and checked by canonical final build |
@@ -137,3 +137,17 @@ This report distinguishes completed code/automated checks from native and live-a
 ## Review closure
 
 A fresh read-only critical review found six issues in CLI provenance, Codex fixture lanes, account attribution, queued cancellation, Cursor source mapping and settings transactions. Each was repaired. Recovery rereads caught and closed cancellation-vs-commit lock lifetime details. Final source review closed all six within that scope; no native or release approval was inferred.
+
+
+## Goal continuation: simulated sign-in closure
+
+The sign-in command now captures fixture provenance while reserving the provider, selecting an in-memory Dev transport before any real auth call. Pending remains cancellable and bounded; success/failure/timeout are deterministic. An empty verification URL and explicit simulation marker prevent actionable fake challenges. Terminal completion is serialized with operation cancellation, including the cancel-after-work/before-delivery boundary.
+
+A reachable pre-existing verification callback refreshed all live providers after fixture success. The verification response now carries provenance and the real ProviderDetailPane consumer suppresses that refresh. Login completions also carry provenance. Its older switch-account handler currently has no caller; no reachable regression is claimed for that dead handler. The generic device challenge notice no longer renders raw clipboard/browser errors or opens arbitrary endpoints. Real missing-cookie results use a dedicated live constructor rather than fixture output.
+
+Focused evidence: Rust transport outcome, two cancellation sources, 50 cancel/retry cycles, both terminal orderings, routing and real-cookie provenance tests; frontend flow cancellation/retry, challenge safety, raw-error suppression, bridge provenance and actual ProviderDetailPane callback isolation. Updated full-suite evidence is recorded below when complete. Native evidence remains DEFERRED — ENVIRONMENT BLOCKED. This packet is not whole-product or release acceptance.
+
+
+Fresh continuation gates: frontend **1564 tests / 228 files**; desktop **561 passed / one existing ignored**; core **1858 passed**; CLI **one passed**; doctests **zero**. Full Rust suite includes locale completeness checks. TypeScript, production build, Clippy with warnings denied, formatting and diff checks passed. Secret scan: **4253 files clean**; no new skip/focus markers. Raw logs: `.local/wave3-fixture-full-front.log`, `wave3-fixture-full-rust.log`, `wave3-fixture-login-tsc.log`, `wave3-fixture-build.log`, `wave3-fixture-login-clippy.log`. These supersede the prior table counts for this increment. The post-commit Dev proof is recorded in `.local/wave3-fixture-dev-build.log` after this document is committed.
+
+Review outcome: independent source review verified transport isolation, then found the terminal cancellation ordering gap and missing completion provenance. Repairs and deterministic tests landed; a recovery read confirmed them and identified a real missing-cookie response mislabeled as simulated. The final dedicated live constructor and regression test close that defect. No native or release verdict follows from this review.
