@@ -7,8 +7,9 @@ mod api;
 mod pat;
 
 use async_trait::async_trait;
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
+
+use crate::cli_dependencies;
+use crate::connection_capabilities::cli_dependency;
 
 use crate::core::{
     FetchContext, Provider, ProviderError, ProviderFetchResult, ProviderId, ProviderMetadata,
@@ -122,41 +123,15 @@ impl Provider for CodexProvider {
     }
 }
 
-/// Try to find the codex CLI binary
-fn which_codex() -> Option<std::path::PathBuf> {
-    // Check common locations on Windows
-    let possible_paths = [
-        // In PATH
-        which::which("codex").ok(),
-        // npm global install
-        dirs::data_dir().map(|p| p.join("npm").join("codex.cmd")),
-        // AppData locations
-        dirs::data_local_dir().map(|p| p.join("Programs").join("codex").join("codex.exe")),
-    ];
-
-    possible_paths.into_iter().flatten().find(|p| p.exists())
-}
-
 /// Detect the version of the codex CLI
 fn detect_codex_version() -> Option<String> {
-    let codex_path = which_codex()?;
-
-    #[cfg(windows)]
-    const CREATE_NO_WINDOW: u32 = 0x08000000;
-
-    let mut cmd = std::process::Command::new(codex_path);
-    cmd.args(["--version"]);
-    #[cfg(windows)]
-    cmd.creation_flags(CREATE_NO_WINDOW);
-
-    let output = cmd.output().ok()?;
-
-    if output.status.success() {
-        let version_str = String::from_utf8_lossy(&output.stdout);
-        super::extract_semver(&version_str)
-    } else {
-        None
+    let dependency = cli_dependency(ProviderId::Codex)?;
+    let executable = cli_dependencies::resolve_executable(dependency)?;
+    let output = cli_dependencies::read_provider_cli_sync(&executable, &["--version"]).ok()?;
+    if output.exit_code != Some(0) {
+        return None;
     }
+    super::extract_semver(&String::from_utf8_lossy(&output.stdout))
 }
 
 #[cfg(test)]
