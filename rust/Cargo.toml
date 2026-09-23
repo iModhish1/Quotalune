@@ -1,6 +1,6 @@
 [package]
 name = "quotalis_core"
-version = "0.11.0"
+version = "0.12.0"
 edition = "2024"
 authors = ["Mohammed Modhish", "Quotalis Contributors"]
 description = "Windows and WSL system tray app for monitoring AI provider usage limits"

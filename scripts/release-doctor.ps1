@@ -124,9 +124,14 @@ $git = Get-Command git -ErrorAction SilentlyContinue
 if ($git) {
     Push-Location $RepoRoot
     try {
-        & $git.Source rev-parse --verify --quiet "$tag^{commit}" *> $null
-        if ($LASTEXITCODE -eq 0) {
-            Write-Ok "Git tag exists: $tag"
+        $tagCommit = (& $git.Source rev-parse --verify --quiet "$tag^{commit}" 2>$null | Select-Object -First 1)
+        if (-not [string]::IsNullOrWhiteSpace($tagCommit)) {
+            $headCommit = (& $git.Source rev-parse HEAD | Select-Object -First 1)
+            if ($tagCommit -ne $headCommit) {
+                Write-Fail "Local tag $tag points to $tagCommit, not release candidate HEAD $headCommit."
+            } else {
+                Write-Ok "Git tag points to candidate HEAD: $tag"
+            }
         } else {
             Write-Warn "Git tag not found locally: $tag"
         }

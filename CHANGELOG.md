@@ -4,6 +4,26 @@ All notable changes to QuotaArc are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/); versioning: [semver](https://semver.org/).
 The inherited Win-CodexBar history is archived in `docs/UPSTREAM_CHANGELOG.md`.
 
+## [0.12.0] — Unreleased
+
+### Added
+
+- A unified provider connection workspace with provider-specific supported
+  methods and clearer connection status.
+- Dedicated analytics for observed provider windows, local activity and data
+  quality, plus a configurable planetary dashboard and Demo Mode.
+- Notification history, provider reset details, profiles, collections and
+  customizable presentation surfaces.
+- Quotalune as the visible product name while preserving existing installation
+  and data identities for upgrade continuity.
+
+### Improved
+
+- Monetary displays distinguish provider-reported Spend, Balance and Credits;
+  unavailable values remain unavailable instead of becoming estimated spend.
+- English and Arabic presentation, provider ordering, themes and accessibility
+  across the desktop workspace.
+
 ## [0.10.1] — 2026-09-07
 
 ### Added
