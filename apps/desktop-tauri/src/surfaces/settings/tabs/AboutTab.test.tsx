@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const tauriMocks = vi.hoisted(() => ({
@@ -126,7 +126,7 @@ describe("AboutTab", () => {
     fireEvent.click(screen.getByRole("button", { name: "AboutContactWhatsApp" }));
     fireEvent.click(screen.getByRole("button", { name: "CodexBar" }));
 
-    expect(screen.getByText("Mohammed Modhish", { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("(iModhish1)")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "SubmitIssue" })).not.toBeInTheDocument();
     expect(tauriMocks.openExternalUrl).toHaveBeenNthCalledWith(
       1,
@@ -169,6 +169,18 @@ describe("AboutTab", () => {
     fireEvent.click(screen.getByRole("button", { name: "codexcontrol" }));
     expect(tauriMocks.openExternalUrl).toHaveBeenCalledWith("https://github.com/ademisler/codexcontrol");
     expect(screen.getByText("WorkflowGuideTitle").closest("details")).not.toHaveAttribute("open");
+  });
+
+  it("makes bundled legal texts readable offline without opening a browser", async () => {
+    render(<AboutTab settings={settings} set={vi.fn()} saving={false} />);
+    await screen.findByRole("heading", { name: "Quotalis" });
+    fireEvent.click(screen.getByText("AboutLegalDocuments"));
+    expect(screen.getByText("AboutMITLicense")).toBeInTheDocument();
+    expect(screen.getByText("AboutDerivedNotice")).toBeInTheDocument();
+    expect(screen.getByText("AboutThirdPartyNotices")).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "AboutMITLicense" })).getByText(/Copyright \(c\) 2025 Peter Steinberger/)).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "AboutDerivedNotice" })).getByText(/Copyright \(c\) 2026 Adem Isler/)).toBeInTheDocument();
+    expect(tauriMocks.openExternalUrl).not.toHaveBeenCalled();
   });
 
   it("routes all creator links to their exact destinations and honors disabled animations", async () => {

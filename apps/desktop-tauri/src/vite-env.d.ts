@@ -5,3 +5,8 @@ declare module "*.svg?raw" {
   export default src;
 }
 
+declare module "virtual:quotalis-legal-documents" {
+  const documents: { license: string; notice: string; thirdPartyNotices: string };
+  export default documents;
+}
+

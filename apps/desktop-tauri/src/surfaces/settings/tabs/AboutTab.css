@@ -24,6 +24,13 @@
 .about-product .about-link:hover { background: color-mix(in srgb, var(--accent) 10%, var(--workspace-surface)); border-color: var(--accent); }
 .about-product .about-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .about-product .about-product__license { margin: 0; font-size: 12px; color: var(--text-secondary); }
+.about-product__legal-documents { border-block: 1px solid var(--workspace-edge); }
+.about-product__legal-documents > summary { padding: 14px 4px; cursor: pointer; font-weight: 650; }
+.about-product__legal-documents > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.about-product__legal-list { display: grid; gap: 16px; padding-block: 8px 20px; }
+.about-product__legal-list section { min-width: 0; padding: 16px; border: 1px solid var(--workspace-edge); border-radius: 8px; background: var(--workspace-surface); }
+.about-product__legal-list h4 { margin: 0 0 10px; font-size: 14px; }
+.about-product__legal-list pre { max-height: 360px; margin: 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-secondary); font: 12px/1.6 ui-monospace, Consolas, monospace; text-align: start; }
 .about-product .about-actions { margin-block: 0; }
 .about-product .about-channel-description { max-width: none; text-align: start; margin: 0; }
 .about-product .about-channel-row .about-channel-description { margin-block-start: 8px; }

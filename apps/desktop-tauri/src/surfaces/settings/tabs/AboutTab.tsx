@@ -7,6 +7,7 @@ import type { AppInfoBridge, UpdateChannel } from "../../../types/bridge";
 import type { TabProps } from "../settingsTabs";
 import AboutProductIdentity, { AboutEngineering } from "./AboutProductIdentity";
 import AboutCreatorFooter from "./AboutCreatorFooter";
+import AboutLegalDocuments from "./AboutLegalDocuments";
 
 import "./AboutTab.css";
 import WorkflowGuide from "../WorkflowGuide";
@@ -166,6 +167,7 @@ export default function AboutTab({ settings, set, saving }: TabProps) {
       </div>
 
       <AboutEngineering openLink={openAboutLink} />
+      <AboutLegalDocuments />
       <WorkflowGuide />
       <AboutCreatorFooter openLink={openAboutLink} enableAnimations={settings.enableAnimations} />
     </section>
