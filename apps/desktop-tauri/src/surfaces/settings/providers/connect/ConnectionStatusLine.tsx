@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useLocale } from "../../../../hooks/useLocale";
-import { METHOD_LABEL, connectionStatusKey, getProviderConnectionStatus, disconnectProviderConnection, type ProviderConnectionStatus } from "../../../../lib/providerConnection";
+import { METHOD_LABEL, connectionStatusKey, getProviderConnectionStatus, disconnectProviderConnection, type ConnectionMethod, type ProviderConnectionStatus } from "../../../../lib/providerConnection";
 
 /** Source-derived connection line: state, "Connected via", last verification. */
 export function ConnectionStatusLine({ providerId }: { providerId: string }) {
@@ -10,10 +10,11 @@ export function ConnectionStatusLine({ providerId }: { providerId: string }) {
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
+  const [retryMethod, setRetryMethod] = useState<ConnectionMethod | null>(null);
   useEffect(() => {
     let alive = true;
     let request = 0;
-    setStatus(null); setConfirm(false); setError(false);
+    setStatus(null); setConfirm(false); setError(false); setRetryMethod(null);
     const load = () => { const sequence = ++request; return getProviderConnectionStatus().then((all) => { if (alive && sequence === request) setStatus(all.find((s) => s.providerId === providerId) ?? null); }).catch(() => {}); };
     void load();
     const stop = listen("provider-updated", () => void load()).catch(() => () => {});
@@ -29,14 +30,15 @@ export function ConnectionStatusLine({ providerId }: { providerId: string }) {
       {verified && <span> · {t("ConnectStatusLastVerified")} <bdi dir="ltr">{verified}</bdi></span>}
     </p>
     {status.enabled && status.method && <button type="button" className="btn btn--ghost" disabled={busy} onClick={() => setConfirm(true)}>{t("ConnectDisconnect")}</button>}
-    {confirm && status.method && <div role="group" aria-label={t("ConnectDisconnect")}>
-      <p>{t("ConnectDisconnectExplanation")}</p>
-      <button type="button" className="btn btn--ghost" disabled={busy} onClick={() => setConfirm(false)}>{t("ConnectCancel")}</button>
+    {confirm && (status.method || retryMethod) && <div role="group" aria-label={t("ConnectDisconnect")}>
+      <p>{retryMethod && !status.enabled ? t("ConnectCredentialRemovalFailed") : t("ConnectDisconnectExplanation")}</p>
+      <button type="button" className="btn btn--ghost" disabled={busy} onClick={() => { setConfirm(false); setRetryMethod(null); setError(false); }}>{t("ConnectCancel")}</button>
       <button type="button" className="btn btn--primary" disabled={busy} onClick={async () => {
         setBusy(true); setError(false);
-        try { await disconnectProviderConnection(providerId, status.method!); setConfirm(false); setStatus((s) => s?.providerId === providerId ? {...s, enabled: false, state: "idle", issue: null, method: null, lastVerified: null, stale: false} : s); }
-        catch { setError(true); } finally { setBusy(false); }
-      }}>{t("ConnectDisconnect")}</button>
+        const method = (status.enabled && status.method) || retryMethod || status.method!;
+        try { await disconnectProviderConnection(providerId, method); setConfirm(false); setRetryMethod(null); setStatus((s) => s?.providerId === providerId ? {...s, enabled: false, state: "idle", issue: null, method: null, lastVerified: null, stale: false} : s); }
+        catch { setRetryMethod(method); setError(true); } finally { setBusy(false); }
+      }}>{retryMethod && !status.enabled ? t("ConnectRetryCredentialRemoval") : t("ConnectDisconnect")}</button>
     </div>}
     {error && <p role="alert">{t("ConnectIssueError")}</p>}
     </div>

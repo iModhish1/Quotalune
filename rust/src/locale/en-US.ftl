@@ -2052,5 +2052,7 @@ ProviderQaApply = Apply fixture
 ProviderQaClear = Clear fixture
 ConnectDisconnect = Disconnect
 ConnectDisconnectExplanation = Stop monitoring and remove Quotalis' selected saved credential. Other accounts, browser sessions, CLI installations and usage history are preserved.
+ConnectCredentialRemovalFailed = Monitoring stopped, but the saved credential could not be removed. Retry removal.
+ConnectRetryCredentialRemoval = Retry credential removal
 
 ConnectBrowserChooseProfile = Choose one browser profile

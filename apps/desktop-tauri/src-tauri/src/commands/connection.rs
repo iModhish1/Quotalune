@@ -79,12 +79,7 @@ pub fn save_provider_connection_key(provider_id: String, key: String) -> Result<
 }
 
 fn persist_connection_key(id: ProviderId, key: &str) -> Result<(), String> {
-    let token_store = quotalis_core::core::TokenAccountSupport::for_provider(id).is_some_and(|s| {
-        matches!(
-            s.injection,
-            quotalis_core::core::TokenInjection::Environment { .. }
-        )
-    });
+    let token_store = api_key_uses_token_account_store(id);
     if token_store {
         let store = TokenAccountStore::new();
         let mut data = store
@@ -111,6 +106,15 @@ fn persist_connection_key(id: ProviderId, key: &str) -> Result<(), String> {
         return Err("No supported key storage for this provider".into());
     }
     Ok(())
+}
+
+fn api_key_uses_token_account_store(id: ProviderId) -> bool {
+    quotalis_core::core::TokenAccountSupport::for_provider(id).is_some_and(|s| {
+        matches!(
+            s.injection,
+            quotalis_core::core::TokenInjection::Environment { .. }
+        )
+    })
 }
 
 fn provider(id: &str) -> Result<ProviderId, String> {
@@ -778,6 +782,26 @@ fn configure_source(settings: &mut Settings, id: ProviderId, method: ConnectionM
 /// Disconnect Quotalis' selected method only. Browser originals, CLI sessions,
 /// other stored accounts, installations and usage history remain owned by their
 /// original applications. Polling is disabled before deleting the owned copy.
+fn remove_selected_token_account_for_method(
+    data: &mut ProviderAccountData,
+    method: ConnectionMethod,
+) -> Result<bool, String> {
+    use quotalis_core::core::TokenAccountOrigin;
+    let expected = match method {
+        ConnectionMethod::ApiKey => TokenAccountOrigin::ApiKey,
+        ConnectionMethod::DeviceFlow => TokenAccountOrigin::DeviceFlow,
+        _ => return Err("This connection method has no token account".into()),
+    };
+    let Some(active) = data.active_account() else {
+        return Ok(false);
+    };
+    if active.origin != Some(expected) {
+        return Err("The selected credential no longer matches this connection method".into());
+    }
+    let id = active.id;
+    Ok(data.remove_account(id).is_some())
+}
+
 #[tauri::command]
 pub fn disconnect_provider_connection(
     app: tauri::AppHandle,
@@ -800,55 +824,74 @@ pub fn disconnect_provider_connection(
         let _ = app.emit("provider-updated", ());
         return Ok(());
     }
-    let _operation = begin_live_connection(id)?;
+    let operation = begin_live_connection(id)?;
     let settings_transaction = super::settings::SETTINGS_PATCH_LOCK
         .lock()
         .map_err(|_| "Settings unavailable")?;
-    let mut settings = Settings::load();
-    settings.enabled_providers.remove(id.cli_name());
-    settings.set_cookie_source(id, "off");
-    settings
-        .save()
-        .map_err(|_| "Connection preferences could not be saved")?;
-    drop(settings_transaction);
-    // Disabling also prevents old in-flight refresh generations from publishing.
-    let state = app.state::<Mutex<AppState>>();
-    if let Ok(mut state) = state.lock() {
-        state.provider_refresh_generation = state.provider_refresh_generation.wrapping_add(1);
-        state
-            .provider_cache
-            .retain(|s| s.provider_id != id.cli_name());
-    }
-    match method {
-        ConnectionMethod::ApiKey | ConnectionMethod::DeviceFlow => {
+    let result = operation.commit_if_active(|| {
+        let selected_token_store = method == ConnectionMethod::DeviceFlow
+            || (method == ConnectionMethod::ApiKey && api_key_uses_token_account_store(id));
+        let token_account = if selected_token_store {
             let store = TokenAccountStore::new();
             let mut data = store
                 .load_provider(id)
                 .map_err(|_| "Protected credential storage unavailable")?;
-            if let Some(account) = data.active_account().map(|a| a.id) {
-                data.remove_account(account);
-                store
-                    .save_provider(id, &data)
-                    .map_err(|_| "Protected credential deletion failed")?;
-            } else if method == ConnectionMethod::ApiKey {
+            let removed = remove_selected_token_account_for_method(&mut data, method)?;
+            Some((store, data, removed))
+        } else {
+            None
+        };
+        let mut settings = Settings::load();
+        settings.enabled_providers.remove(id.cli_name());
+        settings.set_cookie_source(id, "off");
+        settings
+            .save()
+            .map_err(|_| "Connection preferences could not be saved")?;
+        // Disabling also prevents old in-flight refresh generations from publishing.
+        let state = app.state::<Mutex<AppState>>();
+        if let Ok(mut state) = state.lock() {
+            state.provider_refresh_generation = state.provider_refresh_generation.wrapping_add(1);
+            state
+                .provider_cache
+                .retain(|s| s.provider_id != id.cli_name());
+        }
+        let deletion_result: Result<(), String> = (|| {
+        match method {
+            ConnectionMethod::ApiKey | ConnectionMethod::DeviceFlow if selected_token_store => {
+                let (store, data, removed) = token_account.ok_or("Credential state unavailable")?;
+                if removed {
+                    store
+                        .save_provider(id, &data)
+                        .map_err(|_| "Protected credential deletion failed")?;
+                } else if method == ConnectionMethod::ApiKey {
+                    let mut keys = ApiKeys::load();
+                    keys.remove(id.cli_name());
+                    keys.save()
+                        .map_err(|_| "Protected credential deletion failed")?;
+                }
+            }
+            ConnectionMethod::ApiKey => {
                 let mut keys = ApiKeys::load();
                 keys.remove(id.cli_name());
-                keys.save()
-                    .map_err(|_| "Protected credential deletion failed")?;
+                keys.save().map_err(|_| "Protected credential deletion failed")?;
             }
+            ConnectionMethod::BrowserSession => {
+                let mut cookies = ManualCookies::load();
+                cookies.remove(id.cli_name());
+                cookies
+                    .save()
+                    .map_err(|_| "Protected session deletion failed")?;
+            }
+            _ => {}
         }
-        ConnectionMethod::BrowserSession => {
-            let mut cookies = ManualCookies::load();
-            cookies.remove(id.cli_name());
-            cookies
-                .save()
-                .map_err(|_| "Protected session deletion failed")?;
-        }
-        _ => {}
-    }
-    let _ = app.emit("provider-updated", ());
-    let _ = app.emit("codexbar:settings-updated", ());
-    Ok(())
+        Ok(())
+        })();
+        let _ = app.emit("provider-updated", ());
+        let _ = app.emit("codexbar:settings-updated", ());
+        deletion_result.map_err(|_| "Monitoring stopped, but protected credential removal failed. Retry disconnect to remove it.".into())
+    });
+    drop(settings_transaction);
+    result
 }
 
 #[tauri::command]
@@ -959,6 +1002,53 @@ pub fn get_provider_connection_status(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn disconnect_cannot_remove_an_active_account_from_another_auth_method() {
+        use quotalis_core::core::TokenAccountOrigin;
+        let mut data = ProviderAccountData::new();
+        let api_key = TokenAccount::new("test API key", "synthetic-api-key")
+            .with_origin(TokenAccountOrigin::ApiKey);
+        let device = TokenAccount::new("test device", "synthetic-device-token")
+            .with_origin(TokenAccountOrigin::DeviceFlow);
+        let device_id = device.id;
+        data.add_account(api_key);
+        data.add_account(device);
+        data.set_active_by_id(device_id);
+
+        assert!(
+            remove_selected_token_account_for_method(&mut data, ConnectionMethod::ApiKey).is_err()
+        );
+        assert_eq!(
+            data.accounts.len(),
+            2,
+            "selection must not mutate another account"
+        );
+        data.active_account_mut().unwrap().origin = None;
+        assert!(
+            remove_selected_token_account_for_method(&mut data, ConnectionMethod::DeviceFlow)
+                .is_err()
+        );
+        data.active_account_mut().unwrap().origin = Some(TokenAccountOrigin::DeviceFlow);
+        assert!(
+            remove_selected_token_account_for_method(&mut data, ConnectionMethod::DeviceFlow)
+                .unwrap()
+        );
+        assert_eq!(data.accounts.len(), 1);
+        assert_eq!(data.accounts[0].origin, Some(TokenAccountOrigin::ApiKey));
+    }
+
+    #[test]
+    fn factory_api_key_uses_legacy_store_independent_of_cookie_accounts() {
+        assert!(!api_key_uses_token_account_store(ProviderId::Factory));
+        let mut browser_accounts = ProviderAccountData::new();
+        browser_accounts.add_account(TokenAccount::new("browser", "synthetic-cookie"));
+        browser_accounts.set_active(0);
+        assert_eq!(browser_accounts.accounts.len(), 1);
+        // Disconnect routes Factory's API key to ApiKeys, without inspecting
+        // or removing the independently stored browser-session account.
+        assert_eq!(browser_accounts.active_account().unwrap().label, "browser");
+    }
 
     #[tokio::test]
     async fn doubao_api_key_verification_never_uses_paid_chat_probe() {

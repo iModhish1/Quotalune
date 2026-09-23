@@ -1813,6 +1813,8 @@ export const ALL_LOCALE_KEYS = [
   "ConnectBrowserChooseProfile",
   "ConnectDisconnect",
   "ConnectDisconnectExplanation",
+  "ConnectCredentialRemovalFailed",
+  "ConnectRetryCredentialRemoval",
   "ConnectClose",
   "ConnectStepMethod",
   "ConnectStepRequirements",

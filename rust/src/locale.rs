@@ -2236,6 +2236,8 @@ locale_keys! {
     ConnectBrowserChooseProfile,
     ConnectDisconnect,
     ConnectDisconnectExplanation,
+    ConnectCredentialRemovalFailed,
+    ConnectRetryCredentialRemoval,
     ConnectClose,
     ConnectStepMethod,
     ConnectStepRequirements,

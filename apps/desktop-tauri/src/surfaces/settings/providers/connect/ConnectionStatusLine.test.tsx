@@ -41,4 +41,41 @@ describe("connection status lifecycle", () => {
     }
     expect(mocks.disconnect).toHaveBeenCalledTimes(50);
   });
+  it("keeps credential-removal retry available after monitoring is disabled", async () => {
+    let refresh!: () => void;
+    mocks.listen.mockImplementationOnce((_event: string, callback: () => void) => { refresh = callback; return Promise.resolve(mocks.stop); });
+    mocks.disconnect.mockRejectedValueOnce(new Error("credential removal failed"));
+    const ui = render(<ConnectionStatusLine providerId="openrouter" />);
+    fireEvent.click(await screen.findByRole("button", {name: "ConnectDisconnect"}));
+    let buttons = screen.getAllByRole("button", {name: "ConnectDisconnect"});
+    fireEvent.click(buttons[buttons.length - 1]);
+    await screen.findByRole("alert");
+    mocks.load.mockResolvedValue([{...status("openrouter"), enabled: false, state: "idle", method: null}]);
+    await act(async () => { refresh(); });
+    // A status refresh can clear the method after settings were saved. The
+    // in-progress confirmation must still retain the selected retry method.
+    expect(screen.getByRole("group", {name: "ConnectDisconnect"})).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", {name: "ConnectRetryCredentialRemoval"}));
+    await waitFor(() => expect(mocks.disconnect).toHaveBeenCalledTimes(2));
+    expect(mocks.disconnect).toHaveBeenLastCalledWith("openrouter", "apiKey");
+    ui.unmount();
+  });
+  it("does not reuse a failed API-key attempt after the method changes", async () => {
+    let refresh!: () => void;
+    mocks.listen.mockImplementationOnce((_event: string, callback: () => void) => { refresh = callback; return Promise.resolve(mocks.stop); });
+    mocks.disconnect.mockRejectedValueOnce(new Error("credential removal failed"));
+    render(<ConnectionStatusLine providerId="openrouter" />);
+    fireEvent.click(await screen.findByRole("button", {name: "ConnectDisconnect"}));
+    let buttons = screen.getAllByRole("button", {name: "ConnectDisconnect"});
+    fireEvent.click(buttons[buttons.length - 1]);
+    await screen.findByRole("alert");
+    fireEvent.click(screen.getByRole("button", {name: "ConnectCancel"}));
+    mocks.load.mockResolvedValue([{...status("openrouter"), method: "browserSession"}]);
+    await act(async () => { refresh(); });
+    fireEvent.click(screen.getByRole("button", {name: "ConnectDisconnect"}));
+    buttons = screen.getAllByRole("button", {name: "ConnectDisconnect"});
+    fireEvent.click(buttons[buttons.length - 1]);
+    await waitFor(() => expect(mocks.disconnect).toHaveBeenCalledTimes(2));
+    expect(mocks.disconnect).toHaveBeenLastCalledWith("openrouter", "browserSession");
+  });
 });

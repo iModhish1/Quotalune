@@ -1299,5 +1299,7 @@ ProviderQaApply = تطبيق البيانات
 ProviderQaClear = مسح البيانات
 ConnectDisconnect = فصل الاتصال
 ConnectDisconnectExplanation = إيقاف المراقبة وإزالة بيانات الدخول المحددة والمحفوظة لدى Quotalis. تُحفظ الحسابات الأخرى وجلسات المتصفح وأدوات سطر الأوامر وسجل الاستخدام.
+ConnectCredentialRemovalFailed = توقفت المراقبة، لكن تعذّر حذف بيانات الدخول المحفوظة. أعد محاولة الحذف.
+ConnectRetryCredentialRemoval = إعادة محاولة حذف بيانات الدخول
 
 ConnectBrowserChooseProfile = اختر ملف متصفح واحداً
