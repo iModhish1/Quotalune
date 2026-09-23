@@ -89,3 +89,22 @@ release remains untouched.
 - The public `v0.11.0` release has not been deleted or renamed. Its historical
   files still display the old name. A future release needs explicit update,
   installer, download-link and screenshot verification before public changes.
+
+## Canonical repository integration — 2026-09-24
+
+- Read-back confirmed `iModhish1/Quotalis` is the public repository and its
+  `main` is `dde6b262`. The local development repository only had an `upstream`
+  remote pointing to `nesszer/Win-CodexBar`; it did not contain an `origin` for
+  the owner's repository. No push to either remote was attempted.
+- The local `v0.11.0` tag resolves to an unrelated upstream commit
+  (`bc9e4acb`), while the owner's public `v0.11.0` tag resolves to
+  `c1902e9a`. Never use the local tag for a new build, publication or rollback.
+- The development HEAD and owner `main` had no common Git ancestor. A separate
+  local `release/quotalune-integration` worktree connected the histories with
+  an `ours` merge while preserving the current source tree and the owner's
+  published commits as parents. The resulting owner-main comparison spans
+  1,257 files, so it needs full diff/security/packaging review before any push.
+- Public README and getting-started copy are being prepared in that local
+  integration worktree. Historical `v0.11.0` binary names and links remain
+  explicitly labeled as the earlier release; no new screenshots or public
+  GitHub mutations have been made.

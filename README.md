@@ -1,16 +1,14 @@
-<p align="center"><img src="assets/brand/icons/quotaarc-icon-256.png" width="112" alt="Quotalis"></p>
+<p align="center"><img src="assets/brand/icons/quotaarc-icon-256.png" width="112" alt="Quotalune app mark"></p>
 
-# Quotalis
+# Quotalune
 
 **Your AI workspace, in one orbit.**
 
-Quotalis brings AI-provider limits, reset schedules and usage history into a customizable Windows desktop workspace. Keep your providers in view with a planetary dashboard, compact floating surfaces and system-tray controls.
+Quotalune brings AI-provider limits, reset schedules and usage history into a customizable Windows desktop workspace. Keep your providers in view with a planetary dashboard, compact floating surfaces and system-tray controls.
 
-[Download for Windows](https://github.com/iModhish1/Quotalis/releases/latest) · [Explore the source](https://github.com/iModhish1/Quotalis) · [Get started](docs/GETTING_STARTED.md)
+[Explore the desktop experience](#a-workspace-that-feels-like-yours) · [Get started](docs/GETTING_STARTED.md) · [Build from source](#build-from-source) · [Windows downloads](#windows-downloads)
 
-![Quotalis planetary dashboard in Demo Mode](docs/images/quotalis-dashboard-demo.png)
-
-*Actual Windows app screenshot with clearly labeled simulated provider data.*
+The official application mark is unchanged. Interface previews for the next release will be added after capture from the verified Windows build, with the operating-system title bar excluded.
 
 ## A workspace that feels like yours
 
@@ -24,11 +22,11 @@ Quotalis brings AI-provider limits, reset schedules and usage history into a cus
 - **Demo Mode.** Explore simulated provider data in a clearly marked workspace, separate from real history.
 - **English and Arabic.** Localized controls, right-to-left layouts and customizable time/reset presentation.
 
-Quotalis displays provider-reported values and preserves their meaning: quotas, Spend, Balance and Credits are distinct. Analytics use available observations rather than inventing missing values.
+Quotalune displays provider-reported values and preserves their meaning: quotas, Spend, Balance and Credits are distinct. Analytics use available observations rather than inventing missing values.
 
-## Install and start
+## Windows downloads
 
-Choose a Windows x64 download from [Releases](https://github.com/iModhish1/Quotalis/releases):
+The [current public release](https://github.com/iModhish1/Quotalis/releases/tag/v0.11.0) was published under the earlier **Quotalis** name. Its original filenames and executable name remain accurate:
 
 | Download | Use |
 | --- | --- |
@@ -39,6 +37,10 @@ Choose a Windows x64 download from [Releases](https://github.com/iModhish1/Quota
 Windows x64, Microsoft Edge WebView2 Runtime and the Microsoft Visual C++ x64 runtime are required. Setup can install missing runtimes. The ZIP edition uses the normal per-user settings and history location; keep its supplied icons beside the executable.
 
 Open **Providers** to configure your integrations, or enable **Demo Mode** in Dashboard Studio to explore first. Customize your workspace through Appearance, Provider Display and the surface controls.
+
+## Data and privacy
+
+Settings and usage history stay on your device. Connecting a provider uses that provider's supported authentication method; Quotalune does not require a Quotalune account or a credential relay service. Demo Mode is labeled and kept separate from real provider data. Share screenshots only after checking them for account details, cookies and usage history.
 
 ## Build from source
 
@@ -63,6 +65,6 @@ The React/TypeScript UI is in `apps/desktop-tauri/src`; the Tauri shell is in `a
 
 **Mohammed Modhish ([iModhish1](https://github.com/iModhish1))** · [TAWAJUD AI](https://tawajud.net)
 
-Quotalis builds on [Win-CodexBar](https://github.com/nesszer/Win-CodexBar), [CodexBar](https://github.com/steipete/CodexBar), and portions of codexcontrol. Their contributions and licenses are preserved in [NOTICE](NOTICE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). QuotaArc is the project's earlier name and remains in compatibility identifiers.
+Quotalune builds on [Win-CodexBar](https://github.com/nesszer/Win-CodexBar), [CodexBar](https://github.com/steipete/CodexBar), and portions of codexcontrol. Their contributions and licenses are preserved in [NOTICE](NOTICE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Quotalis and QuotaArc are earlier names retained in compatibility identifiers and historical releases.
 
 [MIT License](LICENSE)

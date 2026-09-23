@@ -1,7 +1,7 @@
-# Get started with Quotalis
+# Get started with Quotalune
 
 Download the Windows x64 Setup or ZIP edition from
-[Quotalis Releases](https://github.com/iModhish1/Quotalis/releases).
+[Windows releases](https://github.com/iModhish1/Quotalis/releases). The currently published v0.11.0 files use the earlier Quotalis name.
 
 ## Set up your workspace
 
@@ -21,10 +21,10 @@ Profiles and collections help organize providers for different workflows. Demo M
 
 Extract **all** files to one folder and open `Quotalis.exe`. Keep the included PNG and ICO artwork beside the executable. Install Microsoft Edge WebView2 Runtime and the Microsoft Visual C++ x64 runtime if needed, or choose Setup to prepare them.
 
-The ZIP edition uses the same per-user data location as an installed copy. Copying its executable folder does not copy your settings or create another isolated account store. Close a running Quotalis instance before opening another copy.
+The ZIP edition uses the same per-user data location as an installed copy. Copying its executable folder does not copy your settings or create another isolated account store. Close a running instance before opening another copy.
 
 ## Your data
 
-Configuration and usage history are stored locally. Connecting a provider allows Quotalis to contact that provider with the selected authentication method; release checks contact GitHub. App-managed credentials use the existing Windows secure-storage helpers. Keep credentials, cookies, account details and raw logs private when sharing screenshots or asking for help.
+Configuration and usage history are stored locally. Connecting a provider allows Quotalune to contact that provider with the selected authentication method; release checks contact GitHub. App-managed credentials use the existing Windows secure-storage helpers. Keep credentials, cookies, account details and raw logs private when sharing screenshots or asking for help.
 
 Scheduled quota resets, observed changes and banked reset credits are separate kinds of information. The app displays available timestamps and values without guessing an unreported reset balance or exact offline event time.
