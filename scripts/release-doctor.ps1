@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Check whether a Win-CodexBar release is ready or complete.
+    Check whether a Quotalis release is ready or complete.
 
 .DESCRIPTION
     Verifies version-file consistency, changelog presence, optional local
@@ -11,7 +11,7 @@
 
 param(
     [string]$Version = "",
-    [string]$AssetsDir = "C:\code\Win-CodexBar-release\assets",
+    [string]$AssetsDir = "C:\code\Quotalis-release\assets",
     [switch]$SkipGitHub
 )
 
@@ -104,7 +104,7 @@ if (-not $Version) {
 }
 
 $tag = "v$Version"
-Write-Host "Release doctor: Win-CodexBar $Version"
+Write-Host "Release doctor: Quotalis $Version"
 Write-Host ""
 
 Assert-Version "rust/Cargo.toml" $rustVersion $Version
@@ -156,12 +156,9 @@ if (-not $SkipGitHub) {
     if ($gh) {
         Push-Location $RepoRoot
         try {
-            $ghJsonPath = Join-Path $env:TEMP "win-codexbar-release-doctor-gh.json"
-            $ghErrPath = Join-Path $env:TEMP "win-codexbar-release-doctor-gh.err"
-            $repoFlag = @()
-            $originUrl = (& $git.Source config --get remote.origin.url 2>$null)
-            if ($originUrl) { $repoFlag = @("-R", ($originUrl -replace '^https://github\.com/','' -replace '\.git$','' -replace '^git@github\.com:','')) }
-            & $gh.Source release view $tag @repoFlag --json assets,url 1>$ghJsonPath 2>$ghErrPath
+            $ghJsonPath = Join-Path $env:TEMP "quotalis-release-doctor-gh.json"
+            $ghErrPath = Join-Path $env:TEMP "quotalis-release-doctor-gh.err"
+            & $gh.Source release view $tag -R iModhish1/Quotalis --json assets,url 1>$ghJsonPath 2>$ghErrPath
             if ($LASTEXITCODE -eq 0) {
                 $release = Get-Content -Raw $ghJsonPath | ConvertFrom-Json
                 Write-Ok "GitHub release exists: $($release.url)"
