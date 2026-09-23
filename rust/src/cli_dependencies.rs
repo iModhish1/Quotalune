@@ -662,6 +662,40 @@ pub(crate) async fn read_cli_credential(provider: ProviderId, args: &[&str]) -> 
     read_resolved_credential(resolved, args, PROBE_TIMEOUT).await
 }
 
+/// Capture a curated CLI's read-only JSON output with the same bounded,
+/// cancellable process-tree supervision used for credential reads. Callers
+/// must not forward stderr or stdout into user-facing error messages.
+pub(crate) struct CliReadOutput {
+    pub exit_code: Option<i32>,
+    pub stdout: Vec<u8>,
+    pub stderr: Vec<u8>,
+}
+
+pub(crate) async fn read_cli_json(
+    provider: ProviderId,
+    args: &[&str],
+) -> Option<Result<CliReadOutput, ProbeFailure>> {
+    let dependency = cli_dependency(provider)?;
+    let resolved = resolve_cli_command(dependency, &DiscoveryRoots::system())?;
+    let (tx, rx) = watch::channel(false);
+    let _cancel_on_drop = CancelOnDrop(tx);
+    let mut all_args = resolved.prefix_args;
+    all_args.extend(args.iter().map(OsString::from));
+    Some(
+        tokio::task::spawn_blocking(move || {
+            run_capture_blocking(resolved.program, all_args, PROBE_TIMEOUT, rx).map(|output| {
+                CliReadOutput {
+                    exit_code: output.exit_code,
+                    stdout: output.stdout,
+                    stderr: output.stderr,
+                }
+            })
+        })
+        .await
+        .unwrap_or(Err(ProbeFailure::Launch)),
+    )
+}
+
 /// Run `program args...` non-interactively with a timeout and a cancellation
 /// watch. The child is killed on either. Output is capped and sanitized.
 pub async fn run_probe(

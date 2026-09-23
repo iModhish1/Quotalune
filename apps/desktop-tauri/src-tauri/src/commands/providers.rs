@@ -688,30 +688,53 @@ pub(crate) async fn fetch_provider_snapshot(
     ctx: FetchContext,
     token_account_id: Option<uuid::Uuid>,
 ) -> ProviderUsageSnapshot {
+    fetch_provider_snapshot_with_purpose(id, ctx, token_account_id, false).await
+}
+
+pub(crate) async fn verify_provider_snapshot(
+    id: ProviderId,
+    ctx: FetchContext,
+    token_account_id: Option<uuid::Uuid>,
+) -> ProviderUsageSnapshot {
+    fetch_provider_snapshot_with_purpose(id, ctx, token_account_id, true).await
+}
+
+async fn fetch_provider_snapshot_with_purpose(
+    id: ProviderId,
+    ctx: FetchContext,
+    token_account_id: Option<uuid::Uuid>,
+    read_only_verification: bool,
+) -> ProviderUsageSnapshot {
     let provider = instantiate_provider(id);
     let metadata = provider.metadata().clone();
     let started = std::time::Instant::now();
 
-    let mut snapshot =
-        match tokio::time::timeout(provider_fetch_timeout(id, &ctx), provider.fetch_usage(&ctx))
-            .await
-        {
-            Ok(Ok(result)) => {
-                ProviderUsageSnapshot::from_fetch_result(id, &metadata, &result, token_account_id)
-            }
-            Ok(Err(e)) => ProviderUsageSnapshot::from_error(
-                id,
-                &metadata,
-                quotalis_core::logging::safe_error_message(&e),
-                provider.error_state_kind(&e),
-            ),
-            Err(_) => ProviderUsageSnapshot::from_error(
-                id,
-                &metadata,
-                "Timeout".to_string(),
-                quotalis_core::core::ProviderStateKind::Unknown,
-            ),
-        };
+    let fetch = async {
+        if read_only_verification && id == ProviderId::Doubao {
+            quotalis_core::providers::DoubaoProvider::new()
+                .fetch_read_only_usage(&ctx)
+                .await
+        } else {
+            provider.fetch_usage(&ctx).await
+        }
+    };
+    let mut snapshot = match tokio::time::timeout(provider_fetch_timeout(id, &ctx), fetch).await {
+        Ok(Ok(result)) => {
+            ProviderUsageSnapshot::from_fetch_result(id, &metadata, &result, token_account_id)
+        }
+        Ok(Err(e)) => ProviderUsageSnapshot::from_error(
+            id,
+            &metadata,
+            quotalis_core::logging::safe_error_message(&e),
+            provider.error_state_kind(&e),
+        ),
+        Err(_) => ProviderUsageSnapshot::from_error(
+            id,
+            &metadata,
+            "Timeout".to_string(),
+            quotalis_core::core::ProviderStateKind::Unknown,
+        ),
+    };
 
     record_provider_fetch_duration(id, &mut snapshot, started);
     snapshot

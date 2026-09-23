@@ -765,17 +765,10 @@
       "methods": [
         {
           "browserDomain": null,
-          "envVar": "SRC_ACCESS_TOKEN",
-          "helpUrl": "https://sourcegraph.com/cody/manage",
+          "envVar": "AMP_API_KEY",
+          "helpUrl": "https://ampcode.com/settings/usage",
           "method": "apiKey",
           "rank": "recommended"
-        },
-        {
-          "browserDomain": "sourcegraph.com",
-          "envVar": null,
-          "helpUrl": "https://ampcode.com/settings/usage",
-          "method": "browserSession",
-          "rank": "alternative"
         }
       ],
       "planSource": "Provider-reported plan when present; never inferred from a credential",
@@ -1777,10 +1770,17 @@
       "methods": [
         {
           "browserDomain": null,
-          "envVar": "ARK_API_KEY or VOLCENGINE_ACCESS_KEY_ID + VOLCENGINE_SECRET_ACCESS_KEY",
+          "envVar": null,
+          "helpUrl": "https://www.volcengine.com/docs/82379",
+          "method": "cliSession",
+          "rank": "recommended"
+        },
+        {
+          "browserDomain": null,
+          "envVar": "VOLCENGINE_ACCESS_KEY_ID + VOLCENGINE_SECRET_ACCESS_KEY",
           "helpUrl": "https://console.volcengine.com/ark/region:ark+cn-beijing/usage",
           "method": "apiKey",
-          "rank": "recommended"
+          "rank": "alternative"
         }
       ],
       "planSource": "Provider-reported plan when present; never inferred from a credential",

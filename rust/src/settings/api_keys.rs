@@ -144,12 +144,12 @@ pub fn get_api_key_providers() -> Vec<ProviderConfigInfo> {
     vec![
         ProviderConfigInfo {
             id: ProviderId::Amp,
-            name: "Amp (Sourcegraph)",
+            name: "Amp",
             requires_api_key: true,
-            api_key_env_var: Some("SRC_ACCESS_TOKEN"),
-            api_key_help: Some("Get your token from Sourcegraph → Settings → Access Tokens"),
-            config_file_path: Some("~/.amp/config.json"),
-            dashboard_url: Some("https://sourcegraph.com/cody/manage"),
+            api_key_env_var: Some("AMP_API_KEY"),
+            api_key_help: Some("Use an Amp-issued API key from your Amp account."),
+            config_file_path: None,
+            dashboard_url: Some("https://ampcode.com/settings/usage"),
         },
         ProviderConfigInfo {
             id: ProviderId::Copilot,
@@ -353,13 +353,11 @@ pub fn get_api_key_providers() -> Vec<ProviderConfigInfo> {
         },
         ProviderConfigInfo {
             id: ProviderId::Doubao,
-            name: "Doubao / Volcengine Ark",
+            name: "Doubao Coding Plan",
             requires_api_key: true,
-            api_key_env_var: Some(
-                "ARK_API_KEY or VOLCENGINE_ACCESS_KEY_ID + VOLCENGINE_SECRET_ACCESS_KEY",
-            ),
+            api_key_env_var: Some("VOLCENGINE_ACCESS_KEY_ID + VOLCENGINE_SECRET_ACCESS_KEY"),
             api_key_help: Some(
-                "Use ARK_API_KEY for chat probe fallback, or paste Coding Plan credentials as access_key|secret_key|region (region defaults to cn-beijing).",
+                "Read-only connection verification requires signed Coding Plan credentials. Paste access_key|secret_key|region (region defaults to cn-beijing), or set both Volcengine credential environment variables. An ordinary ARK_API_KEY cannot verify this connection without a paid chat probe.",
             ),
             config_file_path: None,
             dashboard_url: Some("https://console.volcengine.com/ark/region:ark+cn-beijing/usage"),

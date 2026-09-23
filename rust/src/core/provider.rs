@@ -331,7 +331,9 @@ impl ProviderId {
             ProviderId::MiniMax => Some("platform.minimax.io"),
             ProviderId::OpenCode => Some("opencode.ai"),
             ProviderId::Augment => Some("app.augmentcode.com"),
-            ProviderId::Amp => Some("sourcegraph.com"),
+            // Amp's active adapter uses a bearer token. A domain alone is
+            // not evidence that a browser cookie can be used for usage reads.
+            ProviderId::Amp => None,
             ProviderId::Antigravity => Some("antigravity.ai"),
             ProviderId::Alibaba => {
                 Some(crate::providers::AlibabaRegion::Singapore.primary_cookie_domain())
@@ -416,7 +418,7 @@ impl ProviderId {
             "kimik2" | "kimi-k2" | "kimi k2" | "k2" | "kimi k2 (removed)" => {
                 Some(ProviderId::KimiK2)
             }
-            "amp" | "sourcegraph" => Some(ProviderId::Amp),
+            "amp" => Some(ProviderId::Amp),
             "warp" | "warp-ai" | "warp-terminal" => Some(ProviderId::Warp),
             "ollama" => Some(ProviderId::Ollama),
             "azureopenai" | "azure-openai" | "azure openai" => Some(ProviderId::AzureOpenAI),
@@ -721,7 +723,6 @@ pub fn cli_name_map() -> HashMap<&'static str, ProviderId> {
     map.insert("github", ProviderId::Copilot);
     map.insert("aws", ProviderId::Kiro);
     map.insert("vertex", ProviderId::VertexAI);
-    map.insert("sourcegraph", ProviderId::Amp);
     map.insert("warp-ai", ProviderId::Warp);
     map.insert("warp-terminal", ProviderId::Warp);
     map.insert("or", ProviderId::OpenRouter);
@@ -1041,6 +1042,7 @@ mod tests {
         assert_eq!(ProviderId::Copilot.cookie_domain(), None);
         assert_eq!(ProviderId::Zai.cookie_domain(), None);
         assert_eq!(ProviderId::VertexAI.cookie_domain(), None);
+        assert_eq!(ProviderId::Amp.cookie_domain(), None);
         assert_eq!(ProviderId::JetBrains.cookie_domain(), None);
     }
 

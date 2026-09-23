@@ -459,7 +459,11 @@ pub(crate) fn method_from_source_label(id: ProviderId, label: &str) -> Option<Co
         } else {
             ConnectionMethod::ApiKey
         }
-    } else if lower.contains("api") || lower.contains("billing") || lower.contains("key") {
+    } else if (id == ProviderId::Doubao && lower == "coding-plan")
+        || lower.contains("api")
+        || lower.contains("billing")
+        || lower.contains("key")
+    {
         ConnectionMethod::ApiKey
     } else if lower.contains("local") || lower.contains("scan") || lower.contains("file") {
         ConnectionMethod::LocalScanner
@@ -655,7 +659,7 @@ pub async fn verify_provider_connection(
     };
     let ctx = build_fetch_context(id, &settings, &cookies, &api_keys, &accounts);
     validate_selected_token(method, &ctx)?;
-    let task = tokio::spawn(async move { fetch_provider_snapshot(id, ctx, active_account).await });
+    let task = tokio::spawn(async move { verify_provider_snapshot(id, ctx, active_account).await });
     begin_verification(id, task.abort_handle())?;
     let snapshot_result = tokio::select! {
         result = task => result,
@@ -955,6 +959,32 @@ pub fn get_provider_connection_status(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn doubao_api_key_verification_never_uses_paid_chat_probe() {
+        let ctx = FetchContext {
+            source_mode: SourceMode::OAuth,
+            api_key: Some("plain-api-key-fixture".into()),
+            ..FetchContext::default()
+        };
+        let result = verify_provider_snapshot(ProviderId::Doubao, ctx, None).await;
+        assert_ne!(result.error_state, ProviderStateKind::Ready);
+        assert!(
+            result
+                .error
+                .as_deref()
+                .unwrap_or_default()
+                .contains("read-only")
+        );
+    }
+
+    #[test]
+    fn doubao_coding_plan_usage_proves_api_key_method() {
+        assert_eq!(
+            method_from_source_label(ProviderId::Doubao, "coding-plan"),
+            Some(ConnectionMethod::ApiKey),
+        );
+    }
 
     #[test]
     fn selected_token_method_requires_matching_provenance_before_fetch() {

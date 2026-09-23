@@ -3,13 +3,13 @@
 //! Probes Ark chat-completions with a one-token request and reads rate-limit headers.
 //! Also supports signed Coding Plan API credentials and `arkcli usage plan` (0.45).
 
+use crate::cli_dependencies::{self, ProbeFailure};
+use crate::connection_capabilities::cli_dependency;
 use async_trait::async_trait;
 use chrono::{DateTime, TimeZone, Utc};
 use reqwest::Client;
 use serde::Deserialize;
 use serde_json::json;
-use std::path::PathBuf;
-use std::process::Command;
 use std::time::Duration;
 
 use crate::core::{
@@ -20,6 +20,7 @@ use crate::core::{
 const DOUBAO_API_URL: &str = "https://ark.cn-beijing.volces.com/api/coding/v3/chat/completions";
 const DOUBAO_CODING_PLAN_URL: &str =
     "https://open.volcengineapi.com/?Action=GetCodingPlanUsage&Version=2024-01-01";
+const MAX_CODING_PLAN_RESPONSE_BYTES: usize = 2 * 1024 * 1024;
 const DOUBAO_CREDENTIAL_TARGET: &str = "codexbar-doubao";
 const PROBE_MODELS: &[&str] = &[
     "doubao-seed-2.0-code",
@@ -29,7 +30,7 @@ const PROBE_MODELS: &[&str] = &[
 
 pub struct DoubaoProvider {
     metadata: ProviderMetadata,
-    client: Client,
+    client: Option<Client>,
 }
 
 impl DoubaoProvider {
@@ -50,9 +51,10 @@ impl DoubaoProvider {
                 status_page_url: None,
             },
             client: crate::core::credentialed_http_client_builder()
-                .timeout(std::time::Duration::from_secs(15))
+                .timeout(Duration::from_secs(15))
+                .redirect(reqwest::redirect::Policy::none())
                 .build()
-                .unwrap_or_else(|_| Client::new()),
+                .ok(),
         }
     }
 
@@ -65,9 +67,43 @@ impl DoubaoProvider {
     }
 
     fn coding_plan_credentials(api_key: Option<&str>) -> Option<DoubaoCodingPlanCredentials> {
-        api_key
-            .and_then(DoubaoCodingPlanCredentials::parse)
-            .or_else(DoubaoCodingPlanCredentials::from_env)
+        match api_key {
+            Some(explicit) => DoubaoCodingPlanCredentials::parse(explicit),
+            None => DoubaoCodingPlanCredentials::from_env(),
+        }
+    }
+
+    /// Connection checks must never fall through to the chat-completions
+    /// probe: that endpoint can consume paid model usage. Only the signed
+    /// Coding Plan usage read or the local CLI usage command qualify.
+    pub async fn fetch_read_only_usage(
+        &self,
+        ctx: &FetchContext,
+    ) -> Result<ProviderFetchResult, ProviderError> {
+        match ctx.source_mode {
+            SourceMode::Cli => Ok(ProviderFetchResult::new(
+                fetch_arkcli_usage().await?,
+                "arkcli",
+            )),
+            SourceMode::Auto | SourceMode::OAuth => {
+                if let Some(credentials) = Self::coding_plan_credentials(ctx.api_key.as_deref()) {
+                    return Ok(ProviderFetchResult::new(
+                        self.fetch_coding_plan(&credentials).await?,
+                        "coding-plan",
+                    ));
+                }
+                if ctx.api_key.is_none() && arkcli_available() {
+                    return Ok(ProviderFetchResult::new(
+                        fetch_arkcli_usage().await?,
+                        "arkcli",
+                    ));
+                }
+                Err(ProviderError::Other(
+                    "Doubao connection verification requires Coding Plan credentials or arkcli usage; the API-key chat probe is not a read-only check".into(),
+                ))
+            }
+            SourceMode::Web => Err(ProviderError::UnsupportedSource(ctx.source_mode)),
+        }
     }
 
     async fn fetch_api(&self, api_key: &str) -> Result<UsageSnapshot, ProviderError> {
@@ -97,6 +133,8 @@ impl DoubaoProvider {
         let signed = sign_volcengine_request(credentials, &body, Utc::now())?;
         let response = self
             .client
+            .as_ref()
+            .ok_or_else(|| ProviderError::Other("Doubao HTTP client unavailable".into()))?
             .post(DOUBAO_CODING_PLAN_URL)
             .header("Accept", "application/json")
             .header("Content-Type", signed.content_type)
@@ -108,18 +146,39 @@ impl DoubaoProvider {
             .send()
             .await?;
 
+        Self::read_coding_plan_response(response).await
+    }
+
+    async fn read_coding_plan_response(
+        mut response: reqwest::Response,
+    ) -> Result<UsageSnapshot, ProviderError> {
         let status = response.status();
-        let bytes = response.bytes().await?;
         if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
             return Err(ProviderError::AuthRequired);
         }
         if !status.is_success() {
             return Err(ProviderError::Other(format!(
-                "Doubao Coding Plan API returned {status}: {}",
-                sanitized_body(&String::from_utf8_lossy(&bytes))
+                "Doubao Coding Plan API returned HTTP {}",
+                status.as_u16()
             )));
         }
-
+        if response
+            .content_length()
+            .is_some_and(|size| size > MAX_CODING_PLAN_RESPONSE_BYTES as u64)
+        {
+            return Err(ProviderError::Parse(
+                "Doubao Coding Plan response size limit exceeded".into(),
+            ));
+        }
+        let mut bytes = Vec::new();
+        while let Some(chunk) = response.chunk().await? {
+            if chunk.len() > MAX_CODING_PLAN_RESPONSE_BYTES.saturating_sub(bytes.len()) {
+                return Err(ProviderError::Parse(
+                    "Doubao Coding Plan response size limit exceeded".into(),
+                ));
+            }
+            bytes.extend_from_slice(&chunk);
+        }
         Ok(coding_plan_snapshot(decode_coding_plan_usage(&bytes)?))
     }
 
@@ -157,6 +216,8 @@ impl DoubaoProvider {
     async fn probe(&self, api_key: &str, model: &str) -> Result<DoubaoProbeResult, ProviderError> {
         let response = self
             .client
+            .as_ref()
+            .ok_or_else(|| ProviderError::Other("Doubao HTTP client unavailable".into()))?
             .post(DOUBAO_API_URL)
             .bearer_auth(api_key)
             .header("Accept", "application/json")
@@ -428,7 +489,7 @@ fn coding_plan_snapshot(usage: CodingPlanResult) -> UsageSnapshot {
         &["session", "5-hour", "five_hour", "5h"],
         Some(5 * 60),
     )
-    .unwrap_or_else(|| RateWindow::new(0.0));
+    .unwrap_or_else(|| RateWindow::informational("Quota unavailable"));
     let mut snapshot = UsageSnapshot::new(primary);
     if let Some(weekly) = coding_plan_window(&usage, &["weekly", "week"], Some(7 * 24 * 60)) {
         snapshot = snapshot.with_secondary(weekly);
@@ -550,14 +611,10 @@ struct ArkcliPeriod {
     reset_at: Option<String>,
 }
 
-fn resolve_arkcli_binary() -> Option<PathBuf> {
-    if let Ok(path) = std::env::var("ARKCLI_PATH") {
-        let p = PathBuf::from(path.trim());
-        if p.is_file() {
-            return Some(p);
-        }
-    }
-    which::which("arkcli").ok()
+fn arkcli_available() -> bool {
+    cli_dependency(ProviderId::Doubao)
+        .and_then(cli_dependencies::resolve_executable)
+        .is_some()
 }
 
 fn is_arkcli_auth_error(message: &str) -> bool {
@@ -574,64 +631,30 @@ fn is_arkcli_auth_error(message: &str) -> bool {
     .any(|s| n.contains(s))
 }
 
-fn run_arkcli_usage_plan() -> Result<Vec<u8>, ProviderError> {
-    let bin = resolve_arkcli_binary().ok_or_else(|| {
-        ProviderError::NotInstalled(
-            "arkcli was not found. Install arkcli, run 'arkcli auth login', or configure Doubao API credentials."
-                .into(),
-        )
-    })?;
-    let mut child = Command::new(&bin)
-        .args(["usage", "plan", "--format", "json"])
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .map_err(|e| ProviderError::Other(format!("Failed to launch arkcli: {e}")))?;
-
-    // ponytail: 15s wall-clock via join timeout isn't available on std Command;
-    // kill after wait timeout via a simple timed poll loop.
-    let deadline = std::time::Instant::now() + Duration::from_secs(15);
-    loop {
-        match child.try_wait() {
-            Ok(Some(_)) => break,
-            Ok(None) if std::time::Instant::now() >= deadline => {
-                // Best-effort teardown of the timed-out child; the outcome is already
-                // reported as timed out.
-                let _killed = child.kill();
-                let _reaped = child.wait();
-                return Err(ProviderError::Other(
-                    "arkcli usage timed out. Check arkcli authentication and try again.".into(),
-                ));
-            }
-            Ok(None) => std::thread::sleep(Duration::from_millis(50)),
-            Err(e) => {
-                return Err(ProviderError::Other(format!("arkcli wait failed: {e}")));
-            }
-        }
-    }
-    let output = child
-        .wait_with_output()
-        .map_err(|e| ProviderError::Other(format!("arkcli wait failed: {e}")))?;
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let message = stderr.split_whitespace().collect::<Vec<_>>().join(" ");
-        if is_arkcli_auth_error(&message) {
-            return Err(ProviderError::AuthRequired);
-        }
-        let code = output.status.code().unwrap_or(-1);
-        return Err(ProviderError::Other(format!(
-            "arkcli usage failed ({code}): {}",
-            if message.is_empty() {
-                "unknown error"
-            } else {
-                &message
-            }
-        )));
-    }
-    if output.stdout.len() > 256 * 1024 {
+async fn run_arkcli_usage_plan() -> Result<Vec<u8>, ProviderError> {
+    let output =
+        cli_dependencies::read_cli_json(ProviderId::Doubao, &["usage", "plan", "--format", "json"])
+            .await
+            .ok_or_else(|| {
+                ProviderError::NotInstalled("arkcli was not found in a trusted installation".into())
+            })?
+            .map_err(|failure| match failure {
+                ProbeFailure::Timeout => ProviderError::Other("arkcli usage timed out".into()),
+                ProbeFailure::Cancelled => ProviderError::Other("arkcli usage cancelled".into()),
+                ProbeFailure::Launch | ProbeFailure::Capture => {
+                    ProviderError::Other("arkcli usage failed".into())
+                }
+            })?;
+    if output.stdout.len() > cli_dependencies::OUTPUT_CAP {
         return Err(ProviderError::Other(
             "arkcli returned too much output. Update arkcli and try again.".into(),
         ));
+    }
+    if output.exit_code != Some(0) {
+        if is_arkcli_auth_error(&String::from_utf8_lossy(&output.stderr)) {
+            return Err(ProviderError::AuthRequired);
+        }
+        return Err(ProviderError::Other("arkcli usage failed".into()));
     }
     Ok(output.stdout)
 }
@@ -742,8 +765,8 @@ fn decode_arkcli_usage(bytes: &[u8]) -> Result<CodingPlanResult, ProviderError> 
     })
 }
 
-fn fetch_arkcli_usage() -> Result<UsageSnapshot, ProviderError> {
-    let stdout = run_arkcli_usage_plan()?;
+async fn fetch_arkcli_usage() -> Result<UsageSnapshot, ProviderError> {
+    let stdout = run_arkcli_usage_plan().await?;
     let usage = decode_arkcli_usage(&stdout)?;
     Ok(coding_plan_snapshot(usage))
 }
@@ -866,10 +889,6 @@ fn percent_encode(value: &str, encode_slash: bool) -> String {
         .collect()
 }
 
-fn sanitized_body(body: &str) -> String {
-    crate::core::sanitized_body(body, 200)
-}
-
 impl Default for DoubaoProvider {
     fn default() -> Self {
         Self::new()
@@ -897,8 +916,8 @@ impl Provider for DoubaoProvider {
                 }
                 // Prefer arkcli when available so Agent Plan / team quotas surface
                 // without signed API credentials (upstream 0.45).
-                if resolve_arkcli_binary().is_some() {
-                    match fetch_arkcli_usage() {
+                if arkcli_available() {
+                    match fetch_arkcli_usage().await {
                         Ok(snap) => return Ok(ProviderFetchResult::new(snap, "arkcli")),
                         Err(ProviderError::AuthRequired) => {
                             return Err(ProviderError::AuthRequired);
@@ -916,7 +935,7 @@ impl Provider for DoubaoProvider {
                 ))
             }
             SourceMode::Cli => {
-                let snap = fetch_arkcli_usage()?;
+                let snap = fetch_arkcli_usage().await?;
                 Ok(ProviderFetchResult::new(snap, "arkcli"))
             }
             SourceMode::Web => Err(ProviderError::UnsupportedSource(ctx.source_mode)),
@@ -976,6 +995,79 @@ fn resolve_api_key(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    async fn response_fixture(status: &str, body: Vec<u8>, chunked: bool) -> reqwest::Response {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let headers = if chunked {
+            "Transfer-Encoding: chunked".to_string()
+        } else {
+            format!("Content-Length: {}", body.len())
+        };
+        let head = format!("HTTP/1.1 {status}\r\n{headers}\r\nConnection: close\r\n\r\n");
+        tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut request = [0u8; 2048];
+            assert!(socket.read(&mut request).await.unwrap() > 0);
+            let mut parts = vec![head.into_bytes()];
+            if chunked {
+                parts.push(format!("{:x}\r\n", body.len()).into_bytes());
+            }
+            parts.push(body);
+            if chunked {
+                parts.push(b"\r\n0\r\n\r\n".to_vec());
+            }
+            for part in parts {
+                if socket.write_all(&part).await.is_err() {
+                    break;
+                }
+            }
+        });
+        Client::builder()
+            .no_proxy()
+            .timeout(Duration::from_secs(5))
+            .build()
+            .unwrap()
+            .get(format!("http://{address}/fixture"))
+            .send()
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn coding_plan_http_errors_never_echo_remote_body() {
+        let response = response_fixture(
+            "500 Internal Server Error",
+            b"private@example.test session=fixture-secret".to_vec(),
+            false,
+        )
+        .await;
+        let error = DoubaoProvider::read_coding_plan_response(response)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("500"));
+        assert!(!error.contains("private@example.test"));
+        assert!(!error.contains("fixture-secret"));
+    }
+
+    #[tokio::test]
+    async fn coding_plan_http_bounds_declared_and_streamed_bodies() {
+        for chunked in [false, true] {
+            let response = response_fixture(
+                "200 OK",
+                vec![b' '; MAX_CODING_PLAN_RESPONSE_BYTES + 1],
+                chunked,
+            )
+            .await;
+            let error = DoubaoProvider::read_coding_plan_response(response)
+                .await
+                .unwrap_err()
+                .to_string();
+            assert!(error.contains("response size limit"), "{error}");
+        }
+    }
     use reqwest::header::{HeaderMap, HeaderValue};
 
     #[test]
@@ -1095,6 +1187,36 @@ mod tests {
         let creds = DoubaoCodingPlanCredentials::parse(json).expect("json creds");
         assert_eq!(creds.access_key_id, "ak-json");
         assert_eq!(creds.secret_access_key, "sk-json");
+        // An explicitly selected bearer key cannot silently borrow an
+        // unrelated signed key from process environment.
+        assert!(DoubaoProvider::coding_plan_credentials(Some("plain-bearer-fixture")).is_none());
+    }
+
+    #[test]
+    fn coding_plan_without_session_does_not_invent_zero_usage() {
+        let body =
+            br#"{"Result":{"Status":"active","QuotaUsage":[{"Level":"weekly","Percent":42.0}]}}"#;
+        let snapshot = coding_plan_snapshot(decode_coding_plan_usage(body).unwrap());
+        assert!(snapshot.primary.is_informational);
+        assert_eq!(
+            snapshot.primary.reset_description.as_deref(),
+            Some("Quota unavailable")
+        );
+        assert_eq!(snapshot.secondary.unwrap().used_percent, 42.0);
+    }
+
+    #[tokio::test]
+    async fn missing_http_client_fails_closed_before_coding_plan_request() {
+        let mut provider = DoubaoProvider::new();
+        provider.client = None;
+        let credentials = DoubaoCodingPlanCredentials {
+            access_key_id: "synthetic-ak".into(),
+            secret_access_key: "synthetic-sk".into(),
+            region: "cn-beijing".into(),
+        };
+        let error = provider.fetch_coding_plan(&credentials).await.unwrap_err();
+        assert!(error.to_string().contains("HTTP client unavailable"));
+        assert!(!error.to_string().contains("synthetic-sk"));
     }
 
     #[test]

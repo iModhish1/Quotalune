@@ -362,6 +362,7 @@ fn cli_owns_sign_in(provider: ProviderId) -> bool {
     cli_dependency(provider).is_some_and(|d| {
         CLI_LOGIN_SUPERVISED.contains(&provider)
             || d.session_detection != SessionDetection::UsageFetch
+            || provider == ProviderId::Doubao
     })
 }
 
@@ -671,6 +672,14 @@ mod tests {
             Some(ConnectionMethod::ApiKey)
         );
         assert_eq!(
+            connection_capabilities(ProviderId::Amp).recommended(),
+            Some(ConnectionMethod::ApiKey)
+        );
+        assert!(
+            !connection_capabilities(ProviderId::Amp).supports(ConnectionMethod::BrowserSession)
+        );
+        assert!(!connection_capabilities(ProviderId::Amp).supports(ConnectionMethod::CliSession));
+        assert_eq!(
             connection_capabilities(ProviderId::Perplexity).recommended(),
             Some(ConnectionMethod::BrowserSession)
         );
@@ -709,6 +718,14 @@ mod tests {
                 TokenInjection::CookieHeader
             ));
         }
+    }
+
+    #[test]
+    fn doubao_offers_the_read_only_cli_usage_route() {
+        let capability = connection_capabilities(ProviderId::Doubao);
+        assert!(capability.supports(ConnectionMethod::CliSession));
+        assert!(capability.supports(ConnectionMethod::ApiKey));
+        assert!(!capability.supports(ConnectionMethod::BrowserSession));
     }
 
     #[test]

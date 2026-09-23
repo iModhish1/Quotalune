@@ -117,14 +117,6 @@ impl TokenAccountSupport {
                 requires_manual_cookie_source: true,
                 cookie_name: None,
             }),
-            ProviderId::Amp => Some(TokenAccountSupport {
-                title: "Session tokens",
-                subtitle: "Store multiple Amp Cookie headers.",
-                placeholder: "Cookie: ...",
-                injection: TokenInjection::CookieHeader,
-                requires_manual_cookie_source: true,
-                cookie_name: None,
-            }),
             ProviderId::Ollama => Some(TokenAccountSupport {
                 title: "Session tokens",
                 subtitle: "Store multiple Ollama Cookie headers or __Secure-session values.",
@@ -314,6 +306,7 @@ impl TokenAccountSupport {
             }),
             // These providers don't support token accounts
             ProviderId::Codex
+            | ProviderId::Amp
             | ProviderId::Gemini
             | ProviderId::Antigravity
             | ProviderId::Kiro

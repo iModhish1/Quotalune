@@ -35,7 +35,7 @@ impl AmpProvider {
     /// The private Amp RPC shape is established by upstream CodexBar's
     /// AmpUsageFetcher, pinned in WAVE3_IMPLEMENTATION_REPORT.md. It is not
     /// a public API guarantee; unknown responses fail closed.
-    async fn fetch_via_web(&self, ctx: &FetchContext) -> Result<UsageSnapshot, ProviderError> {
+    async fn fetch_balance(&self, ctx: &FetchContext) -> Result<UsageSnapshot, ProviderError> {
         // A selected browser session identifies a different account lane. Do
         // not silently replace it with a saved/env API token.
         if ctx.manual_cookie_header.is_some() {
@@ -163,21 +163,24 @@ impl Provider for AmpProvider {
         tracing::debug!("Fetching Amp usage");
 
         match ctx.source_mode {
-            SourceMode::Auto | SourceMode::Web => {
-                let usage = self.fetch_via_web(ctx).await?;
+            // The shared onboarding layer stores API-key selection as OAuth
+            // source mode. This is still an Amp-issued bearer key, not an
+            // OAuth authorization flow.
+            SourceMode::Auto | SourceMode::OAuth => {
+                let usage = self.fetch_balance(ctx).await?;
                 Ok(api_fetch_result(usage))
             }
             SourceMode::Cli => Err(ProviderError::UnsupportedSource(SourceMode::Cli)),
-            SourceMode::OAuth => Err(ProviderError::UnsupportedSource(SourceMode::OAuth)),
+            SourceMode::Web => Err(ProviderError::UnsupportedSource(SourceMode::Web)),
         }
     }
 
     fn available_sources(&self) -> Vec<SourceMode> {
-        vec![SourceMode::Auto, SourceMode::Web]
+        vec![SourceMode::Auto, SourceMode::OAuth]
     }
 
     fn supports_web(&self) -> bool {
-        true
+        false
     }
 
     fn supports_cli(&self) -> bool {
@@ -553,6 +556,22 @@ mod current_subscription_tests {
 mod source_truth_tests {
     use super::*;
     use chrono::{TimeZone, Utc};
+
+    #[tokio::test]
+    async fn api_key_onboarding_source_uses_amp_bearer_path() {
+        let provider = AmpProvider::new();
+        assert!(provider.available_sources().contains(&SourceMode::OAuth));
+        assert!(!provider.supports_web());
+        let ctx = FetchContext {
+            source_mode: SourceMode::OAuth,
+            api_key: Some("sgp_synthetic_cody_token".into()),
+            ..FetchContext::default()
+        };
+        assert!(matches!(
+            provider.fetch_usage(&ctx).await,
+            Err(ProviderError::AuthRequired)
+        ));
+    }
 
     #[tokio::test]
     async fn cli_configuration_does_not_report_zero_usage() {
