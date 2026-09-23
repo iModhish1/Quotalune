@@ -14,6 +14,13 @@ $fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) ('quotalis-portable-test-' +
 try {
     $desktop = Join-Path $fixtureRoot 'Quotalis.exe'
     $files = Get-QuotalisPortableFiles -DesktopExe $desktop -RepoRoot $fixtureRoot
+    foreach ($licenseName in @(
+        'licenses/option-ext-0.2.0-MPL-2.0.txt',
+        'licenses/webpki-roots-1.0.7-CDLA-Permissive-2.0.txt',
+        'licenses/icu4x-2.2.0-Unicode-3.0.txt'
+    )) {
+        if (-not $files.Contains($licenseName)) { throw "Portable archive omits required license: $licenseName" }
+    }
     foreach ($name in $files.Keys) {
         [void][IO.Directory]::CreateDirectory((Split-Path $files[$name] -Parent))
         [IO.File]::WriteAllText($files[$name], "Fixture content for $name")

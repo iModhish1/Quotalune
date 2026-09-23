@@ -10,6 +10,9 @@ function Get-QuotalisPortableFiles {
         'LICENSE' = Join-Path $RepoRoot 'LICENSE'
         'NOTICE' = Join-Path $RepoRoot 'NOTICE'
         'THIRD_PARTY_NOTICES.md' = Join-Path $RepoRoot 'THIRD_PARTY_NOTICES.md'
+        'licenses/option-ext-0.2.0-MPL-2.0.txt' = Join-Path $RepoRoot 'legal/licenses/option-ext-0.2.0-MPL-2.0.txt'
+        'licenses/webpki-roots-1.0.7-CDLA-Permissive-2.0.txt' = Join-Path $RepoRoot 'legal/licenses/webpki-roots-1.0.7-CDLA-Permissive-2.0.txt'
+        'licenses/icu4x-2.2.0-Unicode-3.0.txt' = Join-Path $RepoRoot 'legal/licenses/icu4x-2.2.0-Unicode-3.0.txt'
         'README.md' = Join-Path $RepoRoot 'docs/validation/QUOTALIS_PORTABLE_WINDOWS.md'
     }
 }

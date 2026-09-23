@@ -43,6 +43,23 @@ described below. This file must be updated whenever a new material dependency is
 - Frontend: React (MIT), Motion for React (MIT), Vite (MIT), Vitest (MIT), TypeScript
   (Apache-2.0)
 
+## Additional licenses in the Windows distribution
+
+The following license texts are bundled under `licenses/` in the installer and
+portable archive, and are readable in About without a network connection:
+
+- `option-ext 0.2.0` (MPL-2.0): `licenses/option-ext-0.2.0-MPL-2.0.txt`.
+  Unmodified source: https://github.com/soc/option-ext
+- `webpki-roots 1.0.7` certificate data (CDLA-Permissive-2.0):
+  `licenses/webpki-roots-1.0.7-CDLA-Permissive-2.0.txt`.
+  Source: https://github.com/rustls/webpki-roots
+- ICU4X `2.2.0` components and Unicode data (Unicode-3.0):
+  `licenses/icu4x-2.2.0-Unicode-3.0.txt`.
+  Source: https://github.com/unicode-org/icu4x
+
+Other dual-licensed crates use their permissive MIT or Apache-2.0 option where
+available; for example, `self_cell` uses Apache-2.0 rather than GPL-2.0-only.
+
 Brand assets under `assets/brand/` are original Quotalis artwork. Provider names and marks
 referenced by integrations belong to their respective owners; Quotalis embeds no provider
 artwork in its own brand.

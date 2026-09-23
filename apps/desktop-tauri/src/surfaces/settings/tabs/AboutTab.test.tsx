@@ -180,6 +180,9 @@ describe("AboutTab", () => {
     expect(screen.getByText("AboutThirdPartyNotices")).toBeInTheDocument();
     expect(within(screen.getByRole("region", { name: "AboutMITLicense" })).getByText(/Copyright \(c\) 2025 Peter Steinberger/)).toBeInTheDocument();
     expect(within(screen.getByRole("region", { name: "AboutDerivedNotice" })).getByText(/Copyright \(c\) 2026 Adem Isler/)).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "AboutOptionExtLicense" })).getByText(/Mozilla Public License Version 2.0/)).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "AboutWebpkiRootsLicense" })).getByText(/Community Data License Agreement - Permissive/)).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "AboutIcu4xLicense" })).getByText(/UNICODE LICENSE V3/)).toBeInTheDocument();
     expect(tauriMocks.openExternalUrl).not.toHaveBeenCalled();
   });
 

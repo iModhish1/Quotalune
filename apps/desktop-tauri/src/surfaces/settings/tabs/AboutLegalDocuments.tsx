@@ -5,6 +5,9 @@ const documents = [
   { key: "AboutMITLicense", text: legalDocuments.license },
   { key: "AboutDerivedNotice", text: legalDocuments.notice },
   { key: "AboutThirdPartyNotices", text: legalDocuments.thirdPartyNotices },
+  { key: "AboutOptionExtLicense", text: legalDocuments.optionExtLicense },
+  { key: "AboutWebpkiRootsLicense", text: legalDocuments.webpkiRootsLicense },
+  { key: "AboutIcu4xLicense", text: legalDocuments.icu4xLicense },
 ] as const;
 
 /** The same committed legal files shipped by the Inno and portable packages. */

@@ -6,7 +6,14 @@ declare module "*.svg?raw" {
 }
 
 declare module "virtual:quotalis-legal-documents" {
-  const documents: { license: string; notice: string; thirdPartyNotices: string };
+  const documents: {
+    license: string;
+    notice: string;
+    thirdPartyNotices: string;
+    optionExtLicense: string;
+    webpkiRootsLicense: string;
+    icu4xLicense: string;
+  };
   export default documents;
 }
 

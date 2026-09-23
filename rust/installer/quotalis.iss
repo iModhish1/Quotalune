@@ -62,6 +62,9 @@ Source: "..\..\assets\brand\icons\quotaarc-icon-128.png"; DestDir: "{app}"; Dest
 Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\NOTICE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\legal\licenses\option-ext-0.2.0-MPL-2.0.txt"; DestDir: "{app}\licenses"; Flags: ignoreversion
+Source: "..\..\legal\licenses\webpki-roots-1.0.7-CDLA-Permissive-2.0.txt"; DestDir: "{app}\licenses"; Flags: ignoreversion
+Source: "..\..\legal\licenses\icu4x-2.2.0-Unicode-3.0.txt"; DestDir: "{app}\licenses"; Flags: ignoreversion
 Source: "{#VCRedistPath}"; Flags: dontcopy
 Source: "{#WebView2BootstrapperPath}"; Flags: dontcopy
 
