@@ -26,3 +26,9 @@ Clear the fixture before real-account testing in a disposable Dev profile. Never
 - Independent Wave 1/2 native gates remain open.
 
 Installer confirmation cases are historical prepared cases: automated installation is intentionally unavailable after security review. Validate manual documentation/no process launch, and mark automated cases NOT APPLICABLE unless a later audited installer implementation exists. Do not mark all matrix cases PASS by inference.
+
+## Guarded native retry with the new desktop adapter — 2026-09-23
+
+The newly installed desktop-visual-qa adapter provides a new, narrowly authorized route, so the prior no-retry instruction was revisited without using a forbidden input fallback. Its canonical launch command held and verified SHA256 `13dc965f03f2d4c93abbe984db6c0f82a0e6099049b25d617d84b907b8eff64a`, launched `target/debug/QuotalisDev.exe` from embedded HEAD `4fcf3269b274`, and returned Dev identity (`channel=dev`, `app.quotalis.desktop.dev`, `QuotaArc-Dev`). The visible window was `Quotalis Dev`; no Personal process was launched.
+
+Background UIA inspection returned only Tauri/WebView2 Pane nodes and no uniquely selectable page controls. The adapter rejected the requested window screenshot as `BACKGROUND_ONLY` because that tool can move the physical pointer, steal focus, or inject input. The adapter was stopped in `finally`, releasing its job-owned Dev process. No mouse, keyboard, clipboard, settings mutation, credential read, page interaction or screenshot occurred. This is a verified launch/identity check, **not native visual or functional QA**; the prepared case matrix remains unexecuted and the release gate remains closed. Further capture needs a permitted adapter path that can expose actual pixels without shared physical input.
