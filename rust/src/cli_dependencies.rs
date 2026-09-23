@@ -263,12 +263,14 @@ fn resolve_native_executable(
     #[cfg(windows)]
     let relatives: &[&str] = match dependency.provider {
         ProviderId::Copilot => &["GitHub CLI/gh.exe"],
+        ProviderId::Kiro => &["Kiro/kiro-cli.exe"],
         _ => &[],
     };
     #[cfg(unix)]
     let relatives: &[&str] = match dependency.provider {
         ProviderId::Copilot => &["bin/gh"],
         ProviderId::VertexAI => &["bin/gcloud"],
+        ProviderId::Kiro => &["bin/kiro-cli"],
         _ => &[],
     };
     #[cfg(not(any(windows, unix)))]
@@ -1350,6 +1352,45 @@ mod tests {
             install_plan(dependency).is_none(),
             "manual install policy remains unchanged"
         );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn kiro_resolver_accepts_only_a_protected_native_executable() {
+        let temp = tempfile::tempdir().unwrap();
+        let protected = temp.path().join("protected");
+        let user_local = temp.path().join("user-local");
+        std::fs::create_dir_all(protected.join("Kiro")).unwrap();
+        std::fs::create_dir_all(user_local.join("Programs/Kiro")).unwrap();
+        std::fs::write(user_local.join("Programs/Kiro/kiro-cli.exe"), b"fixture").unwrap();
+        let dependency = cli_dependency(ProviderId::Kiro).unwrap();
+        let roots = DiscoveryRoots {
+            protected_roots: vec![protected.clone()],
+        };
+        assert!(resolve_cli_command(dependency, &roots).is_none());
+
+        let trusted = protected.join("Kiro/kiro-cli.exe");
+        std::fs::write(&trusted, b"fixture").unwrap();
+        let resolved = resolve_cli_command(dependency, &roots).expect("protected Kiro CLI");
+        assert_eq!(resolved.program, std::fs::canonicalize(trusted).unwrap());
+        assert_eq!(resolved.display_path, resolved.program);
+        assert!(install_plan(dependency).is_none());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn kiro_resolver_accepts_a_protected_unix_binary() {
+        let temp = tempfile::tempdir().unwrap();
+        let protected = temp.path().join("protected");
+        std::fs::create_dir_all(protected.join("bin")).unwrap();
+        let trusted = protected.join("bin/kiro-cli");
+        std::fs::write(&trusted, b"fixture").unwrap();
+        let roots = DiscoveryRoots {
+            protected_roots: vec![protected],
+        };
+        let dependency = cli_dependency(ProviderId::Kiro).unwrap();
+        let resolved = resolve_cli_command(dependency, &roots).expect("protected Kiro CLI");
+        assert_eq!(resolved.program, std::fs::canonicalize(trusted).unwrap());
     }
 
     #[test]

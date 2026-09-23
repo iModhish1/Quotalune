@@ -6,13 +6,12 @@ use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 use crate::cli_dependencies;
+use crate::connection_capabilities::cli_dependency;
+use crate::core::ProviderId;
 
-/// Cached CLI path
-static CLI_PATH: OnceLock<Option<PathBuf>> = OnceLock::new();
-
-/// Cached CLI version
-static CLI_VERSION: OnceLock<Option<String>> = OnceLock::new();
-const KIRO_CLI_PATH_ENV: &str = "CODEXBAR_KIRO_CLI_PATH";
+/// Cache only a successful version; a missing CLI can be installed while
+/// Quotalis is running and must be discoverable on the next check.
+static CLI_VERSION: OnceLock<String> = OnceLock::new();
 
 fn is_allowed_kiro_binary(path: &Path) -> bool {
     if !path.is_file() {
@@ -32,21 +31,6 @@ fn is_allowed_kiro_binary(path: &Path) -> bool {
     {
         file_name == "kiro-cli" || file_name == "kiro"
     }
-}
-
-fn env_override_cli_path() -> Option<PathBuf> {
-    let raw = std::env::var(KIRO_CLI_PATH_ENV).ok()?;
-    let trimmed = raw.trim();
-    if trimmed.is_empty() {
-        return None;
-    }
-
-    let path = PathBuf::from(trimmed);
-    if is_allowed_kiro_binary(&path) {
-        return Some(path);
-    }
-
-    None
 }
 
 /// Kiro CLI version info
@@ -184,86 +168,48 @@ impl Ord for KiroVersion {
 
 /// Find Kiro CLI binary path
 pub fn find_kiro_cli() -> Option<PathBuf> {
-    CLI_PATH
-        .get_or_init(|| {
-            // 1. Check explicit environment override first
-            if let Some(path) = env_override_cli_path() {
-                return Some(path);
-            }
-
-            // 2. Hardened PATH lookup - use which but validate the result
-            //    (avoids CWD hijacking by not executing bare command names)
-            if let Ok(path) = which::which("kiro-cli")
-                && is_allowed_kiro_binary(&path)
-            {
-                return Some(path);
-            }
-            if let Ok(path) = which::which("kiro")
-                && is_allowed_kiro_binary(&path)
-            {
-                return Some(path);
-            }
-
-            // 3. Fall back to known install locations
-            #[cfg(target_os = "windows")]
-            {
-                let possible_paths = [
-                    dirs::data_local_dir()
-                        .map(|p| p.join("Programs").join("Kiro").join("kiro-cli.exe")),
-                    Some(PathBuf::from("C:\\Program Files\\Kiro\\kiro-cli.exe")),
-                ];
-                for path in possible_paths.into_iter().flatten() {
-                    if is_allowed_kiro_binary(&path) {
-                        return Some(path);
-                    }
-                }
-            }
-
-            None
-        })
-        .clone()
+    let dependency = cli_dependency(ProviderId::Kiro)?;
+    let path = cli_dependencies::resolve_executable(dependency)?;
+    if !is_allowed_kiro_binary(&path) {
+        return None;
+    }
+    Some(path)
 }
 
 /// Detect Kiro CLI version
 pub fn detect_version() -> Option<String> {
-    CLI_VERSION
-        .get_or_init(|| {
-            let cli_path = find_kiro_cli()?;
+    if let Some(version) = CLI_VERSION.get() {
+        return Some(version.clone());
+    }
+    let cli_path = find_kiro_cli()?;
+    let output = cli_dependencies::read_provider_cli_sync(&cli_path, &["--version"]).ok()?;
+    if output.exit_code != Some(0)
+        || output.stdout.len() > cli_dependencies::OUTPUT_CAP
+        || output.stderr.len() > cli_dependencies::OUTPUT_CAP
+    {
+        return None;
+    }
 
-            let output =
-                cli_dependencies::read_provider_cli_sync(&cli_path, &["--version"]).ok()?;
-            if output.exit_code != Some(0)
-                || output.stdout.len() > cli_dependencies::OUTPUT_CAP
-                || output.stderr.len() > cli_dependencies::OUTPUT_CAP
-            {
-                return None;
-            }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let combined = if stdout.trim().is_empty() {
+        stderr.to_string()
+    } else {
+        stdout.to_string()
+    };
 
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let combined = if stdout.trim().is_empty() {
-                stderr.to_string()
-            } else {
-                stdout.to_string()
-            };
-
-            let trimmed = combined.trim();
-            if trimmed.is_empty() {
-                return None;
-            }
-
-            // Output is like "kiro-cli 1.23.1" or just "1.23.1"
-            let version = if trimmed.to_lowercase().starts_with("kiro-cli ") {
-                trimmed[9..].trim().to_string()
-            } else if trimmed.to_lowercase().starts_with("kiro ") {
-                trimmed[5..].trim().to_string()
-            } else {
-                trimmed.to_string()
-            };
-
-            Some(version)
-        })
-        .clone()
+    let trimmed = combined.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let version = if trimmed.to_lowercase().starts_with("kiro-cli ") {
+        trimmed[9..].trim().to_string()
+    } else if trimmed.to_lowercase().starts_with("kiro ") {
+        trimmed[5..].trim().to_string()
+    } else {
+        trimmed.to_string()
+    };
+    Some(CLI_VERSION.get_or_init(|| version).clone())
 }
 
 /// Get parsed Kiro version

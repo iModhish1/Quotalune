@@ -472,7 +472,7 @@
       },
       "cli": {
         "automatedInstallAvailable": false,
-        "docsUrl": "https://kiro.dev/",
+        "docsUrl": "https://kiro.dev/docs/cli/",
         "executables": [
           "kiro-cli"
         ],
@@ -498,7 +498,7 @@
         {
           "browserDomain": null,
           "envVar": null,
-          "helpUrl": "https://kiro.dev/",
+          "helpUrl": "https://kiro.dev/docs/cli/",
           "method": "cliSession",
           "rank": "recommended"
         }

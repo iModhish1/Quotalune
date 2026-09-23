@@ -664,9 +664,20 @@ async fn run_cli_provider_login(
     match result.outcome {
         LoginOutcome::Success => ProviderLoginRunResult::Completed,
         LoginOutcome::Canceled => ProviderLoginRunResult::Canceled,
-        LoginOutcome::MissingBinary => ProviderLoginRunResult::Failed(format!(
-            "{display_name} CLI not found. Install it and ensure it is on your PATH."
-        )),
+        LoginOutcome::MissingBinary => ProviderLoginRunResult::Failed(if id == ProviderId::Kiro {
+            let location = if cfg!(windows) {
+                "Program Files\\Kiro\\kiro-cli.exe"
+            } else {
+                "/usr/local/bin/kiro-cli or /usr/bin/kiro-cli"
+            };
+            format!(
+                "Kiro CLI was not found in a verified installation. Quotalis accepts {location}; PATH-only and per-user copies are not run. See https://kiro.dev/docs/cli/ for installation guidance."
+            )
+        } else {
+            format!(
+                "{display_name} CLI was not found in a verified installation. Use its official installation instructions; PATH alone does not establish a trusted executable."
+            )
+        }),
         LoginOutcome::LaunchFailed(e) => {
             ProviderLoginRunResult::Failed(format!("Failed to launch {display_name} login: {e}"))
         }

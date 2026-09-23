@@ -193,7 +193,7 @@ pub const CLI_DEPENDENCIES: &[CliDependency] = &[
         min_version: None,
         install: InstallPolicy::ManualOnly,
         install_requires_admin: false,
-        docs_url: "https://kiro.dev/",
+        docs_url: "https://kiro.dev/docs/cli/",
         session_detection: SessionDetection::UsageFetch,
         sign_in_hint: "kiro-cli login",
     },
