@@ -16,10 +16,8 @@ use async_trait::async_trait;
 use regex_lite::Regex;
 use std::path::PathBuf;
 use std::sync::OnceLock;
-use std::time::Duration;
-use tokio::process::Command;
-use tokio::time::timeout;
 
+use crate::cli_dependencies::{self, CliReadOutput, ProbeFailure};
 use crate::core::{
     FetchContext, Provider, ProviderError, ProviderFetchResult, ProviderId, ProviderMetadata,
     RateWindow, SourceMode, UsageSnapshot,
@@ -28,6 +26,21 @@ use crate::core::{
 /// Augment provider
 pub struct AugmentProvider {
     metadata: ProviderMetadata,
+}
+
+const MAX_AUGMENT_RESPONSE_BYTES: usize = 1024 * 1024;
+
+fn check_usage_http_status(status: reqwest::StatusCode) -> Result<(), ProviderError> {
+    if matches!(status.as_u16(), 401 | 403) {
+        return Err(ProviderError::AuthRequired);
+    }
+    if !status.is_success() {
+        return Err(ProviderError::Other(format!(
+            "Augment usage API returned HTTP {}",
+            status.as_u16()
+        )));
+    }
+    Ok(())
 }
 
 impl AugmentProvider {
@@ -146,20 +159,32 @@ impl AugmentProvider {
             .build()
             .map_err(|e| ProviderError::Other(e.to_string()))?;
 
-        let resp = client
+        let mut resp = client
             .get("https://api.augmentcode.com/v1/user/usage")
             .header("Authorization", format!("Bearer {}", token))
             .send()
             .await?;
 
-        if !resp.status().is_success() {
-            return Err(ProviderError::AuthRequired);
+        check_usage_http_status(resp.status())?;
+        if resp
+            .content_length()
+            .is_some_and(|size| size > MAX_AUGMENT_RESPONSE_BYTES as u64)
+        {
+            return Err(ProviderError::Parse(
+                "Augment usage response size limit exceeded".into(),
+            ));
         }
-
-        let json: serde_json::Value = resp
-            .json()
-            .await
-            .map_err(|e| ProviderError::Parse(e.to_string()))?;
+        let mut body = Vec::new();
+        while let Some(chunk) = resp.chunk().await? {
+            if chunk.len() > MAX_AUGMENT_RESPONSE_BYTES.saturating_sub(body.len()) {
+                return Err(ProviderError::Parse(
+                    "Augment usage response size limit exceeded".into(),
+                ));
+            }
+            body.extend_from_slice(&chunk);
+        }
+        let json: serde_json::Value = serde_json::from_slice(&body)
+            .map_err(|_| ProviderError::Parse("Invalid Augment usage response".into()))?;
 
         self.parse_usage_response(&json)
     }
@@ -170,34 +195,46 @@ impl AugmentProvider {
     ) -> Result<UsageSnapshot, ProviderError> {
         let used = json
             .get("used_credits")
-            .or_else(|| json.get("usage"))
             .and_then(|v| v.as_f64())
-            .unwrap_or(0.0);
+            .or_else(|| json.get("usage").and_then(|v| v.as_f64()))
+            .filter(|value| value.is_finite() && *value >= 0.0);
 
         let limit = json
             .get("credit_limit")
-            .or_else(|| json.get("limit"))
             .and_then(|v| v.as_f64())
-            .unwrap_or(100.0);
-
-        let used_percent = if limit > 0.0 {
-            (used / limit) * 100.0
-        } else {
-            0.0
-        };
+            .or_else(|| json.get("limit").and_then(|v| v.as_f64()))
+            .filter(|value| value.is_finite() && *value > 0.0);
 
         let email = json
             .get("email")
             .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+            .map(str::trim)
+            .filter(|value| !value.is_empty());
 
         let plan = json
             .get("plan")
-            .or_else(|| json.get("subscription"))
             .and_then(|v| v.as_str())
-            .unwrap_or("Augment");
+            .or_else(|| json.get("subscription").and_then(|v| v.as_str()))
+            .map(str::trim)
+            .filter(|value| !value.is_empty());
 
-        let mut usage = UsageSnapshot::new(RateWindow::new(used_percent)).with_login_method(plan);
+        if used.is_none() && limit.is_none() && email.is_none() && plan.is_none() {
+            return Err(ProviderError::Parse(
+                "Augment usage response contained no recognized fields".into(),
+            ));
+        }
+
+        let percent = used.zip(limit).map(|(used, limit)| used / limit * 100.0);
+        let window = match percent.filter(|value| value.is_finite()) {
+            Some(percent) => RateWindow::new(percent),
+            None => RateWindow::informational("Credit usage unavailable"),
+        };
+
+        let mut usage = UsageSnapshot::new(window);
+
+        if let Some(plan) = plan {
+            usage = usage.with_login_method(plan);
+        }
 
         if let Some(email) = email {
             usage = usage.with_email(email);
@@ -213,35 +250,16 @@ impl AugmentProvider {
             )
         })?;
 
-        #[cfg(windows)]
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-
-        let mut cmd = Command::new(cli_path);
-        cmd.args(["account", "status"]);
-        #[cfg(windows)]
-        cmd.creation_flags(CREATE_NO_WINDOW);
-
-        let output = timeout(Duration::from_secs(15), cmd.output())
+        let output = cli_dependencies::read_provider_cli(&cli_path, &["account", "status"], None)
             .await
-            .map_err(|_| ProviderError::Timeout)?
-            .map_err(|e| ProviderError::Other(format!("Failed to run Augment CLI: {e}")))?;
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        if !output.status.success() {
-            let message = if stderr.trim().is_empty() {
-                stdout.trim()
-            } else {
-                stderr.trim()
-            };
-            if message.contains("Authentication failed") || message.contains("auggie login") {
-                return Err(ProviderError::AuthRequired);
-            }
-            return Err(ProviderError::Other(format!(
-                "Augment CLI failed: {}",
-                message
-            )));
-        }
+            .map_err(|failure| match failure {
+                ProbeFailure::Timeout => ProviderError::Timeout,
+                ProbeFailure::Cancelled => ProviderError::Other("Augment CLI cancelled".into()),
+                ProbeFailure::Launch | ProbeFailure::Capture => {
+                    ProviderError::Other("Augment CLI could not be read".into())
+                }
+            })?;
+        let stdout = checked_auggie_status_output(output)?;
         if stdout.trim().is_empty() {
             return Err(ProviderError::Parse(
                 "Augment CLI returned no account status output".to_string(),
@@ -273,6 +291,26 @@ impl AugmentProvider {
             }
         })
     }
+}
+
+fn checked_auggie_status_output(output: CliReadOutput) -> Result<String, ProviderError> {
+    if output.stdout.len() > cli_dependencies::OUTPUT_CAP
+        || output.stderr.len() > cli_dependencies::OUTPUT_CAP
+    {
+        return Err(ProviderError::Other(
+            "Augment CLI output exceeded the safe limit".into(),
+        ));
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    if output.exit_code != Some(0) {
+        let combined = format!("{stdout} {stderr}").to_lowercase();
+        if combined.contains("authentication failed") || combined.contains("auggie login") {
+            return Err(ProviderError::AuthRequired);
+        }
+        return Err(ProviderError::Other("Augment CLI command failed".into()));
+    }
+    Ok(stdout)
 }
 
 impl Default for AugmentProvider {
@@ -404,12 +442,13 @@ fn parse_auggie_account_status(output: &str) -> Result<UsageSnapshot, ProviderEr
     let total = total.or(max_credits).ok_or_else(|| {
         ProviderError::Parse("Could not extract Augment credit limit".to_string())
     })?;
+    if total <= 0.0 || remaining > total {
+        return Err(ProviderError::Parse(
+            "Augment credit limit is zero or inconsistent with remaining credits".to_string(),
+        ));
+    }
     let used = used.unwrap_or_else(|| (total - remaining).max(0.0));
-    let used_percent = if total > 0.0 {
-        (used / total) * 100.0
-    } else {
-        0.0
-    };
+    let used_percent = (used / total) * 100.0;
 
     let mut window = RateWindow::new(used_percent);
     window.reset_description = reset_description;
@@ -420,7 +459,12 @@ fn parse_auggie_account_status(output: &str) -> Result<UsageSnapshot, ProviderEr
 }
 
 fn parse_credit_number(value: &str) -> Option<f64> {
-    value.replace(',', "").trim().parse::<f64>().ok()
+    value
+        .replace(',', "")
+        .trim()
+        .parse::<f64>()
+        .ok()
+        .filter(|number| number.is_finite())
 }
 
 fn format_integer_credits(value: f64) -> String {
@@ -438,6 +482,39 @@ fn format_integer_credits(value: f64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn cli_output(exit_code: Option<i32>, stdout: &[u8], stderr: &[u8]) -> CliReadOutput {
+        CliReadOutput {
+            exit_code,
+            stdout: stdout.to_vec(),
+            stderr: stderr.to_vec(),
+        }
+    }
+
+    #[test]
+    fn cli_status_rejects_private_failures_and_truncation() {
+        assert!(matches!(
+            checked_auggie_status_output(cli_output(Some(1), b"", b"Authentication failed")),
+            Err(ProviderError::AuthRequired)
+        ));
+        assert!(matches!(
+            checked_auggie_status_output(cli_output(Some(1), b"private token", b"failure")),
+            Err(ProviderError::Other(message)) if !message.contains("private")
+        ));
+        assert!(matches!(
+            checked_auggie_status_output(cli_output(
+                Some(0),
+                &vec![b'x'; cli_dependencies::OUTPUT_CAP + 1],
+                b"",
+            )),
+            Err(ProviderError::Other(message)) if message.contains("safe limit")
+        ));
+        assert_eq!(
+            checked_auggie_status_output(cli_output(Some(0), b"account status", b""))
+                .expect("bounded successful output"),
+            "account status"
+        );
+    }
 
     #[test]
     fn parses_current_auggie_account_status() {
@@ -471,6 +548,86 @@ mod tests {
 
         assert!((usage.primary.used_percent - 98.79).abs() < 0.01);
         assert_eq!(usage.login_method.as_deref(), Some("450,000 credits/month"));
+    }
+
+    #[test]
+    fn rejects_zero_or_contradictory_credit_limits_instead_of_reporting_zero_usage() {
+        for status in [
+            "0 credits remaining\n0 credits / month",
+            "120 credits remaining\n100 credits / month",
+        ] {
+            assert!(matches!(
+                parse_auggie_account_status(status),
+                Err(ProviderError::Parse(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn rejects_credit_numbers_that_overflow_finite_arithmetic() {
+        let huge = "9".repeat(350);
+        let status = format!("{huge} credits remaining\n{huge} credits / month");
+        assert!(matches!(
+            parse_auggie_account_status(&status),
+            Err(ProviderError::Parse(_))
+        ));
+    }
+
+    #[test]
+    fn web_usage_missing_limit_is_informational_and_keeps_observed_plan() {
+        let usage = AugmentProvider::new()
+            .parse_usage_response(&serde_json::json!({"used_credits": 23, "plan": "Max"}))
+            .unwrap();
+        assert!(usage.primary.is_informational);
+        assert_eq!(usage.login_method.as_deref(), Some("Max"));
+    }
+
+    #[test]
+    fn web_usage_observed_zero_and_positive_limit_is_real_zero() {
+        let usage = AugmentProvider::new()
+            .parse_usage_response(&serde_json::json!({"used_credits": 0, "credit_limit": 100}))
+            .unwrap();
+        assert!(!usage.primary.is_informational);
+        assert_eq!(usage.primary.used_percent, 0.0);
+        assert!(usage.login_method.is_none());
+    }
+
+    #[test]
+    fn web_usage_uses_observed_fallback_fields_when_primary_fields_are_null() {
+        let usage = AugmentProvider::new()
+            .parse_usage_response(&serde_json::json!({
+                "used_credits": null,
+                "usage": 25,
+                "credit_limit": null,
+                "limit": 100,
+                "plan": null,
+                "subscription": "Team",
+            }))
+            .unwrap();
+        assert!(!usage.primary.is_informational);
+        assert_eq!(usage.primary.used_percent, 25.0);
+        assert_eq!(usage.login_method.as_deref(), Some("Team"));
+    }
+
+    #[test]
+    fn web_usage_empty_response_does_not_claim_connected_quota() {
+        assert!(matches!(
+            AugmentProvider::new().parse_usage_response(&serde_json::json!({})),
+            Err(ProviderError::Parse(_))
+        ));
+    }
+
+    #[test]
+    fn web_usage_does_not_misclassify_server_failures_as_sign_in_required() {
+        assert!(matches!(
+            check_usage_http_status(reqwest::StatusCode::UNAUTHORIZED),
+            Err(ProviderError::AuthRequired)
+        ));
+        assert!(matches!(
+            check_usage_http_status(reqwest::StatusCode::SERVICE_UNAVAILABLE),
+            Err(ProviderError::Other(message)) if message.contains("503")
+        ));
+        assert!(check_usage_http_status(reqwest::StatusCode::OK).is_ok());
     }
 
     #[test]
