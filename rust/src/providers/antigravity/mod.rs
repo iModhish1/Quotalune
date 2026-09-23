@@ -8,11 +8,10 @@ pub mod local_sessions;
 use async_trait::async_trait;
 use regex_lite::Regex;
 use serde::Deserialize;
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
-use std::process::Command;
+use std::path::PathBuf;
 use std::sync::{LazyLock, OnceLock};
 
+use crate::cli_dependencies::{self, ProbeFailure};
 use crate::core::{
     FetchContext, NamedRateWindow, Provider, ProviderError, ProviderFetchResult, ProviderId,
     ProviderMetadata, RateWindow, SourceMode, UsageSnapshot,
@@ -20,6 +19,22 @@ use crate::core::{
 
 const NOT_RUNNING_MESSAGE: &str =
     "Antigravity language server not running. Start Google Antigravity and sign in, then retry.";
+
+#[cfg(windows)]
+fn system_powershell() -> Option<PathBuf> {
+    let root = std::env::var_os("SystemRoot")?;
+    let path = PathBuf::from(root).join("System32/WindowsPowerShell/v1.0/powershell.exe");
+    path.is_file().then_some(path)
+}
+
+#[cfg(not(windows))]
+fn system_powershell() -> Option<PathBuf> {
+    which::which("pwsh").ok()
+}
+
+// Emit only the PID, process name, and four flags required by the parser.
+// Never print the complete command line: unrelated arguments may be private.
+const PROCESS_DISCOVERY_SCRIPT: &str = r#"Get-CimInstance Win32_Process | Where-Object { $_.Name -like '*language_server_windows*' -or $_.Name -like 'language_server.exe' -or $_.Name -eq 'agy.exe' -or $_.Name -eq 'agy' } | ForEach-Object { $proc = $_; $flags = [regex]::Matches([string]$proc.CommandLine, '--(?:csrf_token|extension_server_csrf_token|extension_server_port|https_server_port)(?:\s+|\s*=\s*)\S+') | ForEach-Object { $_.Value }; "$($proc.ProcessId)`t$($proc.Name) $($flags -join ' ')" }"#;
 
 /// Antigravity provider
 pub struct AntigravityProvider {
@@ -84,29 +99,30 @@ impl AntigravityProvider {
 
     /// Detect running Antigravity language server and extract connection info
     fn detect_process_info() -> Result<ProcessInfo, ProviderError> {
-        // Use PowerShell to get process command lines
-        #[cfg(windows)]
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-
-        let mut cmd = Command::new("powershell.exe");
-        cmd.args([
-                "-ExecutionPolicy", "Bypass",
+        let powershell = system_powershell()
+            .ok_or_else(|| ProviderError::NotInstalled("Windows PowerShell not found".into()))?;
+        let output = cli_dependencies::read_provider_cli_sync(
+            &powershell,
+            &[
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
                 "-Command",
-                // Match the desktop IDE/app language server (language_server.exe /
-                // language_server_windows*) and the `agy` CLI (agy / agy.exe), which
-                // hosts the same language server in-process with no --csrf_token flag.
-                "Get-CimInstance Win32_Process | Where-Object { $_.Name -like '*language_server_windows*' -or $_.Name -like 'language_server.exe' -or $_.Name -eq 'agy.exe' -or $_.Name -eq 'agy' } | ForEach-Object { \"$($_.ProcessId)`t$($_.CommandLine)\" }"
-            ]);
-        #[cfg(windows)]
-        cmd.creation_flags(CREATE_NO_WINDOW);
-
-        let output = cmd
-            .output()
-            .map_err(|e| ProviderError::Other(format!("Failed to run PowerShell: {}", e)))?;
-
-        if !output.status.success() {
-            return Err(ProviderError::NotInstalled(
-                "Failed to detect Antigravity process".to_string(),
+                PROCESS_DISCOVERY_SCRIPT,
+            ],
+        )
+        .map_err(|failure| match failure {
+            ProbeFailure::Timeout => ProviderError::Timeout,
+            ProbeFailure::Cancelled | ProbeFailure::Launch | ProbeFailure::Capture => {
+                ProviderError::Other("Antigravity process detection failed".into())
+            }
+        })?;
+        if output.exit_code != Some(0)
+            || output.stdout.len() > cli_dependencies::OUTPUT_CAP
+            || output.stderr.len() > cli_dependencies::OUTPUT_CAP
+        {
+            return Err(ProviderError::Other(
+                "Antigravity process detection failed".into(),
             ));
         }
 
@@ -265,24 +281,29 @@ impl AntigravityProvider {
     /// so the caller deterministically falls back to the heuristic candidate ports.
     #[cfg(windows)]
     fn listening_ports_for_pid(pid: u32) -> Vec<u16> {
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-
-        let mut cmd = Command::new("powershell.exe");
-        cmd.args([
-            "-ExecutionPolicy",
-            "Bypass",
-            "-Command",
-            &format!(
-                "Get-NetTCPConnection -OwningProcess {pid} -State Listen \
-                 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalPort"
-            ),
-        ]);
-        cmd.creation_flags(CREATE_NO_WINDOW);
-
-        let Ok(output) = cmd.output() else {
+        let Some(powershell) = system_powershell() else {
             return Vec::new();
         };
-        if !output.status.success() {
+        let command = format!(
+            "Get-NetTCPConnection -OwningProcess {pid} -State Listen \
+             -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalPort"
+        );
+        let Ok(output) = cli_dependencies::read_provider_cli_sync(
+            &powershell,
+            &[
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                &command,
+            ],
+        ) else {
+            return Vec::new();
+        };
+        if output.exit_code != Some(0)
+            || output.stdout.len() > cli_dependencies::OUTPUT_CAP
+            || output.stderr.len() > cli_dependencies::OUTPUT_CAP
+        {
             return Vec::new();
         }
 

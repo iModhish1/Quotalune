@@ -1,5 +1,96 @@
 use super::*;
 
+#[cfg(windows)]
+fn project_fake_processes(fake_source: &str) -> String {
+    let powershell = system_powershell().expect("system PowerShell");
+    let script = PROCESS_DISCOVERY_SCRIPT.replacen("Get-CimInstance Win32_Process", fake_source, 1);
+    let output = cli_dependencies::read_provider_cli_sync(
+        &powershell,
+        &[
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            &script,
+        ],
+    )
+    .expect("synthetic process projection");
+    assert_eq!(output.exit_code, Some(0));
+    String::from_utf8(output.stdout).expect("UTF-8 output")
+}
+
+#[cfg(windows)]
+#[test]
+fn powershell_discovery_projects_only_required_process_fields() {
+    let fake_source = r#"$fake = @([pscustomobject]@{ Name = 'language_server.exe'; ProcessId = 4242; CommandLine = 'C:\Antigravity\language_server.exe --csrf_token abc123 --extension_server_port 54123 --unrelated private-value' }); $fake"#;
+    let stdout = project_fake_processes(fake_source);
+    assert!(!stdout.contains("private-value"));
+    let process = AntigravityProvider::parse_process_info(&stdout).expect("projected process");
+    assert_eq!(process.pid, Some(4242));
+    assert_eq!(process.extension_port, Some(54123));
+    assert_eq!(process.csrf_token, "abc123");
+}
+
+#[cfg(windows)]
+#[test]
+fn powershell_projection_preserves_ide_precedence_and_equals_flags_in_both_orders() {
+    let cli = r#"[pscustomobject]@{ Name = 'agy.exe'; ProcessId = 11; CommandLine = 'C:\Antigravity\agy.exe --unrelated cli-private' }"#;
+    let ide = r#"[pscustomobject]@{ Name = 'language_server.exe'; ProcessId = 22; CommandLine = 'C:\Antigravity\language_server.exe --csrf_token=ide-token --extension_server_csrf_token=extension-token --https_server_port=54321 --unrelated ide-private' }"#;
+    for fake_source in [
+        format!("$fake = @({cli}, {ide}); $fake"),
+        format!("$fake = @({ide}, {cli}); $fake"),
+    ] {
+        let stdout = project_fake_processes(&fake_source);
+        assert!(!stdout.contains("cli-private") && !stdout.contains("ide-private"));
+        let process = AntigravityProvider::parse_process_info(&stdout).expect("IDE process");
+        assert_eq!(process.pid, Some(22));
+        assert_eq!(process.extension_port, Some(54321));
+        assert_eq!(process.csrf_token, "ide-token");
+        assert_eq!(
+            process.extension_server_csrf_token.as_deref(),
+            Some("extension-token")
+        );
+        assert_eq!(process.source, ProcessSource::Ide);
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn powershell_projection_handles_cli_only_and_no_matching_process() {
+    let cli = r#"$fake = @([pscustomobject]@{ Name = 'agy.exe'; ProcessId = 11; CommandLine = 'C:\Antigravity\agy.exe --unrelated private-value' }); $fake"#;
+    let stdout = project_fake_processes(cli);
+    assert!(!stdout.contains("private-value"));
+    let process = AntigravityProvider::parse_process_info(&stdout).expect("CLI process");
+    assert_eq!(process.source, ProcessSource::Cli);
+    assert_eq!(process.pid, Some(11));
+
+    let unrelated = r#"$fake = @([pscustomobject]@{ Name = 'other.exe'; ProcessId = 33; CommandLine = 'other.exe --csrf_token secret' }); $fake"#;
+    let stdout = project_fake_processes(unrelated);
+    assert!(stdout.trim().is_empty());
+    assert!(AntigravityProvider::parse_process_info(&stdout).is_none());
+}
+
+#[cfg(windows)]
+#[test]
+fn powershell_discovery_cmdlets_are_available_without_a_user_profile() {
+    let powershell = system_powershell().expect("system PowerShell");
+    let output = cli_dependencies::read_provider_cli_sync(
+        &powershell,
+        &[
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "Get-Command Get-CimInstance,Get-NetTCPConnection -ErrorAction Stop | Select-Object -ExpandProperty Name",
+        ],
+    )
+    .expect("cmdlet discovery");
+    assert_eq!(output.exit_code, Some(0));
+    let names = String::from_utf8(output.stdout).expect("UTF-8 output");
+    assert!(names.contains("Get-CimInstance"));
+    assert!(names.contains("Get-NetTCPConnection"));
+}
+
 #[test]
 fn test_classify_model_families() {
     assert_eq!(classify_model("Claude 3.5 Sonnet"), ModelFamily::Claude);
