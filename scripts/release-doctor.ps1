@@ -19,6 +19,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot 'release-pipeline-common.ps1')
 $Failures = New-Object System.Collections.Generic.List[string]
 $Warnings = New-Object System.Collections.Generic.List[string]
 
@@ -144,9 +145,13 @@ if ((Test-Path $changelogPath) -and (Select-String -Path $changelogPath -Pattern
 }
 
 if (Test-Path $AssetsDir) {
-    Test-AssetHash (Join-Path $AssetsDir "Quotalis-$Version-Setup.exe")
-    Test-AssetHash (Join-Path $AssetsDir "Quotalis-$Version-portable.zip")
-    Test-AssetHash (Join-Path $AssetsDir "QuotalisCLI-v$Version-windows-x64.zip")
+    if ($Version -eq '0.11.0') {
+        Write-Warn 'Published v0.11.0 used a historical asset layout; local sidecar checks apply to later releases.'
+    } else {
+        Test-AssetHash (Join-Path $AssetsDir "Quotalis-$Version-Setup.exe")
+        Test-AssetHash (Join-Path $AssetsDir "Quotalis-$Version-portable.zip")
+        Test-AssetHash (Join-Path $AssetsDir "QuotalisCLI-v$Version-windows-x64.zip")
+    }
 } else {
     Write-Warn "local assets directory not found: $AssetsDir"
 }
@@ -163,14 +168,17 @@ if (-not $SkipGitHub) {
                 $release = Get-Content -Raw $ghJsonPath | ConvertFrom-Json
                 Write-Ok "GitHub release exists: $($release.url)"
                 $assetNames = @($release.assets | ForEach-Object { $_.name })
-                foreach ($name in @(
-                    "Quotalis-$Version-Setup.exe",
-                    "Quotalis-$Version-Setup.exe.sha256",
-                    "Quotalis-$Version-portable.zip",
-                    "Quotalis-$Version-portable.zip.sha256",
-                    "QuotalisCLI-v$Version-windows-x64.zip",
-                    "QuotalisCLI-v$Version-windows-x64.zip.sha256"
-                )) {
+                $expectedAssets = if ($Version -eq '0.11.0') {
+                    @(
+                        'Quotalis-0.11.0-x64-Setup.exe',
+                        'Quotalis-0.11.0-x64-Portable.zip',
+                        'Quotalis-0.11.0-x64-CLI.zip',
+                        'SHA256SUMS.txt'
+                    )
+                } else {
+                    Get-RequiredReleaseAssets -Version $Version
+                }
+                foreach ($name in $expectedAssets) {
                     if ($assetNames -contains $name) {
                         Write-Ok "GitHub release has $name"
                     } else {
