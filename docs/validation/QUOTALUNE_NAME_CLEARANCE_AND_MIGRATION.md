@@ -108,3 +108,13 @@ release remains untouched.
   integration worktree. Historical `v0.11.0` binary names and links remain
   explicitly labeled as the earlier release; no new screenshots or public
   GitHub mutations have been made.
+- The local candidate now uses version `0.12.0` consistently across Rust,
+  Tauri, frontend metadata, lockfile and `version.env`; the changelog has an
+  unreleased entry. Focused release-pipeline tests and locked offline Cargo
+  metadata pass. This is version preparation, not a completed package build.
+- Release-doctor previously treated any local `v0.12.0` tag as valid. The local
+  tag actually belongs to upstream (`d2692874`), while the owner's repository
+  has no such tag. Release-doctor now fails when the local tag is not the exact
+  candidate HEAD; the mismatch was exercised and rejected. The upstream tag
+  was preserved, not rewritten. A fresh owner checkout with an owner-created
+  tag is required for the final release pipeline.
