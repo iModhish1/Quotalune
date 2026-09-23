@@ -569,6 +569,17 @@ fn run_capture_blocking(
     cancel: watch::Receiver<bool>,
     terminal_hint: Option<&'static str>,
 ) -> Result<CapturedOutput, ProbeFailure> {
+    run_capture_blocking_with_env(program, args, timeout, cancel, terminal_hint, &[])
+}
+
+fn run_capture_blocking_with_env(
+    program: PathBuf,
+    args: Vec<OsString>,
+    timeout: Duration,
+    cancel: watch::Receiver<bool>,
+    terminal_hint: Option<&'static str>,
+    additional_env: &[(OsString, OsString)],
+) -> Result<CapturedOutput, ProbeFailure> {
     if *cancel.borrow() {
         return Err(ProbeFailure::Cancelled);
     }
@@ -578,6 +589,9 @@ fn run_capture_blocking(
     let mut command = Command::new(program);
     command.args(args);
     scrub_environment(&mut command);
+    for (key, value) in additional_env {
+        command.env(key, value);
+    }
     if let Some(term) = terminal_hint {
         command.env("TERM", term);
     }
@@ -723,6 +737,71 @@ pub(crate) async fn read_provider_cli(
     let args = args.iter().map(OsString::from).collect();
     let output = tokio::task::spawn_blocking(move || {
         run_capture_blocking(program, args, PROBE_TIMEOUT, rx, terminal_hint)
+    })
+    .await
+    .map_err(|_| ProbeFailure::Launch)??;
+    Ok(CliReadOutput {
+        exit_code: output.exit_code,
+        stdout: output.stdout,
+        stderr: output.stderr,
+    })
+}
+
+fn aws_credential_export_args(profile: &str) -> Vec<OsString> {
+    vec![
+        OsString::from("configure"),
+        OsString::from("export-credentials"),
+        OsString::from("--profile"),
+        OsString::from(profile),
+        OsString::from("--format"),
+        OsString::from("process"),
+    ]
+}
+
+fn aws_credential_export_env(get: impl Fn(&str) -> Option<OsString>) -> Vec<(OsString, OsString)> {
+    [
+        "AWS_CONFIG_FILE",
+        "AWS_SHARED_CREDENTIALS_FILE",
+        "AWS_REGION",
+        "AWS_DEFAULT_REGION",
+        "AWS_CA_BUNDLE",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_SESSION_TOKEN",
+        "AWS_ROLE_ARN",
+        "AWS_ROLE_SESSION_NAME",
+        "AWS_WEB_IDENTITY_TOKEN_FILE",
+        "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI",
+        "AWS_CONTAINER_CREDENTIALS_FULL_URI",
+        "AWS_CONTAINER_AUTHORIZATION_TOKEN",
+        "AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE",
+        "AWS_EC2_METADATA_DISABLED",
+        "HTTPS_PROXY",
+        "HTTP_PROXY",
+        "NO_PROXY",
+    ]
+    .into_iter()
+    .filter_map(|key| get(key).map(|value| (OsString::from(key), value)))
+    .collect()
+}
+
+/// Read AWS profile credentials through the same supervised process-tree
+/// runner. The caller supplies an already-validated executable and an explicit
+/// allowlist of AWS configuration and source-credential variables; PATH is not
+/// inherited. Some profiles use `credential_source = Environment` to assume a
+/// role, so removing ambient AWS access keys would break those profiles. Raw
+/// output must remain local to credential parsing, never user-facing errors.
+pub(crate) async fn read_aws_credentials_cli(
+    program: &Path,
+    profile: &str,
+) -> Result<CliReadOutput, ProbeFailure> {
+    let (tx, rx) = watch::channel(false);
+    let _cancel_on_drop = CancelOnDrop(tx);
+    let program = program.to_path_buf();
+    let args = aws_credential_export_args(profile);
+    let additional_env = aws_credential_export_env(|key| std::env::var_os(key));
+    let output = tokio::task::spawn_blocking(move || {
+        run_capture_blocking_with_env(program, args, PROBE_TIMEOUT, rx, None, &additional_env)
     })
     .await
     .map_err(|_| ProbeFailure::Launch)??;
@@ -1113,6 +1192,86 @@ mod supervised_windows {
 mod tests {
     use super::*;
     use crate::connection_capabilities::{CLI_DEPENDENCIES, install_plan};
+
+    #[test]
+    fn aws_export_keeps_explicit_profile_and_only_required_environment() {
+        assert_eq!(
+            aws_credential_export_args("role profile"),
+            [
+                "configure",
+                "export-credentials",
+                "--profile",
+                "role profile",
+                "--format",
+                "process",
+            ]
+            .map(OsString::from)
+        );
+
+        let synthetic = std::collections::HashMap::from([
+            ("AWS_CONFIG_FILE", OsString::from("fixture-config")),
+            ("AWS_ACCESS_KEY_ID", OsString::from("fixture-access-key")),
+            ("AWS_SECRET_ACCESS_KEY", OsString::from("fixture-secret")),
+            ("AWS_SESSION_TOKEN", OsString::from("fixture-session")),
+            ("PATH", OsString::from("untrusted-path")),
+            ("OTHER_SECRET", OsString::from("unrelated-secret")),
+        ]);
+        let captured = aws_credential_export_env(|key| synthetic.get(key).cloned());
+        for required in [
+            "AWS_CONFIG_FILE",
+            "AWS_ACCESS_KEY_ID",
+            "AWS_SECRET_ACCESS_KEY",
+            "AWS_SESSION_TOKEN",
+        ] {
+            assert!(
+                captured.iter().any(|(key, _)| key == required),
+                "missing {required} for environment-backed role profiles"
+            );
+        }
+        assert!(!captured.iter().any(|(key, _)| key == "PATH"));
+        assert!(!captured.iter().any(|(key, _)| key == "OTHER_SECRET"));
+    }
+
+    #[tokio::test]
+    async fn aws_export_wrapper_reads_only_a_bounded_synthetic_credential() {
+        let temp = tempfile::tempdir().unwrap();
+        let source = temp.path().join("aws_fixture.rs");
+        #[cfg(windows)]
+        let program = temp.path().join("aws.exe");
+        #[cfg(not(windows))]
+        let program = temp.path().join("aws");
+        std::fs::write(
+            &source,
+            r##"fn main() {
+                let args: Vec<String> = std::env::args().skip(1).collect();
+                assert_eq!(args, ["configure", "export-credentials", "--profile", "fixture", "--format", "process"]);
+                assert!(std::env::var_os("PATH").is_none());
+                println!("{}", r#"{"Version":1,"AccessKeyId":"fixture-id","SecretAccessKey":"fixture-secret"}"#);
+            }"##,
+        )
+        .unwrap();
+        let rustc = std::env::var_os("RUSTC").unwrap_or_else(|| OsString::from("rustc"));
+        let build = Command::new(rustc)
+            .arg(&source)
+            .arg("--edition=2021")
+            .arg("-o")
+            .arg(&program)
+            .output()
+            .expect("compile owned synthetic AWS CLI fixture");
+        assert!(
+            build.status.success(),
+            "synthetic AWS CLI fixture must compile"
+        );
+
+        let output = read_aws_credentials_cli(&program, "fixture")
+            .await
+            .expect("bounded synthetic credential export");
+        assert_eq!(output.exit_code, Some(0));
+        assert!(output.stderr.is_empty());
+        assert!(output.stdout.len() <= OUTPUT_CAP);
+        let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(json["AccessKeyId"], "fixture-id");
+    }
 
     fn probe(code: Option<i32>, stdout: &str, stderr: &str) -> ProbeOutput {
         ProbeOutput {

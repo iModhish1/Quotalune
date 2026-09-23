@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use chrono::{Datelike, Duration, TimeZone, Utc};
 use reqwest::Client;
 use serde_json::{Value, json};
+use std::path::{Path, PathBuf};
 
 use crate::core::{
     CostSnapshot, FetchContext, Provider, ProviderError, ProviderFetchResult, ProviderId,
@@ -248,30 +249,39 @@ impl BedrockProvider {
         None
     }
 
-    fn credentials_from_profile(profile: &str) -> Result<AwsCredentials, ProviderError> {
+    async fn credentials_from_profile(profile: &str) -> Result<AwsCredentials, ProviderError> {
+        if profile.is_empty()
+            || profile.len() > 128
+            || profile.starts_with('-')
+            || profile.chars().any(char::is_control)
+        {
+            return Err(ProviderError::Other("Invalid AWS profile name".to_string()));
+        }
         let aws = aws_cli_path()?;
-        let output = std::process::Command::new(&aws)
-            .args([
-                "configure",
-                "export-credentials",
-                "--profile",
-                profile,
-                "--format",
-                "process",
-            ])
-            .env_remove("AWS_PROFILE")
-            .output()
-            .map_err(|e| ProviderError::Other(format!("Failed to run AWS CLI: {e}")))?;
+        let output = crate::cli_dependencies::read_aws_credentials_cli(&aws, profile)
+            .await
+            .map_err(|failure| match failure {
+                crate::cli_dependencies::ProbeFailure::Timeout => {
+                    ProviderError::Other("AWS CLI credential export timed out".to_string())
+                }
+                _ => ProviderError::Other("AWS CLI credential export failed".to_string()),
+            })?;
 
-        if !output.status.success() {
+        if output.exit_code != Some(0) {
             let stderr = String::from_utf8_lossy(&output.stderr);
             return Err(map_aws_profile_error(profile, &stderr));
+        }
+
+        if output.stdout.len() > crate::cli_dependencies::OUTPUT_CAP {
+            return Err(ProviderError::Other(
+                "AWS CLI credential export exceeded the size limit".to_string(),
+            ));
         }
 
         parse_aws_profile_credentials(&output.stdout)
     }
 
-    fn resolve_credentials(ctx: &FetchContext) -> Result<AwsCredentials, ProviderError> {
+    async fn resolve_credentials(ctx: &FetchContext) -> Result<AwsCredentials, ProviderError> {
         if let Some(credentials) = Self::credentials_from_context(ctx.api_key.as_deref()) {
             return Ok(credentials);
         }
@@ -279,7 +289,7 @@ impl BedrockProvider {
         if let Some(profile) =
             Self::profile_from_context(ctx.api_key.as_deref()).or_else(Self::profile_from_env)
         {
-            return Self::credentials_from_profile(&profile);
+            return Self::credentials_from_profile(&profile).await;
         }
 
         Self::credentials_from_env()
@@ -433,7 +443,7 @@ impl BedrockProvider {
         &self,
         ctx: &FetchContext,
     ) -> Result<ProviderFetchResult, ProviderError> {
-        let credentials = Self::resolve_credentials(ctx)?;
+        let credentials = Self::resolve_credentials(ctx).await?;
         let budget = Self::monthly_budget();
         let spend = self.fetch_monthly_spend(&credentials).await?;
         let resets_at = end_of_current_month();
@@ -598,10 +608,70 @@ fn json_profile_name(json: &Value) -> Option<String> {
         .map(str::to_string)
 }
 
-fn aws_cli_path() -> Result<String, ProviderError> {
-    Ok(cleaned_env("CODEXBAR_AWS_CLI_PATH")
-        .or_else(|| cleaned_env("AWS_CLI_PATH"))
-        .unwrap_or_else(|| "aws".to_string()))
+fn validated_aws_cli_file(candidate: &Path) -> Option<PathBuf> {
+    #[cfg(windows)]
+    let expected_name = "aws.exe";
+    #[cfg(not(windows))]
+    let expected_name = "aws";
+    if !candidate.is_absolute()
+        || !candidate
+            .file_name()?
+            .to_string_lossy()
+            .eq_ignore_ascii_case(expected_name)
+    {
+        return None;
+    }
+    let canonical = candidate.canonicalize().ok()?;
+    canonical.is_file().then_some(canonical)
+}
+
+fn aws_cli_path() -> Result<PathBuf, ProviderError> {
+    // An explicit absolute path is an owner choice. A bare `aws` name would
+    // execute whichever program happens to be first on PATH, which is unsafe
+    // for a subprocess that receives profile credentials on stdout.
+    if let Some(path) = cleaned_env("CODEXBAR_AWS_CLI_PATH").or_else(|| cleaned_env("AWS_CLI_PATH"))
+    {
+        return validated_aws_cli_file(Path::new(&path)).ok_or_else(|| {
+            ProviderError::NotInstalled(
+                "AWS CLI path must be an absolute path to an installed aws executable".to_string(),
+            )
+        });
+    }
+
+    let mut candidates = Vec::new();
+    #[cfg(windows)]
+    {
+        // AWS's Windows installer uses this per-user location by default.
+        if let Some(local) = dirs::data_local_dir() {
+            candidates.push(local.join("Programs/Amazon/AWSCLIV2/aws.exe"));
+        }
+        use winreg::RegKey;
+        use winreg::enums::{HKEY_LOCAL_MACHINE, KEY_READ, KEY_WOW64_64KEY};
+        if let Ok(key) = RegKey::predef(HKEY_LOCAL_MACHINE).open_subkey_with_flags(
+            r"SOFTWARE\Microsoft\Windows\CurrentVersion",
+            KEY_READ | KEY_WOW64_64KEY,
+        ) && let Ok(program_files) = key.get_value::<String, _>("ProgramFilesDir")
+        {
+            candidates.push(PathBuf::from(program_files).join("Amazon/AWSCLIV2/aws.exe"));
+        }
+    }
+    #[cfg(unix)]
+    {
+        candidates.extend([
+            PathBuf::from("/usr/local/bin/aws"),
+            PathBuf::from("/usr/bin/aws"),
+            PathBuf::from("/opt/aws-cli/v2/current/bin/aws"),
+        ]);
+    }
+    candidates
+        .iter()
+        .find_map(|candidate| validated_aws_cli_file(candidate))
+        .ok_or_else(|| {
+            ProviderError::NotInstalled(
+                "AWS CLI not found in an official installation location; set CODEXBAR_AWS_CLI_PATH to its absolute path"
+                    .to_string(),
+            )
+        })
 }
 
 fn map_aws_profile_error(_profile: &str, stderr: &str) -> ProviderError {
@@ -911,6 +981,22 @@ mod tests {
 
         let auth_error = map_aws_profile_error("private-profile", "SSO login required");
         assert!(matches!(auth_error, ProviderError::AuthRequired));
+    }
+
+    #[test]
+    fn aws_cli_requires_an_explicit_executable_file_not_a_path_shim() {
+        assert!(validated_aws_cli_file(Path::new("aws")).is_none());
+        let temp = tempfile::tempdir().unwrap();
+        let wrong = temp.path().join("other.exe");
+        std::fs::write(&wrong, b"fixture").unwrap();
+        assert!(validated_aws_cli_file(&wrong).is_none());
+
+        #[cfg(windows)]
+        let named = temp.path().join("aws.exe");
+        #[cfg(not(windows))]
+        let named = temp.path().join("aws");
+        std::fs::write(&named, b"fixture").unwrap();
+        assert_eq!(validated_aws_cli_file(&named), named.canonicalize().ok());
     }
 
     #[test]
