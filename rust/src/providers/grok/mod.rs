@@ -11,9 +11,8 @@ use reqwest::Client;
 use serde_json::Value;
 use std::path::PathBuf;
 
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
-
+use crate::cli_dependencies;
+use crate::connection_capabilities::cli_dependency;
 use crate::core::{
     FetchContext, Provider, ProviderError, ProviderFetchResult, ProviderId, ProviderMetadata,
     RateWindow, SourceMode, UsageSnapshot,
@@ -206,10 +205,12 @@ impl GrokProvider {
     }
 
     fn detect_cli_version() -> Option<String> {
-        let mut command = std::process::Command::new("grok");
-        command.arg("--version");
-        hide_windows_console(&mut command);
-        let output = command.output().ok()?;
+        let dependency = cli_dependency(ProviderId::Grok)?;
+        let executable = cli_dependencies::resolve_executable(dependency)?;
+        let output = cli_dependencies::read_provider_cli_sync(&executable, &["--version"]).ok()?;
+        if output.exit_code != Some(0) {
+            return None;
+        }
         let text = String::from_utf8_lossy(&output.stdout);
         let trimmed = text
             .lines()
@@ -220,15 +221,6 @@ impl GrokProvider {
         (!trimmed.is_empty()).then(|| trimmed.to_string())
     }
 }
-
-#[cfg(windows)]
-fn hide_windows_console(command: &mut std::process::Command) {
-    const CREATE_NO_WINDOW: u32 = 0x08000000;
-    command.creation_flags(CREATE_NO_WINDOW);
-}
-
-#[cfg(not(windows))]
-fn hide_windows_console(_command: &mut std::process::Command) {}
 
 impl Default for GrokProvider {
     fn default() -> Self {
