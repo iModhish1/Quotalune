@@ -604,7 +604,7 @@ fn aws_cli_path() -> Result<String, ProviderError> {
         .unwrap_or_else(|| "aws".to_string()))
 }
 
-fn map_aws_profile_error(profile: &str, stderr: &str) -> ProviderError {
+fn map_aws_profile_error(_profile: &str, stderr: &str) -> ProviderError {
     let lower = stderr.to_ascii_lowercase();
     if lower.contains("sso login")
         || lower.contains("expired")
@@ -614,10 +614,10 @@ fn map_aws_profile_error(profile: &str, stderr: &str) -> ProviderError {
         return ProviderError::AuthRequired;
     }
 
-    let message = sanitized_body(stderr);
-    ProviderError::Other(format!(
-        "AWS CLI could not export credentials for profile `{profile}`: {message}"
-    ))
+    // AWS CLI and credential_process implementations can echo credential
+    // material, profile names, or private file paths on stderr. Classify the
+    // known authentication case above, then discard the body entirely.
+    ProviderError::Other("AWS CLI could not export profile credentials".to_string())
 }
 
 fn parse_aws_profile_credentials(stdout: &[u8]) -> Result<AwsCredentials, ProviderError> {
@@ -900,6 +900,17 @@ mod tests {
         assert_eq!(credentials.access_key_id, "ASIAEXAMPLE");
         assert_eq!(credentials.secret_access_key, "secret");
         assert_eq!(credentials.session_token.as_deref(), Some("session"));
+    }
+
+    #[test]
+    fn aws_profile_errors_never_echo_cli_output_or_profile() {
+        let error = map_aws_profile_error("private-profile", "SecretAccessKey=private-secret");
+        let rendered = error.to_string();
+        assert!(!rendered.contains("private-profile"));
+        assert!(!rendered.contains("private-secret"));
+
+        let auth_error = map_aws_profile_error("private-profile", "SSO login required");
+        assert!(matches!(auth_error, ProviderError::AuthRequired));
     }
 
     #[test]
