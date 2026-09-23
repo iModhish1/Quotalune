@@ -110,7 +110,7 @@ fn xml_escape(value: &str) -> String {
         .replace('\'', "&apos;")
 }
 
-const PUBLIC_APP_NAME: &str = "Quotalis";
+const PUBLIC_APP_NAME: &str = "Quotalune";
 
 /// URI scheme used only for notification activation. Development and Personal
 /// builds must never share a protocol handler because each registration points
@@ -1690,7 +1690,7 @@ impl NotificationManager {
         // Try notify-send first (works on most Linux distros including WSL with WSLg)
         if let Ok(output) = Command::new("notify-send")
             .args([
-                "--app-name=Quotalis",
+                "--app-name=Quotalune",
                 "--icon=dialog-information",
                 title,
                 body,
@@ -1876,7 +1876,7 @@ mod tests {
         );
 
         assert!(xml.contains("placement=\"appLogoOverride\""));
-        assert!(xml.contains("alt=\"Quotalis\""));
+        assert!(xml.contains("alt=\"Quotalune\""));
         assert!(xml.contains(&format!(
             "launch=\"{}://dashboard\"",
             notification_protocol_scheme()

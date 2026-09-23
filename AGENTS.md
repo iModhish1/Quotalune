@@ -11,9 +11,9 @@ historical completion claims as current native verification. Preserve historical
 plans, but do not follow superseded material-only, single-window-only or preset-only
 product restrictions over the current ledger.
 
-<!-- TAWAJUD-CODEX-TRI-LANE:BEGIN v5.1 -->
+<!-- TAWAJUD-CODEX-TRI-LANE:BEGIN v6.0 -->
 ## Tawajud project routing inheritance
-Follow the active Codex home's policies/Tawajud-Router-Current.md for routing; use global v5.1+ guidance when a file is unavailable. Preserve project-specific instructions and explicit user model/effort. Route each packet, retain objective quality checks, coordinate independent workers, and store only relevant verified project lessons. Older Tawajud routing-only blocks are superseded. No conversation activation or background model work.
+Follow the active Codex home's policies/Tawajud-Router-Current.md for routing; use global v6.0+ guidance when a file is unavailable. Preserve project-specific instructions and explicit user model/effort. Route each packet, retain objective quality checks, coordinate only independent workers, and store only relevant verified project lessons. Older Tawajud routing-only blocks are superseded. No conversation activation or background model work.
 <!-- TAWAJUD-CODEX-TRI-LANE:END -->
 
 ## Project Overview

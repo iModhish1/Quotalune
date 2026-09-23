@@ -291,7 +291,7 @@ fn main() {
         // all other native window settings from the canonical base config.
         for window in &mut context.config_mut().app.windows {
             if window.label == "main" {
-                window.title = "Quotalis Dev".to_string();
+                window.title = "Quotalune Dev".to_string();
             }
         }
     }

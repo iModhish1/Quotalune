@@ -82,7 +82,7 @@ export default function CatalogUsageHero({
           />
           <div className="qa-catalog-hero__focus-core">
             <div>
-              <span className="qa-catalog-hero__focus-name">{focused?.name ?? "Quotalis"}</span>
+              <span className="qa-catalog-hero__focus-name">{focused?.name ?? "Quotalune"}</span>
               <strong className="qa-catalog-hero__focus-value">{formatPercentage(focused?.primaryValue)}</strong>
               <span className="qa-catalog-hero__focus-mode">{focused?.primaryLabel ?? "unavailable"}</span>
             </div>
@@ -206,7 +206,7 @@ export default function CatalogUsageHero({
 
       <div className="qa-catalog-hero__dashboard-core">
         <div>
-          <span className="qa-catalog-hero__focus-name">{focused?.name ?? "Quotalis"}</span>
+          <span className="qa-catalog-hero__focus-name">{focused?.name ?? "Quotalune"}</span>
           <strong className="qa-catalog-hero__focus-value">{formatPercentage(focused?.primaryValue)}</strong>
           <span className="qa-catalog-hero__focus-mode">{focused?.primaryLabel ?? "unavailable"}</span>
           <span className="qa-catalog-hero__reset">↻ {focused?.reset ?? "—"}</span>

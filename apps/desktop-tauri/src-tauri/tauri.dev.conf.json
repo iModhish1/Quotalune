@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Quotalis Dev",
+  "productName": "Quotalune Dev",
   "mainBinaryName": "QuotalisDev",
   "identifier": "app.quotalis.desktop.dev",
   "build": {

@@ -91,7 +91,7 @@ describe("SurfacesTab", () => {
     bridge.getSurfaceSettings.mockResolvedValue(SETTINGS);
     render(<SurfacesTab />);
 
-    const island = await screen.findByRole("checkbox", { name: "Show Quotalis Surface" });
+    const island = await screen.findByRole("checkbox", { name: "Show Quotalune Surface" });
     expect(screen.queryByRole("checkbox", { name: "Show Edge Arc" })).not.toBeInTheDocument();
     expect(screen.queryByRole("checkbox", { name: "Show Taskbar Arc" })).not.toBeInTheDocument();
 
@@ -112,14 +112,14 @@ describe("SurfacesTab", () => {
       topArcAnchor: "top",
     }));
     // Position is a QuotalisSelect (trigger button, not a native <select>).
-    expect(screen.getByLabelText("Quotalis surface position")).toHaveTextContent("Top");
+    expect(screen.getByLabelText("Quotalune surface position")).toHaveTextContent("Top");
   });
 
   it("offers true wall docking for compact orbital structures", async () => {
     bridge.getSurfaceSettings.mockResolvedValue({ ...SETTINGS, topArcEnabled: true, topArcForm: "orbital", topArcAnchor: "right" });
     render(<SurfacesTab />);
 
-    const position = await screen.findByLabelText("Quotalis surface position");
+    const position = await screen.findByLabelText("Quotalune surface position");
     expect(position).toHaveTextContent("Right wall");
     // The option list only exists once the trigger opens it (portal-rendered).
     fireEvent.click(position);
@@ -131,7 +131,7 @@ describe("SurfacesTab", () => {
     render(<SurfacesTab />);
 
     expect(await screen.findByRole("button", { name: /Lens/ })).toBeInTheDocument();
-    const position = screen.getByLabelText("Quotalis surface position");
+    const position = screen.getByLabelText("Quotalune surface position");
     expect(position).toHaveTextContent("Left wall");
     fireEvent.click(position);
     expect(await screen.findByRole("option", { name: "Left wall" })).toBeInTheDocument();

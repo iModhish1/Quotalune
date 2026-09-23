@@ -4,7 +4,7 @@ use super::*;
 pub fn get_app_info() -> AppInfoBridge {
     let settings = Settings::load();
     AppInfoBridge {
-        name: "Quotalis".to_string(),
+        name: "Quotalune".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         build_number: option_env!("BUILD_NUMBER").unwrap_or("dev").to_string(),
         update_channel: update_channel_label(settings.update_channel).to_string(),
@@ -259,7 +259,7 @@ pub async fn trigger_provider_login(
     let (operation, fixture) = super::connection::begin_login_connection(id)?;
     let transport = provider_login_transport(id).ok_or_else(|| {
         format!(
-            "Quotalis cannot start a sign-in flow for '{}'; configure its credentials in Provider settings or open its dashboard.",
+            "Quotalune cannot start a sign-in flow for '{}'; configure its credentials in Provider settings or open its dashboard.",
             id.display_name()
         )
     })?;
@@ -671,7 +671,7 @@ async fn run_cli_provider_login(
                 "/usr/local/bin/kiro-cli or /usr/bin/kiro-cli"
             };
             format!(
-                "Kiro CLI was not found in a verified installation. Quotalis accepts {location}; PATH-only and per-user copies are not run. See https://kiro.dev/docs/cli/ for installation guidance."
+                "Kiro CLI was not found in a verified installation. Quotalune accepts {location}; PATH-only and per-user copies are not run. See https://kiro.dev/docs/cli/ for installation guidance."
             )
         } else {
             format!(
@@ -922,7 +922,7 @@ mod tests {
     /// -- it must never regress to the legacy "QuotaArc" name.
     #[test]
     fn app_info_reports_the_current_public_brand() {
-        assert_eq!(get_app_info().name, "Quotalis");
+        assert_eq!(get_app_info().name, "Quotalune");
     }
 
     #[test]

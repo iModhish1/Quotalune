@@ -413,7 +413,7 @@ export default function GeneralTab({
                     writeLogoAppearance(next);
                     set({ logoVariant: variant as LogoVariant });
                   }}>
-                  <span className="logo-appearance__preview"><QuotaArcMark size={38} variant={variant} sizePreference="balanced" label={`${variant} Quotalis logo`} /></span>
+                  <span className="logo-appearance__preview"><QuotaArcMark size={38} variant={variant} sizePreference="balanced" label={`${variant} Quotalune logo`} /></span>
                   <span>{t(LOGO_VARIANT_LABELS[variant])}</span>
                 </button>
               ))}

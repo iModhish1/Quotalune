@@ -42,7 +42,7 @@ describe("FlowSurface", () => {
   it("keeps the hidden state to one reachable reveal control", () => {
     render(<FlowSurface catalog="01-obsidian-orbit" settings={settings} state="hidden" providers={providers} />);
 
-    expect(screen.getByRole("button", { name: "Reveal Quotalis" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reveal Quotalune" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
@@ -67,7 +67,7 @@ describe("FlowSurface", () => {
   it("keeps the compact surface quiet and honest when no provider data is available", () => {
     render(<FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={[]} />);
 
-    expect(screen.getByRole("button", { name: "Quotalis is waiting for provider data" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Quotalune is waiting for provider data" })).toBeDisabled();
     expect(screen.getByText("Waiting for provider data")).toBeInTheDocument();
     expect(screen.getByTestId("flow-surface")).toHaveAttribute("data-empty", "true");
   });
@@ -264,7 +264,7 @@ describe("FlowSurface", () => {
       // handle still exists (for hover/focus/keyboard reachability) rather
       // than the actual opacity value — the opacity:0-by-default behavior
       // itself is verified natively (see docs/WAVE6_CONTINUATION.md).
-      expect(drag).toHaveAttribute("aria-label", "Move Quotalis");
+      expect(drag).toHaveAttribute("aria-label", "Move Quotalune");
     });
   });
 
@@ -351,7 +351,7 @@ describe("FlowSurface", () => {
       render(
         <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={providers} onNudge={onNudge} onStartDrag={onStartDrag} />,
       );
-      const drag = screen.getByRole("button", { name: "Move Quotalis" });
+      const drag = screen.getByRole("button", { name: "Move Quotalune" });
       fireEvent.keyDown(drag, { key: "ArrowLeft" });
       fireEvent.keyDown(drag, { key: "ArrowRight" });
       fireEvent.keyDown(drag, { key: "ArrowUp" });
@@ -368,13 +368,13 @@ describe("FlowSurface", () => {
       render(
         <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={providers} onResetPosition={onResetPosition} />,
       );
-      fireEvent.keyDown(screen.getByRole("button", { name: "Move Quotalis" }), { key: "Home" });
+      fireEvent.keyDown(screen.getByRole("button", { name: "Move Quotalune" }), { key: "Home" });
       expect(onResetPosition).toHaveBeenCalledOnce();
     });
 
     it("arrow keys and Home are inert (no crash, no unrelated side effect) when no handler is supplied", () => {
       render(<FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={providers} />);
-      const drag = screen.getByRole("button", { name: "Move Quotalis" });
+      const drag = screen.getByRole("button", { name: "Move Quotalune" });
       expect(() => {
         fireEvent.keyDown(drag, { key: "ArrowLeft" });
         fireEvent.keyDown(drag, { key: "Home" });
@@ -385,11 +385,11 @@ describe("FlowSurface", () => {
       const { rerender } = render(
         <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={providers} />,
       );
-      expect(screen.getByRole("button", { name: "Move Quotalis" })).toHaveAttribute("title", "Drag to move");
+      expect(screen.getByRole("button", { name: "Move Quotalune" })).toHaveAttribute("title", "Drag to move");
       rerender(
         <FlowSurface catalog="01-obsidian-orbit" settings={settings} state="compact" providers={providers} onNudge={() => {}} />,
       );
-      expect(screen.getByRole("button", { name: "Move Quotalis" })).toHaveAttribute("title", "StructureMoveHint");
+      expect(screen.getByRole("button", { name: "Move Quotalune" })).toHaveAttribute("title", "StructureMoveHint");
     });
   });
 

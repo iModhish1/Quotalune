@@ -49,7 +49,7 @@ fn notification_proof_payload(
     let provider_name = provider.display_name();
     let (title, body, destination) = match kind {
         "normal" => (
-            "Quotalis",
+            "Quotalune",
             "Notifications are ready.".to_string(),
             NotificationDestination::Dashboard,
         ),
@@ -620,7 +620,7 @@ mod tests {
         use quotalis_core::notifications::NotificationDestination;
 
         let normal = notification_proof_payload("normal", ProviderId::Codex).unwrap();
-        assert_eq!(normal.title, "Quotalis");
+        assert_eq!(normal.title, "Quotalune");
         assert_eq!(normal.destination, NotificationDestination::Dashboard);
 
         let high = notification_proof_payload("highUsage", ProviderId::Codex).unwrap();

@@ -10,7 +10,7 @@ it("explains the same threshold in used and remaining terms without sending a no
   expect(screen.getByText("Notification Center Paused")).toBeInTheDocument();
   expect(screen.getByRole("progressbar",{name:"High Usage Alert"})).toHaveAttribute("aria-valuenow","80");
   expect(container.querySelector(".notification-overview__provider-icon")).not.toBeNull();
-  expect(screen.getByRole("img", {name: "Quotalis"})).toHaveAttribute(
+  expect(screen.getByRole("img", {name: "Quotalune"})).toHaveAttribute(
     "data-quotaarc-mark",
     "official",
   );

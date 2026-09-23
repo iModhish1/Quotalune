@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Quotalis",
+  "productName": "Quotalune",
   "version": "0.11.0",
   "identifier": "app.quotaarc.desktop",
   "build": {
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Quotalis",
+        "title": "Quotalune",
         "width": 496,
         "height": 800,
         "minWidth": 320,
@@ -36,7 +36,7 @@
   },
   "bundle": {
     "active": true,
-    "publisher": "Quotalis",
+    "publisher": "Quotalune",
     "resources": {
       "../../../assets/brand/icons/quotaarc-icon-128.png": "quotalis-icon-128.png"
     },

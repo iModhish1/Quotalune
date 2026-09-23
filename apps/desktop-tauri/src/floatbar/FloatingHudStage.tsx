@@ -159,7 +159,7 @@ export default function FloatingHudStage({
       <div className="qa-floating-hud__focus" data-tauri-drag-region>
         <span className="qa-floating-hud__focus-provider" data-tauri-drag-region>
           {focused && showProviderIcons && <QaProviderIcon providerId={focused.iconId} size={22} />}
-          <span>{focused?.name ?? "Quotalis"}</span>
+          <span>{focused?.name ?? "Quotalune"}</span>
         </span>
         <strong data-tauri-drag-region>{formatPercentage(focused?.primaryValue)}</strong>
         <span className="qa-floating-hud__focus-mode" data-tauri-drag-region>

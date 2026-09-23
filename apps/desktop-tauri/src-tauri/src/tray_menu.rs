@@ -450,7 +450,7 @@ mod tests {
         assert_eq!(label_for(&menu, "refresh"), "すべて更新");
         // TrayOpenMainApp has no Japanese translation yet — falls back to
         // English, per this repo's established locale-fallback convention.
-        assert_eq!(label_for(&menu, "open_main_app"), "Open Quotalis");
+        assert_eq!(label_for(&menu, "open_main_app"), "Open Quotalune");
         assert_eq!(label_for(&menu, "settings"), "設定...");
         assert_eq!(label_for(&menu, "quit"), "終了");
 

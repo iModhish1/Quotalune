@@ -82,7 +82,7 @@ export default function DemoSettingsSection({ settings, catalog, update }: DemoS
       <p className="demo-settings__description">
         {t(
           "DashboardStudioDemoSectionDescription",
-          "Preview Quotalis with simulated provider data without connecting accounts.",
+          "Preview Quotalune with simulated provider data without connecting accounts.",
         )}
       </p>
 

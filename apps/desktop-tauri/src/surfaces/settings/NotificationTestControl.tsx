@@ -20,7 +20,7 @@ export default function NotificationTestControl({ catalog }: { catalog: Provider
   return <section className="settings-section notification-test-control">
     <Field label={t("NotificationTestTitle")} description={t("NotificationTestHelp")}>
       <Select ariaLabel={t("NotificationTestSource")} value={provider} disabled={busy}
-        options={[{ value: "", label: "Quotalis" }, ...catalog.map(p => ({ value: p.id, label: p.displayName }))]}
+        options={[{ value: "", label: "Quotalune" }, ...catalog.map(p => ({ value: p.id, label: p.displayName }))]}
         onChange={value => { setProvider(value); setResult(null); }}/>
     </Field>
     <button type="button" disabled={busy} onClick={() => void send()}>{t("NotificationTestSend")}</button>

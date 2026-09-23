@@ -215,7 +215,7 @@ export default function TopOrbitStage({
         }}
       >
         <div className="qa-top-orbit__summary-content">
-          <span className="qa-top-orbit__summary-name">{focused?.name ?? "Quotalis"}</span>
+          <span className="qa-top-orbit__summary-name">{focused?.name ?? "Quotalune"}</span>
           <span className="qa-top-orbit__summary-value">{formatPercentage(focused?.primaryValue)}</span>
           <span className="qa-top-orbit__summary-mode">{focused?.primaryLabel ?? "unavailable"}</span>
           <span className="qa-top-orbit__summary-reset">↻ {focused?.reset ?? "—"}</span>

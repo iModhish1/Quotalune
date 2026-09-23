@@ -294,7 +294,7 @@ function recommendationFor(theme: CatalogTheme, id: OptionalScopeId): string | u
 function OptionalScopePreview({ id, theme }: { id: OptionalScopeId; theme: CatalogTheme }) {
   if (id === "quotalisLogo") {
     const variant = theme.recommendedAppearance?.quotalisLogo as LogoVariant | undefined;
-    return <QuotaArcMark size={28} variant={variant} sizePreference="balanced" label={`${variant} Quotalis logo preview`} />;
+    return <QuotaArcMark size={28} variant={variant} sizePreference="balanced" label={`${variant} Quotalune logo preview`} />;
   }
   if (id === "providerIdentity") {
     return (

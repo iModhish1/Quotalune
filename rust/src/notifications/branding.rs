@@ -26,7 +26,7 @@ fn content_name_and_bytes(provider: Option<ProviderId>) -> (String, Cow<'static,
     (
         "quotalis".to_string(),
         Cow::Borrowed(APP_ICON),
-        "Quotalis".to_string(),
+        "Quotalune".to_string(),
     )
 }
 
@@ -103,7 +103,7 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let icon = materialize_icon(root.path(), Some(ProviderId::AzureOpenAI)).unwrap();
 
-        assert_eq!(icon.alternate_text, "Quotalis");
+        assert_eq!(icon.alternate_text, "Quotalune");
         assert_eq!(std::fs::read(icon.path).unwrap(), APP_ICON);
     }
 

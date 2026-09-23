@@ -65,7 +65,7 @@ export default function QuotaIsland({
       data-state={state}
       data-theme={theme.slug}
       style={style}
-      aria-label="Quotalis quota island"
+      aria-label="Quotalune quota island"
     >
       <div
         className="quota-island__trigger"
@@ -80,7 +80,7 @@ export default function QuotaIsland({
         >
           <span className="quota-island__brand" aria-hidden="true">Q</span>
           <span className="quota-island__trigger-copy">
-            <span className="quota-island__provider-name">{focused?.name ?? "Quotalis"}</span>
+            <span className="quota-island__provider-name">{focused?.name ?? "Quotalune"}</span>
             <span className="quota-island__provider-meta">
               {focused ? `${focused.primaryLabel} · ${focused.reset}` : "No provider data"}
             </span>

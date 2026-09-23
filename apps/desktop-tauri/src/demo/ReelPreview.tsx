@@ -95,7 +95,7 @@ export default function ReelPreview() {
   const position={x:Math.max(0,Math.min(positioned.x,area.width-width)),y:Math.max(0,Math.min(positioned.y,area.height-height))};
   useEffect(()=>{if(!canvas.current)return;const observer=new ResizeObserver(([entry])=>setArea({width:entry.contentRect.width,height:entry.contentRect.height}));observer.observe(canvas.current);return()=>observer.disconnect();},[]);
   return <main style={{ position: "fixed", inset: 0, background: "radial-gradient(ellipse at 15% 85%,#dfb8a0,transparent 60%),radial-gradient(ellipse at 85% 15%,#a6c7cb,transparent 65%),#e2deda", color: "#202427", padding: 20 }}>
-    <h1 style={{ fontSize: 18,margin:0 }}>Quotalis · Structure Studio</h1><p style={{fontSize:11}}>Dev-only fixture QA panel (Wave 1E §22-26) · real production FlowSurface/Reel/Notch components, synthetic data only</p>
+    <h1 style={{ fontSize: 18,margin:0 }}>Quotalune · Structure Studio</h1><p style={{fontSize:11}}>Dev-only fixture QA panel (Wave 1E §22-26) · real production FlowSurface/Reel/Notch components, synthetic data only</p>
     <label>Structure <select aria-label="Preview structure" value={form} onChange={e=>{setForm(e.target.value as FlowSurfaceForm);setFocus(0);}}>
       {FLOW_SURFACE_FORM_CATALOG.map(({id,name})=><option key={id} value={id}>{name}</option>)}</select></label><br/>
     <label>Position <select aria-label="Preview position" value={anchor} onChange={e => setAnchor(e.target.value as FlowSurfaceAnchor)}>
@@ -128,7 +128,7 @@ export default function ReelPreview() {
       <button onClick={()=>setState(state==="pinned"?"expanded":"pinned")}>{state==="pinned"?"Unpin":"Pin"}</button>
     </div>
     <div ref={canvas} style={{position:"absolute",inset:"224px 0 0",overflow:"hidden"}}>
-    <div onPointerDown={e=>{if(e.button!==0 || !(e.target as HTMLElement).closest('[aria-label="Move Quotalis"]'))return;
+    <div onPointerDown={e=>{if(e.button!==0 || !(e.target as HTMLElement).closest('[aria-label="Move Quotalune"]'))return;
       drag.current={x:e.clientX,y:e.clientY,left:position.x,top:position.y};e.currentTarget.setPointerCapture(e.pointerId);}}
       onPointerMove={e=>{if(!drag.current)return;setAnchor("free");setFree({x:Math.max(0,Math.min(area.width-width,drag.current.left+e.clientX-drag.current.x)),y:Math.max(0,Math.min(area.height-height,drag.current.top+e.clientY-drag.current.y))});}}
       onPointerUp={e=>{if(!drag.current)return;drag.current=undefined;setAnchor(snapSurface(position.x,position.y,width,height,area.width,area.height));e.currentTarget.releasePointerCapture(e.pointerId);}}

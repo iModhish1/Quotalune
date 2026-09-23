@@ -40,7 +40,7 @@ export default function CollectionsStudio({providers=SURFACE_DEMO_PROVIDERS,init
   const page=(group:Collection,step:number)=>setPages(p=>({...p,[group.id]:((p[group.id]??0)+step+Math.ceil(group.items.length/3))%Math.ceil(group.items.length/3)}));
   if(!displayedProviders.length)return <section role="status">No provider data available. Connect a provider before configuring collections.</section>;
   return <main className="collections-studio">
-    {!onSave && <header><span className="collections-wordmark">Quotalis</span><h1>Collections</h1><p>Interactive design preview · synthetic data · no desktop settings changed</p></header>}
+    {!onSave && <header><span className="collections-wordmark">Quotalune</span><h1>Collections</h1><p>Interactive design preview · synthetic data · no desktop settings changed</p></header>}
     <section className="collections-editor" aria-label="Collection editor">
       <div className="collections-views" role="group" aria-label="Collection view">{views.map(v=><button key={v} aria-pressed={view===v} onClick={()=>setView(v)}><span aria-hidden="true">{v==="grid"?"▦":v==="vertical"?"☷":"⋯"}</span>{v[0].toUpperCase()+v.slice(1)}</button>)}</div>
       <label>Size <output>{scale}%</output><input aria-label="Collection size" type="range" min="75" max="125" step="5" value={scale} onChange={e=>setScale(Number(e.target.value))}/></label>

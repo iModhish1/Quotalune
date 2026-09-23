@@ -37,7 +37,7 @@ export default function CollectionsNativeView(){
   for(const id of layout.groups.flatMap(g=>g.items))if(!providers.some(p=>p.id===id))providers.push(unavailable(id));
 
   if(!layout.groups.length){
-    return <main className="collections-studio"><header><span className="collections-wordmark">Quotalis</span><h1>Collections</h1><p>No collections saved yet. Open Settings → Collections to group providers, choose a layout and save it here.</p></header></main>;
+    return <main className="collections-studio"><header><span className="collections-wordmark">Quotalune</span><h1>Collections</h1><p>No collections saved yet. Open Settings → Collections to group providers, choose a layout and save it here.</p></header></main>;
   }
 
   const provider=providers.find(p=>p.id===detail);
@@ -46,7 +46,7 @@ export default function CollectionsNativeView(){
   // saved position instead of clipping or leaving unexplained blank space.
   const contentHeight=Math.max(0,...layout.groups.map(group=>group.y+collectionLayout(group.items,layout.fields,layout.view,layout.scale).height))+24;
   return <main className="collections-studio">
-    <header><span className="collections-wordmark">Quotalis</span><h1>Collections</h1><p>Live · click a provider for details</p></header>
+    <header><span className="collections-wordmark">Quotalune</span><h1>Collections</h1><p>Live · click a provider for details</p></header>
     <section className="collections-preview" aria-label="Collections">
       <div className="collections-canvas" data-native="true" style={{minHeight:contentHeight}}>
         {layout.groups.map(group=>{

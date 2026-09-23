@@ -8,9 +8,9 @@ it("replaces a fatal render failure with a recoverable diagnostic",()=>{
   const consoleError=vi.spyOn(console,"error").mockImplementation(()=>{});
   function Broken():never{throw new Error("preview exploded");}
   render(<AppErrorBoundary onReload={reload}><Broken/></AppErrorBoundary>);
-  expect(screen.getByRole("heading",{name:"Quotalis could not open this view"})).toBeInTheDocument();
+  expect(screen.getByRole("heading",{name:"Quotalune could not open this view"})).toBeInTheDocument();
   expect(screen.getByText("preview exploded")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button",{name:"Reload Quotalis"}));
+  fireEvent.click(screen.getByRole("button",{name:"Reload Quotalune"}));
   expect(reload).toHaveBeenCalledOnce();
   consoleError.mockRestore();
 });

@@ -161,7 +161,7 @@ pub fn open_or_focus_provider(
         WebviewUrl::App(format!("index.html?window=settings&tab={tab}{provider_query}").into());
 
     let win = tauri::WebviewWindowBuilder::new(app, SETTINGS_LABEL, url)
-        .title("Quotalis Settings")
+        .title("Quotalune Settings")
         .inner_size(SETTINGS_WINDOW_WIDTH, SETTINGS_WINDOW_HEIGHT)
         .min_inner_size(SETTINGS_WINDOW_MIN_WIDTH, SETTINGS_WINDOW_MIN_HEIGHT)
         .decorations(true)

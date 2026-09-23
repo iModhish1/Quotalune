@@ -76,7 +76,7 @@ export default function ReelSurface({ catalog, settings, state, providers, focus
     <div className="reel-stage" data-anchor={settings.anchor} data-horizontal={horizontal}
       style={{ width: size.width, height: size.height, transform: `scale(${fit})` }}>
       {state === "hidden" || state === "peek" ? <button className="reel-reveal" onClick={onReveal}
-        aria-label="Reveal Quotalis" title={demoLabel ? "Quotalis · Demo data" : "Quotalis"}>
+        aria-label="Reveal Quotalune" title={demoLabel ? "Quotalune · Demo data" : "Quotalune"}>
         <QuotaArcMark size={20}/>
       </button> : <>
         <div className="reel-core">
@@ -117,10 +117,10 @@ export default function ReelSurface({ catalog, settings, state, providers, focus
           {/* Wave 1D §10: distinct first-load vs. genuinely-no-data text,
               same DOM shape (see FlowSurface.tsx's identical fix). */}
           {!selected && <span className="reel-empty">{initialLoading ? t("QuotalisStructureLoading") : "No quota data"}</span>}
-          <span className="reel-caption" aria-live="polite">{selected?.name ?? "Quotalis"}<small>{providers.length ? `${focus + 1} / ${providers.length}` : "—"}</small></span>
+          <span className="reel-caption" aria-live="polite">{selected?.name ?? "Quotalune"}<small>{providers.length ? `${focus + 1} / ${providers.length}` : "—"}</small></span>
           {/* Wave 1D §20-21: same keyboard-nudge alternative FlowSurface's
               drag button has -- see its onKeyDown comment. */}
-          <button className="reel-drag" aria-label="Move Quotalis" title={onNudge || onResetPosition ? t("StructureMoveHint") : "Drag to move"}
+          <button className="reel-drag" aria-label="Move Quotalune" title={onNudge || onResetPosition ? t("StructureMoveHint") : "Drag to move"}
             onMouseDown={e => { if (e.button === 0) { e.preventDefault(); onStartDrag?.(); } }}
             onKeyDown={e => {
               const directionByKey: Record<string, "left" | "right" | "up" | "down"> = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down" };

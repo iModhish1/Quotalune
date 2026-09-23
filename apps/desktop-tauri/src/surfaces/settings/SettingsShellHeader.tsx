@@ -16,10 +16,10 @@ export default function SettingsShellHeader({
       <div className="settings-shell-brand">
         {leading}
         <span className="settings-shell-brand__mark">
-          <QuotaArcMark size={32} label="Quotalis" />
+          <QuotaArcMark size={32} label="Quotalune" />
         </span>
         <span className="settings-shell-brand__copy">
-          <span className="settings-shell-brand__name">Quotalis</span>
+          <span className="settings-shell-brand__name">Quotalune</span>
           <h1>{section}</h1>
         </span>
       </div>

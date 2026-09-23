@@ -6,11 +6,11 @@ import "../surfaces/settings/SettingsStudio.css";
 export default function LogoProof() {
   return <main className="settings settings-studio" data-navigation="side" style={{ minHeight: "100vh", padding: 28 }}>
     <section className="settings-section" style={{ maxWidth: 920, margin: "auto" }}>
-      <h1>Quotalis official mark system</h1>
+      <h1>Quotalune official mark system</h1>
       <p className="settings-section__description">One silhouette, five finishes and three bounded prominence levels.</p>
       <div className="logo-appearance__choices">
         {LOGO_VARIANTS.map((variant) => <article className="logo-appearance__choice" key={variant} aria-pressed={variant === "silver"}>
-          <span className="logo-appearance__preview"><QuotaArcMark size={40} variant={variant} sizePreference="balanced" label={`${variant} Quotalis logo`} /></span>
+          <span className="logo-appearance__preview"><QuotaArcMark size={40} variant={variant} sizePreference="balanced" label={`${variant} Quotalune logo`} /></span>
           <span>{variant[0].toUpperCase() + variant.slice(1)}</span>
         </article>)}
       </div>

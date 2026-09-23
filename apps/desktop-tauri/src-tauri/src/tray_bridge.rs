@@ -278,7 +278,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let _tray = TrayIconBuilder::with_id("quotalis-main")
         .icon(icon)
         .tooltip(format!(
-            "Quotalis{}",
+            "Quotalune{}",
             quotalis_core::paths::channel_suffix()
         ))
         .menu(&menu)
@@ -768,7 +768,7 @@ fn build_tooltip(
     use quotalis_core::locale::{LocaleKey, get_text};
 
     if snapshots.is_empty() {
-        return format!("Quotalis{}", quotalis_core::paths::channel_suffix());
+        return format!("Quotalune{}", quotalis_core::paths::channel_suffix());
     }
 
     let error_label = get_text(lang, LocaleKey::TrayStatusRowError);
@@ -785,7 +785,7 @@ fn build_tooltip(
         lines.push(status);
     }
 
-    fit_tooltip_lines("Quotalis", &lines)
+    fit_tooltip_lines("Quotalune", &lines)
 }
 
 /// Keeps whole provider lines while they fit the native 127-unit tooltip and
@@ -1319,7 +1319,7 @@ mod tests {
 
         assert_eq!(
             tooltip,
-            "Quotalis\nClaude: 13% • Resets in 2h 05m\nCodex: 8% • Resets in 4h 10m"
+            "Quotalune\nClaude: 13% • Resets in 2h 05m\nCodex: 8% • Resets in 4h 10m"
         );
     }
 
@@ -1335,7 +1335,7 @@ mod tests {
 
         let tooltip = build_tooltip(&[codex], quotalis_core::settings::Language::English);
 
-        assert_eq!(tooltip, "Quotalis\nCodex: 16% • Resets in 3d 17h");
+        assert_eq!(tooltip, "Quotalune\nCodex: 16% • Resets in 3d 17h");
     }
 
     #[test]

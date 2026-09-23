@@ -1,4 +1,4 @@
-#define MyAppName "Quotalis"
+#define MyAppName "Quotalune"
 #ifndef AppVersion
   #define AppVersion "0.0.0-dev"
 #endif
@@ -29,12 +29,12 @@ AppId=QuotaArcDesktop
 AppName={#MyAppName}
 AppVersion={#AppVersion}
 AppVerName={#MyAppName} {#AppVersion}
-AppPublisher=Quotalis
+AppPublisher=Quotalune
 AppPublisherURL=https://github.com/iModhish1/Quotalis
 AppSupportURL=https://github.com/iModhish1/Quotalis/issues
 AppUpdatesURL=https://github.com/iModhish1/Quotalis/releases
 DefaultDirName={localappdata}\Programs\Quotalis
-DefaultGroupName=Quotalis
+DefaultGroupName=Quotalune
 DisableProgramGroupPage=yes
 DisableDirPage=auto
 PrivilegesRequired=lowest
@@ -79,22 +79,22 @@ Source: "{#WebView2BootstrapperPath}"; Flags: dontcopy
 ; app.quotaarc.desktop, breaking the "Start Menu pin survives
 ; automatically" guarantee Option A depends on, even though the app
 ; itself was registering the correct AUMID at runtime the whole time.
-Name: "{autoprograms}\Quotalis"; Filename: "{app}\Quotalis.exe"; Parameters: "menubar"; WorkingDir: "{app}"; IconFilename: "{app}\icon.ico"; AppUserModelID: "app.quotaarc.desktop"
-Name: "{autodesktop}\Quotalis"; Filename: "{app}\Quotalis.exe"; Parameters: "menubar"; WorkingDir: "{app}"; Tasks: desktopicon; IconFilename: "{app}\icon.ico"; AppUserModelID: "app.quotaarc.desktop"
+Name: "{autoprograms}\Quotalune"; Filename: "{app}\Quotalis.exe"; Parameters: "menubar"; WorkingDir: "{app}"; IconFilename: "{app}\icon.ico"; AppUserModelID: "app.quotaarc.desktop"
+Name: "{autodesktop}\Quotalune"; Filename: "{app}\Quotalis.exe"; Parameters: "menubar"; WorkingDir: "{app}"; Tasks: desktopicon; IconFilename: "{app}\icon.ico"; AppUserModelID: "app.quotaarc.desktop"
 
 [Registry]
 ; Give this installer the same stable Windows notification identity as the
 ; Tauri package. This prevents Windows from substituting the generic app
 ; glyph. app.quotaarc.desktop preserved unchanged (Option A); the
 ; DisplayName shown in Windows notification settings is the current brand.
-Root: HKCU; Subkey: "Software\Classes\AppUserModelId\app.quotaarc.desktop"; ValueType: string; ValueName: "DisplayName"; ValueData: "Quotalis"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\AppUserModelId\app.quotaarc.desktop"; ValueType: string; ValueName: "DisplayName"; ValueData: "Quotalune"; Flags: uninsdeletekey
 ; Toast identity uses the packaged raster artwork, separate from shortcut ICOs.
 Root: HKCU; Subkey: "Software\Classes\AppUserModelId\app.quotaarc.desktop"; ValueType: string; ValueName: "IconUri"; ValueData: "{app}\quotalis-icon-128.png"
 Root: HKCU; Subkey: "Software\Classes\AppUserModelId\app.quotaarc.desktop"; ValueType: string; ValueName: "IconBackgroundColor"; ValueData: "FF10141C"
 
 [Run]
 ; Interactive installs: optional checkbox on the finish page.
-Filename: "{app}\Quotalis.exe"; Parameters: "menubar"; Description: "Launch Quotalis"; Flags: nowait postinstall skipifsilent; Check: CanLaunchQuotalis
+Filename: "{app}\Quotalis.exe"; Parameters: "menubar"; Description: "Launch Quotalune"; Flags: nowait postinstall skipifsilent; Check: CanLaunchQuotalis
 ; Silent upgrades (winget / in-app updater): always relaunch so the tray icon
 ; returns after CloseApplications kills the previous process. Single-instance
 ; handles a second launch from the updater helper if both fire.

@@ -9,5 +9,5 @@ it("renders a full settings shell proof with the selected navigation and balance
   expect(container.querySelector('.settings[data-navigation="top"]')).not.toBeNull();
   expect(container.querySelector('.settings-body[data-tab="advanced"]')).not.toBeNull();
   expect(screen.getByRole("heading",{name:"Performance"})).toBeInTheDocument();
-  expect(screen.getByRole("img",{name:"Quotalis"})).toHaveAttribute("data-quotaarc-mark","official");
+  expect(screen.getByRole("img",{name:"Quotalune"})).toHaveAttribute("data-quotaarc-mark","official");
 });
