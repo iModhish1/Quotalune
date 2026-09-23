@@ -64,3 +64,17 @@ startup and output assertions are mandatory. Independent review findings were
 closed; no live account or owner credential was accessed. This is not an audit
 of every other adapter subprocess. See WAVE3_IMPLEMENTATION_REPORT.md for exact
 tests and the remaining native, provider-wide and release gates.
+
+## Managed Mistral history attribution — 2026-09-23
+
+History attribution now travels with the resolved fetch rather than re-reading the current account selection after I/O. Only a selected managed Mistral cookie on its supported Auto/Web path receives a local lane; explicit CLI/Web selections that exclude managed credentials, disabled cookies, stored/browser fallback and unsupported source paths do not. Mistral returns directly from the supplied cookie request. This limited guarantee is not generalized to adapters with unverified internal fallback behavior.
+
+The lane key contains provider + existing local UUID, never a cookie/hash of a cookie, token, label or email. Scope stays unresolved. Provider-observed identity retains precedence. Existing error and refresh-generation gates remain ahead of history writes. Database fields are unchanged; no historical samples are rewritten. Frontend aggregation must retain the accompanying scope guard to avoid adding legacy ambient readings to potentially aliased local lanes.
+
+Downgrade warning for private engineering use: no schema migration does not mean old readers are semantically safe. Keep the aggregation guard when reverting other pieces, or use an explicitly preserved pre-change Dev history copy. Never silently rewrite/erase owner history to make older readers appear correct. No owner data or credentials were accessed during these tests.
+
+## Mistral HTTP boundary repair — 2026-09-23
+
+A loopback-only regression reproduced private response-body text leaking through a provider error. Non-success responses now expose only the HTTP status, retaining existing 401/403 authentication classification; no response body is copied into the error. Successful response bodies are limited to8MiB both by declared length and incremental chunk accounting, then decoded as strict UTF-8 before the billing interpreter. Construction failure yields an explicit unavailable-client error, never a default unrestricted HTTP client. The Mistral client refuses redirects and retains its30-second request deadline. This changes no endpoint or credential selection.
+
+RED: `.local/wave3-mistral-http-red.log` (body disclosure and oversized-response regressions failed). GREEN: `.local/wave3-mistral-http-green.log`, all17 Mistral tests pass, including declared/chunked oversize, auth statuses, valid unknown billing, invalid encoding and no-client failure. Fixtures bind only loopback and contain synthetic text; no provider credential or live request is used. Full integrated gate/review results are recorded separately. This bounded repair does not claim all70 adapters' HTTP paths have been audited.
