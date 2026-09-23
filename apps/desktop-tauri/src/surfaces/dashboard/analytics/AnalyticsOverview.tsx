@@ -20,6 +20,7 @@ const SOURCE_SCOPE_KEY: Record<AnalyticsScope, LocaleKey> = {
   account: 'AnalyticsScopeAccount',
   provider: 'AnalyticsScopeProvider',
   device: 'AnalyticsScopeDevice',
+  perObservation: 'AnalyticsScopePerObservation',
 };
 
 /** Analytics -> Overview: the DATA UNIVERSE summary (owner: "Analytics

@@ -133,6 +133,7 @@ impl From<QuotaHistoryPoint> for QuotaHistoryPointBridge {
 pub struct SpendTrendPointBridge {
     pub provider: String,
     pub account_id: String,
+    pub account_scope: &'static str,
     pub bucket_start: i64,
     /// A reading in whatever this bucket's `measurement_kind` says it is
     /// -- ProviderReported always (see `DashboardSnapshotBridge`'s
@@ -157,6 +158,7 @@ impl From<SpendDailyPoint> for SpendTrendPointBridge {
         Self {
             provider: p.provider,
             account_id: p.account_id,
+            account_scope: p.account_scope.as_str(),
             bucket_start: p.bucket_start,
             cost_used: p.cost_used,
             currency_code: p.currency_code,
@@ -384,6 +386,33 @@ mod tests {
                 "counterDecreased": false
             })
         );
+    }
+
+    #[test]
+    fn spend_bridge_preserves_scope_without_promoting_credential_lanes() {
+        use quotalis_core::dashboard_data::{
+            CostMeasurementKind, MonetaryQuantityKind, QuotaAccountScope,
+        };
+        for scope in [
+            QuotaAccountScope::Observed,
+            QuotaAccountScope::Unresolved,
+            QuotaAccountScope::Legacy,
+        ] {
+            let wire = serde_json::to_value(SpendTrendPointBridge::from(SpendDailyPoint {
+                provider: "mistral".into(),
+                account_id: "credential-lane:mistral:fixture".into(),
+                account_scope: scope,
+                bucket_start: 100,
+                cost_used: 0.0,
+                currency_code: Some("EUR".into()),
+                measurement_kind: CostMeasurementKind::Cumulative,
+                quantity_kind: MonetaryQuantityKind::Spend,
+            }))
+            .unwrap();
+            assert_eq!(wire["accountScope"], scope.as_str());
+            assert_eq!(wire["costUsed"], 0.0);
+            assert_eq!(wire["accountId"], "credential-lane:mistral:fixture");
+        }
     }
 
     /// Native/Dev verification (owner's spec section 35): reads the real,

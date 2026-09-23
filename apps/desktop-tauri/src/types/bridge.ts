@@ -943,7 +943,7 @@ export type AnalyticsSourceId =
 
 /** Mirrors AnalyticsScope. Local CLI-log scanning is always "device" --
  *  never "account", even when only one account is configured. */
-export type AnalyticsScope = "account" | "provider" | "device";
+export type AnalyticsScope = "account" | "provider" | "device" | "perObservation";
 
 /** Mirrors AnalyticsAvailability. */
 export type AnalyticsAvailability = "available" | "noDataYet" | "unsupported";
@@ -1285,6 +1285,12 @@ export type MonetaryQuantityKind = "spend" | "balance" | "credits" | "unknown";
 export interface SpendTrendPoint {
   provider: string;
   accountId: string;
+  /**
+   * Attribution confidence for this individual monetary observation.
+   * New backend payloads always include it. Older payloads omit it and are
+   * treated as legacy, never upgraded to an independent account.
+   */
+  accountScope?: "observed" | "unresolved" | "legacy";
   bucketStart: number;
   /** A reading in whatever `quantityKind`/`measurementKind` say it is --
    *  always provider-reported (see `DashboardSnapshot.costContract.origin`),

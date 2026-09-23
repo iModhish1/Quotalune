@@ -4,7 +4,7 @@ import { resolveIntlLocale } from "../../../i18n/resolveIntlLocale";
 import { LineChart, type LineChartPoint } from "../../../components/charts/LineChart";
 import { providerCreditsColor, providerCostColor } from "../../../components/charts/chartPalette";
 import { formatPercentage } from "../../../design-system/percent";
-import type { DashboardSnapshot } from "../../../types/bridge";
+import type { DashboardSnapshot, SpendTrendPoint } from "../../../types/bridge";
 
 type Metric = "usage" | "spend";
 
@@ -50,6 +50,21 @@ function groupByProvider<T extends { provider: string; accountId: string; bucket
   return groups;
 }
 
+function groupSpendByAttribution(points: SpendTrendPoint[]): Map<string, SpendTrendPoint[]> {
+  const groups = new Map<string, SpendTrendPoint[]>();
+  for (const point of points) {
+    const accountScope = point.accountScope ?? "legacy";
+    const key = JSON.stringify([point.provider, accountScope, point.accountId]);
+    const list = groups.get(key) ?? [];
+    list.push(point);
+    groups.set(key, list);
+  }
+  for (const list of groups.values()) {
+    list.sort((a, b) => a.bucketStart - b.bucketStart);
+  }
+  return groups;
+}
+
 /**
  * The hero analytics visual (owner section 10-12): usage/spend trend from
  * real local history, aggregated at the grain the backend already chose
@@ -77,7 +92,7 @@ export default function UsageTrendSection({ snapshot }: { snapshot: DashboardSna
   );
   const spendGroups = useMemo(
     () => {
-      const grouped = groupByProvider((snapshot?.spendTrend ?? []).filter(p => p.quantityKind === "spend" && p.measurementKind !== "unknown" && p.currencyCode && Number.isFinite(p.costUsed)));
+      const grouped = groupSpendByAttribution((snapshot?.spendTrend ?? []).filter(p => p.quantityKind === "spend" && p.measurementKind !== "unknown" && p.currencyCode && Number.isFinite(p.costUsed)));
       // A single chart must never silently combine different currencies or measurement kinds.
       for (const [key, points] of grouped) {
         if (new Set(points.map(p => `${p.currencyCode}:${p.measurementKind}`)).size !== 1) grouped.delete(key);
@@ -126,7 +141,7 @@ export default function UsageTrendSection({ snapshot }: { snapshot: DashboardSna
       ) : (
         <div className="dashboard-analytics__trend-grid">
           {[...groups.entries()].map(([key, points]) => {
-            const [providerId] = key.split(":");
+            const providerId = points[0].provider;
             const color =
               activeMetric === "usage" ? providerCreditsColor(providerId) : providerCostColor(providerId);
             const chartPoints: LineChartPoint[] = points.map((p) => ({

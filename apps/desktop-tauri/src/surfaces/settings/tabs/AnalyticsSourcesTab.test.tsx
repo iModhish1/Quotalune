@@ -18,6 +18,7 @@ vi.mock("../../../hooks/useLocale", () => ({
         AnalyticsScopeAccount: "Account",
         AnalyticsScopeProvider: "Provider",
         AnalyticsScopeDevice: "Device",
+        AnalyticsScopePerObservation: "Per-observation identity",
         AnalyticsCapabilityQuota: "Quota",
         AnalyticsCapabilityResets: "Resets",
         AnalyticsCapabilityMonetary: "Monetary",
@@ -120,6 +121,20 @@ describe("AnalyticsSourcesTab", () => {
     expect(screen.getByText("Monetary")).toBeInTheDocument();
     expect(screen.queryByText("Tokens")).not.toBeInTheDocument();
     expect(screen.queryByText("Models")).not.toBeInTheDocument();
+  });
+
+  it("labels per-observation sources without claiming every sample resolves to an account", async () => {
+    tauriMocks.getAnalyticsSourceRegistry.mockResolvedValue([
+      source({
+        id: "providerReportedMonetary",
+        label: "Provider-reported monetary data",
+        scope: "perObservation",
+        capabilities: { quota: false, resets: false, monetary: true, tokens: false, models: false, sessionCount: false, dailyActivity: false },
+      }),
+    ]);
+    render(<AnalyticsSourcesTab />);
+    await waitFor(() => expect(screen.getByText("Provider-reported monetary data")).toBeInTheDocument());
+    expect(screen.getByText("Per-observation identity")).toBeInTheDocument();
   });
 
   it("surfaces a real fetch error instead of silently rendering nothing", async () => {

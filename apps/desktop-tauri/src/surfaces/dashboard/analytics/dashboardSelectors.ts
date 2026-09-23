@@ -371,13 +371,33 @@ function totalReportedSpend(
     if (point.quantityKind !== "spend") return null;
     if (point.measurementKind !== "cumulative") return null;
     if (point.currencyCode !== contract.currencyCode || !Number.isFinite(point.costUsed)) return null;
-    const key = JSON.stringify([point.provider, point.accountId]);
+    // A locally managed credential lane is useful attribution, but it is not
+    // evidence of an independently observed provider account. Keep scope in
+    // the identity so a legacy/ambient reading cannot replace an observed
+    // account's total, then apply the provider-level aggregation guard below.
+    const key = JSON.stringify([point.provider, point.accountScope ?? "legacy", point.accountId]);
     const existing = latestBySeries.get(key);
     if (!existing || point.bucketStart > existing.bucketStart) {
       latestBySeries.set(key, point);
     }
   }
   if (latestBySeries.size === 0) return null;
-  const total = Array.from(latestBySeries.values()).reduce((sum, p) => sum + p.costUsed, 0);
+  const latestSeries = Array.from(latestBySeries.values());
+  const seriesByProvider = new Map<string, typeof latestSeries>();
+  for (const point of latestSeries) {
+    const series = seriesByProvider.get(point.provider) ?? [];
+    series.push(point);
+    seriesByProvider.set(point.provider, series);
+  }
+  // The same provider may report one explicit account alongside a local
+  // credential lane or legacy ambient history. Those identifiers do not prove
+  // distinct remote accounts, so presenting a sum would risk double-counting.
+  // A lone unresolved series remains useful and shows its latest reading.
+  for (const series of seriesByProvider.values()) {
+    if (series.length > 1 && series.some((point) => (point.accountScope ?? "legacy") !== "observed")) {
+      return null;
+    }
+  }
+  const total = latestSeries.reduce((sum, p) => sum + p.costUsed, 0);
   return Number.isFinite(total) ? { total, currencyCode: contract.currencyCode } : null;
 }

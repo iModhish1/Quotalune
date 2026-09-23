@@ -97,7 +97,9 @@ function costContract(overrides: Partial<CostContract> = {}): CostContract {
   };
 }
 
-function spendPoint(overrides: Partial<SpendTrendPoint> = {}): SpendTrendPoint {
+function spendPoint(
+  overrides: Partial<SpendTrendPoint & { accountScope?: "observed" | "unresolved" | "legacy" }> = {},
+): SpendTrendPoint {
   return {
     provider: "claude",
     accountId: "acct-1",
@@ -508,6 +510,86 @@ describe("computeKpis", () => {
     });
     expect(kpis.reportedSpendTotal).toBeCloseTo(6.25);
     expect(kpis.reportedSpendCurrency).toBe("USD");
+  });
+
+  it("sums latest cumulative readings from two observed accounts of the same provider", () => {
+    const kpis = computeKpis({
+      liveProviders: [],
+      snapshot: snapshot({
+        availability: cumulativeAvailability,
+        costContract: cumulativeContract,
+        spendTrend: [
+          spendPoint({ provider: "mistral", accountId: "observed-a", accountScope: "observed", bucketStart: 0, costUsed: 2 }),
+          spendPoint({ provider: "mistral", accountId: "observed-b", accountScope: "observed", bucketStart: 0, costUsed: 3 }),
+        ],
+      }),
+      settings,
+    });
+    expect(kpis.reportedSpendTotal).toBeCloseTo(5);
+  });
+
+  it("fails closed instead of adding an unresolved lane to an observed account of the same provider", () => {
+    const kpis = computeKpis({
+      liveProviders: [],
+      snapshot: snapshot({
+        availability: cumulativeAvailability,
+        costContract: cumulativeContract,
+        spendTrend: [
+          spendPoint({ provider: "mistral", accountId: "observed-a", accountScope: "observed", bucketStart: 0, costUsed: 2 }),
+          spendPoint({ provider: "mistral", accountId: "credential-lane:uuid", accountScope: "unresolved", bucketStart: 0, costUsed: 3 }),
+        ],
+      }),
+      settings,
+    });
+    expect(kpis.reportedSpendTotal).toBeNull();
+  });
+
+  it("fails closed for two ambient or credential lanes of the same provider", () => {
+    const kpis = computeKpis({
+      liveProviders: [],
+      snapshot: snapshot({
+        availability: cumulativeAvailability,
+        costContract: cumulativeContract,
+        spendTrend: [
+          spendPoint({ provider: "mistral", accountId: "provider:mistral", accountScope: "unresolved", bucketStart: 0, costUsed: 2 }),
+          spendPoint({ provider: "mistral", accountId: "credential-lane:uuid", accountScope: "unresolved", bucketStart: 0, costUsed: 3 }),
+        ],
+      }),
+      settings,
+    });
+    expect(kpis.reportedSpendTotal).toBeNull();
+  });
+
+  it("treats a payload without account scope as legacy rather than an observed account", () => {
+    const kpis = computeKpis({
+      liveProviders: [],
+      snapshot: snapshot({
+        availability: cumulativeAvailability,
+        costContract: cumulativeContract,
+        spendTrend: [
+          spendPoint({ provider: "mistral", accountId: "observed-a", accountScope: "observed", bucketStart: 0, costUsed: 2 }),
+          spendPoint({ provider: "mistral", accountId: "legacy-provider-key", bucketStart: 0, costUsed: 3 }),
+        ],
+      }),
+      settings,
+    });
+    expect(kpis.reportedSpendTotal).toBeNull();
+  });
+
+  it("keeps the latest reading for one unresolved series without summing buckets", () => {
+    const kpis = computeKpis({
+      liveProviders: [],
+      snapshot: snapshot({
+        availability: cumulativeAvailability,
+        costContract: cumulativeContract,
+        spendTrend: [
+          spendPoint({ provider: "mistral", accountId: "provider:mistral", accountScope: "unresolved", bucketStart: 0, costUsed: 2 }),
+          spendPoint({ provider: "mistral", accountId: "provider:mistral", accountScope: "unresolved", bucketStart: 1, costUsed: 3 }),
+        ],
+      }),
+      settings,
+    });
+    expect(kpis.reportedSpendTotal).toBeCloseTo(3);
   });
 
   it("PHASE 4A.1 hard rule: a point-in-time BALANCE is never shown as Spend -- returns unavailable, not the balance number", () => {

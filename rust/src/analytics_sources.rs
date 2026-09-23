@@ -42,6 +42,9 @@ pub enum AnalyticsSourceId {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum AnalyticsScope {
+    /// Attribution must be read on each observation; provider data may have
+    /// observed identity, an unresolved credential lane, or legacy history.
+    PerObservation,
     /// Tied to one authenticated, resolved account
     /// (`QuotaAccountScope::Observed`).
     Account,
@@ -111,7 +114,7 @@ pub enum AnalyticsSourceFact {
     /// "Each configured provider's live quota, plan, and connection status."
     ProviderLiveQuotaPlanStatus,
     /// "Persisted quota-percentage and reset-boundary samples over time,
-    /// per resolved account."
+    /// retaining each observation's identity evidence."
     PersistedQuotaResetSamples,
     /// "Spend, Balance, or Credits figures the provider itself reports,
     /// only when the cost contract is eligible."
@@ -176,7 +179,7 @@ pub fn analytics_source_registry() -> Vec<AnalyticsSourceDescriptor> {
         AnalyticsSourceDescriptor {
             id: AnalyticsSourceId::ProviderCurrentState,
             label: "Provider current state",
-            scope: AnalyticsScope::Account,
+            scope: AnalyticsScope::PerObservation,
             capabilities: AnalyticsCapabilities {
                 quota: true,
                 resets: true,
@@ -193,7 +196,7 @@ pub fn analytics_source_registry() -> Vec<AnalyticsSourceDescriptor> {
         AnalyticsSourceDescriptor {
             id: AnalyticsSourceId::ProviderHistory,
             label: "Provider quota history",
-            scope: AnalyticsScope::Account,
+            scope: AnalyticsScope::PerObservation,
             capabilities: AnalyticsCapabilities {
                 quota: true,
                 resets: true,
@@ -210,7 +213,7 @@ pub fn analytics_source_registry() -> Vec<AnalyticsSourceDescriptor> {
         AnalyticsSourceDescriptor {
             id: AnalyticsSourceId::ProviderReportedMonetary,
             label: "Provider-reported monetary data",
-            scope: AnalyticsScope::Account,
+            scope: AnalyticsScope::PerObservation,
             capabilities: AnalyticsCapabilities {
                 monetary: true,
                 ..Default::default()
@@ -307,6 +310,24 @@ mod tests {
                 AnalyticsSourceId::CodexLocalActivity | AnalyticsSourceId::ClaudeLocalActivity
             ) {
                 assert_eq!(descriptor.scope, AnalyticsScope::Device);
+            }
+        }
+    }
+
+    #[test]
+    fn provider_sources_require_per_observation_identity_evidence() {
+        for descriptor in analytics_source_registry() {
+            if matches!(
+                descriptor.id,
+                AnalyticsSourceId::ProviderCurrentState
+                    | AnalyticsSourceId::ProviderHistory
+                    | AnalyticsSourceId::ProviderReportedMonetary
+            ) {
+                assert_eq!(descriptor.scope, AnalyticsScope::PerObservation);
+                assert_eq!(
+                    serde_json::to_value(descriptor.scope).unwrap(),
+                    "perObservation"
+                );
             }
         }
     }

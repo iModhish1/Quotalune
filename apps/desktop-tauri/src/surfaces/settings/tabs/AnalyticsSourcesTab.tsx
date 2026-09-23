@@ -14,6 +14,7 @@ const SCOPE_KEY: Record<AnalyticsScope, LocaleKey> = {
   account: "AnalyticsScopeAccount",
   provider: "AnalyticsScopeProvider",
   device: "AnalyticsScopeDevice",
+  perObservation: "AnalyticsScopePerObservation",
 };
 const CAPABILITY_ORDER: { key: keyof AnalyticsCapabilities; labelKey: LocaleKey }[] = [
   { key: "quota", labelKey: "AnalyticsCapabilityQuota" },

@@ -3,7 +3,8 @@
 //! Account resolution uses only identity evidence carried by the provider
 //! snapshot. Provider-reported email plus organization context becomes a
 //! domain-separated digest; snapshots without email evidence remain explicitly
-//! provider-scoped and unresolved.
+//! unresolved. A proven managed-cookie fetch may carry a separate local lane;
+//! that lane prevents history collisions without claiming remote identity.
 //!
 //! Recording is best-effort: history failures must never break the
 //! provider refresh path.
@@ -15,6 +16,13 @@ use quotalis_core::history::{HistoryStore, UsageSample};
 use crate::commands::ProviderUsageSnapshot;
 
 static STORE: std::sync::OnceLock<HistoryStore> = std::sync::OnceLock::new();
+
+/// A local credential selection, never proof of a remote account identity.
+/// Only Mistral currently guarantees this cookie is the sole fetch credential.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum HistoryLane {
+    MistralCookie(uuid::Uuid),
+}
 
 fn store() -> &'static HistoryStore {
     STORE.get_or_init(HistoryStore::open)
@@ -69,6 +77,22 @@ fn account_identity(snapshot: &ProviderUsageSnapshot) -> (String, &'static str) 
     (format!("provider:{}", snapshot.provider_id), "unresolved")
 }
 
+fn identity_for_lane(
+    snapshot: &ProviderUsageSnapshot,
+    lane: Option<HistoryLane>,
+) -> (String, &'static str) {
+    let identity = account_identity(snapshot);
+    if identity.1 == "observed" {
+        return identity;
+    }
+    match lane {
+        Some(HistoryLane::MistralCookie(id)) if snapshot.provider_id == "mistral" => {
+            (format!("credential-lane:mistral:{id}"), "unresolved")
+        }
+        _ => identity,
+    }
+}
+
 fn valid_quota_window(window: &crate::commands::RateWindowSnapshot) -> bool {
     !window.is_informational
         && window.used_percent.is_finite()
@@ -111,11 +135,14 @@ fn sample_for_window(
 /// through the real, process-global store, which would otherwise mean a
 /// unit test contaminates the real on-disk `history.db`). Returns `None`
 /// for an error snapshot (nothing to record).
-fn samples_for_snapshot(snapshot: &ProviderUsageSnapshot) -> Option<Vec<UsageSample>> {
+fn samples_for_snapshot_in_lane(
+    snapshot: &ProviderUsageSnapshot,
+    lane: Option<HistoryLane>,
+) -> Option<Vec<UsageSample>> {
     if snapshot.error.is_some() || snapshot.error_state != ProviderStateKind::Ready {
         return None;
     }
-    let (account_key, account_scope) = account_identity(snapshot);
+    let (account_key, account_scope) = identity_for_lane(snapshot, lane);
     let captured_at = iso_to_epoch(&snapshot.updated_at)?;
 
     let mut samples = Vec::new();
@@ -210,8 +237,8 @@ fn samples_for_snapshot(snapshot: &ProviderUsageSnapshot) -> Option<Vec<UsageSam
 
 /// Record a successfully-refreshed snapshot into history. Errors are logged,
 /// never propagated.
-pub(crate) fn record_snapshot(snapshot: &ProviderUsageSnapshot) {
-    let Some(samples) = samples_for_snapshot(snapshot) else {
+pub(crate) fn record_snapshot(snapshot: &ProviderUsageSnapshot, lane: Option<HistoryLane>) {
+    let Some(samples) = samples_for_snapshot_in_lane(snapshot, lane) else {
         return;
     };
     let store = store();
@@ -231,6 +258,61 @@ pub(crate) fn prune_on_startup() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn samples_for_snapshot(snapshot: &ProviderUsageSnapshot) -> Option<Vec<UsageSample>> {
+        samples_for_snapshot_in_lane(snapshot, None)
+    }
+
+    #[test]
+    fn managed_cookie_history_separates_local_lanes_without_claiming_remote_accounts() {
+        let mut snapshot = test_snapshot();
+        snapshot.provider_id = "mistral".into();
+        let first = HistoryLane::MistralCookie(uuid::Uuid::from_u128(1));
+        let second = HistoryLane::MistralCookie(uuid::Uuid::from_u128(2));
+        let (key, scope) = identity_for_lane(&snapshot, Some(first));
+        assert_eq!(scope, "unresolved");
+        assert_eq!(
+            key,
+            "credential-lane:mistral:00000000-0000-0000-0000-000000000001"
+        );
+        assert_eq!(
+            identity_for_lane(&snapshot, Some(first)),
+            (key.clone(), scope)
+        );
+        assert_ne!(identity_for_lane(&snapshot, Some(second)).0, key);
+        assert_ne!(identity_for_lane(&snapshot, None).0, key);
+        let samples = samples_for_snapshot_in_lane(&snapshot, Some(first)).unwrap();
+        assert!(
+            samples
+                .iter()
+                .all(|s| s.account_id == key && s.account_scope.as_deref() == Some("unresolved"))
+        );
+        snapshot.account_email = Some("fixture@example.test".into());
+        assert_eq!(
+            identity_for_lane(&snapshot, Some(first)),
+            account_identity(&snapshot)
+        );
+        snapshot.account_email = None;
+        snapshot.provider_id = "claude".into();
+        assert_eq!(
+            identity_for_lane(&snapshot, Some(first)),
+            account_identity(&snapshot)
+        );
+    }
+
+    #[test]
+    fn failed_managed_cookie_refresh_does_not_record_history() {
+        let mut snapshot = test_snapshot();
+        snapshot.provider_id = "mistral".into();
+        snapshot.error = Some("Verification failed".into());
+        assert!(
+            samples_for_snapshot_in_lane(
+                &snapshot,
+                Some(HistoryLane::MistralCookie(uuid::Uuid::from_u128(1)))
+            )
+            .is_none()
+        );
+    }
 
     #[test]
     fn account_identity_hashes_provider_reported_identity_without_exposing_it() {

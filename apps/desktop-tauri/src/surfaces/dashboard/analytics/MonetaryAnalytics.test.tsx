@@ -27,6 +27,10 @@ vi.mock("../../../hooks/useLocale", () => ({
         MonetaryColumnMeasurement: "Measurement",
         MonetaryColumnPeriod: "Currency / Unit",
         MonetaryColumnFreshness: "Freshness",
+        MonetaryColumnAttribution: "Identity",
+        MonetaryAttributionObserved: "Observed account",
+        MonetaryAttributionUnresolved: "Unresolved identity",
+        MonetaryAttributionLegacy: "Legacy identity",
         MonetaryMeasurementCumulative: "Current period total",
         MonetaryMeasurementPointInTime: "Current snapshot",
         MonetaryMeasurementDelta: "Period amount",
@@ -105,6 +109,43 @@ describe("MonetaryAnalytics", () => {
     expect(screen.getByText("€20.00")).toBeInTheDocument();
     const currenciesCell = screen.getByText("Currencies").closest(".analytics-comparison-stat");
     expect(currenciesCell).toHaveTextContent("2");
+  });
+
+  it("keeps two managed credential lanes from the same provider and currency as separate rows", async () => {
+    render(
+      <MonetaryAnalytics
+        snapshot={snapshot([
+          point({ provider: "mistral", accountId: "credential-lane:a", accountScope: "unresolved", bucketStart: 100, costUsed: 11, currencyCode: "EUR" }),
+          point({ provider: "mistral", accountId: "credential-lane:b", accountScope: "unresolved", bucketStart: 100, costUsed: 22, currencyCode: "EUR" }),
+        ])}
+        providerId={null}
+        isDemo={false}
+      />,
+    );
+    expect(await screen.findByText("€11.00")).toBeInTheDocument();
+    expect(screen.getByText("€22.00")).toBeInTheDocument();
+    expect(screen.getByText("Unresolved identity 1")).toBeInTheDocument();
+    expect(screen.getByText("Unresolved identity 2")).toBeInTheDocument();
+    const spendRibbon = screen.getAllByText("Spend").find((element) => element.tagName === "DT")?.closest(".analytics-comparison-stat");
+    expect(spendRibbon).toHaveTextContent("1");
+  });
+
+  it("does not collapse an ambient legacy lane into a managed lane from the same provider and bucket", async () => {
+    render(
+      <MonetaryAnalytics
+        snapshot={snapshot([
+          point({ provider: "mistral", accountId: "provider:mistral", accountScope: "legacy", bucketStart: 100, costUsed: 3, currencyCode: "EUR" }),
+          point({ provider: "mistral", accountId: "credential-lane:managed", accountScope: "unresolved", bucketStart: 100, costUsed: 4, currencyCode: "EUR" }),
+        ])}
+        providerId={null}
+        isDemo={false}
+      />,
+    );
+    expect(await screen.findByText("€3.00")).toBeInTheDocument();
+    expect(screen.getByText("€4.00")).toBeInTheDocument();
+    expect(screen.getByText("Legacy identity 1")).toBeInTheDocument();
+    expect(screen.getByText("Unresolved identity 1")).toBeInTheDocument();
+    expect(screen.queryByText("credential-lane:managed")).not.toBeInTheDocument();
   });
 
   it("excludes quantityKind 'unknown' rows entirely -- never shown as Spend/Balance/Credits", async () => {

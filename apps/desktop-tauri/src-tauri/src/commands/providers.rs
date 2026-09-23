@@ -15,6 +15,21 @@ pub(crate) fn build_fetch_context(
     api_keys: &ApiKeys,
     token_accounts: &HashMap<ProviderId, ProviderAccountData>,
 ) -> FetchContext {
+    resolve_fetch_context(id, settings, cookies, api_keys, token_accounts).context
+}
+
+struct ResolvedProviderFetch {
+    context: FetchContext,
+    history_lane: Option<crate::history_recorder::HistoryLane>,
+}
+
+fn resolve_fetch_context(
+    id: ProviderId,
+    settings: &Settings,
+    cookies: &ManualCookies,
+    api_keys: &ApiKeys,
+    token_accounts: &HashMap<ProviderId, ProviderAccountData>,
+) -> ResolvedProviderFetch {
     let cookie_source = settings.cookie_source(id);
     let stored_cookie = cookies.get(id.cli_name()).map(|s| s.to_string());
     let stored_api_key = api_keys
@@ -30,6 +45,18 @@ pub(crate) fn build_fetch_context(
     let active_token_cookie = token_override
         .as_ref()
         .and_then(|override_data| override_data.cookie_header.clone());
+    // Capture provenance with the credential selection, not from mutable
+    // account settings after network I/O. No secret is hashed or persisted.
+    let managed_cookie_lane = token_override.as_ref().and_then(|value| {
+        (id == ProviderId::Mistral
+            && active_token_cookie
+                .as_deref()
+                .is_some_and(|cookie| !cookie.trim().is_empty()))
+        .then_some(crate::history_recorder::HistoryLane::MistralCookie(
+            value.account.id,
+        ))
+    });
+    let mut managed_cookie_selected = false;
     let active_token_env = token_override
         .as_ref()
         .and_then(|override_data| override_data.env_override.as_ref());
@@ -75,6 +102,7 @@ pub(crate) fn build_fetch_context(
             "off" if id == ProviderId::Factory => (SourceMode::Cli, None),
             "off" => (SourceMode::Cli, None),
             "manual" => {
+                managed_cookie_selected = managed_cookie_lane.is_some();
                 let cookie_header = active_token_cookie.or(stored_cookie);
                 let source_mode = if (has_kimi_code_api_key || has_opencodego_api_key)
                     && usage_source == SourceMode::Auto
@@ -91,6 +119,7 @@ pub(crate) fn build_fetch_context(
             }
             // `browser` is accepted as a legacy alias from older settings.
             "auto" | "browser" | "web" => {
+                managed_cookie_selected = managed_cookie_lane.is_some();
                 // Try browser cookie extraction as fallback when no manual cookie is set.
                 // On non-Windows this is a harmless no-op that returns an error.
                 let cookie_header = active_token_cookie.or(stored_cookie).or_else(|| {
@@ -120,6 +149,7 @@ pub(crate) fn build_fetch_context(
                 .map(str::trim)
                 .is_none_or(|s| s.is_empty())
         {
+            managed_cookie_selected = false;
             cookie_header = provider_cookie_domain(id, settings).and_then(|domain| {
                 quotalis_core::browser::cookies::get_cookie_header(domain)
                     .ok()
@@ -137,7 +167,7 @@ pub(crate) fn build_fetch_context(
     // token account or manual cookie source scopes the session to web creds.
     let auto_prefer_web = token_override.is_some() || cookie_source == "manual";
 
-    FetchContext {
+    let context = FetchContext {
         source_mode,
         manual_cookie_header: cookie_header,
         api_key,
@@ -147,6 +177,17 @@ pub(crate) fn build_fetch_context(
         gateway_url,
         auto_prefer_web,
         ..FetchContext::default()
+    };
+    // Mistral returns directly from a supplied cookie in Auto/Web; it never
+    // falls back to another account on error. Other adapters need a separate
+    // provenance audit before they can attach a managed history lane.
+    let history_lane = (managed_cookie_selected
+        && matches!(source_mode, SourceMode::Auto | SourceMode::Web))
+    .then_some(managed_cookie_lane)
+    .flatten();
+    ResolvedProviderFetch {
+        context,
+        history_lane,
     }
 }
 
@@ -373,7 +414,7 @@ fn spawn_provider_refreshes(
         let id = *id;
         let app_handle = app.clone();
         let fetch_permits = Arc::clone(&fetch_permits);
-        let ctx = build_fetch_context(
+        let resolved = resolve_fetch_context(
             id,
             &inputs.settings,
             &inputs.manual_cookies,
@@ -393,7 +434,14 @@ fn spawn_provider_refreshes(
             let Ok(_permit) = fetch_permits.clone().acquire_owned().await else {
                 return;
             };
-            refresh_provider(app_handle.clone(), id, ctx, generation, token_account_id).await;
+            refresh_provider(
+                app_handle.clone(),
+                id,
+                resolved,
+                generation,
+                token_account_id,
+            )
+            .await;
             drop(_permit);
             if id == ProviderId::Codex {
                 super::codex_accounts::refresh_codex_account_lanes(app_handle, fetch_permits).await;
@@ -407,7 +455,7 @@ fn spawn_provider_refreshes(
 async fn refresh_provider(
     app: tauri::AppHandle,
     id: ProviderId,
-    ctx: FetchContext,
+    resolved: ResolvedProviderFetch,
     generation: u64,
     token_account_id: Option<uuid::Uuid>,
 ) {
@@ -420,7 +468,7 @@ async fn refresh_provider(
         () = super::connection_operations::cancelled(&mut cancellation) => return,
     };
     let snapshot = tokio::select! {
-        snapshot = fetch_provider_snapshot(id, ctx, token_account_id) => snapshot,
+        snapshot = fetch_provider_snapshot(id, resolved.context, token_account_id) => snapshot,
         () = super::connection_operations::cancelled(&mut cancellation) => return,
     };
 
@@ -455,7 +503,7 @@ async fn refresh_provider(
     if let Some(snapshot) = published {
         events::emit_provider_updated(&app, &snapshot);
         // Account-scoped history recording (best-effort, never fails refresh).
-        crate::history_recorder::record_snapshot(&snapshot);
+        crate::history_recorder::record_snapshot(&snapshot, resolved.history_lane);
     }
 }
 
@@ -1464,5 +1512,127 @@ mod reset_backfill_tests {
         let mut fresh = codex_snapshot(win(30.0, None));
         codex_reset_backfill(&mut fresh, None);
         assert!(fresh.primary.resets_at.is_none());
+    }
+}
+
+#[cfg(test)]
+mod managed_cookie_history_tests {
+    use super::*;
+    use crate::history_recorder::HistoryLane;
+    use quotalis_core::core::TokenAccount;
+
+    #[test]
+    fn managed_cookie_failure_cannot_replay_a_previous_mistral_snapshot() {
+        let id = ProviderId::Mistral;
+        let metadata = instantiate_provider(id).metadata().clone();
+        let result = ProviderFetchResult {
+            usage: quotalis_core::core::UsageSnapshot::new(
+                quotalis_core::core::RateWindow::informational("Billing only"),
+            ),
+            cost: None,
+            wayfinder_usage: None,
+            source_label: "web".into(),
+        };
+        let good = ProviderUsageSnapshot::from_fetch_result(id, &metadata, &result, None);
+        let mut failure = good.clone();
+        failure.error = Some("Request timed out".into());
+        let mut state = AppState::new();
+        state.provider_cache.push(good);
+        let actual = preserve_last_good_transient_failure(&mut state, id, failure);
+        assert_eq!(actual.error.as_deref(), Some("Request timed out"));
+    }
+
+    #[test]
+    fn managed_cookie_history_lane_tracks_the_selected_credential_only() {
+        let id = ProviderId::Mistral;
+        let account = TokenAccount::new("Fixture", "session=managed-fixture");
+        let account_id = account.id;
+        let mut data = ProviderAccountData::new();
+        data.add_account(account);
+        let accounts = HashMap::from([(id, data)]);
+        let mut cookies = ManualCookies::default();
+        cookies.set("mistral", "session=stored-fixture");
+        let keys = ApiKeys::default();
+        for (usage, source, selected) in [
+            ("auto", "manual", true),
+            ("auto", "auto", true),
+            ("auto", "browser", true),
+            ("auto", "web", true),
+            ("auto", "off", false),
+            ("auto", "unknown", false),
+            ("cli", "manual", false),
+            ("web", "manual", false),
+            ("oauth", "auto", false),
+        ] {
+            let mut settings = Settings::default();
+            settings.set_usage_source(id, usage);
+            settings.set_cookie_source(id, source);
+            let resolved = resolve_fetch_context(id, &settings, &cookies, &keys, &accounts);
+            assert_eq!(
+                resolved.history_lane,
+                selected.then_some(HistoryLane::MistralCookie(account_id)),
+                "usage={usage}, cookie={source}"
+            );
+            if selected {
+                assert_eq!(
+                    resolved.context.manual_cookie_header.as_deref(),
+                    Some("session=managed-fixture")
+                );
+            }
+        }
+        let mut settings = Settings::default();
+        settings.set_cookie_source(id, "manual");
+        let resolved = resolve_fetch_context(id, &settings, &cookies, &keys, &HashMap::new());
+        assert!(resolved.history_lane.is_none());
+        assert_eq!(
+            resolved.context.manual_cookie_header.as_deref(),
+            Some("session=stored-fixture")
+        );
+    }
+
+    #[test]
+    fn managed_cookie_history_lane_is_captured_before_selection_changes() {
+        let id = ProviderId::Mistral;
+        let mut settings = Settings::default();
+        settings.set_cookie_source(id, "manual");
+        let mut data = ProviderAccountData::new();
+        let first = TokenAccount::new("A", "session=fixture-a");
+        let first_id = first.id;
+        let second = TokenAccount::new("B", "session=fixture-b");
+        let second_id = second.id;
+        data.add_account(first);
+        data.add_account(second);
+        let mut accounts = HashMap::from([(id, data)]);
+        let original = resolve_fetch_context(
+            id,
+            &settings,
+            &ManualCookies::default(),
+            &ApiKeys::default(),
+            &accounts,
+        );
+        accounts.get_mut(&id).unwrap().active_index = 1;
+        let next = resolve_fetch_context(
+            id,
+            &settings,
+            &ManualCookies::default(),
+            &ApiKeys::default(),
+            &accounts,
+        );
+        assert_eq!(
+            original.history_lane,
+            Some(HistoryLane::MistralCookie(first_id))
+        );
+        assert_eq!(
+            next.history_lane,
+            Some(HistoryLane::MistralCookie(second_id))
+        );
+        assert_eq!(
+            original.context.manual_cookie_header.as_deref(),
+            Some("session=fixture-a")
+        );
+        assert_eq!(
+            next.context.manual_cookie_header.as_deref(),
+            Some("session=fixture-b")
+        );
     }
 }

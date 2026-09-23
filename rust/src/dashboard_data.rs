@@ -685,9 +685,10 @@ pub struct UsageDailyPoint {
     pub sample_count: u32,
 }
 
-/// Account evidence attached to a quota-history series. Only `Observed`
+/// Account evidence attached to a history series. Only `Observed`
 /// may participate in same-account comparison. `Unresolved` is an honest
-/// provider-scoped observation; `Legacy` predates the identity contract.
+/// observation (possibly isolated by local credential); `Legacy` predates
+/// the identity contract. A local credential UUID never proves independence.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum QuotaAccountScope {
     Observed,
@@ -745,6 +746,7 @@ pub struct QuotaHistoryPoint {
 pub struct SpendDailyPoint {
     pub provider: String,
     pub account_id: String,
+    pub account_scope: QuotaAccountScope,
     pub bucket_start: i64,
     pub cost_used: f64,
     /// ISO 4217 currency code, when the sample that produced this bucket
@@ -822,21 +824,25 @@ pub fn aggregate_usage(samples: &[UsageSample], tz: Tz, grain: Grain) -> Vec<Usa
 /// Aggregate `cost`-window samples the same way -- only ever produces
 /// points for providers/accounts that actually reported cost data.
 pub fn aggregate_spend(samples: &[UsageSample], tz: Tz, grain: Grain) -> Vec<SpendDailyPoint> {
-    let mut buckets: HashMap<(String, String, i64), SpendDailyPoint> = HashMap::new();
+    let mut buckets: HashMap<(String, String, QuotaAccountScope, i64), SpendDailyPoint> =
+        HashMap::new();
     for sample in samples
         .iter()
         .filter(|s| s.window_id.as_deref() == Some(COST_WINDOW_ID) && s.cost_used.is_some())
     {
         let start = bucket_start(sample.captured_at, tz, grain);
-        let key = (sample.provider.clone(), sample.account_id.clone(), start);
+        let account_scope = QuotaAccountScope::from_sample(sample);
+        let key = (
+            sample.provider.clone(),
+            sample.account_id.clone(),
+            account_scope,
+            start,
+        );
         buckets
             .entry(key)
             .and_modify(|existing| {
                 existing.cost_used = sample.cost_used.unwrap_or(existing.cost_used);
-                existing.currency_code = sample
-                    .cost_currency_code
-                    .clone()
-                    .or_else(|| existing.currency_code.clone());
+                existing.currency_code = sample.cost_currency_code.clone();
                 existing.measurement_kind =
                     CostMeasurementKind::parse(sample.cost_measurement_kind.as_deref());
                 existing.quantity_kind =
@@ -845,6 +851,7 @@ pub fn aggregate_spend(samples: &[UsageSample], tz: Tz, grain: Grain) -> Vec<Spe
             .or_insert_with(|| SpendDailyPoint {
                 provider: sample.provider.clone(),
                 account_id: sample.account_id.clone(),
+                account_scope,
                 bucket_start: start,
                 cost_used: sample.cost_used.unwrap_or(0.0),
                 currency_code: sample.cost_currency_code.clone(),
@@ -857,7 +864,14 @@ pub fn aggregate_spend(samples: &[UsageSample], tz: Tz, grain: Grain) -> Vec<Spe
             });
     }
     let mut buckets: Vec<_> = buckets.into_values().collect();
-    buckets.sort_by_key(|b| (b.bucket_start, b.provider.clone(), b.account_id.clone()));
+    buckets.sort_by_key(|b| {
+        (
+            b.bucket_start,
+            b.provider.clone(),
+            b.account_id.clone(),
+            b.account_scope.as_str(),
+        )
+    });
     buckets
 }
 
@@ -1993,6 +2007,61 @@ mod tests {
         let day0 = dt(2026, 9, 1, 6, 0, 0).timestamp();
         let samples = vec![sample("claude", "a1", "selected", 10.0, None, day0)];
         assert!(aggregate_spend(&samples, resolve_timezone("UTC"), Grain::Daily).is_empty());
+    }
+
+    #[test]
+    fn spend_scope_does_not_merge_unresolved_legacy_and_observed_rows() {
+        let at = 1_790_000_000;
+        let mut unresolved = cost_sample(
+            "mistral",
+            "same-key",
+            1.0,
+            Some("EUR"),
+            Some(CostMeasurementKind::Cumulative),
+            at,
+        );
+        unresolved.account_scope = Some("unresolved".into());
+        let mut observed = unresolved.clone();
+        observed.account_scope = Some("observed".into());
+        observed.cost_used = Some(2.0);
+        let mut legacy = unresolved.clone();
+        legacy.account_scope = None;
+        legacy.cost_used = Some(3.0);
+        let points = aggregate_spend(
+            &[unresolved, observed, legacy],
+            resolve_timezone("UTC"),
+            Grain::Daily,
+        );
+        assert_eq!(
+            points.len(),
+            3,
+            "scope changes must not overwrite another series"
+        );
+    }
+
+    #[test]
+    fn spend_bucket_does_not_borrow_currency_from_an_older_reading() {
+        let at = 1_790_000_000;
+        let older = cost_sample(
+            "mistral",
+            "lane",
+            1.0,
+            Some("EUR"),
+            Some(CostMeasurementKind::Cumulative),
+            at,
+        );
+        let newer = cost_sample(
+            "mistral",
+            "lane",
+            2.0,
+            None,
+            Some(CostMeasurementKind::Cumulative),
+            at + 1,
+        );
+        let points = aggregate_spend(&[older, newer], resolve_timezone("UTC"), Grain::Daily);
+        assert_eq!(points.len(), 1);
+        assert_eq!(points[0].cost_used, 2.0);
+        assert_eq!(points[0].currency_code, None);
     }
 
     // ── Phase 4A: monetary-semantics regression corpus ──────────────────
