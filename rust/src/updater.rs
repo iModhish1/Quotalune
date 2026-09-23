@@ -454,20 +454,25 @@ fn is_inno_uninstaller_name(name: &str) -> bool {
 
 #[cfg(target_os = "windows")]
 fn is_quotalis_product_name(name: &str) -> bool {
-    name.eq_ignore_ascii_case("Quotalis") || name.eq_ignore_ascii_case("QuotaArc")
+    ["Quotalune", "Quotalis", "QuotaArc"]
+        .iter()
+        .any(|known| name.eq_ignore_ascii_case(known))
 }
 
 #[cfg(target_os = "windows")]
 fn is_quotalis_publisher(name: &str) -> bool {
-    name.eq_ignore_ascii_case("Quotalis") || name.eq_ignore_ascii_case("quotaarc")
+    ["Quotalune", "Quotalis", "QuotaArc"]
+        .iter()
+        .any(|known| name.eq_ignore_ascii_case(known))
 }
 
-/// Classify only installer names actually produced by Quotalis packaging.
+/// Classify only installer names produced by current and legacy packaging.
 ///
 /// Tauri NSIS uses `Quotalis_<version>_x64-setup.exe`; the legacy Inno
 /// publisher uses `Quotalis-<version>-Setup.exe`; WiX uses
 /// `Quotalis_<version>_x64_<locale>.msi`. The legacy public QuotaArc prefix
-/// remains accepted for upgrade continuity. Dev packages are deliberately
+/// remains accepted for upgrade continuity. Quotalune is the new visible
+/// product name. Dev packages are deliberately
 /// rejected because remote updates are for the stable product identity.
 fn installer_kind_from_name(name: &str) -> Option<WindowsInstallerKind> {
     let lower = name.to_ascii_lowercase();
@@ -502,10 +507,12 @@ fn installer_kind_from_name(name: &str) -> Option<WindowsInstallerKind> {
 fn strip_brand_prefix(name: &str, separator: char) -> Option<&str> {
     match separator {
         '_' => name
-            .strip_prefix("quotalis_")
+            .strip_prefix("quotalune_")
+            .or_else(|| name.strip_prefix("quotalis_"))
             .or_else(|| name.strip_prefix("quotaarc_")),
         '-' => name
-            .strip_prefix("quotalis-")
+            .strip_prefix("quotalune-")
+            .or_else(|| name.strip_prefix("quotalis-"))
             .or_else(|| name.strip_prefix("quotaarc-")),
         _ => None,
     }
@@ -1104,12 +1111,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn installer_asset_matching_accepts_only_verified_quotalis_formats() {
+    fn installer_asset_matching_accepts_current_and_legacy_formats() {
+        assert!(is_installer_asset_name("Quotalune-1.2.3-Setup.exe"));
+        assert!(is_installer_asset_name("Quotalune_1.2.3_x64-setup.exe"));
+        assert!(is_installer_asset_name("Quotalune_1.2.3_x64_en-US.msi"));
         assert!(is_installer_asset_name("QuotaArc-1.2.3-x64-Setup.exe"));
         assert!(is_installer_asset_name("Quotalis-1.2.3-Setup.exe"));
         assert!(is_installer_asset_name("Quotalis_1.2.3_x64-setup.exe"));
         assert!(is_installer_asset_name("Quotalis_1.2.3_x64_en-US.msi"));
         assert!(!is_installer_asset_name("Quotalis Dev_1.2.3_x64-setup.exe"));
+        assert!(!is_installer_asset_name(
+            "Quotalune Dev_1.2.3_x64-setup.exe"
+        ));
         assert!(!is_installer_asset_name("CodexBar-1.2.3-Setup.exe"));
         assert!(!is_installer_asset_name("malware-1.2.3-Setup.exe"));
         assert!(!is_installer_asset_name("Quotalis-latest-Setup.exe"));
