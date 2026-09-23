@@ -17,6 +17,10 @@ use std::path::PathBuf;
 #[cfg(windows)]
 use std::process::{Command, Stdio};
 use std::sync::mpsc;
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
 use std::time::{Duration, Instant};
 use thiserror::Error;
 
@@ -71,6 +75,10 @@ pub struct TtyCommandOptions {
     pub settle_after_stop_secs: f64,
     /// Environment variables to set
     pub env: HashMap<String, String>,
+    /// Maximum retained output; exceeding it terminates the child.
+    pub max_output_bytes: Option<usize>,
+    /// Cooperative cancellation signal, including when the async caller is dropped.
+    pub cancel: Option<Arc<AtomicBool>>,
 }
 
 impl Default for TtyCommandOptions {
@@ -91,6 +99,8 @@ impl Default for TtyCommandOptions {
             stop_on_substrings: Vec::new(),
             settle_after_stop_secs: 0.25,
             env: HashMap::new(),
+            max_output_bytes: None,
+            cancel: None,
         }
     }
 }
@@ -102,6 +112,16 @@ impl TtyCommandOptions {
 
     pub fn with_timeout(mut self, secs: f64) -> Self {
         self.timeout_secs = secs;
+        self
+    }
+
+    pub fn with_max_output_bytes(mut self, bytes: usize) -> Self {
+        self.max_output_bytes = Some(bytes);
+        self
+    }
+
+    pub fn with_cancel(mut self, signal: Arc<AtomicBool>) -> Self {
+        self.cancel = Some(signal);
         self
     }
 
@@ -167,6 +187,12 @@ pub enum TtyCommandError {
     #[error("Command timed out")]
     TimedOut,
 
+    #[error("Command cancelled")]
+    Cancelled,
+
+    #[error("Command output exceeded limit")]
+    OutputTooLarge,
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
@@ -180,6 +206,31 @@ pub enum TtyCommandError {
 /// interactive programs. For true PTY support, consider using the
 /// `conpty` crate or Windows ConPTY APIs directly.
 pub struct TtyCommandRunner;
+
+/// Signals a blocking PTY worker when its async owner is dropped.
+pub struct TtyCancellationGuard(Arc<AtomicBool>);
+
+impl TtyCancellationGuard {
+    pub fn new() -> Self {
+        Self(Arc::new(AtomicBool::new(false)))
+    }
+
+    pub fn signal(&self) -> Arc<AtomicBool> {
+        self.0.clone()
+    }
+}
+
+impl Default for TtyCancellationGuard {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Drop for TtyCancellationGuard {
+    fn drop(&mut self) {
+        self.0.store(true, Ordering::Relaxed);
+    }
+}
 
 impl TtyCommandRunner {
     /// Create a new runner instance
@@ -321,6 +372,9 @@ impl TtyCommandRunner {
         script: &str,
         options: TtyCommandOptions,
     ) -> Result<TtyCommandResult, TtyCommandError> {
+        if Self::cancelled(&options) {
+            return Err(TtyCommandError::Cancelled);
+        }
         // Resolve the binary path
         let resolved = if Self::is_explicit_binary_path(binary) {
             let path = PathBuf::from(binary);
@@ -390,7 +444,7 @@ impl TtyCommandRunner {
         let url_regex = Regex::new(r"https?://[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+").ok();
 
         // Set up non-blocking readers using channels
-        let (tx, rx) = mpsc::channel::<String>();
+        let (tx, rx) = mpsc::sync_channel::<String>(32);
         let mut writer = master
             .take_writer()
             .map_err(|e| TtyCommandError::LaunchFailed(e.to_string()))?;
@@ -415,7 +469,8 @@ impl TtyCommandRunner {
         });
 
         // Initial delay
-        std::thread::sleep(Duration::from_secs_f64(options.initial_delay_secs));
+        let mut failure = None;
+        Self::interruptible_delay(Duration::from_secs_f64(options.initial_delay_secs), options);
 
         // Send the script if provided. PTYs expect carriage-return line endings
         // for interactive programs to treat writes like pressing Enter.
@@ -424,14 +479,29 @@ impl TtyCommandRunner {
             .map(str::trim_end)
             .filter(|line| !line.trim().is_empty())
             .collect();
-        for (idx, line) in script_lines.iter().enumerate() {
+        'script: for (idx, line) in script_lines.iter().enumerate() {
+            if Self::cancelled(options) {
+                failure = Some(TtyCommandError::Cancelled);
+                break;
+            }
             if options.script_char_delay_secs > 0.0 {
                 for ch in line.chars() {
+                    if Self::cancelled(options) {
+                        failure = Some(TtyCommandError::Cancelled);
+                        break 'script;
+                    }
                     // Best-effort scripted input; a closed PTY just drops the write.
                     let _typed = write!(writer, "{}", ch);
                     // Best-effort flush; failures surface only as missing script output.
                     let _flushed = writer.flush();
-                    std::thread::sleep(Duration::from_secs_f64(options.script_char_delay_secs));
+                    Self::interruptible_delay(
+                        Duration::from_secs_f64(options.script_char_delay_secs),
+                        options,
+                    );
+                }
+                if Self::cancelled(options) {
+                    failure = Some(TtyCommandError::Cancelled);
+                    break;
                 }
                 // Best-effort line terminator; interactive programs expect CRLF.
                 let _newline_written = write!(writer, "\r\n");
@@ -442,7 +512,10 @@ impl TtyCommandRunner {
             // Best-effort flush per script line.
             let _line_flushed = writer.flush();
             if idx + 1 < script_lines.len() && options.script_line_delay_secs > 0.0 {
-                std::thread::sleep(Duration::from_secs_f64(options.script_line_delay_secs));
+                Self::interruptible_delay(
+                    Duration::from_secs_f64(options.script_line_delay_secs),
+                    options,
+                );
             }
         }
 
@@ -450,6 +523,13 @@ impl TtyCommandRunner {
 
         // Main read loop
         loop {
+            if Self::cancelled(options) {
+                failure = Some(TtyCommandError::Cancelled);
+                break;
+            }
+            if failure.is_some() {
+                break;
+            }
             // Check timeout
             if start.elapsed() > timeout {
                 break;
@@ -479,7 +559,14 @@ impl TtyCommandRunner {
                         break;
                     }
                     match rx.recv_timeout(remaining.min(Duration::from_millis(25))) {
-                        Ok(chunk) => buffer.push_str(&chunk),
+                        Ok(chunk) => {
+                            if Self::append_bounded(&mut buffer, &chunk, options.max_output_bytes)
+                                .is_err()
+                            {
+                                failure = Some(TtyCommandError::OutputTooLarge);
+                                break;
+                            }
+                        }
                         Err(mpsc::RecvTimeoutError::Disconnected) => break,
                         // Quiet slice: keep waiting until the deadline so
                         // slowly forwarded tail output is not lost.
@@ -491,7 +578,10 @@ impl TtyCommandRunner {
 
             // Read available output
             while let Ok(chunk) = rx.try_recv() {
-                buffer.push_str(&chunk);
+                if Self::append_bounded(&mut buffer, &chunk, options.max_output_bytes).is_err() {
+                    failure = Some(TtyCommandError::OutputTooLarge);
+                    break;
+                }
                 last_output_time = Instant::now();
 
                 // Some Windows ConPTY-backed shells issue an ANSI Device
@@ -552,6 +642,9 @@ impl TtyCommandRunner {
             if stopped_early {
                 break;
             }
+            if failure.is_some() {
+                break;
+            }
 
             // Send periodic enters if configured
             if let Some(interval) = options.send_enter_every_secs
@@ -569,11 +662,22 @@ impl TtyCommandRunner {
         }
 
         // Settle period - collect remaining output
-        if stopped_early {
+        if stopped_early && failure.is_none() {
             let settle_start = Instant::now();
             while settle_start.elapsed() < settle {
+                if Self::cancelled(options) {
+                    failure = Some(TtyCommandError::Cancelled);
+                    break;
+                }
                 while let Ok(chunk) = rx.try_recv() {
-                    buffer.push_str(&chunk);
+                    if Self::append_bounded(&mut buffer, &chunk, options.max_output_bytes).is_err()
+                    {
+                        failure = Some(TtyCommandError::OutputTooLarge);
+                        break;
+                    }
+                }
+                if failure.is_some() {
+                    break;
                 }
                 std::thread::sleep(Duration::from_millis(50));
             }
@@ -586,6 +690,10 @@ impl TtyCommandRunner {
             let _reaped = child.wait();
         }
 
+        if let Some(error) = failure {
+            return Err(error);
+        }
+
         if buffer.is_empty() && !stopped_early {
             return Err(TtyCommandError::TimedOut);
         }
@@ -595,6 +703,32 @@ impl TtyCommandRunner {
             stopped_early,
             detected_urls,
         })
+    }
+
+    fn cancelled(options: &TtyCommandOptions) -> bool {
+        options
+            .cancel
+            .as_ref()
+            .is_some_and(|signal| signal.load(Ordering::Relaxed))
+    }
+
+    fn interruptible_delay(delay: Duration, options: &TtyCommandOptions) {
+        let until = Instant::now() + delay;
+        while !Self::cancelled(options) {
+            let remaining = until.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                break;
+            }
+            std::thread::sleep(remaining.min(Duration::from_millis(25)));
+        }
+    }
+
+    fn append_bounded(buffer: &mut String, chunk: &str, limit: Option<usize>) -> Result<(), ()> {
+        if limit.is_some_and(|max| buffer.len().saturating_add(chunk.len()) > max) {
+            return Err(());
+        }
+        buffer.push_str(chunk);
+        Ok(())
     }
 
     /// Get enriched PATH for finding CLI tools
@@ -760,5 +894,130 @@ mod tests {
         assert!(!path.is_empty());
         // Should contain path separator or at least a non-empty path string.
         assert!(path.contains(';') || !path.is_empty());
+    }
+
+    #[test]
+    fn bounded_output_rejects_overflow_without_retaining_chunk() {
+        let mut buffer = String::from("abc");
+        assert_eq!(
+            TtyCommandRunner::append_bounded(&mut buffer, "def", Some(5)),
+            Err(())
+        );
+        assert_eq!(buffer, "abc");
+        assert_eq!(
+            TtyCommandRunner::append_bounded(&mut buffer, "de", Some(5)),
+            Ok(())
+        );
+        assert_eq!(buffer, "abcde");
+    }
+
+    #[test]
+    fn cancellation_interrupts_delay() {
+        let signal = Arc::new(AtomicBool::new(false));
+        let options = TtyCommandOptions::new().with_cancel(signal.clone());
+        let started = Instant::now();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(50));
+            signal.store(true, Ordering::Relaxed);
+        });
+        TtyCommandRunner::interruptible_delay(Duration::from_secs(3), &options);
+        assert!(started.elapsed() < Duration::from_secs(1));
+        assert!(TtyCommandRunner::cancelled(&options));
+    }
+
+    #[test]
+    fn live_pty_output_limit_terminates_probe() {
+        let runner = TtyCommandRunner::new();
+        let options = TtyCommandOptions::new()
+            .with_timeout(10.0)
+            .with_initial_delay(0.2)
+            .with_max_output_bytes(256);
+        #[cfg(windows)]
+        let result = runner.run(
+            "cmd",
+            "for /L %i in (1,1,100) do @echo 0123456789abcdef\nexit",
+            options,
+        );
+        #[cfg(not(windows))]
+        let result = runner.run("sh", "yes 0123456789abcdef | head -100\nexit", options);
+        assert!(
+            matches!(result, Err(TtyCommandError::OutputTooLarge)),
+            "{result:?}"
+        );
+    }
+
+    #[test]
+    fn live_pty_cancellation_returns_before_wall_timeout() {
+        let scratch = tempfile::tempdir().expect("temp directory");
+        let marker = scratch.path().join("command-executed");
+        let signal = Arc::new(AtomicBool::new(false));
+        let options = TtyCommandOptions::new()
+            .with_timeout(15.0)
+            .with_initial_delay(2.0)
+            .with_cancel(signal.clone());
+        let started = Instant::now();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(250));
+            signal.store(true, Ordering::Relaxed);
+        });
+        #[cfg(windows)]
+        let script = format!("echo MUST_NOT_RUN > \"{}\"\nexit", marker.display());
+        #[cfg(not(windows))]
+        let script = format!("touch \"{}\"\nexit", marker.display());
+        #[cfg(windows)]
+        let result = TtyCommandRunner::new().run("cmd", &script, options);
+        #[cfg(not(windows))]
+        let result = TtyCommandRunner::new().run("sh", &script, options);
+        assert!(
+            matches!(result, Err(TtyCommandError::Cancelled)),
+            "{result:?}"
+        );
+        assert!(started.elapsed() < Duration::from_secs(5));
+        assert!(!marker.exists(), "cancelled command was still submitted");
+    }
+
+    #[tokio::test]
+    async fn aborting_async_owner_stops_a_live_pty_worker() {
+        let scratch = tempfile::tempdir().expect("temp directory");
+        let marker = scratch.path().join("child-started");
+        let child_marker = marker.clone();
+        let (finished_tx, finished_rx) =
+            mpsc::sync_channel::<Result<TtyCommandResult, TtyCommandError>>(1);
+        let owner = tokio::spawn(async move {
+            let guard = TtyCancellationGuard::new();
+            let signal = guard.signal();
+            let worker = tokio::task::spawn_blocking(move || {
+                let options = TtyCommandOptions::new()
+                    .with_timeout(15.0)
+                    .with_initial_delay(0.3)
+                    .with_cancel(signal);
+                #[cfg(windows)]
+                let script = format!("echo READY > \"{}\"", child_marker.display());
+                #[cfg(not(windows))]
+                let script = format!("touch \"{}\"", child_marker.display());
+                #[cfg(windows)]
+                let result = TtyCommandRunner::new().run("cmd", &script, options);
+                #[cfg(not(windows))]
+                let result = TtyCommandRunner::new().run("sh", &script, options);
+                finished_tx.send(result).expect("completion receiver");
+            });
+            worker.await.expect("PTY worker task");
+            drop(guard);
+        });
+        let readiness_deadline = Instant::now() + Duration::from_secs(5);
+        while !marker.exists() && Instant::now() < readiness_deadline {
+            tokio::time::sleep(Duration::from_millis(25)).await;
+        }
+        assert!(marker.exists(), "child did not execute readiness command");
+        owner.abort();
+        let result =
+            tokio::task::spawn_blocking(move || finished_rx.recv_timeout(Duration::from_secs(4)))
+                .await
+                .expect("completion task")
+                .expect("PTY worker did not terminate after owner abort");
+        assert!(
+            matches!(result, Err(TtyCommandError::Cancelled)),
+            "{result:?}"
+        );
     }
 }

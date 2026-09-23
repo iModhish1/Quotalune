@@ -17,7 +17,7 @@ use std::sync::LazyLock;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use crate::cli::tty_runner::{TtyCommandOptions, TtyCommandRunner};
+use crate::cli::tty_runner::{TtyCancellationGuard, TtyCommandOptions, TtyCommandRunner};
 use crate::core::{
     FetchContext, Provider, ProviderError, ProviderFetchResult, ProviderId, ProviderMetadata,
     RateWindow, SourceMode, UsageSnapshot,
@@ -353,6 +353,8 @@ async fn run_claude_pty_probe(
     working_directory: std::path::PathBuf,
     probe: ClaudePtyProbeOptions,
 ) -> Result<String, ProviderError> {
+    let guard = TtyCancellationGuard::new();
+    let cancel = guard.signal();
     tokio::task::spawn_blocking(move || {
         cleanup_probe_session_jsonl(&working_directory);
         let session_id = load_or_create_probe_session_id(&working_directory);
@@ -360,6 +362,8 @@ async fn run_claude_pty_probe(
 
         let mut options = TtyCommandOptions::new()
             .with_timeout(probe.timeout_secs)
+            .with_max_output_bytes(256 * 1024)
+            .with_cancel(cancel)
             .with_initial_delay(probe.initial_delay_secs)
             .with_script_char_delay(probe.script_char_delay_secs)
             .with_script_line_delay(probe.script_line_delay_secs)
@@ -378,6 +382,7 @@ async fn run_claude_pty_probe(
             .map(|result| result.text)
     })
     .await
+    .inspect(|_| drop(guard))
     .map_err(|e| ProviderError::Other(format!("Claude CLI probe failed: {}", e)))?
     .map_err(|e| match e {
         crate::cli::tty_runner::TtyCommandError::TimedOut => ProviderError::Timeout,

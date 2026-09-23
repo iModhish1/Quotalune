@@ -39,6 +39,12 @@ Windows protection reuses `secure_file`/DPAPI. Regression tests write only tempo
 ## Evidence files
 
 `cli_dependencies::tests`, `login::tests`, `connection_security::tests`, `connection_state::tests`, shell `commands::connection`, `connection_operations`, browser profile tests, and `ProviderConnectFlow.test.tsx`. Final counts and commands are recorded in `WAVE3_IMPLEMENTATION_REPORT.md`; local raw logs are under `.local/wave3-*.log` and contain fixture-only test output. Release gate remains CLOSED.
+
+## Claude interactive PTY bounded-output checkpoint — 2026-09-23
+
+The Claude `/usage` PTY probe now bounds its retained output at 256 KiB and its reader queue at 32 chunks of at most 4 KiB. Exceeding the cap terminates the direct child and returns an error without surfacing partial output. Dropping the async probe signals cancellation to its blocking PTY worker; startup delay, per-character input delay, the read loop and the settle loop observe it. An independent review found that the first version still wrote remaining script characters after cancellation; the input loop now checks before each character and before the line terminator. Synthetic PTY tests exercise output overflow, cancellation before command submission and async-owner abort with a live worker. No owner Claude account or CLI was invoked.
+
+This is a bounded-memory and cooperative-cancellation improvement, **not** a complete process-supervision or executable-trust pass. Synchronous PTY writes can still block independently of cancellation, and the existing teardown kills only the direct child before an unbounded wait. Descendant containment, stalled-input recovery, trusted discovery of official per-user Claude installations, and the separate unbounded `--version` subprocess remain open. The current CLI source cannot be declared fully safe or compatible until those are resolved and tested against the native Dev app.
 # Current credential provenance and cancellation checkpoint
 
 The Wave 3 continuation makes onboarding key/browser-import read/modify/write
