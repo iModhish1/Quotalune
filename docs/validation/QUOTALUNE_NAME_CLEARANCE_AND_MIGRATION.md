@@ -70,3 +70,22 @@ Remaining release gates include formal trademark/similarity clearance,
 complete native visual testing, installer upgrade/shortcut migration proof,
 and the broader master-goal product/security checks. The public v0.11.0
 release remains untouched.
+
+## Release and screenshot preparation — 2026-09-24
+
+- The current update classifier now accepts `Quotalune` installer names alongside
+  `Quotalis` and `QuotaArc` and recognizes the new visible product/publisher
+  names for Windows package-family detection. The 26 focused updater tests pass.
+  The repository URL and executable identity remain unchanged for compatibility.
+- A local **internal-only** Inno candidate was compiled, not installed or
+  published: `target/installer-candidate/Quotalune-internal-candidate-Setup.exe`,
+  SHA-256 `4af14d73235ca9e51afd520f3dec2101c30be63819fdfb85732d5550bd821152`.
+  This is not a release artifact or installer-upgrade proof. The separate GUI
+  and CLI executable layout was checked after a Windows case-insensitive output
+  collision during manual build preparation.
+- The guarded native Dev screenshot operation returned an all-black WebView2
+  image. No screenshot from that operation is suitable for README or release
+  media. No claim of complete page-by-page visual QA is made.
+- The public `v0.11.0` release has not been deleted or renamed. Its historical
+  files still display the old name. A future release needs explicit update,
+  installer, download-link and screenshot verification before public changes.
