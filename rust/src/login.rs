@@ -206,13 +206,35 @@ where
             auth_link: None,
         };
     }
-    let Some(command) = crate::cli_dependencies::trusted_cli_command(provider, args) else {
-        return missing_binary_result(provider.cli_name());
-    };
+    let args = args.iter().map(|arg| (*arg).to_owned()).collect::<Vec<_>>();
     match tokio::task::spawn_blocking(move || {
+        let deadline = Instant::now() + Duration::from_secs(timeout_secs);
+        let arguments = args.iter().map(String::as_str).collect::<Vec<_>>();
+        let Some(command) = crate::cli_dependencies::trusted_cli_command_cancellable(
+            provider,
+            &arguments,
+            &|| cancellation.is_canceled(),
+            deadline,
+        ) else {
+            if cancellation.is_canceled() {
+                return LoginResult {
+                    outcome: LoginOutcome::Canceled,
+                    output: String::new(),
+                    auth_link: None,
+                };
+            }
+            if Instant::now() >= deadline {
+                return LoginResult {
+                    outcome: LoginOutcome::TimedOut,
+                    output: String::new(),
+                    auth_link: None,
+                };
+            }
+            return missing_binary_result(provider.cli_name());
+        };
         supervise_login_cancellable(
             command,
-            Duration::from_secs(timeout_secs),
+            deadline.saturating_duration_since(Instant::now()),
             cancellation,
             on_phase,
         )

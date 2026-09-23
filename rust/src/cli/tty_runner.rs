@@ -10,6 +10,7 @@
 
 use regex_lite::Regex;
 use std::collections::HashMap;
+use std::ffi::OsString;
 use std::io::{Read, Write};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
@@ -56,7 +57,7 @@ pub struct TtyCommandOptions {
     /// Working directory
     pub working_directory: Option<PathBuf>,
     /// Extra arguments to pass to the command
-    pub extra_args: Vec<String>,
+    pub extra_args: Vec<OsString>,
     /// Initial delay before sending script (default: 0.4s)
     pub initial_delay_secs: f64,
     /// Delay between script characters (default: 0s)
@@ -151,6 +152,11 @@ impl TtyCommandOptions {
     }
 
     pub fn with_extra_args(mut self, args: Vec<String>) -> Self {
+        self.extra_args = args.into_iter().map(OsString::from).collect();
+        self
+    }
+
+    pub fn with_os_extra_args(mut self, args: Vec<OsString>) -> Self {
         self.extra_args = args;
         self
     }

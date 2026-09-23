@@ -9,13 +9,11 @@ mod web_api;
 use async_trait::async_trait;
 use chrono::Utc;
 use regex_lite::Regex;
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
-#[cfg(windows)]
-use std::process::{Command as StdCommand, Stdio};
+use std::ffi::OsString;
 use std::sync::LazyLock;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
+use tokio::sync::watch;
 
 use crate::cli::tty_runner::{TtyCancellationGuard, TtyCommandOptions, TtyCommandRunner};
 use crate::core::{
@@ -215,12 +213,18 @@ struct ClaudePtyProbeOptions {
     send_on_substring: Option<(&'static str, &'static str)>,
 }
 
+#[derive(Clone)]
+struct ClaudeCliCommand {
+    program: std::path::PathBuf,
+    prefix_args: Vec<OsString>,
+}
+
 async fn run_claude_usage_pty_probe(
-    claude_path: std::path::PathBuf,
+    claude_command: ClaudeCliCommand,
     working_directory: std::path::PathBuf,
 ) -> Result<String, ProviderError> {
     run_claude_pty_probe(
-        claude_path,
+        claude_command,
         working_directory,
         ClaudePtyProbeOptions {
             script: "/usage",
@@ -236,11 +240,11 @@ async fn run_claude_usage_pty_probe(
 }
 
 async fn run_claude_trust_preflight(
-    claude_path: std::path::PathBuf,
+    claude_command: ClaudeCliCommand,
     working_directory: std::path::PathBuf,
 ) -> Result<String, ProviderError> {
     run_claude_pty_probe(
-        claude_path,
+        claude_command,
         working_directory,
         ClaudePtyProbeOptions {
             script: "",
@@ -255,25 +259,36 @@ async fn run_claude_trust_preflight(
     .await
 }
 
-fn resolve_claude_cli_path() -> Result<std::path::PathBuf, ProviderError> {
-    which_claude().ok_or_else(|| {
+fn resolve_claude_cli_command_cancellable(
+    cancelled: &dyn Fn() -> bool,
+    deadline: Instant,
+) -> Result<ClaudeCliCommand, ProviderError> {
+    which_claude_cancellable(cancelled, deadline).ok_or_else(|| {
         ProviderError::NotInstalled(
-            "Claude CLI not found. Install from https://docs.claude.ai/claude-code".to_string(),
+            "Claude CLI not found in a trusted installation. Install from https://code.claude.com/docs/en/setup".to_string(),
         )
     })
 }
 
+struct ClaudeDiscoveryCancelOnDrop(watch::Sender<bool>);
+
+impl Drop for ClaudeDiscoveryCancelOnDrop {
+    fn drop(&mut self) {
+        let _send_result = self.0.send(true);
+    }
+}
+
 async fn fetch_claude_cli_usage_text(
-    claude_path: std::path::PathBuf,
+    claude_command: ClaudeCliCommand,
 ) -> Result<String, ProviderError> {
     let probe_dir = claude_usage_probe_dir()?;
-    let combined = run_claude_usage_pty_probe(claude_path.clone(), probe_dir.clone()).await?;
+    let combined = run_claude_usage_pty_probe(claude_command.clone(), probe_dir.clone()).await?;
 
-    rerun_claude_usage_after_trust_prompt(claude_path, probe_dir, combined).await
+    rerun_claude_usage_after_trust_prompt(claude_command, probe_dir, combined).await
 }
 
 async fn rerun_claude_usage_after_trust_prompt(
-    claude_path: std::path::PathBuf,
+    claude_command: ClaudeCliCommand,
     probe_dir: std::path::PathBuf,
     combined: String,
 ) -> Result<String, ProviderError> {
@@ -281,8 +296,8 @@ async fn rerun_claude_usage_after_trust_prompt(
         return Ok(combined);
     }
 
-    run_claude_trust_preflight(claude_path.clone(), probe_dir.clone()).await?;
-    run_claude_usage_pty_probe(claude_path, probe_dir).await
+    run_claude_trust_preflight(claude_command.clone(), probe_dir.clone()).await?;
+    run_claude_usage_pty_probe(claude_command, probe_dir).await
 }
 
 fn claude_cli_error_from_output(output: &str) -> Option<ProviderError> {
@@ -323,14 +338,14 @@ fn claude_cli_environment_error(lowered: &str) -> Option<ProviderError> {
     if lowered.contains("running scripts is disabled") {
         return Some(ProviderError::Other(
             "Claude CLI could not start because PowerShell script execution is disabled. \
-             Use claude.cmd or adjust the execution policy."
+             Use a signed native Claude Code installation."
                 .to_string(),
         ));
     }
     if lowered.contains("cannot run a document in the middle of a pipeline") {
         return Some(ProviderError::Other(
             "Claude CLI resolved to a Unix shell script on Windows. Reinstall Claude Code or \
-             ensure claude.cmd is first on PATH."
+             use the official native Windows installer."
                 .to_string(),
         ));
     }
@@ -349,7 +364,7 @@ fn claude_passive_probe_env(
 }
 
 async fn run_claude_pty_probe(
-    claude_path: std::path::PathBuf,
+    claude_command: ClaudeCliCommand,
     working_directory: std::path::PathBuf,
     probe: ClaudePtyProbeOptions,
 ) -> Result<String, ProviderError> {
@@ -360,6 +375,13 @@ async fn run_claude_pty_probe(
         let session_id = load_or_create_probe_session_id(&working_directory);
         let env = claude_passive_probe_env(TtyCommandRunner::enriched_environment());
 
+        let mut args = claude_command.prefix_args;
+        args.extend(
+            claude_probe_launch_args(&session_id)
+                .into_iter()
+                .map(OsString::from),
+        );
+
         let mut options = TtyCommandOptions::new()
             .with_timeout(probe.timeout_secs)
             .with_max_output_bytes(256 * 1024)
@@ -368,7 +390,7 @@ async fn run_claude_pty_probe(
             .with_script_char_delay(probe.script_char_delay_secs)
             .with_script_line_delay(probe.script_line_delay_secs)
             .with_working_directory(working_directory)
-            .with_extra_args(claude_probe_launch_args(&session_id));
+            .with_os_extra_args(args);
         if let Some(idle) = probe.idle_timeout_secs {
             options = options.with_idle_timeout(idle);
         }
@@ -378,7 +400,11 @@ async fn run_claude_pty_probe(
         options.env = env;
 
         TtyCommandRunner::new()
-            .run(&claude_path.to_string_lossy(), probe.script, options)
+            .run(
+                &claude_command.program.to_string_lossy(),
+                probe.script,
+                options,
+            )
             .map(|result| result.text)
     })
     .await
@@ -443,7 +469,7 @@ impl Provider for ClaudeProvider {
     fn detect_version(&self) -> Option<String> {
         detect_claude_version()
     }
-    /// Claude's CLI-presence probe (`resolve_claude_cli_path`) raises
+    /// Claude's CLI-presence probe (`resolve_claude_cli_command`) raises
     /// `NotInstalled` when the `claude` binary itself is missing — an
     /// installation gap, not a credential problem — so it surfaces as an
     /// offline local runtime (matching the pre-backend classifier's
@@ -580,8 +606,17 @@ impl ClaudeProvider {
     ) -> Result<ProviderFetchResult, ProviderError> {
         tracing::debug!("Attempting CLI probe for Claude");
 
-        let claude_path = resolve_claude_cli_path()?;
-        let combined = fetch_claude_cli_usage_text(claude_path).await?;
+        let (sender, cancelled) = watch::channel(false);
+        let _cancel_on_drop = ClaudeDiscoveryCancelOnDrop(sender);
+        let claude_command = tokio::task::spawn_blocking(move || {
+            resolve_claude_cli_command_cancellable(
+                &|| *cancelled.borrow(),
+                Instant::now() + crate::cli_dependencies::PROBE_TIMEOUT,
+            )
+        })
+        .await
+        .map_err(|_| ProviderError::Other("Claude CLI discovery failed".to_string()))??;
+        let combined = fetch_claude_cli_usage_text(claude_command).await?;
 
         if let Some(error) = claude_cli_error_from_output(&combined) {
             return Err(error);
@@ -750,108 +785,62 @@ fn should_fallback_from_claude_cli_error(error: &ProviderError) -> bool {
 }
 
 /// Try to find the claude CLI binary
-fn which_claude() -> Option<std::path::PathBuf> {
+fn which_claude() -> Option<ClaudeCliCommand> {
+    which_claude_cancellable(
+        &|| false,
+        Instant::now() + crate::cli_dependencies::PROBE_TIMEOUT,
+    )
+}
+
+fn which_claude_cancellable(
+    cancelled: &dyn Fn() -> bool,
+    deadline: Instant,
+) -> Option<ClaudeCliCommand> {
+    if cancelled() || Instant::now() >= deadline {
+        return None;
+    }
     #[cfg(windows)]
     {
-        let candidates = [
-            // Direct install
-            dirs::data_local_dir().map(|p| p.join("Programs").join("claude").join("claude.exe")),
-            // npm global (AppData\Roaming\npm)
-            dirs::data_local_dir().map(|p| p.join("npm").join("claude.cmd")),
-            dirs::home_dir().map(|h| {
-                h.join("AppData")
-                    .join("Roaming")
-                    .join("npm")
-                    .join("claude.cmd")
-            }),
-            // npm global alternate (~\.npm-global)
-            dirs::home_dir().map(|h| h.join(".npm-global").join("claude.cmd")),
-            // Volta managed
-            dirs::data_local_dir().map(|p| {
-                p.join("Volta")
-                    .join("tools")
-                    .join("image")
-                    .join("packages")
-                    .join("@anthropic-ai")
-                    .join("claude-code")
-                    .join("bin")
-                    .join("claude.cmd")
-            }),
-            // fnm managed (via shim)
-            dirs::data_local_dir().map(|p| p.join("fnm_multishells").join("claude.cmd")),
-            // PATH lookup
-            find_windows_claude_in_path(),
-        ];
-
-        candidates.into_iter().flatten().find(|p| p.exists())
+        crate::cli_dependencies::trusted_claude_pty_command_cancellable(cancelled, deadline).map(
+            |(program, prefix_args)| ClaudeCliCommand {
+                program,
+                prefix_args,
+            },
+        )
     }
 
     #[cfg(not(windows))]
     {
-        which::which("claude").ok()
+        which::which("claude").ok().map(|program| ClaudeCliCommand {
+            program,
+            prefix_args: Vec::new(),
+        })
     }
-}
-
-#[cfg(windows)]
-fn find_windows_claude_in_path() -> Option<std::path::PathBuf> {
-    const CREATE_NO_WINDOW: u32 = 0x08000000;
-
-    let mut command = StdCommand::new("where");
-    command
-        .arg("claude")
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .creation_flags(CREATE_NO_WINDOW);
-    let output = command.output().ok()?;
-
-    if !output.status.success() {
-        return None;
-    }
-
-    let mut matches: Vec<_> = String::from_utf8_lossy(&output.stdout)
-        .lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .map(std::path::PathBuf::from)
-        .collect();
-
-    matches.sort_by_key(|path| {
-        match path
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .map(|ext| ext.to_ascii_lowercase())
-            .as_deref()
-        {
-            Some("cmd") => 0,
-            Some("bat") => 1,
-            Some("exe") => 2,
-            _ => 3,
-        }
-    });
-
-    matches.into_iter().find(|path| path.exists())
 }
 
 /// Detect the version of the claude CLI
 fn detect_claude_version() -> Option<String> {
-    let claude_path = which_claude()?;
-
+    let command = which_claude()?;
+    let mut args = command.prefix_args;
+    args.push(OsString::from("--version"));
     #[cfg(windows)]
-    const CREATE_NO_WINDOW: u32 = 0x08000000;
+    let output =
+        crate::cli_dependencies::read_provider_cli_sync_os(&command.program, &args).ok()?;
+    #[cfg(unix)]
+    let output = crate::cli_dependencies::read_provider_cli_sync_os_with_path(
+        &command.program,
+        &args,
+        &std::env::var_os("PATH")?,
+    )
+    .ok()?;
+    claude_version_from_probe(output)
+}
 
-    let mut cmd = std::process::Command::new(claude_path);
-    cmd.args(["--version"]);
-    #[cfg(windows)]
-    cmd.creation_flags(CREATE_NO_WINDOW);
-
-    let output = cmd.output().ok()?;
-
-    if output.status.success() {
-        let version_str = String::from_utf8_lossy(&output.stdout);
-        super::extract_semver(&version_str)
-    } else {
-        None
+fn claude_version_from_probe(output: crate::cli_dependencies::CliReadOutput) -> Option<String> {
+    if output.exit_code != Some(0) || output.stdout.len() > crate::cli_dependencies::OUTPUT_CAP {
+        return None;
     }
+    super::extract_semver(std::str::from_utf8(&output.stdout).ok()?)
 }
 
 /// Strip ANSI escape codes from text
@@ -1069,6 +1058,24 @@ fn clean_plan_name(text: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn cli_version_requires_successful_bounded_utf8_output() {
+        use crate::cli_dependencies::{CliReadOutput, OUTPUT_CAP};
+        let probe = |exit_code, stdout| CliReadOutput {
+            exit_code,
+            stdout,
+            stderr: b"private diagnostic".to_vec(),
+        };
+        assert_eq!(
+            super::claude_version_from_probe(probe(Some(0), b"2.1.211 (Claude Code)".to_vec())),
+            Some("2.1.211".to_string())
+        );
+        assert!(super::claude_version_from_probe(probe(Some(1), b"2.1.211".to_vec())).is_none());
+        assert!(super::claude_version_from_probe(probe(Some(0), vec![0xff])).is_none());
+        assert!(
+            super::claude_version_from_probe(probe(Some(0), vec![b'1'; OUTPUT_CAP + 1])).is_none()
+        );
+    }
     use chrono::{DateTime, Utc};
     use std::collections::HashMap;
 
@@ -1546,7 +1553,7 @@ Active days: 2/10              Longest streak: 1 day
     fn cli_presence_maps_to_local_runtime_offline() {
         assert_eq!(
             ClaudeProvider::new().error_state_kind(&ProviderError::NotInstalled(
-                "Claude CLI not found. Install from https://docs.claude.ai/claude-code".to_string(),
+                "Claude CLI not found in a trusted installation. Install from https://code.claude.com/docs/en/setup".to_string(),
             )),
             crate::core::ProviderStateKind::LocalRuntimeOffline
         );

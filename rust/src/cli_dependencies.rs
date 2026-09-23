@@ -291,6 +291,31 @@ fn resolve_cli_command(
     dependency: &CliDependency,
     roots: &DiscoveryRoots,
 ) -> Option<ResolvedExecutable> {
+    resolve_cli_command_cancellable(dependency, roots, &|| false, Instant::now() + PROBE_TIMEOUT)
+}
+
+fn resolve_cli_command_cancellable(
+    dependency: &CliDependency,
+    roots: &DiscoveryRoots,
+    cancelled: &dyn Fn() -> bool,
+    deadline: Instant,
+) -> Option<ResolvedExecutable> {
+    if cancelled() || Instant::now() >= deadline {
+        return None;
+    }
+    #[cfg(windows)]
+    if dependency.provider == ProviderId::Claude
+        && let Some(program) = trusted_claude_native_executable_cancellable(cancelled, deadline)
+    {
+        return Some(ResolvedExecutable {
+            display_path: program.clone(),
+            program,
+            prefix_args: Vec::new(),
+        });
+    }
+    if cancelled() || Instant::now() >= deadline {
+        return None;
+    }
     match dependency.install {
         InstallPolicy::Npm { package } => resolve_npm_executable(dependency, package, roots),
         // Ark CLI is installed manually, so no automated install plan is
@@ -305,12 +330,174 @@ fn resolve_cli_command(
     }
 }
 
+/// Anthropic documents a current-user native Windows install and signs its
+/// Windows binaries as "Anthropic, PBC". Accept a native candidate only after
+/// Windows validates its Authenticode signature and the signer common name.
+/// Never execute a filename-only PATH shim or a user-writable script here.
+#[cfg(windows)]
+fn trusted_claude_native_executable_cancellable(
+    cancelled: &dyn Fn() -> bool,
+    deadline: Instant,
+) -> Option<PathBuf> {
+    let candidates = claude_native_candidates(
+        dirs::home_dir().as_deref(),
+        dirs::data_local_dir().as_deref(),
+        dirs::data_dir().as_deref(),
+        std::env::var_os("PATH").as_deref(),
+    );
+    candidates.into_iter().find_map(|candidate| {
+        if cancelled() || Instant::now() >= deadline {
+            None
+        } else {
+            verify_anthropic_windows_binary_cancellable(&candidate, cancelled, deadline)
+        }
+    })
+}
+
+#[cfg(windows)]
+fn claude_native_candidates(
+    home: Option<&Path>,
+    local: Option<&Path>,
+    roaming: Option<&Path>,
+    path: Option<&OsStr>,
+) -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+    if let Some(home) = home {
+        candidates.push(home.join(".local").join("bin").join("claude.exe"));
+    }
+    if let Some(local) = local {
+        candidates.push(local.join("Programs").join("claude").join("claude.exe"));
+        candidates.push(
+            local
+                .join("npm")
+                .join("node_modules")
+                .join("@anthropic-ai")
+                .join("claude-code")
+                .join("bin")
+                .join("claude.exe"),
+        );
+    }
+    if let Some(roaming) = roaming {
+        candidates.push(
+            roaming
+                .join("npm")
+                .join("node_modules")
+                .join("@anthropic-ai")
+                .join("claude-code")
+                .join("bin")
+                .join("claude.exe"),
+        );
+    }
+    if let Some(path) = path {
+        candidates.extend(std::env::split_paths(path).map(|dir| dir.join("claude.exe")));
+    }
+    candidates
+}
+
+#[cfg(windows)]
+fn system_powershell() -> Option<PathBuf> {
+    use std::os::windows::ffi::OsStringExt;
+    use windows::Win32::System::SystemInformation::GetSystemDirectoryW;
+    let mut buffer = [0u16; 32768];
+    // SAFETY: Windows writes no more than the supplied UTF-16 slice length.
+    let length = unsafe { GetSystemDirectoryW(Some(&mut buffer)) } as usize;
+    if length == 0 || length >= buffer.len() {
+        return None;
+    }
+    let directory = PathBuf::from(OsString::from_wide(&buffer[..length]));
+    let powershell = directory
+        .join("WindowsPowerShell")
+        .join("v1.0")
+        .join("powershell.exe");
+    powershell.is_file().then_some(powershell)
+}
+
+#[cfg(all(windows, test))]
+fn verify_anthropic_windows_binary(candidate: &Path) -> Option<PathBuf> {
+    verify_anthropic_windows_binary_cancellable(
+        candidate,
+        &|| false,
+        Instant::now() + PROBE_TIMEOUT,
+    )
+}
+
+#[cfg(windows)]
+const CLAUDE_SIGNATURE_VERIFY_SCRIPT: &str = r#"try {
+  $ErrorActionPreference = 'Stop'
+  $PSModuleAutoLoadingPreference = 'None'
+  $securityModule = [System.IO.Path]::Combine($PSHOME, 'Modules\Microsoft.PowerShell.Security\Microsoft.PowerShell.Security.psd1')
+  Import-Module -Name $securityModule -ErrorAction Stop
+  $s = Microsoft.PowerShell.Security\Get-AuthenticodeSignature -LiteralPath $env:QUOTALIS_CLAUDE_SIGNATURE_TARGET
+  if ($s.Status -ne 'Valid' -or $null -eq $s.SignerCertificate) { exit 1 }
+  $name = $s.SignerCertificate.GetNameInfo([System.Security.Cryptography.X509Certificates.X509NameType]::SimpleName, $false)
+  if ($name -cne 'Anthropic, PBC') { exit 1 }
+  [Console]::Out.Write('ANTHROPIC_SIGNED')
+} catch { exit 1 }"#;
+
+#[cfg(windows)]
+fn verify_anthropic_windows_binary_cancellable(
+    candidate: &Path,
+    cancelled: &dyn Fn() -> bool,
+    deadline: Instant,
+) -> Option<PathBuf> {
+    if !candidate.is_file()
+        || !candidate
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("exe"))
+    {
+        return None;
+    }
+    let candidate = std::fs::canonicalize(candidate).ok()?;
+    let powershell = system_powershell()?;
+    let (_sender, receiver) = watch::channel(false);
+    let timeout = deadline.saturating_duration_since(Instant::now());
+    let output = run_capture_blocking_with_env_cancelled(
+        powershell,
+        [
+            OsString::from("-NoLogo"),
+            OsString::from("-NoProfile"),
+            OsString::from("-NonInteractive"),
+            OsString::from("-Command"),
+            OsString::from(CLAUDE_SIGNATURE_VERIFY_SCRIPT),
+        ]
+        .to_vec(),
+        timeout,
+        receiver,
+        None,
+        &[(
+            OsString::from("QUOTALIS_CLAUDE_SIGNATURE_TARGET"),
+            candidate.as_os_str().to_os_string(),
+        )],
+        cancelled,
+    )
+    .ok()?;
+    (output.exit_code == Some(0) && output.stdout == b"ANTHROPIC_SIGNED").then_some(candidate)
+}
+
 /// Resolve a CLI only when its location and package metadata establish a
 /// curated provenance. Arbitrary PATH entries and filename-only home shims are
 /// deliberately ignored. For npm CLIs this is the validated package entry;
 /// execution uses a protected Node runtime rather than the user-writable shim.
 pub fn resolve_executable(dependency: &CliDependency) -> Option<PathBuf> {
     resolve_cli_command(dependency, &DiscoveryRoots::system()).map(|r| r.display_path)
+}
+
+/// The same curated Claude command used for connection detection and managed
+/// login, including a protected Node prefix when an older npm installation
+/// still uses a package entry instead of a signed native binary.
+pub(crate) fn trusted_claude_pty_command_cancellable(
+    cancelled: &dyn Fn() -> bool,
+    deadline: Instant,
+) -> Option<(PathBuf, Vec<OsString>)> {
+    let dependency = cli_dependency(ProviderId::Claude)?;
+    let resolved = resolve_cli_command_cancellable(
+        dependency,
+        &DiscoveryRoots::system(),
+        cancelled,
+        deadline,
+    )?;
+    Some((resolved.program, resolved.prefix_args))
 }
 
 /// Build a provider CLI command only after curated provenance validation.
@@ -321,8 +508,22 @@ pub fn resolve_executable(dependency: &CliDependency) -> Option<PathBuf> {
 /// CLIs. `None` means the caller must offer the provider's official manual
 /// instructions rather than falling back to PATH.
 pub fn trusted_cli_command(provider: ProviderId, args: &[&str]) -> Option<Command> {
+    trusted_cli_command_cancellable(provider, args, &|| false, Instant::now() + PROBE_TIMEOUT)
+}
+
+pub(crate) fn trusted_cli_command_cancellable(
+    provider: ProviderId,
+    args: &[&str],
+    cancelled: &dyn Fn() -> bool,
+    deadline: Instant,
+) -> Option<Command> {
     let dependency = cli_dependency(provider)?;
-    let resolved = resolve_cli_command(dependency, &DiscoveryRoots::system())?;
+    let resolved = resolve_cli_command_cancellable(
+        dependency,
+        &DiscoveryRoots::system(),
+        cancelled,
+        deadline,
+    )?;
     let mut command = Command::new(resolved.program);
     command.args(resolved.prefix_args).args(args);
     scrub_environment(&mut command);
@@ -580,7 +781,27 @@ fn run_capture_blocking_with_env(
     terminal_hint: Option<&'static str>,
     additional_env: &[(OsString, OsString)],
 ) -> Result<CapturedOutput, ProbeFailure> {
-    if *cancel.borrow() {
+    run_capture_blocking_with_env_cancelled(
+        program,
+        args,
+        timeout,
+        cancel,
+        terminal_hint,
+        additional_env,
+        &|| false,
+    )
+}
+
+fn run_capture_blocking_with_env_cancelled(
+    program: PathBuf,
+    args: Vec<OsString>,
+    timeout: Duration,
+    cancel: watch::Receiver<bool>,
+    terminal_hint: Option<&'static str>,
+    additional_env: &[(OsString, OsString)],
+    cancelled: &dyn Fn() -> bool,
+) -> Result<CapturedOutput, ProbeFailure> {
+    if *cancel.borrow() || cancelled() {
         return Err(ProbeFailure::Cancelled);
     }
     if timeout.is_zero() {
@@ -602,7 +823,7 @@ fn run_capture_blocking_with_env(
     let mut err = Vec::new();
     let deadline = Instant::now() + timeout;
     loop {
-        if *cancel.borrow() {
+        if *cancel.borrow() || cancelled() {
             process.stop();
             return Err(ProbeFailure::Cancelled);
         }
@@ -818,9 +1039,48 @@ pub(crate) fn read_provider_cli_sync(
     program: &Path,
     args: &[&str],
 ) -> Result<CliReadOutput, ProbeFailure> {
+    read_provider_cli_sync_os(
+        program,
+        &args.iter().map(OsString::from).collect::<Vec<_>>(),
+    )
+}
+
+pub(crate) fn read_provider_cli_sync_os(
+    program: &Path,
+    args: &[OsString],
+) -> Result<CliReadOutput, ProbeFailure> {
     let (_tx, rx) = watch::channel(false);
-    let args = args.iter().map(OsString::from).collect();
-    let output = run_capture_blocking(program.to_path_buf(), args, PROBE_TIMEOUT, rx, None)?;
+    let output = run_capture_blocking(
+        program.to_path_buf(),
+        args.to_vec(),
+        PROBE_TIMEOUT,
+        rx,
+        None,
+    )?;
+    Ok(CliReadOutput {
+        exit_code: output.exit_code,
+        stdout: output.stdout,
+        stderr: output.stderr,
+    })
+}
+
+/// Unix Claude's legacy npm entry may use `#!/usr/bin/env node`. Preserve the
+/// already-selected interpreter search path while retaining bounded capture.
+#[cfg(unix)]
+pub(crate) fn read_provider_cli_sync_os_with_path(
+    program: &Path,
+    args: &[OsString],
+    path: &OsStr,
+) -> Result<CliReadOutput, ProbeFailure> {
+    let (_tx, rx) = watch::channel(false);
+    let output = run_capture_blocking_with_env(
+        program.to_path_buf(),
+        args.to_vec(),
+        PROBE_TIMEOUT,
+        rx,
+        None,
+        &[(OsString::from("PATH"), path.to_os_string())],
+    )?;
     Ok(CliReadOutput {
         exit_code: output.exit_code,
         stdout: output.stdout,
@@ -973,7 +1233,20 @@ pub async fn detect(provider: ProviderId, cancel: watch::Receiver<bool>) -> Opti
         docs_url: dependency.docs_url,
         sign_in_hint: dependency.sign_in_hint,
     };
-    let Some(resolved) = resolve_cli_command(dependency, &DiscoveryRoots::system()) else {
+    let (discovery_sender, discovery_cancel) = watch::channel(false);
+    let _cancel_on_drop = CancelOnDrop(discovery_sender);
+    let external_cancel = cancel.clone();
+    let Some(resolved) = tokio::task::spawn_blocking(move || {
+        resolve_cli_command_cancellable(
+            dependency,
+            &DiscoveryRoots::system(),
+            &|| *external_cancel.borrow() || *discovery_cancel.borrow(),
+            Instant::now() + PROBE_TIMEOUT,
+        )
+    })
+    .await
+    .ok()
+    .flatten() else {
         return Some(base);
     };
     let probe = run_resolved_probe(
@@ -1192,6 +1465,159 @@ mod supervised_windows {
 mod tests {
     use super::*;
     use crate::connection_capabilities::{CLI_DEPENDENCIES, install_plan};
+
+    #[cfg(windows)]
+    #[test]
+    fn claude_native_trust_rejects_unsigned_binary_and_script() {
+        let unsigned = std::env::current_exe().expect("test executable path");
+        assert!(unsigned.is_file());
+        assert!(
+            verify_anthropic_windows_binary(&unsigned).is_none(),
+            "an unsigned test binary must not be accepted as Anthropic"
+        );
+        let scratch = tempfile::tempdir().expect("fixture directory");
+        let shim = scratch.path().join("claude.cmd");
+        std::fs::write(&shim, "@echo off\r\n").expect("write synthetic shim");
+        assert!(verify_anthropic_windows_binary(&shim).is_none());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn claude_signature_probe_never_loads_user_shadow_module() {
+        let scratch = tempfile::tempdir().expect("isolated module fixture");
+        let module = scratch.path().join("Microsoft.PowerShell.Security");
+        std::fs::create_dir(&module).expect("create shadow module");
+        std::fs::write(
+            module.join("Microsoft.PowerShell.Security.psm1"),
+            "function Get-AuthenticodeSignature { [System.IO.File]::WriteAllText($env:QUOTALIS_SHADOW_MARKER, 'loaded'); throw 'shadow' }; Export-ModuleMember -Function Get-AuthenticodeSignature",
+        )
+        .expect("write shadow module");
+        let marker = scratch.path().join("shadow-loaded.txt");
+        let powershell = system_powershell().expect("OS PowerShell");
+        let (_sender, receiver) = watch::channel(false);
+        let output = run_capture_blocking_with_env(
+            powershell.clone(),
+            [
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                CLAUDE_SIGNATURE_VERIFY_SCRIPT,
+            ]
+            .into_iter()
+            .map(OsString::from)
+            .collect(),
+            PROBE_TIMEOUT,
+            receiver,
+            None,
+            &[
+                (
+                    OsString::from("PSModulePath"),
+                    scratch.path().as_os_str().to_os_string(),
+                ),
+                (
+                    OsString::from("QUOTALIS_SHADOW_MARKER"),
+                    marker.as_os_str().to_os_string(),
+                ),
+                (
+                    OsString::from("QUOTALIS_CLAUDE_SIGNATURE_TARGET"),
+                    powershell.as_os_str().to_os_string(),
+                ),
+            ],
+        )
+        .expect("run isolated signature probe");
+        assert_ne!(
+            output.exit_code,
+            Some(0),
+            "Microsoft signer is not Anthropic"
+        );
+        assert!(!marker.exists(), "user shadow module must not be loaded");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn claude_discovery_honors_cancellation_and_deadline_before_launch() {
+        let dependency = cli_dependency(ProviderId::Claude).expect("Claude dependency");
+        let roots = DiscoveryRoots::system();
+        assert!(
+            resolve_cli_command_cancellable(
+                dependency,
+                &roots,
+                &|| true,
+                Instant::now() + PROBE_TIMEOUT
+            )
+            .is_none()
+        );
+        assert!(
+            resolve_cli_command_cancellable(dependency, &roots, &|| false, Instant::now())
+                .is_none()
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn claude_candidates_include_official_native_and_npm_binary_without_shims() {
+        let home = Path::new(r"C:\fixture\home");
+        let local = Path::new(r"C:\fixture\local");
+        let roaming = Path::new(r"C:\fixture\roaming");
+        let search = OsString::from(r"C:\fixture\search");
+        let candidates = claude_native_candidates(
+            Some(home),
+            Some(local),
+            Some(roaming),
+            Some(search.as_os_str()),
+        );
+        assert!(candidates.contains(&home.join(r".local\bin\claude.exe")));
+        assert!(
+            candidates.contains(
+                &roaming.join(r"npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe")
+            )
+        );
+        assert!(candidates.contains(&PathBuf::from(r"C:\fixture\search\claude.exe")));
+        assert!(
+            candidates
+                .iter()
+                .all(|path| path.extension() == Some(OsStr::new("exe")))
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn claude_protected_npm_legacy_entry_keeps_node_prefix() {
+        let scratch = tempfile::tempdir().expect("fixture directory");
+        let root = scratch.path().join("protected");
+        let modules = root.join("nodejs").join("node_modules");
+        let package = modules.join("@anthropic-ai").join("claude-code");
+        std::fs::create_dir_all(package.join("bin")).expect("package directory");
+        std::fs::write(root.join("nodejs/node.exe"), b"fixture").expect("node fixture");
+        std::fs::write(package.join("bin/cli.js"), b"fixture").expect("entry fixture");
+        std::fs::write(
+            package.join("package.json"),
+            br#"{"name":"@anthropic-ai/claude-code","bin":{"claude":"bin/cli.js"}}"#,
+        )
+        .expect("package metadata");
+        let dependency = cli_dependency(ProviderId::Claude).expect("Claude dependency");
+        let resolved = resolve_npm_executable(
+            dependency,
+            "@anthropic-ai/claude-code",
+            &DiscoveryRoots {
+                protected_roots: vec![root.clone()],
+            },
+        )
+        .expect("protected Claude package");
+        assert_eq!(
+            resolved.program,
+            std::fs::canonicalize(root.join("nodejs/node.exe")).unwrap()
+        );
+        assert_eq!(
+            resolved.prefix_args,
+            vec![
+                std::fs::canonicalize(package.join("bin/cli.js"))
+                    .unwrap()
+                    .into_os_string()
+            ]
+        );
+    }
 
     #[test]
     fn aws_export_keeps_explicit_profile_and_only_required_environment() {

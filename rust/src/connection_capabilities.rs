@@ -141,7 +141,7 @@ pub const CLI_DEPENDENCIES: &[CliDependency] = &[
             package: "@anthropic-ai/claude-code",
         },
         install_requires_admin: false,
-        docs_url: "https://docs.anthropic.com/en/docs/claude-code",
+        docs_url: "https://code.claude.com/docs/en/setup",
         session_detection: SessionDetection::AuthFile,
         sign_in_hint: "claude",
     },

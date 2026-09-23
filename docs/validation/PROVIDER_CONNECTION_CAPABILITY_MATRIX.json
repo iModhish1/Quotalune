@@ -64,7 +64,7 @@
       },
       "cli": {
         "automatedInstallAvailable": false,
-        "docsUrl": "https://docs.anthropic.com/en/docs/claude-code",
+        "docsUrl": "https://code.claude.com/docs/en/setup",
         "executables": [
           "claude"
         ],
@@ -91,7 +91,7 @@
         {
           "browserDomain": null,
           "envVar": null,
-          "helpUrl": "https://docs.anthropic.com/en/docs/claude-code",
+          "helpUrl": "https://code.claude.com/docs/en/setup",
           "method": "cliSession",
           "rank": "recommended"
         },
