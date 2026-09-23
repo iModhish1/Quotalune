@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const tauriMocks = vi.hoisted(() => ({
   getCachedProviders: vi.fn(),
@@ -223,6 +223,12 @@ function renderPopOut(
 }
 
 describe("PopOutPanel", () => {
+  beforeAll(async () => {
+    // Compile the real lazy page before the interaction deadline. Cold Vitest
+    // transforms can outlast waitFor while the UI is still in Suspense.
+    // No page mock: the all-provider tests exercise the actual dashboard.
+    await import("./dashboard/AnalyticsDashboard");
+  });
   it("reports settings launch errors instead of silently leaving the dashboard",async()=>{
     tauriMocks.openSettingsWindow.mockRejectedValueOnce(new Error("Window unavailable"));
     renderPopOut([]);
