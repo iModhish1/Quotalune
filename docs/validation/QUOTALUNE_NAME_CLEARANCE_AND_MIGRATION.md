@@ -39,3 +39,34 @@ starting point, not a substitute for counsel in intended release markets.
 
 The candidate is **provisional** until formal clearance and product-wide
 rebrand validation are complete. No public release may assert legal uniqueness.
+
+## Local Dev verification — 2026-09-24
+
+- Visible-name candidate commits: `3a602336` (UI, locales, notification and
+  installer display) and `295d664b` (WebView document title).
+- The production frontend build and locale parity passed (1,975 keys); frontend
+  tests passed 1,652/1,652 across 230 files. Rust workspace tests passed with
+  one pre-existing ignored desktop test: desktop 584, core 1,944, CLI 1.
+  Clippy (`-D warnings`), fmt and Git whitespace checks passed. A concurrent
+  Rust test run had five process-timeout fixture failures under load; the
+  serial rerun passed. Do not treat that timing sensitivity as resolved.
+- The fresh Dev binary at `target/debug/QuotalisDev.exe` passed its channel
+  preflight (Dev app ID and `QuotaArc-Dev` data root) with SHA-256
+  `b3b4c07887f5eca061993fa6157eae5d95bdf6547dc73e40b95dc19746dbbfd6`.
+  Its Windows version fields report `Quotalune Dev` for ProductName and
+  FileDescription, and `Quotalune` for CompanyName.
+- The guarded desktop adapter launched this exact hash in its owned Job with
+  no input. Native UIA inspection observed window title `Quotalune Dev` and
+  WebView pane names `Quotalune` / `Quotalune - Web content`. The adapter
+  exposes WebView pane nodes but no page controls; this does **not** prove
+  screenshot quality, interaction correctness, notification appearance, or
+  installer upgrade behavior. The existing Personal `Quotalis.exe` process
+  was only identified read-only and was not touched.
+- The global guarded Dev launcher was updated from an exact old window title
+  to the exact new `Quotalune Dev` title. All ten launcher unit tests passed;
+  its hash, PID, Job-ownership and Dev-channel identity checks remain in place.
+
+Remaining release gates include formal trademark/similarity clearance,
+complete native visual testing, installer upgrade/shortcut migration proof,
+and the broader master-goal product/security checks. The public v0.11.0
+release remains untouched.
