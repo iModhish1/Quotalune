@@ -565,6 +565,7 @@ fn run_capture_blocking(
     args: Vec<OsString>,
     timeout: Duration,
     cancel: watch::Receiver<bool>,
+    terminal_hint: Option<&'static str>,
 ) -> Result<CapturedOutput, ProbeFailure> {
     if *cancel.borrow() {
         return Err(ProbeFailure::Cancelled);
@@ -575,6 +576,9 @@ fn run_capture_blocking(
     let mut command = Command::new(program);
     command.args(args);
     scrub_environment(&mut command);
+    if let Some(term) = terminal_hint {
+        command.env("TERM", term);
+    }
     let mut process = SupervisedProcess::spawn(&mut command).map_err(|_| ProbeFailure::Launch)?;
     let mut stdout = process.child.stdout.take().ok_or(ProbeFailure::Launch)?;
     let mut stderr = process.child.stderr.take().ok_or(ProbeFailure::Launch)?;
@@ -614,7 +618,7 @@ fn run_probe_blocking(
     timeout: Duration,
     cancel: watch::Receiver<bool>,
 ) -> Result<ProbeOutput, ProbeFailure> {
-    let mut captured = run_capture_blocking(program, args, timeout, cancel)?;
+    let mut captured = run_capture_blocking(program, args, timeout, cancel, None)?;
     captured.stdout.truncate(OUTPUT_CAP);
     captured.stderr.truncate(OUTPUT_CAP);
     Ok(ProbeOutput {
@@ -651,7 +655,7 @@ async fn read_resolved_credential(
     let mut all_args = resolved.prefix_args;
     all_args.extend(args.iter().map(OsString::from));
     let output = tokio::task::spawn_blocking(move || {
-        run_capture_blocking(resolved.program, all_args, timeout, rx)
+        run_capture_blocking(resolved.program, all_args, timeout, rx, None)
     })
     .await
     .ok()?
@@ -689,17 +693,58 @@ pub(crate) async fn read_cli_json(
     all_args.extend(args.iter().map(OsString::from));
     Some(
         tokio::task::spawn_blocking(move || {
-            run_capture_blocking(resolved.program, all_args, PROBE_TIMEOUT, rx).map(|output| {
-                CliReadOutput {
+            run_capture_blocking(resolved.program, all_args, PROBE_TIMEOUT, rx, None).map(
+                |output| CliReadOutput {
                     exit_code: output.exit_code,
                     stdout: output.stdout,
                     stderr: output.stderr,
-                }
-            })
+                },
+            )
         })
         .await
         .unwrap_or(Err(ProbeFailure::Launch)),
     )
+}
+
+/// Supervise an already-discovered provider CLI without routing it through a
+/// second executable registry. The caller must validate the path and use fixed
+/// arguments. Raw output is for local parsing only and must never be returned
+/// in a user-facing error. Dropping the future stops the owned process tree.
+pub(crate) async fn read_provider_cli(
+    program: &Path,
+    args: &[&str],
+    terminal_hint: Option<&'static str>,
+) -> Result<CliReadOutput, ProbeFailure> {
+    let (tx, rx) = watch::channel(false);
+    let _cancel_on_drop = CancelOnDrop(tx);
+    let program = program.to_path_buf();
+    let args = args.iter().map(OsString::from).collect();
+    let output = tokio::task::spawn_blocking(move || {
+        run_capture_blocking(program, args, PROBE_TIMEOUT, rx, terminal_hint)
+    })
+    .await
+    .map_err(|_| ProbeFailure::Launch)??;
+    Ok(CliReadOutput {
+        exit_code: output.exit_code,
+        stdout: output.stdout,
+        stderr: output.stderr,
+    })
+}
+
+/// Synchronous variant for CLI metadata lookup performed before async fetch.
+/// Its short timeout and process-tree ownership also apply to `--version`.
+pub(crate) fn read_provider_cli_sync(
+    program: &Path,
+    args: &[&str],
+) -> Result<CliReadOutput, ProbeFailure> {
+    let (_tx, rx) = watch::channel(false);
+    let args = args.iter().map(OsString::from).collect();
+    let output = run_capture_blocking(program.to_path_buf(), args, PROBE_TIMEOUT, rx, None)?;
+    Ok(CliReadOutput {
+        exit_code: output.exit_code,
+        stdout: output.stdout,
+        stderr: output.stderr,
+    })
 }
 
 /// Run `program args...` non-interactively with a timeout and a cancellation
@@ -1600,6 +1645,25 @@ mod tests {
         assert!(!out.stdout.contains("abc.def"));
         assert!(!out.stdout.contains("JaneDoe") && !out.stdout.contains("/home/jane"));
         assert!(out.stdout.len() <= OUTPUT_CAP);
+    }
+
+    #[tokio::test]
+    async fn provider_cli_capture_and_sync_version_use_the_supervisor() {
+        #[cfg(windows)]
+        let (program, args): (PathBuf, &[&str]) = (system_cmd(), &["/c", "echo supervised"]);
+        #[cfg(unix)]
+        let (program, args): (PathBuf, &[&str]) =
+            (which::which("sh").unwrap(), &["-c", "echo supervised"]);
+
+        let usage = read_provider_cli(&program, args, Some("xterm-256color"))
+            .await
+            .expect("supervised async provider command");
+        assert_eq!(usage.exit_code, Some(0));
+        assert!(String::from_utf8_lossy(&usage.stdout).contains("supervised"));
+        let version = read_provider_cli_sync(&program, args)
+            .expect("supervised synchronous provider command");
+        assert_eq!(version.exit_code, Some(0));
+        assert!(String::from_utf8_lossy(&version.stdout).contains("supervised"));
     }
 
     #[tokio::test]

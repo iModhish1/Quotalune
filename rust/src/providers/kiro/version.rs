@@ -2,11 +2,10 @@
 //!
 //! Detect and parse Kiro CLI version for compatibility checks.
 
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::sync::OnceLock;
+
+use crate::cli_dependencies;
 
 /// Cached CLI path
 static CLI_PATH: OnceLock<Option<PathBuf>> = OnceLock::new();
@@ -231,17 +230,12 @@ pub fn detect_version() -> Option<String> {
         .get_or_init(|| {
             let cli_path = find_kiro_cli()?;
 
-            #[cfg(windows)]
-            const CREATE_NO_WINDOW: u32 = 0x08000000;
-
-            let mut cmd = Command::new(&cli_path);
-            cmd.arg("--version");
-            #[cfg(windows)]
-            cmd.creation_flags(CREATE_NO_WINDOW);
-
-            let output = cmd.output().ok()?;
-
-            if !output.status.success() {
+            let output =
+                cli_dependencies::read_provider_cli_sync(&cli_path, &["--version"]).ok()?;
+            if output.exit_code != Some(0)
+                || output.stdout.len() > cli_dependencies::OUTPUT_CAP
+                || output.stderr.len() > cli_dependencies::OUTPUT_CAP
+            {
                 return None;
             }
 

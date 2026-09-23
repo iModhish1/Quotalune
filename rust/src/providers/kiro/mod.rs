@@ -19,9 +19,8 @@ use async_trait::async_trait;
 use chrono::Datelike;
 use regex_lite::Regex;
 use std::path::PathBuf;
-use std::process::Stdio;
-use tokio::process::Command;
 
+use crate::cli_dependencies::{self, CliReadOutput, ProbeFailure};
 use crate::core::{
     FetchContext, Provider, ProviderError, ProviderFetchResult, ProviderId, ProviderMetadata,
     RateWindow, SourceMode, UsageSnapshot,
@@ -81,6 +80,44 @@ impl KiroProvider {
         version::find_kiro_cli()
     }
 
+    fn cli_failure(error: ProbeFailure) -> ProviderError {
+        let message = match error {
+            ProbeFailure::Timeout => "kiro-cli timed out",
+            ProbeFailure::Cancelled => "kiro-cli was cancelled",
+            ProbeFailure::Launch | ProbeFailure::Capture => "kiro-cli could not be read",
+        };
+        ProviderError::Other(message.into())
+    }
+
+    fn checked_cli_text(output: CliReadOutput) -> Result<(String, String), ProviderError> {
+        if output.stdout.len() > cli_dependencies::OUTPUT_CAP
+            || output.stderr.len() > cli_dependencies::OUTPUT_CAP
+        {
+            return Err(ProviderError::Other(
+                "kiro-cli output exceeded the safe limit".into(),
+            ));
+        }
+        let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+        let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+        let combined = format!("{stdout} {stderr}").to_lowercase();
+        if [
+            "not logged in",
+            "login required",
+            "failed to initialize auth portal",
+            "kiro-cli login",
+            "oauth error",
+        ]
+        .iter()
+        .any(|phrase| combined.contains(phrase))
+        {
+            return Err(ProviderError::AuthRequired);
+        }
+        if output.exit_code != Some(0) {
+            return Err(ProviderError::Other("kiro-cli command failed".into()));
+        }
+        Ok((stdout, stderr))
+    }
+
     /// Check if user is logged in by running `kiro-cli whoami`
     async fn ensure_logged_in(&self) -> Result<(), ProviderError> {
         let cli_path = Self::which_kiro().ok_or_else(|| {
@@ -89,36 +126,10 @@ impl KiroProvider {
             )
         })?;
 
-        #[cfg(windows)]
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-
-        let mut cmd = Command::new(&cli_path);
-        cmd.arg("whoami")
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-        #[cfg(windows)]
-        cmd.creation_flags(CREATE_NO_WINDOW);
-
-        let output = cmd
-            .output()
+        let output = cli_dependencies::read_provider_cli(&cli_path, &["whoami"], None)
             .await
-            .map_err(|e| ProviderError::Other(format!("Failed to run kiro-cli: {}", e)))?;
-
-        let stdout = String::from_utf8_lossy(&output.stdout).to_lowercase();
-        let stderr = String::from_utf8_lossy(&output.stderr).to_lowercase();
-        let combined = format!("{} {}", stdout, stderr);
-
-        if combined.contains("not logged in") || combined.contains("login required") {
-            return Err(ProviderError::AuthRequired);
-        }
-
-        if !output.status.success() {
-            return Err(ProviderError::Other(format!(
-                "kiro-cli whoami failed with status {}",
-                output.status.code().unwrap_or(-1)
-            )));
-        }
-
+            .map_err(Self::cli_failure)?;
+        Self::checked_cli_text(output)?;
         Ok(())
     }
 
@@ -130,45 +141,21 @@ impl KiroProvider {
         let cli_path = Self::which_kiro()
             .ok_or_else(|| ProviderError::NotInstalled("kiro-cli not found".to_string()))?;
 
-        // Run the usage command.
-        // Windows intentionally uses pipe-first (stdout/stderr Stdio::piped) rather than a dual
-        // ConPTY path: kiro-cli `/usage` under --no-interactive emits parseable text on pipes, and
-        // a second ConPTY probe would add flaky process-lifetime cost without better quota data.
-        #[cfg(windows)]
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-
-        let mut cmd = Command::new(&cli_path);
-        cmd.args(["chat", "--no-interactive", "/usage"])
-            .env("TERM", "xterm-256color")
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-        #[cfg(windows)]
-        cmd.creation_flags(CREATE_NO_WINDOW);
-
-        let output = cmd
-            .output()
-            .await
-            .map_err(|e| ProviderError::Other(format!("Failed to run kiro-cli: {}", e)))?;
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        // The supervised pipe path retains the TERM hint used by Kiro's
+        // non-interactive usage command, with bounded capture and teardown.
+        let output = cli_dependencies::read_provider_cli(
+            &cli_path,
+            &["chat", "--no-interactive", "/usage"],
+            Some("xterm-256color"),
+        )
+        .await
+        .map_err(Self::cli_failure)?;
+        let (stdout, stderr) = Self::checked_cli_text(output)?;
         let combined = if stdout.trim().is_empty() {
-            stderr.as_ref()
+            stderr.as_str()
         } else {
-            stdout.as_ref()
+            stdout.as_str()
         };
-
-        // Check for login errors
-        let lowered = combined.to_lowercase();
-        if lowered.contains("not logged in")
-            || lowered.contains("login required")
-            || lowered.contains("failed to initialize auth portal")
-            || lowered.contains("kiro-cli login")
-            || lowered.contains("oauth error")
-        {
-            return Err(ProviderError::AuthRequired);
-        }
-
         self.parse_cli_output(combined)
     }
 
@@ -499,6 +486,37 @@ impl Provider for KiroProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn cli_output(exit_code: Option<i32>, stdout: &[u8], stderr: &[u8]) -> CliReadOutput {
+        CliReadOutput {
+            exit_code,
+            stdout: stdout.to_vec(),
+            stderr: stderr.to_vec(),
+        }
+    }
+
+    #[test]
+    fn cli_output_fails_closed_for_auth_failure_overflow_and_nonzero_exit() {
+        assert!(matches!(
+            KiroProvider::checked_cli_text(cli_output(Some(1), b"", b"login required")),
+            Err(ProviderError::AuthRequired)
+        ));
+        assert!(matches!(
+            KiroProvider::checked_cli_text(cli_output(
+                Some(0),
+                &vec![b'x'; cli_dependencies::OUTPUT_CAP + 1],
+                b"",
+            )),
+            Err(ProviderError::Other(message)) if message.contains("safe limit")
+        ));
+        assert!(matches!(
+            KiroProvider::checked_cli_text(cli_output(Some(1), b"private command output", b"")),
+            Err(ProviderError::Other(message)) if !message.contains("private")
+        ));
+        let (stdout, _) = KiroProvider::checked_cli_text(cli_output(Some(0), b"usage", b""))
+            .expect("successful bounded output");
+        assert_eq!(stdout, "usage");
+    }
 
     #[test]
     fn cli_presence_maps_to_local_runtime_offline_but_state_db_stays_default() {
