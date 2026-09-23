@@ -291,6 +291,12 @@ fn resolve_cli_command(
 ) -> Option<ResolvedExecutable> {
     match dependency.install {
         InstallPolicy::Npm { package } => resolve_npm_executable(dependency, package, roots),
+        // Ark CLI is installed manually, so no automated install plan is
+        // offered. Its official npm package can still be verified and run
+        // from a protected, machine-wide Node installation.
+        InstallPolicy::ManualOnly if dependency.provider == ProviderId::Doubao => {
+            resolve_npm_executable(dependency, "@volcengine/ark-cli", roots)
+        }
         InstallPolicy::Winget { .. } | InstallPolicy::ManualOnly => {
             resolve_native_executable(dependency, roots)
         }
@@ -1247,6 +1253,57 @@ mod tests {
         assert_eq!(
             resolved.display_path,
             std::fs::canonicalize(package.join("bin/codex.js")).unwrap()
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn doubao_manual_cli_resolves_only_the_official_protected_npm_package() {
+        let temp = tempfile::tempdir().unwrap();
+        let protected = temp.path().join("protected");
+        let roaming = temp.path().join("roaming");
+        std::fs::create_dir_all(protected.join("nodejs")).unwrap();
+        std::fs::write(protected.join("nodejs/node.exe"), b"fixture").unwrap();
+        let roots = DiscoveryRoots {
+            protected_roots: vec![protected.clone()],
+        };
+        let dependency = cli_dependency(ProviderId::Doubao).unwrap();
+        let roaming_package = roaming.join("npm/node_modules/@volcengine/ark-cli");
+        std::fs::create_dir_all(roaming_package.join("scripts")).unwrap();
+        std::fs::write(roaming_package.join("scripts/run.js"), b"fixture").unwrap();
+        std::fs::write(
+            roaming_package.join("package.json"),
+            br#"{"name":"@volcengine/ark-cli","bin":{"arkcli":"scripts/run.js"}}"#,
+        )
+        .unwrap();
+        assert!(resolve_cli_command(dependency, &roots).is_none());
+
+        let package = protected.join("nodejs/node_modules/@volcengine/ark-cli");
+        std::fs::create_dir_all(package.join("scripts")).unwrap();
+        std::fs::write(package.join("scripts/run.js"), b"fixture").unwrap();
+        std::fs::write(
+            package.join("package.json"),
+            br#"{"name":"@attacker/ark-cli","bin":{"arkcli":"scripts/run.js"}}"#,
+        )
+        .unwrap();
+        assert!(resolve_cli_command(dependency, &roots).is_none());
+        std::fs::write(
+            package.join("package.json"),
+            br#"{"name":"@volcengine/ark-cli","bin":{"arkcli":"scripts/run.js"}}"#,
+        )
+        .unwrap();
+        let resolved = resolve_cli_command(dependency, &roots).expect("official Ark CLI");
+        assert_eq!(
+            resolved.program,
+            std::fs::canonicalize(protected.join("nodejs/node.exe")).unwrap()
+        );
+        assert_eq!(
+            resolved.display_path,
+            std::fs::canonicalize(package.join("scripts/run.js")).unwrap()
+        );
+        assert!(
+            install_plan(dependency).is_none(),
+            "manual install policy remains unchanged"
         );
     }
 
