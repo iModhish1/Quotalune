@@ -269,6 +269,7 @@ export function ProviderDetailPane({
   const openConnectFlow = () => {
     if (providerCapabilities && providerCapabilities.methods.length > 0) setConnectOpen(true);
   };
+  const connectAction = providerCapabilities?.methods.length ? openConnectFlow : undefined;
   const handleSwitchAccount = async () => {
     const actionProviderId = detail.id;
     const sequence = ++actionSequenceRef.current;
@@ -341,7 +342,7 @@ export function ProviderDetailPane({
 
   return (
     <div className="provider-detail">
-      <IdentitySection provider={detail} subtitle={subtitle} t={t} onConnect={openConnectFlow} busy={busy} />
+      <IdentitySection provider={detail} subtitle={subtitle} t={t} onConnect={connectAction} busy={busy} />
       <ProviderConnectionSummary capability={detail.authCapability}/>
       <ConnectionStatusLine providerId={detail.id} />
       {connectOpen && providerCapabilities && (
@@ -382,7 +383,7 @@ export function ProviderDetailPane({
           provider={detail}
           busy={busy}
           onRefresh={handleRefresh}
-          onConnect={openConnectFlow}
+          onConnect={connectAction}
           onOpenDashboard={handleOpenDashboard}
           onOpenStatusPage={handleOpenStatusPage}
           onBuyCredits={handleBuyCredits}

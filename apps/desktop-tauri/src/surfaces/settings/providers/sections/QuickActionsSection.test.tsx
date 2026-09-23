@@ -53,6 +53,21 @@ describe("QuickActionsSection", () => {
       screen.queryByRole("button", { name: "Sign in" }),
     ).not.toBeInTheDocument();
   });
+
+  it("hides sign-in when the capability model offers no verifiable method", () => {
+    render(
+      <QuickActionsSection
+        provider={{ id: "vertexai", displayName: "Vertex AI", canConnect: true } as never}
+        busy={false}
+        onRefresh={vi.fn()}
+        onOpenDashboard={vi.fn()}
+        onOpenStatusPage={vi.fn()}
+        onBuyCredits={vi.fn()}
+        t={(key) => key}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "ActionSignIn" })).not.toBeInTheDocument();
+  });
 });
 
 it.each([["ready", "ActionSwitchAccount"], ["expiredSession", "DashboardReconnect"], ["needsAuthentication", "ActionSignIn"]])("labels the supported connection action from observed %s state", (errorState, label) => {

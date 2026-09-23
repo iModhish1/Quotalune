@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { METHOD_LABEL, type ConnectionMethod, type ConnectionVerification, type ProviderConnectionCapabilities } from "../../../../lib/providerConnection";
 
 const here = import.meta.dirname!;
-const matrix = JSON.parse(readFileSync(`${here}/../../../../../../../docs/validation/PROVIDER_CONNECTION_CAPABILITY_MATRIX.json`, "utf8")) as { providers: ProviderConnectionCapabilities[] };
+const matrix = JSON.parse(readFileSync(`${here}/../../../../../../../docs/validation/PROVIDER_CONNECTION_CAPABILITY_MATRIX.json`, "utf8")) as { providerCount: number; providers: ProviderConnectionCapabilities[] };
 
 const ipc = vi.hoisted(() => ({
   detectCliDependency: vi.fn(), verifyProviderConnection: vi.fn(), saveProviderConnectionKey: vi.fn(),
@@ -20,6 +20,7 @@ import { ProviderConnectFlow } from "./ProviderConnectFlow";
 
 const activeProviders = matrix.providers.filter((provider) => provider.status === "supported" || provider.status === "autoDetected");
 const deprecatedProviders = matrix.providers.filter((provider) => provider.status === "deprecated");
+const unsupportedProviders = matrix.providers.filter((provider) => provider.status === "unsupported");
 
 const verificationFixture = (
   providerId: string,
@@ -115,10 +116,11 @@ beforeEach(() => {
 });
 
 describe("ProviderConnectFlow registry lifecycle fixtures", () => {
-  it("uses the documented active and deprecated provider inventory", () => {
-    expect(matrix.providers).toHaveLength(70);
-    expect(activeProviders).toHaveLength(68);
+  it("covers the derived provider inventory and makes unsupported exceptions explicit", () => {
+    expect(matrix.providers).toHaveLength(matrix.providerCount);
+    expect(activeProviders.length + deprecatedProviders.length + unsupportedProviders.length).toBe(matrix.providerCount);
     expect(deprecatedProviders).toHaveLength(2);
+    expect(unsupportedProviders.map((provider) => provider.provider)).toEqual(["vertexai"]);
   });
 
   it.each(activeProviders.map((provider) => [provider.provider, provider, recommendedMethod(provider)] as const))(

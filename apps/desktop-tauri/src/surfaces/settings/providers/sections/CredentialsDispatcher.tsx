@@ -1,6 +1,5 @@
 import type { LocaleKey } from "../../../../i18n/keys";
 import { GeminiCliCreds } from "./credentials/GeminiCliCreds";
-import { VertexAiCreds } from "./credentials/VertexAiCreds";
 import { JetBrainsCreds } from "./credentials/JetBrainsCreds";
 import { KiroCreds } from "./credentials/KiroCreds";
 import { ClaudeCreds } from "./credentials/ClaudeCreds";
@@ -22,8 +21,6 @@ export function CredentialsDispatcher({ providerId, t }: Props) {
   switch (providerId) {
     case "gemini":
       return <GeminiCliCreds providerId={providerId} t={t} />;
-    case "vertexai":
-      return <VertexAiCreds providerId={providerId} t={t} />;
     case "jetbrains":
       return <JetBrainsCreds t={t} />;
     case "kiro":

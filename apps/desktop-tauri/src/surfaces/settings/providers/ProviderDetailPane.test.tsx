@@ -12,7 +12,7 @@ vi.mock("../../../lib/providerConnection", async (original) => ({ ...(await orig
 vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn().mockResolvedValue(() => {}) }));
 vi.mock("../../../hooks/useLocale", () => ({ useLocale: () => ({ t: (key: string) => key }) }));
 vi.mock("./providerDetailFormat", () => ({ buildSubtitle: () => "" }));
-vi.mock("./sections/IdentitySection", () => ({ IdentitySection: ({ onConnect }: { onConnect: () => void }) => <button onClick={onConnect}>Connect</button> }));
+vi.mock("./sections/IdentitySection", () => ({ IdentitySection: ({ onConnect }: { onConnect?: () => void }) => <div data-testid="identity-section">{onConnect && <button onClick={onConnect}>Connect</button>}</div> }));
 vi.mock("./ProviderConnectionSummary", () => ({ ProviderConnectionSummary: () => null }));
 vi.mock("./connect/ConnectionStatusLine", () => ({ ConnectionStatusLine: () => null }));
 vi.mock("./ProviderDetailWorkspace", () => ({ ProviderDetailWorkspace: () => null }));
@@ -40,4 +40,12 @@ it.each([true, false])("isolates simulated=%s verification completion from globa
   fireEvent.click(await screen.findByRole("button", { name: "Complete" }));
   await waitFor(() => expect(api.refreshProviders).toHaveBeenCalledTimes(simulated ? 0 : 1));
   expect(api.getProviderDetail).toHaveBeenCalledTimes(1);
+});
+
+it("does not show a dead Connect action when a provider has no verifiable method", async () => {
+  api.getProviderDetail.mockResolvedValue({ id: "vertexai", displayName: "Vertex AI", canConnect: true, errorState: "unavailable", primary: {}, usageWindows: [] });
+  api.getProviderConnectionCapabilities.mockResolvedValue([{ provider: "vertexai", status: "unsupported", methods: [] }]);
+  render(<ProviderDetailPane providerId="vertexai" resetTimeRelative providerMetrics={{}} providerAccentColors={{}} wayfinderGatewayUrl="" settingsDisabled={false} onSettingsChange={vi.fn()} />);
+  await screen.findByTestId("identity-section");
+  expect(screen.queryByRole("button", { name: "Connect" })).not.toBeInTheDocument();
 });

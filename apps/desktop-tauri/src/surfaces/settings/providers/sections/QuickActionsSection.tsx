@@ -5,7 +5,7 @@ interface Props {
   provider: ProviderDetail;
   busy: boolean;
   onRefresh: () => void;
-  onConnect: () => void;
+  onConnect?: () => void;
   onOpenDashboard: () => void;
   onOpenStatusPage: () => void;
   onBuyCredits: () => void;
@@ -40,7 +40,7 @@ export function QuickActionsSection({
         >
           {t("ActionRefresh")}
         </button>
-        {provider.canConnect && (
+        {provider.canConnect && onConnect && (
           <button
             type="button"
             className="btn btn--primary"

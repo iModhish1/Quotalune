@@ -7,7 +7,7 @@ export type MethodRank = "recommended" | "alternative";
 export interface MethodOffer { method: ConnectionMethod; rank: MethodRank; envVar: string | null; browserDomain: string | null; helpUrl: string | null }
 export type InstallPolicy = { kind: "winget"; id: string } | { kind: "npm"; package: string } | { kind: "manualOnly" };
 export interface CliDependencySummary { managedLogin?: boolean; tool: string; executables: string[]; install: InstallPolicy; installRequiresAdmin: boolean; docsUrl: string; sessionDetection: "authFile" | "statusCommand" | "usageFetch"; minVersion: string | null }
-export type VerificationStrategy = "usageFetch" | "localDetection" | "gatewayProbe";
+export type VerificationStrategy = "unavailable" | "usageFetch" | "localDetection" | "gatewayProbe";
 export type SupportStatus = "supported" | "deprecated" | "autoDetected" | "unsupported";
 export interface ReportingCapabilities { quotaWindows: "inspectProviderResponse"; resetTimes: "inspectProviderResponse"; monetaryObservations: "classifyProviderResponse"; localTokens: boolean; planName: "inspectProviderResponse" }
 export interface ProviderConnectionCapabilities {

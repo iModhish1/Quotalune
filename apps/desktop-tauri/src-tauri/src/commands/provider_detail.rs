@@ -94,10 +94,14 @@ pub(crate) fn build_provider_detail(provider_id: &str) -> Result<ProviderDetail,
     };
     // Every provider with a real connection method gets the unified flow;
     // auto-detected and deprecated providers keep detection-only surfaces.
-    let can_connect = super::system::provider_login_transport(id).is_some()
-        || quotalis_core::connection_capabilities::connection_capabilities(id).status
-            != quotalis_core::connection_capabilities::SupportStatus::Unsupported;
-    let auth_capability = provider_auth_capability_for(id, dashboard_url.as_deref());
+    let connection = quotalis_core::connection_capabilities::connection_capabilities(id);
+    let can_connect =
+        connection.status != quotalis_core::connection_capabilities::SupportStatus::Unsupported;
+    let auth_capability = if can_connect {
+        provider_auth_capability_for(id, dashboard_url.as_deref())
+    } else {
+        ProviderAuthCapability::Unsupported
+    };
 
     Ok(ProviderDetail {
         id: id.cli_name().to_string(),
@@ -298,7 +302,7 @@ mod tests {
     fn connection_capability_includes_supported_onboarding_methods() {
         assert!(build_provider_detail("codex").unwrap().can_connect);
         assert!(build_provider_detail("copilot").unwrap().can_connect);
-        assert!(build_provider_detail("vertexai").unwrap().can_connect);
+        assert!(!build_provider_detail("vertexai").unwrap().can_connect);
         assert!(build_provider_detail("mistral").unwrap().can_connect);
         assert!(build_provider_detail("sub2api").unwrap().can_connect);
     }
@@ -354,19 +358,12 @@ mod tests {
     /// gives no guarantee a newly added `ProviderId` gets a real, audited
     /// capability rather than silently landing on the generic
     /// `ExternalDashboard`/`Unsupported` tail of the chain. This test is the
-    /// substitute gate: it fails loudly the moment any registered provider
-    /// resolves to `Unsupported`, and pins today's exact count (70) so a
-    /// newly added `ProviderId` forces this file to be revisited rather than
-    /// silently inheriting a fallback classification.
+    /// substitute gate: it fails loudly when an unreviewed provider resolves
+    /// to `Unsupported`; Vertex AI is an explicit exception until an observed
+    /// usage source exists.
     #[test]
-    fn no_registered_provider_falls_back_to_unsupported() {
+    fn unsupported_auth_capabilities_are_explicit() {
         let all = ProviderId::all();
-        assert_eq!(
-            all.len(),
-            70,
-            "ProviderId::all() count changed — re-audit provider_auth_capability_for \
-             for the new/removed provider(s) before updating this count"
-        );
 
         let unsupported: Vec<&str> = all
             .iter()
@@ -379,10 +376,6 @@ mod tests {
             .map(|id| id.cli_name())
             .collect();
 
-        assert!(
-            unsupported.is_empty(),
-            "provider(s) fell through to the generic Unsupported auth capability \
-             with no verified auth mechanism: {unsupported:?}"
-        );
+        assert_eq!(unsupported, vec!["vertexai"]);
     }
 }

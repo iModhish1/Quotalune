@@ -536,7 +536,7 @@
           "kind": "winget"
         },
         "installRequiresAdmin": true,
-        "managedLogin": true,
+        "managedLogin": false,
         "minVersion": null,
         "sessionDetection": "authFile",
         "tool": "Google Cloud CLI"
@@ -550,15 +550,7 @@
       },
       "liveVerification": "NOT VERIFIED",
       "localSessionReader": false,
-      "methods": [
-        {
-          "browserDomain": null,
-          "envVar": null,
-          "helpUrl": "https://cloud.google.com/sdk/docs/install",
-          "method": "cliSession",
-          "rank": "recommended"
-        }
-      ],
+      "methods": [],
       "planSource": "Provider-reported plan when present; never inferred from a credential",
       "provider": "vertexai",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
@@ -570,11 +562,11 @@
         "resetTimes": "inspectProviderResponse"
       },
       "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
-      "status": "supported",
+      "status": "unsupported",
       "statusPageUrl": "https://status.cloud.google.com",
       "supportedQuotaWindows": null,
       "tokenSource": null,
-      "verification": "usageFetch"
+      "verification": "unavailable"
     },
     {
       "adapterSource": {

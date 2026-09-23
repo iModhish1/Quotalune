@@ -604,7 +604,7 @@ pub(super) enum ProviderLoginTransport {
 /// metadata-owned dashboard route rather than an invented auth integration.
 pub(super) fn provider_login_transport(id: ProviderId) -> Option<ProviderLoginTransport> {
     match id {
-        ProviderId::Codex | ProviderId::Claude | ProviderId::Kiro | ProviderId::VertexAI => {
+        ProviderId::Codex | ProviderId::Claude | ProviderId::Kiro => {
             Some(ProviderLoginTransport::Cli)
         }
         ProviderId::Copilot => Some(ProviderLoginTransport::Device),
@@ -925,20 +925,17 @@ mod tests {
     #[test]
     fn all_registered_providers_have_an_explicit_safe_connection_decision() {
         let ids = ProviderId::all();
-        assert_eq!(ids.len(), 70);
-        let offered: Vec<_> = ids
+        let mut offered: Vec<_> = ids
             .iter()
             .filter(|id| provider_login_transport(**id).is_some())
             .map(|id| id.cli_name())
             .collect();
-        assert_eq!(offered.len(), 5);
+        offered.sort_unstable();
+        assert_eq!(offered, vec!["claude", "codex", "copilot", "kiro"]);
         for id in ids {
             assert_eq!(
                 provider_login_transport(*id).is_some(),
-                matches!(
-                    id.cli_name(),
-                    "codex" | "claude" | "copilot" | "kiro" | "vertexai"
-                )
+                matches!(id.cli_name(), "codex" | "claude" | "copilot" | "kiro")
             );
         }
     }
@@ -958,10 +955,7 @@ mod tests {
             provider_login_transport(ProviderId::Copilot),
             Some(ProviderLoginTransport::Device)
         );
-        assert_eq!(
-            provider_login_transport(ProviderId::VertexAI),
-            Some(ProviderLoginTransport::Cli)
-        );
+        assert_eq!(provider_login_transport(ProviderId::VertexAI), None);
         assert_eq!(provider_login_transport(ProviderId::Mistral), None);
     }
 

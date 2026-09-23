@@ -272,6 +272,8 @@ pub fn install_plan(dependency: &CliDependency) -> Option<InstallPlan> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum VerificationStrategy {
+    /// No read-only usage source can currently verify this provider.
+    Unavailable,
     /// The provider's normal read-only usage fetch (the smallest safe read).
     UsageFetch,
     /// Presence and readability of local application data.
@@ -349,16 +351,17 @@ const LOCAL_SCANNER_PROVIDERS: &[ProviderId] = &[
 ];
 
 /// Providers whose sign-in Quotalis supervises through the CLI (`login.rs`).
-const CLI_LOGIN_SUPERVISED: &[ProviderId] = &[
-    ProviderId::Codex,
-    ProviderId::Claude,
-    ProviderId::Kiro,
-    ProviderId::VertexAI,
-];
+const CLI_LOGIN_SUPERVISED: &[ProviderId] =
+    &[ProviderId::Codex, ProviderId::Claude, ProviderId::Kiro];
 
 /// Providers whose CLI owns sign-in: the supervised logins above plus CLIs
 /// whose credential file or status command the adapter reads directly.
 fn cli_owns_sign_in(provider: ProviderId) -> bool {
+    // Its current adapter probes gcloud/project metadata, not a measured
+    // Vertex usage source. Installation/sign-in cannot verify a usage link.
+    if provider == ProviderId::VertexAI {
+        return false;
+    }
     cli_dependency(provider).is_some_and(|d| {
         CLI_LOGIN_SUPERVISED.contains(&provider)
             || d.session_detection != SessionDetection::UsageFetch
@@ -472,8 +475,8 @@ pub fn connection_capabilities(provider: ProviderId) -> ProviderConnectionCapabi
     }
     let mut seen = std::collections::HashSet::new();
     methods.retain(|m| seen.insert(m.method));
-
     let verification = match provider {
+        ProviderId::VertexAI => VerificationStrategy::Unavailable,
         ProviderId::Wayfinder => VerificationStrategy::GatewayProbe,
         ProviderId::Windsurf | ProviderId::JetBrains => VerificationStrategy::LocalDetection,
         _ => VerificationStrategy::UsageFetch,
@@ -619,13 +622,13 @@ mod tests {
             let unique: HashSet<_> = c.methods.iter().map(|m| m.method).collect();
             assert_eq!(unique.len(), c.methods.len(), "{}", c.provider.cli_name());
         }
-        // Today every registered provider has at least one real method.
+        // Every unsupported row must be an explicit, reviewed exception.
         let unsupported: Vec<_> = all_connection_capabilities()
             .into_iter()
             .filter(|c| c.status == SupportStatus::Unsupported)
             .map(|c| c.provider.cli_name())
             .collect();
-        assert!(unsupported.is_empty(), "{unsupported:?}");
+        assert_eq!(unsupported, vec![ProviderId::VertexAI.cli_name()]);
     }
 
     #[test]
@@ -726,6 +729,14 @@ mod tests {
         assert!(capability.supports(ConnectionMethod::CliSession));
         assert!(capability.supports(ConnectionMethod::ApiKey));
         assert!(!capability.supports(ConnectionMethod::BrowserSession));
+    }
+
+    #[test]
+    fn vertex_ai_project_metadata_is_not_an_onboarding_usage_method() {
+        let capability = connection_capabilities(ProviderId::VertexAI);
+        assert_eq!(capability.status, SupportStatus::Unsupported);
+        assert!(capability.methods.is_empty());
+        assert_eq!(capability.verification, VerificationStrategy::Unavailable);
     }
 
     #[test]
