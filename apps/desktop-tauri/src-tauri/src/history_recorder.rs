@@ -411,6 +411,39 @@ mod tests {
         );
     }
 
+    #[test]
+    fn mistral_billing_records_only_observed_spend_without_a_quota() {
+        for amount in [None, Some(0.0), Some(0.005)] {
+            let mut snapshot = test_snapshot();
+            snapshot.provider_id = "mistral".to_string();
+            snapshot.primary.is_informational = true;
+            snapshot.cost = amount.map(|used| crate::commands::CostSnapshotBridge {
+                used,
+                limit: None,
+                remaining: None,
+                currency_code: "EUR".to_string(),
+                currency_symbol: None,
+                period: "Monthly".to_string(),
+                resets_at: None,
+                formatted_used: format!("{used} EUR"),
+                formatted_limit: None,
+                balance: None,
+                formatted_balance: None,
+                daily: Vec::new(),
+            });
+            let samples = samples_for_snapshot(&snapshot).unwrap();
+            assert_eq!(samples.len(), usize::from(amount.is_some()));
+            for sample in samples {
+                assert_eq!(sample.window_key.as_deref(), Some("cost"));
+                assert_eq!(sample.cost_used, amount);
+                assert_eq!(sample.cost_currency_code.as_deref(), Some("EUR"));
+                assert_eq!(sample.monetary_quantity_kind.as_deref(), Some("spend"));
+                assert_eq!(sample.cost_measurement_kind.as_deref(), Some("cumulative"));
+                assert_eq!(sample.account_scope.as_deref(), Some("unresolved"));
+            }
+        }
+    }
+
     fn test_snapshot() -> ProviderUsageSnapshot {
         serde_json::from_str(
             r#"{
