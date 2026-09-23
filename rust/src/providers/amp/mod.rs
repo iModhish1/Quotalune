@@ -1,17 +1,15 @@
 //! Amp provider implementation
 //!
-//! Amp is Sourcegraph's AI coding assistant
-//! Fetches usage data from Amp's local config or API
+//! Amp usage from the Amp balance RPC. Never interpret Cody data as Amp data.
 
 use async_trait::async_trait;
-use std::path::PathBuf;
 
 use crate::core::{
     FetchContext, Provider, ProviderError, ProviderFetchResult, ProviderId, ProviderMetadata,
     RateWindow, SourceMode, UsageSnapshot,
 };
 
-/// Amp provider (Sourcegraph)
+/// Amp provider
 pub struct AmpProvider {
     metadata: ProviderMetadata,
 }
@@ -34,178 +32,115 @@ impl AmpProvider {
         }
     }
 
-    /// Get Amp config directory
-    fn get_amp_config_path() -> Option<PathBuf> {
-        #[cfg(target_os = "windows")]
-        {
-            dirs::config_dir().map(|p| p.join("amp"))
-        }
-        #[cfg(not(target_os = "windows"))]
-        {
-            dirs::home_dir().map(|p| p.join(".amp"))
-        }
-    }
-
-    /// Get Sourcegraph/Cody config directory (Amp might use this)
-    fn get_cody_config_path() -> Option<PathBuf> {
-        #[cfg(target_os = "windows")]
-        {
-            dirs::config_dir().map(|p| p.join("sourcegraph-cody"))
-        }
-        #[cfg(not(target_os = "windows"))]
-        {
-            dirs::home_dir().map(|p| p.join(".sourcegraph"))
-        }
-    }
-
-    /// Read Amp/Sourcegraph access token
-    async fn read_access_token(&self, ctx: &FetchContext) -> Result<String, ProviderError> {
-        if let Some(token) = access_token_from_context(ctx) {
-            return Ok(token);
-        }
-
-        if let Some(token) = access_token_from_environment() {
-            return Ok(token);
-        }
-
-        if let Some(token) = Self::read_local_config_token().await {
-            return Ok(token);
-        }
-
-        Err(ProviderError::AuthRequired)
-    }
-
-    async fn read_local_config_token() -> Option<String> {
-        let amp_token = read_access_token_config(Self::get_amp_config_path()).await;
-        if amp_token.is_some() {
-            return amp_token;
-        }
-
-        read_access_token_config(Self::get_cody_config_path()).await
-    }
-
-    /// Fetch usage via Sourcegraph API
+    /// The private Amp RPC shape is established by upstream CodexBar's
+    /// AmpUsageFetcher, pinned in WAVE3_IMPLEMENTATION_REPORT.md. It is not
+    /// a public API guarantee; unknown responses fail closed.
     async fn fetch_via_web(&self, ctx: &FetchContext) -> Result<UsageSnapshot, ProviderError> {
-        let token = self.read_access_token(ctx).await?;
+        // A selected browser session identifies a different account lane. Do
+        // not silently replace it with a saved/env API token.
+        if ctx.manual_cookie_header.is_some() {
+            return Err(ProviderError::UnsupportedSource(SourceMode::Web));
+        }
+        // An explicitly selected credential must never fall through to an
+        // environment token for another account when it is not an Amp key.
+        let token = if ctx.api_key.is_some() {
+            access_token_from_context(ctx)
+        } else {
+            access_token_from_environment()
+        }
+        .ok_or(ProviderError::AuthRequired)?;
 
         let client = crate::core::credentialed_http_client_builder()
+            .redirect(reqwest::redirect::Policy::none())
             .timeout(std::time::Duration::from_secs(30))
             .build()
-            .map_err(|e| ProviderError::Other(e.to_string()))?;
+            .map_err(|_| ProviderError::Other("Amp HTTP client unavailable".into()))?;
 
-        // Sourcegraph Cody usage API
         let resp = client
-            .get("https://sourcegraph.com/.api/cody/current-user/usage")
-            .header("Authorization", format!("token {}", token))
+            .post("https://ampcode.com/api/internal?userDisplayBalanceInfo")
+            .bearer_auth(token)
+            .header("Accept", "application/json")
+            .json(&serde_json::json!({"method": "userDisplayBalanceInfo", "params": {}}))
             .send()
             .await?;
 
-        if !resp.status().is_success() {
+        if matches!(resp.status().as_u16(), 401 | 403) {
             return Err(ProviderError::AuthRequired);
         }
-
-        let json: serde_json::Value = resp
-            .json()
-            .await
-            .map_err(|e| ProviderError::Parse(e.to_string()))?;
-
-        self.parse_usage_response(&json)
-    }
-
-    fn parse_usage_response(
-        &self,
-        json: &serde_json::Value,
-    ) -> Result<UsageSnapshot, ProviderError> {
-        // Parse Sourcegraph/Amp usage response
-        let used = json
-            .get("completionsUsed")
-            .or_else(|| json.get("used"))
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0);
-
-        let limit = json
-            .get("completionsLimit")
-            .or_else(|| json.get("limit"))
-            .and_then(|v| v.as_f64())
-            .unwrap_or(500.0);
-
-        let used_percent = if limit > 0.0 {
-            (used / limit) * 100.0
-        } else {
-            0.0
-        };
-
-        let plan = json
-            .get("plan")
-            .or_else(|| json.get("tier"))
-            .and_then(|v| v.as_str())
-            .unwrap_or("Pro");
-
-        let reset_time = json
-            .get("resetAt")
-            .or_else(|| json.get("periodEnd"))
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
-
-        let primary_window = RateWindow::with_details(used_percent, None, None, reset_time);
-        let usage = UsageSnapshot::new(primary_window).with_login_method(plan);
-
-        Ok(usage)
-    }
-
-    /// Probe for Amp installation
-    async fn probe_cli(&self, ctx: &FetchContext) -> Result<UsageSnapshot, ProviderError> {
-        // Check ctx.api_key first
-        let has_api_key = ctx.api_key.as_ref().map(|k| !k.is_empty()).unwrap_or(false);
-
-        let has_env =
-            std::env::var("SRC_ACCESS_TOKEN").is_ok() || std::env::var("AMP_ACCESS_TOKEN").is_ok();
-
-        let has_amp_config = Self::get_amp_config_path()
-            .map(|p| p.join("config.json").exists())
-            .unwrap_or(false);
-
-        let has_cody_config = Self::get_cody_config_path()
-            .map(|p| p.join("config.json").exists())
-            .unwrap_or(false);
-
-        if has_api_key || has_env || has_amp_config || has_cody_config {
-            let usage =
-                UsageSnapshot::new(RateWindow::new(0.0)).with_login_method("Amp (configured)");
-            Ok(usage)
-        } else {
-            Err(ProviderError::NotInstalled(
-                "Amp not configured. Set SRC_ACCESS_TOKEN environment variable or configure Amp."
-                    .to_string(),
-            ))
+        if !resp.status().is_success() {
+            return Err(ProviderError::Other(format!(
+                "Amp API returned HTTP {}",
+                resp.status().as_u16()
+            )));
         }
+        let mut resp = resp;
+        const LIMIT: usize = 1024 * 1024;
+        if resp
+            .content_length()
+            .is_some_and(|size| size > LIMIT as u64)
+        {
+            return Err(ProviderError::Parse(
+                "Amp response size limit exceeded".into(),
+            ));
+        }
+        let mut body = Vec::new();
+        while let Some(chunk) = resp.chunk().await? {
+            if chunk.len() > LIMIT.saturating_sub(body.len()) {
+                return Err(ProviderError::Parse(
+                    "Amp response size limit exceeded".into(),
+                ));
+            }
+            body.extend_from_slice(&chunk);
+        }
+        let json: serde_json::Value = serde_json::from_slice(&body)
+            .map_err(|_| ProviderError::Parse("Invalid Amp balance response".into()))?;
+        usage_from_balance_response(&json, chrono::Utc::now())
     }
 }
 
 fn access_token_from_context(ctx: &FetchContext) -> Option<String> {
     ctx.api_key
         .as_deref()
-        .filter(|api_key| !api_key.is_empty())
+        .filter(|api_key| is_amp_issuer_token(api_key))
         .map(str::to_string)
 }
 
 fn access_token_from_environment() -> Option<String> {
-    std::env::var("SRC_ACCESS_TOKEN")
+    std::env::var("AMP_API_KEY")
         .ok()
-        .or_else(|| std::env::var("AMP_ACCESS_TOKEN").ok())
+        .filter(|token| is_amp_issuer_token(token))
 }
 
-async fn read_access_token_config(config_dir: Option<PathBuf>) -> Option<String> {
-    let config_file = config_dir?.join("config.json");
-    if !config_file.exists() {
-        return None;
-    }
+fn is_amp_issuer_token(token: &str) -> bool {
+    token.starts_with("sgamp_")
+        && token.len() > "sgamp_".len()
+        && !token.chars().any(char::is_whitespace)
+}
 
-    let content = tokio::fs::read_to_string(config_file).await.ok()?;
-    let json = serde_json::from_str::<serde_json::Value>(&content).ok()?;
-    json.get("accessToken")
-        .and_then(|v| v.as_str())
-        .map(str::to_string)
+fn usage_from_balance_response(
+    json: &serde_json::Value,
+    now: chrono::DateTime<chrono::Utc>,
+) -> Result<UsageSnapshot, ProviderError> {
+    if json.get("ok").and_then(serde_json::Value::as_bool) != Some(true) {
+        if json
+            .pointer("/error/code")
+            .and_then(serde_json::Value::as_str)
+            == Some("auth-required")
+        {
+            return Err(ProviderError::AuthRequired);
+        }
+        return Err(ProviderError::Other("Amp balance request failed".into()));
+    }
+    let text = json
+        .pointer("/result/displayText")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| ProviderError::Parse("Missing Amp usage display text".into()))?;
+    usage_snapshot_from_amp_display_text(text, now)
+        .ok_or_else(|| ProviderError::Parse("Unrecognized Amp usage display text".into()))
+}
+
+fn api_fetch_result(usage: UsageSnapshot) -> ProviderFetchResult {
+    ProviderFetchResult::new(usage, "api")
 }
 
 impl Default for AmpProvider {
@@ -228,27 +163,17 @@ impl Provider for AmpProvider {
         tracing::debug!("Fetching Amp usage");
 
         match ctx.source_mode {
-            SourceMode::Auto => {
-                if let Ok(usage) = self.fetch_via_web(ctx).await {
-                    return Ok(ProviderFetchResult::new(usage, "web"));
-                }
-                let usage = self.probe_cli(ctx).await?;
-                Ok(ProviderFetchResult::new(usage, "cli"))
-            }
-            SourceMode::Web => {
+            SourceMode::Auto | SourceMode::Web => {
                 let usage = self.fetch_via_web(ctx).await?;
-                Ok(ProviderFetchResult::new(usage, "web"))
+                Ok(api_fetch_result(usage))
             }
-            SourceMode::Cli => {
-                let usage = self.probe_cli(ctx).await?;
-                Ok(ProviderFetchResult::new(usage, "cli"))
-            }
+            SourceMode::Cli => Err(ProviderError::UnsupportedSource(SourceMode::Cli)),
             SourceMode::OAuth => Err(ProviderError::UnsupportedSource(SourceMode::OAuth)),
         }
     }
 
     fn available_sources(&self) -> Vec<SourceMode> {
-        vec![SourceMode::Auto, SourceMode::Web, SourceMode::Cli]
+        vec![SourceMode::Auto, SourceMode::Web]
     }
 
     fn supports_web(&self) -> bool {
@@ -256,7 +181,7 @@ impl Provider for AmpProvider {
     }
 
     fn supports_cli(&self) -> bool {
-        true
+        false
     }
 }
 
@@ -273,15 +198,14 @@ pub struct AmpSubscriptionUsage {
     pub reset_description: String,
 }
 
-/// Parse Amp Free percentage lines from CLI/display text (upstream 0.42.1+ shape).
+/// Parse Amp Free percentage lines from Amp display text (upstream 0.42.1+ shape).
 ///
 /// Matches lines like:
 /// - `Amp Free: 72% remaining today`
 /// - `Amp Free: 72% remaining (resets daily)`
 ///
-/// Returns **used** percent (100 - remaining). Not wired into the live fetch path:
-/// Win Amp currently uses the Sourcegraph Cody API schema, which does not emit this text.
-/// Kept as a pure helper for future CLI/text integration and parity tests.
+/// Returns **used** percent (100 - remaining). The live Amp balance RPC
+/// supplies this text; the helper also supports offline fixture tests.
 pub fn parse_amp_free_percent_remaining(text: &str) -> Option<f64> {
     for line in text.lines() {
         let line = line.trim();
@@ -304,11 +228,10 @@ pub fn parse_amp_free_percent_remaining(text: &str) -> Option<f64> {
             continue;
         }
         let remaining: f64 = number_part.replace(',', "").parse().ok()?;
-        if !remaining.is_finite() {
+        if !remaining.is_finite() || !(0.0..=100.0).contains(&remaining) {
             continue;
         }
-        let clamped = remaining.clamp(0.0, 100.0);
-        return Some(100.0 - clamped);
+        return Some(100.0 - remaining);
     }
     None
 }
@@ -356,6 +279,9 @@ pub fn parse_amp_subscription_usage(
         }
         let other_remaining = parse_amp_number(caps.get(2)?.as_str())?;
         let orb_remaining = parse_amp_number(caps.get(3)?.as_str())?;
+        if !(0.0..=100.0).contains(&other_remaining) || !(0.0..=100.0).contains(&orb_remaining) {
+            continue;
+        }
         let renewal_value: i64 = caps.get(4)?.as_str().replace(',', "").parse().ok()?;
         if renewal_value < 0 {
             continue;
@@ -378,8 +304,8 @@ pub fn parse_amp_subscription_usage(
         };
         return Some(AmpSubscriptionUsage {
             plan: plan.to_string(),
-            other_used_percent: 100.0 - other_remaining.clamp(0.0, 100.0),
-            orb_used_percent: 100.0 - orb_remaining.clamp(0.0, 100.0),
+            other_used_percent: 100.0 - other_remaining,
+            orb_used_percent: 100.0 - orb_remaining,
             resets_at,
             reset_description,
         });
@@ -620,5 +546,83 @@ mod current_subscription_tests {
             Utc.with_ymd_and_hms(2026, 9, 18, 12, 0, 0).unwrap()
         );
         assert_eq!(sub.reset_description, "renews in 1 month");
+    }
+}
+
+#[cfg(test)]
+mod source_truth_tests {
+    use super::*;
+    use chrono::{TimeZone, Utc};
+
+    #[tokio::test]
+    async fn cli_configuration_does_not_report_zero_usage() {
+        let ctx = FetchContext {
+            source_mode: SourceMode::Cli,
+            api_key: Some("sgamp_synthetic_key".into()),
+            ..FetchContext::default()
+        };
+        assert!(matches!(
+            AmpProvider::new().fetch_usage(&ctx).await,
+            Err(ProviderError::UnsupportedSource(SourceMode::Cli))
+        ));
+    }
+
+    #[tokio::test]
+    async fn selected_cookie_does_not_fall_back_to_a_different_api_key() {
+        let ctx = FetchContext {
+            source_mode: SourceMode::Web,
+            manual_cookie_header: Some("session=synthetic".into()),
+            api_key: Some("sgamp_synthetic_key".into()),
+            ..FetchContext::default()
+        };
+        assert!(matches!(
+            AmpProvider::new().fetch_usage(&ctx).await,
+            Err(ProviderError::UnsupportedSource(SourceMode::Web))
+        ));
+    }
+
+    #[test]
+    fn cody_token_cannot_be_sent_to_amp() {
+        let ctx = FetchContext {
+            api_key: Some("sgp_synthetic_cody_token".into()),
+            ..FetchContext::default()
+        };
+        assert!(access_token_from_context(&ctx).is_none());
+    }
+
+    #[test]
+    fn amp_balance_requires_real_display_text() {
+        let now = Utc.with_ymd_and_hms(2026, 9, 1, 12, 0, 0).unwrap();
+        assert!(matches!(
+            usage_from_balance_response(
+                &serde_json::json!({"ok": false, "error": {"code": "auth-required"}}),
+                now
+            ),
+            Err(ProviderError::AuthRequired)
+        ));
+        for body in [
+            serde_json::json!({"ok": true, "result": {}}),
+            serde_json::json!({"ok": false, "result": {"displayText": "Amp Free: 100% remaining today"}}),
+            serde_json::json!({"ok": true, "result": {"displayText": "unknown"}}),
+        ] {
+            assert!(usage_from_balance_response(&body, now).is_err());
+        }
+        let valid = serde_json::json!({"ok": true, "result": {"displayText": "Amp Free: 72% remaining today"}});
+        let usage = usage_from_balance_response(&valid, now).unwrap();
+        assert_eq!(usage.primary.used_percent, 28.0);
+        assert_eq!(api_fetch_result(usage).source_label, "api");
+    }
+
+    #[test]
+    fn impossible_reported_percentages_are_not_clamped_to_fake_limits() {
+        assert_eq!(
+            parse_amp_free_percent_remaining("Amp Free: 120% remaining today"),
+            None
+        );
+        let now = Utc.with_ymd_and_hms(2026, 9, 1, 12, 0, 0).unwrap();
+        assert!(parse_amp_subscription_usage(
+            "Subscription Megawatt: 120% other usage and 80% orb usage remaining - resets upon renewal in 12 days",
+            now
+        ).is_none());
     }
 }
