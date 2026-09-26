@@ -38,7 +38,7 @@
     "active": true,
     "publisher": "Quotalune",
     "resources": {
-      "../../../assets/brand/icons/quotaarc-icon-128.png": "quotalis-icon-128.png"
+      "../../../assets/brand/icons/quotaarc-icon-128.png": "quotalune-icon-128.png"
     },
     "targets": [
       "nsis",
@@ -83,5 +83,5 @@
       }
     }
   },
-  "mainBinaryName": "Quotalis"
+  "mainBinaryName": "Quotalune"
 }

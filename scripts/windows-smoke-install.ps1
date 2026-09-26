@@ -203,35 +203,35 @@ if ([IO.Path]::GetExtension($installer).ToLowerInvariant() -ne ".exe") {
     throw "Expected an Inno Setup .exe installer, got: $installer"
 }
 $installerName = Split-Path $installer -Leaf
-if ($installerName -notmatch '^Quotalis-[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?-Setup\.exe$') {
-    throw "Expected a canonical Quotalis Inno Setup release asset, got: $installerName"
+if ($installerName -notmatch '^Quotalune-[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?-Setup\.exe$') {
+    throw "Expected a canonical Quotalune Inno Setup release asset, got: $installerName"
 }
 
 $canonicalUninstallKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\QuotaArcDesktop_is1"
 $canonicalAumidKey = "HKCU:\Software\Classes\AppUserModelId\app.quotaarc.desktop"
 $startMenu = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs"
 $shortcutCandidates = @(
-    (Join-Path $startMenu "Quotalis.lnk"),
+    (Join-Path $startMenu "Quotalune.lnk"),
     (Join-Path $startMenu "Quotalis\Quotalis.lnk")
 )
 
 if (Test-Path -LiteralPath $canonicalUninstallKey) {
-    throw "Refusing to run while the canonical Quotalis/QuotaArc installer identity already exists: $canonicalUninstallKey"
+    throw "Refusing to run while the canonical Quotalune/QuotaArc installer identity already exists: $canonicalUninstallKey"
 }
 if (Test-Path -LiteralPath $canonicalAumidKey) {
-    throw "Refusing to run while the canonical Quotalis notification identity already exists: $canonicalAumidKey"
+    throw "Refusing to run while the canonical Quotalune notification identity already exists: $canonicalAumidKey"
 }
 $existingShortcut = $shortcutCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
 if ($existingShortcut) {
-    throw "Refusing to replace an existing Quotalis Start Menu shortcut: $existingShortcut"
+    throw "Refusing to replace an existing Quotalune Start Menu shortcut: $existingShortcut"
 }
 
 $runningProductProcesses = @(
-    Get-Process -Name @("Quotalis", "QuotalisDev", "QuotaArc", "QuotaArcDev") -ErrorAction SilentlyContinue
+    Get-Process -Name @("Quotalune", "Quotalis", "QuotalisDev", "QuotaArc", "QuotaArcDev") -ErrorAction SilentlyContinue
 )
 if ($runningProductProcesses.Count -gt 0) {
     $runningSummary = ($runningProductProcesses | ForEach-Object { "$($_.ProcessName)#$($_.Id)" }) -join ", "
-    throw "Refusing to stop or install over a running Quotalis process: $runningSummary"
+    throw "Refusing to stop or install over a running Quotalune process: $runningSummary"
 }
 
 Write-Step "installer: $installer"
@@ -256,7 +256,7 @@ $installArgs = @(
     "/DIR=`"$installDirPath`"",
     "/LOG=`"$installLog`""
 )
-$desktopExe = Join-Path $installDirPath "Quotalis.exe"
+$desktopExe = Join-Path $installDirPath "Quotalune.exe"
 $cliExe = Join-Path $installDirPath "quotalis-cli.exe"
 $legacyDesktopExe = Join-Path $installDirPath "quotalis-desktop.exe"
 $icon = Join-Path $installDirPath "icon.ico"
@@ -278,10 +278,10 @@ $acquireOwnership = {
     $resolvedInstalledDir = Get-NormalizedPath -Path (Resolve-Path -LiteralPath $installDirPath).ProviderPath -Label "resolved InstallDir"
 
     if (-not (Test-Path -LiteralPath $canonicalUninstallKey)) {
-        throw "Missing per-user Quotalis uninstall registry entry: $canonicalUninstallKey"
+        throw "Missing per-user Quotalune uninstall registry entry: $canonicalUninstallKey"
     }
     $entry = Get-ItemProperty -LiteralPath $canonicalUninstallKey
-    if ($entry.DisplayName -ne "Quotalis") {
+    if ($entry.DisplayName -ne "Quotalune") {
         throw "Unexpected uninstall DisplayName: $($entry.DisplayName)"
     }
     if ($entry.InstallLocation) {
@@ -323,7 +323,7 @@ $verifyAction = {
     Assert-Path -Path $icon -Label "icon"
 
     $desktopHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $desktopExe).Hash.ToLowerInvariant()
-    Write-Step "installed Quotalis.exe sha256: $desktopHash"
+    Write-Step "installed Quotalune.exe sha256: $desktopHash"
     $cliHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $cliExe).Hash.ToLowerInvariant()
     Write-Step "installed quotalis-cli.exe sha256: $cliHash"
     $legacyDesktopHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $legacyDesktopExe).Hash.ToLowerInvariant()

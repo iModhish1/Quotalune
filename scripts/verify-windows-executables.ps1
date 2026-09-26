@@ -58,10 +58,10 @@ $cliHash = Get-Sha256 $cli
 $legacyDesktopHash = Get-Sha256 $legacyDesktop
 
 if ($desktopHash -eq $cliHash) {
-    throw "Quotalis.exe and quotalis-cli.exe must not be byte-identical; the CLI must be the console binary."
+    throw "Quotalune.exe and quotalis-cli.exe must not be byte-identical; the CLI must be the console binary."
 }
 if ($desktopHash -ne $legacyDesktopHash) {
-    throw "Quotalis.exe and quotalis-desktop.exe should be identical desktop binaries."
+    throw "Quotalune.exe and quotalis-desktop.exe should be identical desktop binaries."
 }
 
 $desktopSubsystem = Get-PeSubsystem $desktop
@@ -69,7 +69,7 @@ $cliSubsystem = Get-PeSubsystem $cli
 $legacyDesktopSubsystem = Get-PeSubsystem $legacyDesktop
 
 if ($desktopSubsystem -ne 2) {
-    throw "Quotalis.exe must be a Windows GUI-subsystem desktop binary; got subsystem $desktopSubsystem."
+    throw "Quotalune.exe must be a Windows GUI-subsystem desktop binary; got subsystem $desktopSubsystem."
 }
 if ($legacyDesktopSubsystem -ne 2) {
     throw "quotalis-desktop.exe must be a Windows GUI-subsystem desktop binary; got subsystem $legacyDesktopSubsystem."

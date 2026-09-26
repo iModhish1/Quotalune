@@ -367,6 +367,12 @@ fn is_stable_windows_binary_name(path: &Path) -> bool {
         .and_then(|name| name.to_str())
         .is_some_and(|name| {
             [
+                // Current brand.
+                "Quotalune.exe",
+                // Retained so an in-place update launched from a previous
+                // Quotalis-branded install still resolves its own install
+                // directory and uninstaller. Do not remove without a
+                // migration for already-installed Quotalis builds.
                 "Quotalis.exe",
                 "quotalis-desktop.exe",
                 "QuotaArc.exe",
@@ -1523,6 +1529,7 @@ mod tests {
     #[test]
     fn windows_install_evidence_path_and_uninstaller_parsing_are_strict() {
         for name in [
+            "Quotalune.exe",
             "Quotalis.exe",
             "quotalis-desktop.exe",
             "QuotaArc.exe",
@@ -1579,19 +1586,19 @@ mod tests {
     #[cfg(target_os = "windows")]
     #[test]
     fn windows_apply_script_waits_for_current_process_before_installing() {
-        let path = PathBuf::from(r"C:\Temp\Quotalis-1.2.3-Setup.exe");
-        let relaunch_path = PathBuf::from(r"C:\Program Files\Quotalis\Quotalis.exe");
+        let path = PathBuf::from(r"C:\Temp\Quotalune-1.2.3-Setup.exe");
+        let relaunch_path = PathBuf::from(r"C:\Program Files\Quotalune\Quotalune.exe");
         let plan = windows_installer_launch_plan(&path).expect("launch plan");
 
         let script = windows_installer_apply_script(&plan, 12345, &relaunch_path);
 
         assert!(script.contains("Wait-Process -Id 12345"));
-        assert!(script.contains(r"Start-Process -FilePath 'C:\Temp\Quotalis-1.2.3-Setup.exe'"));
+        assert!(script.contains(r"Start-Process -FilePath 'C:\Temp\Quotalune-1.2.3-Setup.exe'"));
         assert!(script.contains(
             "-ArgumentList @('/SILENT','/SUPPRESSMSGBOXES','/CLOSEAPPLICATIONS','/NORESTART')"
         ));
         assert!(script.contains("-PassThru -Wait"));
-        assert!(script.contains(r"Start-Process -FilePath 'C:\Program Files\Quotalis\Quotalis.exe' -ArgumentList @('menubar')"));
+        assert!(script.contains(r"Start-Process -FilePath 'C:\Program Files\Quotalune\Quotalune.exe' -ArgumentList @('menubar')"));
     }
 
     #[cfg(target_os = "windows")]

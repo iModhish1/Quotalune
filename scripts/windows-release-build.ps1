@@ -53,8 +53,8 @@
 
 param(
     [string]$Ref = "HEAD",
-    [string]$RepoUrl = "https://github.com/iModhish1/Quotalis.git",
-    [string]$WorkRoot = "C:\code\Quotalis-release",
+    [string]$RepoUrl = "https://github.com/iModhish1/Quotalune.git",
+    [string]$WorkRoot = "C:\code\Quotalune-release",
     [switch]$RefreshInstallerDependencies,
     [switch]$WarmCacheOnly,
     [switch]$SmokeInstall,
@@ -124,7 +124,7 @@ foreach ($nodeRoot in @($env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:LOCALA
 }
 if ($env:APPDATA) { Add-PathIfPresent (Join-Path $env:APPDATA 'npm') }
 if ($env:LOCALAPPDATA) { Add-PathIfPresent (Join-Path $env:LOCALAPPDATA 'pnpm') }
-if ($env:LOCALAPPDATA) { Add-PathIfPresent (Join-Path $env:LOCALAPPDATA 'Quotalis\release-toolchain\pnpm') }
+    if ($env:LOCALAPPDATA) { Add-PathIfPresent (Join-Path $env:LOCALAPPDATA 'Quotalune\release-toolchain\pnpm') }
 
 function Require-Command {
     param([string]$Name)
@@ -333,7 +333,7 @@ try {
     }
     $env:PNPM_HOME = if ($env:PNPM_HOME) { $env:PNPM_HOME } else { Join-Path $CacheDir "pnpm-home" }
 
-    Write-Host "Building Quotalis $version from $commit"
+    Write-Host "Building Quotalune $version from $commit"
     Write-Host "Source: $SourceDir"
     Write-Host "Cargo target cache: $DesktopCargoTargetDir"
     Write-Host "pnpm store cache: $PnpmStoreDir"
@@ -387,7 +387,7 @@ try {
     } else {
         Join-Path $DesktopCargoTargetDir "release"
     }
-    $sourceExe = Join-Path $releaseBinDir "Quotalis.exe"
+    $sourceExe = Join-Path $releaseBinDir "Quotalune.exe"
     if ($null -eq $process.ExitCode) {
         if (Test-Path $sourceExe) {
             Write-Host "Warning: Tauri build did not report an exit code, but produced $sourceExe."
@@ -417,7 +417,7 @@ try {
     }
 
     # No post-build rename hack: the Tauri build already produces the
-    # correctly-named Quotalis.exe directly; package/verify that file under
+    # correctly-named Quotalune.exe directly; package/verify that file under
     # its own name rather than copying it to a legacy alias first.
     $desktopExe = $sourceExe
     $legacyDesktopExe = Join-Path $releaseBinDir "quotalis-desktop.exe"
@@ -431,7 +431,7 @@ try {
     # -- but verify-windows-executables.ps1 expects a -LegacyDesktopExe arg).
     Copy-Item $sourceExe $legacyDesktopExe -Force
     if (Get-ObjdumpImportsWebView2Loader -ExePath $desktopExe) {
-        throw "Quotalis.exe imports WebView2Loader.dll, but release builds are expected to statically link the loader."
+        throw "Quotalune.exe imports WebView2Loader.dll, but release builds are expected to statically link the loader."
     }
 
     $env:CARGO_TARGET_DIR = $CliCargoTargetDir
@@ -467,7 +467,7 @@ try {
         -CheckCliStdout
 
     if ($WarmCacheOnly) {
-        $warmExe = Join-Path $AssetsDir "Quotalis-$version-warm.exe"
+        $warmExe = Join-Path $AssetsDir "Quotalune-$version-warm.exe"
         Copy-Item $desktopExe $warmExe -Force
         Write-Host ""
         Write-Host "Warm build artifact: $warmExe"
@@ -502,17 +502,17 @@ try {
             "/DVCRedistPath=$vcRedistPath",
             "/DWebView2BootstrapperPath=$webView2BootstrapperPath",
             "/DOutputDir=$installerOut",
-            "/DOutputBaseFilename=Quotalis-$version-Setup",
+            "/DOutputBaseFilename=Quotalune-$version-Setup",
             "quotalis.iss"
         )
     } finally {
         Pop-Location
     }
 
-    $installer = Join-Path $installerOut "Quotalis-$version-Setup.exe"
-    $portableZip = Join-Path $AssetsDir "Quotalis-$version-portable.zip"
-    $installerAsset = Join-Path $AssetsDir "Quotalis-$version-Setup.exe"
-    $cliZip = Join-Path $AssetsDir "QuotalisCLI-v$version-windows-x64.zip"
+    $installer = Join-Path $installerOut "Quotalune-$version-Setup.exe"
+    $portableZip = Join-Path $AssetsDir "Quotalune-$version-portable.zip"
+    $installerAsset = Join-Path $AssetsDir "Quotalune-$version-Setup.exe"
+    $cliZip = Join-Path $AssetsDir "QuotaluneCLI-v$version-windows-x64.zip"
 
     foreach ($path in @($desktopExe, $releaseExe, $installer)) {
         if (-not (Test-Path $path)) {
@@ -556,7 +556,7 @@ try {
 
     Write-Host ""
     Write-Host "Release assets:"
-    Get-ChildItem $AssetsDir -Filter "Quotalis*" |
+    Get-ChildItem $AssetsDir -Filter "Quotalune*" |
         Sort-Object Name |
         Select-Object Name, Length, LastWriteTime |
         Format-Table -AutoSize

@@ -4,8 +4,8 @@ Set-StrictMode -Version Latest
 function Get-QuotalisPortableFiles {
     param([Parameter(Mandatory)][string]$DesktopExe, [Parameter(Mandatory)][string]$RepoRoot)
     return [ordered]@{
-        'Quotalis.exe' = $DesktopExe
-        'quotalis-icon-128.png' = Join-Path $RepoRoot 'assets/brand/icons/quotaarc-icon-128.png'
+        'Quotalune.exe' = $DesktopExe
+        'quotalune-icon-128.png' = Join-Path $RepoRoot 'assets/brand/icons/quotaarc-icon-128.png'
         'icon.ico' = Join-Path $RepoRoot 'rust/icons/icon.ico'
         'LICENSE' = Join-Path $RepoRoot 'LICENSE'
         'NOTICE' = Join-Path $RepoRoot 'NOTICE'

@@ -1,15 +1,20 @@
-//! Single source of truth for Quotalis product identity and filesystem
+//! Single source of truth for Quotalune product identity and filesystem
 //! layout.
 //!
 //! Every place that needs the product's directory name, registry value name,
 //! toast AUMID, or HTTP user agent must go through this module so the product
 //! brand can never drift apart across stores, logs, and integrations.
 //!
-//! ## Public brand vs. legacy Windows identity (Quotalis rebrand, Option A)
+//! ## Public brand vs. legacy Windows identity (Option A)
 //!
-//! The public product is **Quotalis** (see `USER_AGENT`, `INSTALLER_STEM`,
+//! The public product is **Quotalune** (see `USER_AGENT`, `INSTALLER_STEM`,
 //! and Tauri's own `productName`/`mainBinaryName` in `tauri.conf.json`,
-//! which now say Quotalis). The **Windows/filesystem identity below this
+//! which now say Quotalune). The name changed from Quotalis because
+//! "Quotalis" was already in active third-party use (see
+//! `docs/validation/QUOTALUNE_NAME_CLEARANCE_AND_MIGRATION.md`), including a
+//! closely-related quota-monitoring product.
+//!
+//! The **Windows/filesystem identity below this
 //! module's `APP_DIR_NAME`/`REGISTRY_RUN_VALUE`/`TOAST_AUMID` intentionally
 //! still says "QuotaArc"** — this is not an incomplete rebrand, it is a
 //! deliberate decision recorded in
@@ -19,13 +24,19 @@
 //! and prevents Windows from treating an upgrade as installing a second,
 //! unrelated application. None of these three constants are ever rendered to
 //! a user; they are purely internal Windows-integration identifiers. Do not
-//! "fix" them to say Quotalis without first re-reading that document — doing
+//! "fix" them to say Quotalune without first re-reading that document — doing
 //! so would either move a real user's data or require a real data-migration
 //! implementation, neither of which this phase does.
 //!
 //! This is also what separates QuotaArc's on-disk state from a co-installed
 //! Win-CodexBar (`%AppData%\QuotaArc` vs `%AppData%\CodexBar`) -- unrelated
-//! upstream-provenance naming, not part of the Quotalis rebrand.
+//! upstream-provenance naming, not part of the Quotalune rebrand.
+//!
+//! The dev channel intentionally keeps the `Quotalis*` names
+//! (`QuotalisDev.exe`, the `app.quotalis.desktop.dev` AUMID). Those are a
+//! load-bearing Dev/Personal isolation contract enforced by
+//! `app_dir_name_matches_channel` and `channel_launch_is_safe`, not a public
+//! brand surface; the dev build is never shipped.
 //!
 //! Channels: the default build is the Personal/Stable channel. A build with
 //! the `dev-channel` cargo feature (shell crate: `--features dev-channel`)
@@ -92,16 +103,16 @@ pub const TOAST_AUMID: &str = if cfg!(feature = "dev-channel") {
 /// HTTP user agent for update downloads and release metadata checks. Public
 /// brand, not tied to any on-disk/Windows identity -- safe to rename outright
 /// (self-referential outbound header, no external allowlist depends on it).
-pub const USER_AGENT: &str = "Quotalis";
+pub const USER_AGENT: &str = "Quotalune";
 
-/// Current installer artifact stem, e.g. `Quotalis-0.1.0-x64-Setup.exe`.
+/// Current installer artifact stem, e.g. `Quotalune-0.1.0-x64-Setup.exe`.
 /// Public brand -- update-artifact matching (`updater.rs::
 /// is_installer_asset_name`) is suffix-only ("-setup.exe"/".msi") and does
 /// not depend on this stem, so changing it carries no update-detection risk.
 pub const INSTALLER_STEM: &str = if cfg!(feature = "dev-channel") {
     "Quotalis-Dev"
 } else {
-    "Quotalis"
+    "Quotalune"
 };
 
 /// LEGACY_INSTALLER_STEM: the installer stem used by every QuotaArc-branded
@@ -121,7 +132,7 @@ pub const LEGACY_INSTALLER_STEM: &str = if cfg!(feature = "dev-channel") {
 pub const CURRENT_EXE_NAME: &str = if cfg!(feature = "dev-channel") {
     "QuotalisDev.exe"
 } else {
-    "Quotalis.exe"
+    "Quotalune.exe"
 };
 
 /// LEGACY_SECURITY_COMPATIBILITY: the executable basename every QuotaArc-
@@ -153,7 +164,7 @@ pub fn cache_dir() -> Option<PathBuf> {
     dirs::cache_dir().map(|p| p.join(APP_DIR_NAME))
 }
 
-/// Installer file name for a version, e.g. `Quotalis-1.2.3-x64-Setup.exe`.
+/// Installer file name for a version, e.g. `Quotalune-1.2.3-x64-Setup.exe`.
 pub fn installer_file_name(version: &str) -> String {
     format!("{INSTALLER_STEM}-{version}-x64-Setup.exe")
 }
@@ -167,7 +178,7 @@ mod tests {
         let stem = if cfg!(feature = "dev-channel") {
             "Quotalis-Dev"
         } else {
-            "Quotalis"
+            "Quotalune"
         };
         assert_eq!(
             installer_file_name("1.2.3"),
@@ -176,21 +187,27 @@ mod tests {
     }
 
     /// The public brand (installer stem, user agent, current exe name) is
-    /// Quotalis; the legacy Windows/filesystem identity (data dir, registry
+    /// Quotalune; the legacy Windows/filesystem identity (data dir, registry
     /// run value, toast AUMID) intentionally still says QuotaArc -- Option A
     /// from docs/validation/QUOTALIS_WINDOWS_IDENTITY_MIGRATION.md. This
     /// test pins both halves so neither drifts silently.
+    ///
+    /// The stable channel uses the Quotalune brand. The dev channel keeps the
+    /// Quotalis* names deliberately: `QuotalisDev.exe` and the
+    /// `app.quotalis.desktop.dev` AUMID are a load-bearing Dev/Personal
+    /// isolation contract asserted by `app_dir_name_matches_channel` and
+    /// `channel_launch_is_safe`, not a public brand surface.
     #[test]
-    fn public_brand_is_quotalis_legacy_windows_identity_is_quotaarc() {
-        assert_eq!(USER_AGENT, "Quotalis");
+    fn public_brand_is_quotalune_legacy_windows_identity_is_quotaarc() {
+        assert_eq!(USER_AGENT, "Quotalune");
         if cfg!(feature = "dev-channel") {
             assert_eq!(INSTALLER_STEM, "Quotalis-Dev");
             assert_eq!(CURRENT_EXE_NAME, "QuotalisDev.exe");
             assert_eq!(LEGACY_EXE_NAME, "QuotaArcDev.exe");
             assert_eq!(LEGACY_INSTALLER_STEM, "QuotaArc-Dev");
         } else {
-            assert_eq!(INSTALLER_STEM, "Quotalis");
-            assert_eq!(CURRENT_EXE_NAME, "Quotalis.exe");
+            assert_eq!(INSTALLER_STEM, "Quotalune");
+            assert_eq!(CURRENT_EXE_NAME, "Quotalune.exe");
             assert_eq!(LEGACY_EXE_NAME, "QuotaArc.exe");
             assert_eq!(LEGACY_INSTALLER_STEM, "QuotaArc");
         }

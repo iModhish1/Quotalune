@@ -1975,8 +1975,8 @@ mod tests {
     #[test]
     fn protocol_command_quotes_executable_and_activation_uri() {
         assert_eq!(
-            protocol_launch_command(Path::new(r"C:\Program Files\Quotalis\Quotalis.exe")),
-            r#""C:\Program Files\Quotalis\Quotalis.exe" "%1""#
+            protocol_launch_command(Path::new(r"C:\Program Files\Quotalune\Quotalune.exe")),
+            r#""C:\Program Files\Quotalune\Quotalune.exe" "%1""#
         );
     }
     use crate::core::{PaceStage, RateWindow, UsagePace};

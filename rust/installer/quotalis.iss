@@ -9,7 +9,7 @@
   #define OutputDir "..\\target\\installer"
 #endif
 #ifndef OutputBaseFilename
-  #define OutputBaseFilename "Quotalis-" + AppVersion + "-x64-Setup"
+  #define OutputBaseFilename "Quotalune-" + AppVersion + "-x64-Setup"
 #endif
 #ifndef VCRedistPath
   #define VCRedistPath "..\\target\\installer-deps\\vc_redist.x64.exe"
@@ -30,10 +30,10 @@ AppName={#MyAppName}
 AppVersion={#AppVersion}
 AppVerName={#MyAppName} {#AppVersion}
 AppPublisher=Quotalune
-AppPublisherURL=https://github.com/iModhish1/Quotalis
-AppSupportURL=https://github.com/iModhish1/Quotalis/issues
-AppUpdatesURL=https://github.com/iModhish1/Quotalis/releases
-DefaultDirName={localappdata}\Programs\Quotalis
+AppPublisherURL=https://github.com/iModhish1/Quotalune
+AppSupportURL=https://github.com/iModhish1/Quotalune/issues
+AppUpdatesURL=https://github.com/iModhish1/Quotalune/releases
+DefaultDirName={localappdata}\Programs\Quotalune
 DefaultGroupName=Quotalune
 DisableProgramGroupPage=yes
 DisableDirPage=auto
@@ -46,7 +46,7 @@ SolidCompression=yes
 OutputDir={#OutputDir}
 OutputBaseFilename={#OutputBaseFilename}
 SetupIconFile=..\icons\icon.ico
-UninstallDisplayIcon={app}\Quotalis.exe
+UninstallDisplayIcon={app}\Quotalune.exe
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 
@@ -54,11 +54,11 @@ ArchitecturesInstallIn64BitMode=x64compatible
 Name: "desktopicon"; Description: "Create a desktop shortcut"; Flags: unchecked
 
 [Files]
-Source: "{#TargetBinDir}\Quotalis.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TargetBinDir}\Quotalune.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TargetBinDir}\quotalis-cli.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TargetBinDir}\quotalis-desktop.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\icons\icon.ico"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\..\assets\brand\icons\quotaarc-icon-128.png"; DestDir: "{app}"; DestName: "quotalis-icon-128.png"; Flags: ignoreversion
+Source: "..\..\assets\brand\icons\quotaarc-icon-128.png"; DestDir: "{app}"; DestName: "quotalune-icon-128.png"; Flags: ignoreversion
 Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\NOTICE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
@@ -79,8 +79,8 @@ Source: "{#WebView2BootstrapperPath}"; Flags: dontcopy
 ; app.quotaarc.desktop, breaking the "Start Menu pin survives
 ; automatically" guarantee Option A depends on, even though the app
 ; itself was registering the correct AUMID at runtime the whole time.
-Name: "{autoprograms}\Quotalune"; Filename: "{app}\Quotalis.exe"; Parameters: "menubar"; WorkingDir: "{app}"; IconFilename: "{app}\icon.ico"; AppUserModelID: "app.quotaarc.desktop"
-Name: "{autodesktop}\Quotalune"; Filename: "{app}\Quotalis.exe"; Parameters: "menubar"; WorkingDir: "{app}"; Tasks: desktopicon; IconFilename: "{app}\icon.ico"; AppUserModelID: "app.quotaarc.desktop"
+Name: "{autoprograms}\Quotalune"; Filename: "{app}\Quotalune.exe"; Parameters: "menubar"; WorkingDir: "{app}"; IconFilename: "{app}\icon.ico"; AppUserModelID: "app.quotaarc.desktop"
+Name: "{autodesktop}\Quotalune"; Filename: "{app}\Quotalune.exe"; Parameters: "menubar"; WorkingDir: "{app}"; Tasks: desktopicon; IconFilename: "{app}\icon.ico"; AppUserModelID: "app.quotaarc.desktop"
 
 [Registry]
 ; Give this installer the same stable Windows notification identity as the
@@ -89,16 +89,16 @@ Name: "{autodesktop}\Quotalune"; Filename: "{app}\Quotalis.exe"; Parameters: "me
 ; DisplayName shown in Windows notification settings is the current brand.
 Root: HKCU; Subkey: "Software\Classes\AppUserModelId\app.quotaarc.desktop"; ValueType: string; ValueName: "DisplayName"; ValueData: "Quotalune"; Flags: uninsdeletekey
 ; Toast identity uses the packaged raster artwork, separate from shortcut ICOs.
-Root: HKCU; Subkey: "Software\Classes\AppUserModelId\app.quotaarc.desktop"; ValueType: string; ValueName: "IconUri"; ValueData: "{app}\quotalis-icon-128.png"
+Root: HKCU; Subkey: "Software\Classes\AppUserModelId\app.quotaarc.desktop"; ValueType: string; ValueName: "IconUri"; ValueData: "{app}\quotalune-icon-128.png"
 Root: HKCU; Subkey: "Software\Classes\AppUserModelId\app.quotaarc.desktop"; ValueType: string; ValueName: "IconBackgroundColor"; ValueData: "FF10141C"
 
 [Run]
 ; Interactive installs: optional checkbox on the finish page.
-Filename: "{app}\Quotalis.exe"; Parameters: "menubar"; Description: "Launch Quotalune"; Flags: nowait postinstall skipifsilent; Check: CanLaunchQuotalis
+Filename: "{app}\Quotalune.exe"; Parameters: "menubar"; Description: "Launch Quotalune"; Flags: nowait postinstall skipifsilent; Check: CanLaunchQuotalis
 ; Silent upgrades (winget / in-app updater): always relaunch so the tray icon
 ; returns after CloseApplications kills the previous process. Single-instance
 ; handles a second launch from the updater helper if both fire.
-Filename: "{app}\Quotalis.exe"; Parameters: "menubar"; Flags: nowait postinstall skipifnotsilent; Check: CanLaunchQuotalis
+Filename: "{app}\Quotalune.exe"; Parameters: "menubar"; Flags: nowait postinstall skipifnotsilent; Check: CanLaunchQuotalis
 
 [Code]
 var

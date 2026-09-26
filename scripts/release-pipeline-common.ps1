@@ -59,12 +59,12 @@ function Get-RequiredReleaseAssets {
     param([Parameter(Mandatory)][string]$Version)
 
     return @(
-        "Quotalis-$Version-Setup.exe",
-        "Quotalis-$Version-Setup.exe.sha256",
-        "Quotalis-$Version-portable.zip",
-        "Quotalis-$Version-portable.zip.sha256",
-        "QuotalisCLI-v$Version-windows-x64.zip",
-        "QuotalisCLI-v$Version-windows-x64.zip.sha256"
+        "Quotalune-$Version-Setup.exe",
+        "Quotalune-$Version-Setup.exe.sha256",
+        "Quotalune-$Version-portable.zip",
+        "Quotalune-$Version-portable.zip.sha256",
+        "QuotaluneCLI-v$Version-windows-x64.zip",
+        "QuotaluneCLI-v$Version-windows-x64.zip.sha256"
     )
 }
 
@@ -118,13 +118,13 @@ function ConvertTo-JsonString {
 function Assert-QuotalisGitHubOwner {
     param([Parameter(Mandatory)][AllowEmptyString()][string]$Login)
     if ($Login -ine 'iModhish1') {
-        throw 'Authenticated GitHub account is not the confirmed Quotalis owner.'
+        throw 'Authenticated GitHub account is not the confirmed Quotalune owner.'
     }
 }
 
 function Assert-QuotalisReleaseOrigin {
     param([Parameter(Mandatory)][AllowEmptyString()][string]$Origin)
-    if ([string]::IsNullOrWhiteSpace($Origin) -or (Normalize-GitHubRepository $Origin) -ne 'imodhish1/quotalis') {
-        throw 'Release checkout origin is not iModhish1/Quotalis; existing checkout is preserved.'
+    if ([string]::IsNullOrWhiteSpace($Origin) -or (Normalize-GitHubRepository $Origin) -ne 'imodhish1/quotalune') {
+        throw 'Release checkout origin is not iModhish1/Quotalune; existing checkout is preserved.'
     }
 }

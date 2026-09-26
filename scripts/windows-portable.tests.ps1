@@ -9,10 +9,10 @@ function Assert-Throws {
     if (-not $failed) { throw "Expected rejection: $Label" }
 }
 
-$fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) ('quotalis-portable-test-' + [guid]::NewGuid().ToString('N'))
+$fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) ('quotalune-portable-test-' + [guid]::NewGuid().ToString('N'))
 [void][IO.Directory]::CreateDirectory($fixtureRoot)
 try {
-    $desktop = Join-Path $fixtureRoot 'Quotalis.exe'
+    $desktop = Join-Path $fixtureRoot 'Quotalune.exe'
     $files = Get-QuotalisPortableFiles -DesktopExe $desktop -RepoRoot $fixtureRoot
     foreach ($licenseName in @(
         'licenses/option-ext-0.2.0-MPL-2.0.txt',
@@ -34,15 +34,15 @@ try {
     if ((Get-FileHash -LiteralPath $destination).Hash -cne $originalHash) { throw 'Existing archive changed' }
 
     $zip = [IO.Compression.ZipFile]::Open($destination, [IO.Compression.ZipArchiveMode]::Update)
-    try { $zip.GetEntry('quotalis-icon-128.png').Delete() } finally { $zip.Dispose() }
+    try { $zip.GetEntry('quotalune-icon-128.png').Delete() } finally { $zip.Dispose() }
     Assert-Throws { Assert-QuotalisPortableArchive -ArchivePath $destination -DesktopExe $desktop -RepoRoot $fixtureRoot } 'missing notification artwork'
 
     $missingDestination = Join-Path $fixtureRoot 'missing.zip'
-    Remove-Item -LiteralPath $files['quotalis-icon-128.png']
+    Remove-Item -LiteralPath $files['quotalune-icon-128.png']
     Assert-Throws { New-QuotalisPortableArchive -Destination $missingDestination -DesktopExe $desktop -RepoRoot $fixtureRoot } 'missing source fails before output'
     if (Test-Path -LiteralPath $missingDestination) { throw 'Missing input produced an archive' }
 
-    [IO.File]::WriteAllText($files['quotalis-icon-128.png'], 'restored icon')
+    [IO.File]::WriteAllText($files['quotalune-icon-128.png'], 'restored icon')
     $tampered = Join-Path $fixtureRoot 'tampered.zip'
     New-QuotalisPortableArchive -Destination $tampered -DesktopExe $desktop -RepoRoot $fixtureRoot
     [IO.File]::WriteAllText($desktop, 'different executable')
@@ -53,7 +53,7 @@ try {
     $resolvedFixture = [IO.Path]::GetFullPath($fixtureRoot)
     $tempPrefix = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\'
     if (-not $resolvedFixture.StartsWith($tempPrefix, [StringComparison]::OrdinalIgnoreCase) -or
-        (Split-Path $resolvedFixture -Leaf) -notlike 'quotalis-portable-test-*') { throw 'Unsafe fixture cleanup path' }
+        (Split-Path $resolvedFixture -Leaf) -notlike 'quotalune-portable-test-*') { throw 'Unsafe fixture cleanup path' }
     Remove-Item -LiteralPath $resolvedFixture -Recurse -Force
 }
 Write-Host 'Portable archive checks passed: exact entries, original resources, no private files, hashes, missing input, immutable output and cleanup.'
