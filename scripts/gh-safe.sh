@@ -9,11 +9,11 @@ what_if=0
 usage() {
   cat <<'EOF'
 Usage:
-  bash scripts/gh-safe.sh --repo owner/repo --verify-kind repo|new-repo|pr|issue|release [--target id-or-tag] [--what-if] -- <gh args...>
+  bash scripts/gh-safe.sh --repo owner/repo --verify-kind repo|new-repo|pr|issue|release|workflow [--target id-or-tag] [--what-if] -- <gh args...>
 
 Examples:
-  bash scripts/gh-safe.sh --repo iModhish1/Quotalis --verify-kind pr --target 361 --what-if -- pr comment 361 --body-file .review/comment.md
-  bash scripts/gh-safe.sh --repo iModhish1/Quotalis --verify-kind repo --what-if -- pr create --title "..." --body-file body.md
+  bash scripts/gh-safe.sh --repo iModhish1/Quotalune --verify-kind pr --target 361 --what-if -- pr comment 361 --body-file .review/comment.md
+  bash scripts/gh-safe.sh --repo iModhish1/Quotalune --verify-kind workflow --target installer-candidate-smoke.yml -- workflow run installer-candidate-smoke.yml --ref main
 EOF
 }
 
@@ -32,16 +32,16 @@ done
 gh_args=("$@")
 
 [[ "$repo" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || { echo "Invalid --repo '$repo'; expected owner/repo." >&2; exit 2; }
-case "$verify_kind" in repo|new-repo|pr|issue|release) ;; *) echo "Invalid --verify-kind '$verify_kind'." >&2; exit 2 ;; esac
+case "$verify_kind" in repo|new-repo|pr|issue|release|workflow) ;; *) echo "Invalid --verify-kind '$verify_kind'." >&2; exit 2 ;; esac
 ((${#gh_args[@]} > 0)) || { echo 'No gh command supplied after --.' >&2; exit 2; }
 
 # The owner explicitly confirmed iModhish1. Never fall back to the upstream fork.
-if [[ "${repo,,}" != "imodhish1/quotalis" ]]; then
-  echo "GitHub writes are not allowlisted for '$repo'. Expected iModhish1/Quotalis." >&2
+if [[ "${repo,,}" != "imodhish1/quotalune" ]]; then
+  echo "GitHub writes are not allowlisted for '$repo'. Expected iModhish1/Quotalune." >&2
   exit 3
 fi
 actor="$(gh api user --jq .login)"
-[[ "${actor,,}" == "imodhish1" ]] || { echo 'Authenticated GitHub account is not the confirmed Quotalis owner.' >&2; exit 3; }
+[[ "${actor,,}" == "imodhish1" ]] || { echo 'Authenticated GitHub account is not the confirmed Quotalune owner.' >&2; exit 3; }
 
 for arg in "${gh_args[@]}"; do
   case "$arg" in --repo|--repo=*|-R*) echo 'Forwarded gh args may not override the repository.' >&2; exit 3 ;; esac
@@ -50,6 +50,20 @@ done
 # First publication has no repository to read back yet. Require an actual 404,
 # the confirmed authenticated owner, and exactly one public repository creation.
 # No --source/--push/import or arbitrary forwarded create options are accepted.
+if [[ "$verify_kind" == workflow ]]; then
+  [[ "$target" == installer-candidate-smoke.yml ]] || { echo 'Only the installer candidate smoke workflow is allowlisted.' >&2; exit 3; }
+  [[ ${#gh_args[@]} == 5 && "${gh_args[0]}" == workflow && "${gh_args[1]}" == run && "${gh_args[2]}" == "$target" && "${gh_args[3]}" == --ref && "${gh_args[4]}" == main ]] || {
+    echo 'Workflow mutation requires exactly: workflow run installer-candidate-smoke.yml --ref main.' >&2; exit 3;
+  }
+  readback="$(gh repo view "$repo" --json url,nameWithOwner --jq '.nameWithOwner + "|" + .url')"
+  [[ "${readback,,}" == "${repo,,}|https://github.com/${repo,,}" ]] || { echo 'Repository read-back mismatch.' >&2; exit 4; }
+  workflow_state="$(gh api "repos/$repo/actions/workflows/$target" --jq '.path + "|" + .state')"
+  [[ "$workflow_state" == '.github/workflows/installer-candidate-smoke.yml|active' ]] || { echo "Unexpected workflow path or state: $workflow_state" >&2; exit 4; }
+  if ((what_if == 1)); then echo "WhatIf: gh workflow run $target --ref main --repo $repo"; exit 0; fi
+  gh "${gh_args[@]}" --repo "$repo"
+  exit
+fi
+
 if [[ "$verify_kind" == new-repo ]]; then
   [[ ${#gh_args[@]} == 4 && "${gh_args[0]}" == repo && "${gh_args[1]}" == create && "${gh_args[2]}" == "$repo" && "${gh_args[3]}" == --public ]] || { echo 'New repository requires exact repo create owner/repo --public.' >&2; exit 3; }
   if lookup="$(gh api "repos/$repo" 2>&1)"; then
