@@ -4,9 +4,15 @@ Sources/** linguist-vendored
 Tests/** linguist-vendored
 Package.swift linguist-vendored
 
-# Pi-family session fixtures are byte-exact copies of upstream wire shapes;
-# never EOL-convert them (parsers split on LF).
-rust/src/agent_sessions/fixtures/** -text
-
-# The shared Rust/TypeScript golden contract compares serialized JSON bytes.
-docs/golden_surface_layouts.json text eol=lf
+  # Pi-family session fixtures are byte-exact copies of upstream wire shapes;
+  # never EOL-convert them (parsers split on LF).
+  rust/src/agent_sessions/fixtures/** -text
+  
+  # The frozen published v0.11.0 notification-journal reader is a byte-exact
+  # copy of the released source. compat_tests.rs locates its body with an LF
+  # marker and asserts a SHA-256 over the raw bytes, so a CRLF checkout
+  # (core.autocrlf=true) makes the drift guard unrunnable on Windows.
+  rust/src/notification_journal/legacy_v0_11_0.rs -text
+  
+  # The shared Rust/TypeScript golden contract compares serialized JSON bytes.
+  docs/golden_surface_layouts.json text eol=lf
