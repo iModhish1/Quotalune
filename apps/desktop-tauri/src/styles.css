@@ -2180,7 +2180,9 @@ body:has(.tray-panel-reveal) {
   color: var(--text);
   font-size: var(--font-body);
   outline: none;
-  padding: 0 30px 0 10px;
+  box-sizing: border-box;
+  padding-block: 0;
+  padding-inline: 10px 34px;
 }
 
 .providers-sidebar-search__input:focus-visible {
@@ -2190,7 +2192,7 @@ body:has(.tray-panel-reveal) {
 
 .providers-sidebar-search__clear {
   position: absolute;
-  right: 16px;
+  inset-inline-end: 16px;
   top: 13px;
   width: 20px;
   height: 20px;

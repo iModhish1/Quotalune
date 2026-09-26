@@ -40,7 +40,7 @@
 .settings-studio .provider-pane-resizer {grid-area:auto;justify-self:center;margin:0;width:10px;z-index:3}
 .settings-studio .providers-sidebar-shell {height:auto;max-height:min(72vh,680px);min-width:0;min-height:0;overflow:hidden;padding:4px;box-sizing:border-box}
 .settings-studio .providers-sidebar-search {padding:6px}
-.settings-studio .providers-sidebar-search__input {min-height:32px;padding:7px 9px}
+.settings-studio .providers-sidebar-search__input {min-height:32px;padding-block:7px;padding-inline:9px 36px}
 .settings-studio .providers-sidebar {flex:0 1 auto;max-height:calc(min(72vh,680px) - 54px);scrollbar-gutter:stable;overscroll-behavior:contain;padding:0 2px 6px}
 .settings-studio .providers-sidebar__row {min-height:64px;margin:3px 2px;padding:8px;gap:7px;box-sizing:border-box}
 .settings-studio .providers-sidebar__text {min-width:0}
