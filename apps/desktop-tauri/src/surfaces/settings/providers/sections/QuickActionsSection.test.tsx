@@ -68,6 +68,23 @@ describe("QuickActionsSection", () => {
     );
     expect(screen.queryByRole("button", { name: "ActionSignIn" })).not.toBeInTheDocument();
   });
+
+  it("omits refresh for an unsupported usage source while retaining a real status link", () => {
+    render(
+      <QuickActionsSection
+        provider={{ id: "gemini", canConnect: false, statusPageUrl: "https://status.cloud.google.com" } as never}
+        busy={false}
+        refreshAvailable={false}
+        onRefresh={vi.fn()}
+        onOpenDashboard={vi.fn()}
+        onOpenStatusPage={vi.fn()}
+        onBuyCredits={vi.fn()}
+        t={(key) => key}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "ActionRefresh" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ActionStatusPage" })).toBeInTheDocument();
+  });
 });
 
 it.each([["ready", "ActionSwitchAccount"], ["expiredSession", "DashboardReconnect"], ["needsAuthentication", "ActionSignIn"]])("labels the supported connection action from observed %s state", (errorState, label) => {

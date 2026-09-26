@@ -4,6 +4,7 @@ import type { LocaleKey } from "../../../../i18n/keys";
 interface Props {
   provider: ProviderDetail;
   busy: boolean;
+  refreshAvailable?: boolean;
   onRefresh: () => void;
   onConnect?: () => void;
   onOpenDashboard: () => void;
@@ -21,6 +22,7 @@ interface Props {
 export function QuickActionsSection({
   provider,
   busy,
+  refreshAvailable = true,
   onRefresh,
   onConnect,
   onOpenDashboard,
@@ -32,14 +34,14 @@ export function QuickActionsSection({
     <section className="provider-detail-section">
       <h4>{t("QuickActions")}</h4>
       <div className="provider-detail-actions">
-        <button
+        {refreshAvailable && <button
           type="button"
           className="btn btn--ghost"
           onClick={onRefresh}
           disabled={busy}
         >
           {t("ActionRefresh")}
-        </button>
+        </button>}
         {provider.canConnect && onConnect && (
           <button
             type="button"

@@ -382,6 +382,7 @@ export function ProviderDetailPane({
         <QuickActionsSection
           provider={detail}
           busy={busy}
+          refreshAvailable={providerCapabilities?.status !== "unsupported"}
           onRefresh={handleRefresh}
           onConnect={connectAction}
           onOpenDashboard={handleOpenDashboard}
