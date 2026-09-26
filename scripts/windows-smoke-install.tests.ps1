@@ -40,12 +40,12 @@ try {
         & $scriptPath -InstallerPath $missingInstaller -DisposableTestRoot $testRoot -InstallDir $safeInstall
     }
 
-    $personalInstall = Join-Path $env:LOCALAPPDATA "Programs\Quotalis"
-    Assert-ThrowsLike -Label "Personal install path" -Pattern "*normal application install root*" -Action {
+    $protectedInstall = Join-Path $env:ProgramFiles ("Quotalune-smoke-forbidden-" + [guid]::NewGuid().ToString("N"))
+    Assert-ThrowsLike -Label "standard application install path" -Pattern "*normal application install root*" -Action {
         & $scriptPath `
             -InstallerPath $missingInstaller `
-            -DisposableTestRoot (Join-Path $env:LOCALAPPDATA "Programs") `
-            -InstallDir $personalInstall `
+            -DisposableTestRoot $env:ProgramFiles `
+            -InstallDir $protectedInstall `
             -AcknowledgeDisposableTestEnvironment
     }
 
