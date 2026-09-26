@@ -257,9 +257,22 @@ Both were attempted and **both are recorded as not captured**. The reason is
 worth stating precisely, because the first attempt produced a plausible-looking
 image that was wrong.
 
-The Dev channel's `settings.json` is not plain JSON. It is a protected
-envelope — `format`, `version`, `protection`, `payload` — so writing `theme` or
-`ui_language` at the top level has no effect: the app ignored the write and
+The Dev channel's `settings.json` is not plain JSON. It is a DPAPI-protected
+envelope written by `secure_file::write_string_atomic`, which passes the
+serialised JSON through `protected_file_bytes` and stores the ciphertext as
+`payload`. The file on disk reads:
+
+```json
+{
+  "format": "codexbar.secure-file",
+  "version": 1,
+  "protection": "windows-dpapi-user",
+  "payload": "AQAAANCMnd8BFdERj..."
+}
+```
+
+So writing `theme` or `ui_language` at the top level cannot work: the app
+decrypts the `payload`, not the visible keys, found nothing usable, and
 persisted the defaults back. The attempt was reverted from a backup taken
 first, and only the Dev-isolated file was ever touched; Personal settings were
 not read or written.
@@ -269,8 +282,9 @@ Light**: its mean luminance was 26.1 against 28.0 for a known-dark capture,
 i.e. no brighter than dark. Publishing it would have been a mislabelled
 screenshot, so it was discarded rather than used.
 
-There is no CLI surface for `theme` or `ui_language`, so switching either
-requires the application's own settings UI, which needs the activation and
-click input the desktop guard correctly refuses. Theme preference and language
-are therefore left at their defaults and no Light or Arabic/RTL image is
-published.
+There is no CLI surface for `theme` or `ui_language`. The only writer is
+the Tauri command `update_settings` in `commands/settings.rs`, which is
+reachable only from the application's own settings UI, so switching either
+requires the activation and click input the desktop guard correctly refuses.
+Theme preference and language are therefore left at their defaults and no Light
+or Arabic/RTL image is published.
