@@ -357,3 +357,21 @@ reliable point could not be derived. The control was not forced.
 This does not change the conclusion: the colour-mode and language selectors are
 correctly implemented, and capturing Light or Arabic requires the dropdown to
 be open, which is the pointer-driven step the desktop guard refuses.
+
+### Native correction — 2026-09-26
+
+A later inspection found the running Dev window already configured for Arabic
+and Light mode. The background UIA tree exposed Arabic dashboard controls, and
+the Desktop Visual QA orchestrator captured and verified both the dashboard
+(`2026-09-26T08-46-37-quotalune-dev-arabic-rtl-current-window-`) and Settings
+(`2026-09-26T08-48-18-quotalune-dev-arabic-settings-visual-cap`). These are
+local QA artifacts, not public screenshots: the dashboard includes real usage
+and plan data. The earlier statement that Arabic/RTL and Light could not be
+captured is superseded for this observed Dev process. These captures do not
+prove every page or the final release binary.
+
+The Settings capture exposed English fallback text in the Arabic General
+section, including the startup destination and refresh controls. The missing
+Arabic locale entries were added in the source after the capture. Locale tests
+and key parity passed; a native capture from a rebuilt binary is still needed
+to verify those new strings visually.

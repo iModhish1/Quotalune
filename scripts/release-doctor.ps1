@@ -105,7 +105,7 @@ if (-not $Version) {
 }
 
 $tag = "v$Version"
-Write-Host "Release doctor: Quotalis $Version"
+Write-Host "Release doctor: Quotalune $Version"
 Write-Host ""
 
 Assert-Version "rust/Cargo.toml" $rustVersion $Version
