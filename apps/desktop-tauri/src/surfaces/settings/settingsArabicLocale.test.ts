@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const here = import.meta.dirname!;
-const tabs = ["AdvancedTab.tsx", "DisplayTab.tsx", "UsageSpendTab.tsx"];
+const tabs = ["AdvancedTab.tsx", "DisplayTab.tsx", "UsageSpendTab.tsx", "../../../components/ShortcutCapture.tsx"];
 
 describe("Arabic settings coverage", () => {
   it.each(tabs)("translates every directly referenced key in %s", (tab) => {
@@ -15,7 +15,7 @@ describe("Arabic settings coverage", () => {
         .map((match) => [match[1], match[2]]),
     );
 
-    expect(keys.length).toBeGreaterThan(10);
+    expect(keys.length).toBeGreaterThan(tab.includes("ShortcutCapture") ? 3 : 10);
     for (const key of keys) {
       expect(translations.get(key), `${tab}: ${key}`).toMatch(/[\u0600-\u06FF]/);
     }
