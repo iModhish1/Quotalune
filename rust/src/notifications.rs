@@ -31,7 +31,7 @@ mod branding;
 /// toast without knowing Tauri's platform-specific resource directory.
 static TOAST_ICON_PATH: OnceLock<PathBuf> = OnceLock::new();
 
-/// Supply the packaged Quotalis icon used by Windows notifications.
+/// Supply the packaged Quotalune icon used by Windows notifications.
 ///
 /// Calling this more than once is harmless: the first valid packaged path is
 /// retained for the life of the process.
@@ -39,7 +39,7 @@ pub fn configure_toast_icon(path: PathBuf) {
     if path.is_file() {
         drop(TOAST_ICON_PATH.set(path));
     } else {
-        tracing::warn!(?path, "Quotalis toast icon resource was not found");
+        tracing::warn!(?path, "Quotalune toast icon resource was not found");
     }
 }
 
