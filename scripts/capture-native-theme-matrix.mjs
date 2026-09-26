@@ -29,7 +29,7 @@ for (let index = 2; index < process.argv.length; index += 2) {
 const port = Number(argumentsMap.get("--port") ?? "9223");
 const pid = Number(argumentsMap.get("--pid") ?? "0") || null;
 const outputDirectory = path.resolve(
-  argumentsMap.get("--out") ?? "docs/images/v9/native/themes",
+  argumentsMap.get("--out") ?? ".local/historical-v9-native-captures/themes",
 );
 
 class CdpClient {

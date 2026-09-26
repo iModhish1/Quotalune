@@ -12,7 +12,7 @@ for (let index = 2; index < process.argv.length; index += 2) {
 const port = Number(args.get("--port") ?? "9223");
 const pid = Number(args.get("--pid") ?? "0") || null;
 const outputDirectory = path.resolve(
-  args.get("--out") ?? "docs/images/v9/native/usage",
+  args.get("--out") ?? ".local/historical-v9-native-captures/usage",
 );
 
 class CdpClient {

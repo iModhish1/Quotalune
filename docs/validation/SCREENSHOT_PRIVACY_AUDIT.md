@@ -76,6 +76,16 @@ CUA capture script is retired so it cannot repopulate the public image path;
 current native QA must use the guarded desktop-visual-qa adapter. This does
 not establish that the rest of V9 or the repository image archive is clean.
 
+The remaining V9 native proof family was reviewed at representative full
+resolution across usage, themes, and surface geometry. Its boards explicitly
+say QuotaArc V9 and display historical provider readings, so none is current
+Quotalune release imagery. All 30 PNGs and four evidence manifests were moved
+to ignored `.local/historical-v9-native-2026-09-27/`. The historical capture
+and board scripts now default to ignored `.local/` output; explicit paths and
+the old documentation still describe earlier experiments, not current native
+acceptance. This family-level withdrawal does not certify every frame or
+remove older public Git objects.
+
 ## Remaining scope
 
 Continue visual review of every tracked screenshot, including the remaining

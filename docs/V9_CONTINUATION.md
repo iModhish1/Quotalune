@@ -1,5 +1,10 @@
 # QUOTAARC V9.1 — CONTINUATION NOTE (written at b227acba)
 
+Historical note: the V9 native captures referenced below were withdrawn from
+the current public tree on 2026-09-27 because they show the former QuotaArc
+identity and historical readings. Local audit copies are in ignored
+`.local/historical-v9-native-2026-09-27/`; they are not Quotalune release proof.
+
 Branch `feature/v9-theme-runtime`. All architecture commits are in and green:
 frontend 74 files / 411 tests, `tsc --noEmit` clean, shared suite 1434,
 shell suite 391. Never touch Personal; Dev only; no storage metaphors.

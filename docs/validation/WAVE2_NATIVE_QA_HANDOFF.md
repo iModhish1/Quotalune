@@ -1,5 +1,9 @@
 # Wave 2 Native QA Handoff — Tray Studio + Windows Notifications
 
+Historical path note: the V9 native image output described below was withdrawn
+from the current public tree on 2026-09-27. Current native QA uses the guarded
+desktop-visual-qa adapter and private local captures pending image review.
+
 Status: **NATIVE — DEFERRED, ENVIRONMENT BLOCKED.** Code and automated tests
 are in place; no native pixel evidence exists yet. Nothing in this document is
 a PASS. The release gate stays closed until this handoff and the Wave 1 handoff

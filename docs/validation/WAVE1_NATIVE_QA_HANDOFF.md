@@ -1,5 +1,9 @@
 # Wave 1 Native QA Handoff
 
+Historical path note: the V9 native image output described below was withdrawn
+from the current public tree on 2026-09-27. Current native QA uses the guarded
+desktop-visual-qa adapter and private local captures pending image review.
+
 This document tells a session that HAS working native pixel-screenshot
 capability everything it needs to close Wave 1. It does not require
 reading the chat history that produced it. **Start at §2a below** — it

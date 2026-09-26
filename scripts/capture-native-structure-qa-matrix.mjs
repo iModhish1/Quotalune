@@ -51,7 +51,7 @@ const manifestPath = path.resolve(
   argumentsMap.get("--manifest") ?? "docs/validation/WAVE1_NATIVE_QA_MATRIX.json",
 );
 const outputDirectory = path.resolve(
-  argumentsMap.get("--out") ?? "docs/images/v9/native/structures",
+  argumentsMap.get("--out") ?? ".local/historical-v9-native-captures/structures",
 );
 // Base URL for the fixture lane's dev server (unused for the native lane,
 // which discovers its target by URL substring like the existing scripts).

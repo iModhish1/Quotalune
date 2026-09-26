@@ -1,5 +1,5 @@
 param(
-    [string]$InputDirectory = "docs/images/v9/native/themes"
+    [string]$InputDirectory = ".local/historical-v9-native-captures/themes"
 )
 
 $ErrorActionPreference = "Stop"

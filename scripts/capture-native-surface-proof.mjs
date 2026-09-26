@@ -13,7 +13,7 @@ const port = Number(argumentsMap.get("--port") ?? "9223");
 const pid = Number(argumentsMap.get("--pid") ?? "0") || null;
 const theme = argumentsMap.get("--theme") ?? "10-celestial-ice";
 const outputDirectory = path.resolve(
-  argumentsMap.get("--out") ?? "docs/images/v9/native/surfaces",
+  argumentsMap.get("--out") ?? ".local/historical-v9-native-captures/surfaces",
 );
 
 class CdpClient {
