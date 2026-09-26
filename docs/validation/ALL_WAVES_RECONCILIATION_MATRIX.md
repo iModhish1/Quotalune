@@ -1,8 +1,17 @@
 # Historical waves — current reconciliation
 
-Source checkpoint: `04776618c03e1ea6ae7dcd2ccbefb616f7da4121`, clean before this documentation packet. The three authoritative ledgers (`tasks/MASTER_REQUIREMENTS.md`, `tasks/plan.md`, `tasks/todo.md`) have been read completely. This index preserves their distinct numbering systems; `C1` is not `C01`, and Product V2 Wave 1 is not the later Structure Wave 1. The duplicated historical E08 descriptions remain separate obligations below.
+Source checkpoint: `f0a96529` (see the 2026-09-26 reconciliation update at the end of this document for everything changed after the original `04776618` packet). The three authoritative ledgers (`tasks/MASTER_REQUIREMENTS.md`, `tasks/plan.md`, `tasks/todo.md`) have been read completely. This index preserves their distinct numbering systems; `C1` is not `C01`, and Product V2 Wave 1 is not the later Structure Wave 1. The duplicated historical E08 descriptions remain separate obligations below.
 
-This is an acceptance inventory, not blanket reacceptance. **PARTIAL** means implementation/evidence exists but the original requirement's complete current acceptance is unproven. **SUPERSEDED** applies only to an explicitly replaced design, never to a missing invariant. No entire historical wave is promoted to PASS by a green aggregate suite. No current native acceptance is claimed. Native closure is **ENVIRONMENT BLOCKED** under the current master; old screenshots remain historical.
+This is an acceptance inventory, not blanket reacceptance. **PARTIAL** means implementation/evidence exists but the original requirement's complete current acceptance is unproven. **SUPERSEDED** applies only to an explicitly replaced design, never to a missing invariant. No entire historical wave is promoted to PASS by a green aggregate suite.
+
+Native status was re-verified on 2026-09-26 and the earlier blanket
+"ENVIRONMENT BLOCKED" is no longer accurate. The prior all-black capture was a
+tooling-path failure, not an application defect. A freshness-proven Dev build
+now launches, opens a real window and paints its WebView2 content; see
+`VALIDATION/PHASE_NATIVE_VISUAL_EVIDENCE.md` and the captures under
+`VALIDATION/evidence/`. Native acceptance is nonetheless still **PARTIAL**:
+the Settings surfaces are captured, and the remaining product surfaces plus
+tray and notification appearance are not. Old screenshots remain historical.
 
 ## Evidence and path key
 
@@ -95,7 +104,7 @@ Each row's native evidence is **none current / blocked** unless stated otherwise
 | Product V2 Wave 5 | Provider Operations | Provider connection | None current | PARTIAL | Modern Wave 3 is the completion path, not an independent registry. |
 | Product V2 Wave 6 | Unified customization | Themes; Presentation | None current | PARTIAL | All scopes, overrides and migration. |
 | Product V2 Wave 7 | RTL / performance | All UI keys | None current | PARTIAL | Fresh representative performance/RTL evidence. |
-| Product V2 Wave 8 | Native final validation | Packaging / safety; prepared native matrices | None current | ENVIRONMENT BLOCKED | Requires supported real-window evidence. |
+| Product V2 Wave 8 | Native final validation | Packaging / safety; prepared native matrices | Settings surfaces captured 2026-09-26 | PARTIAL | Real-window capture is proven to work; remaining surfaces still uncaptured. |
 | L10 — inline Settings navigation | Expandable subpages under Settings | Shell / navigation | Historical only | PARTIAL | Keyboard/RTL and later deduplication of shallow pages. |
 | L11 — Analytics Waves 2–4 continuation | Close metric/primitives/dashboard work | Data / analytics | Historical only | PARTIAL | Later code exists despite old unchecked bullets; do not bulk flip historical checkboxes. |
 | L12 — Analytics V3 / Wave 4.5 | Professional visualization platform | Data / analytics; Controls / loading | Owner later rejected appearance | PARTIAL | Retain functional obligations; presentation direction replaced by L13. |
@@ -134,15 +143,15 @@ Each row's native evidence is **none current / blocked** unless stated otherwise
 | M — 71-section master / legal quick-close | Whole product, legal provenance and branding | LEGAL_OPEN_SOURCE_AUDIT.md; current LICENSE/NOTICE/THIRD_PARTY_NOTICES; all keys | None current | PARTIAL | Reaudit current dependencies/attribution and finish product; prior legal-only slice was not completion. |
 | M — initial Continuation Wave 1 | Structure closure, theme composition, loading | Surfaces; Themes; Controls / loading | None current | PARTIAL | Later accepted Wave 1 supersedes the early progress snapshot, not its requirements. |
 | Current Wave 1 code (1B–1F) | All structures, shared connectors/safe-area, accessible movement, composition/migration/loading/Dev QA | Surfaces; Themes; Controls / loading; WAVE1_NATIVE_QA_HANDOFF.md | None current | PARTIAL | Code baseline accepted by master; final cross-wave sweep still required. Don't rebuild without a reproduced defect. |
-| Current Wave 1 native | DPI/work-area/all-form visual and interaction closure | WAVE1_NATIVE_QA_MATRIX.json | None | ENVIRONMENT BLOCKED | Execute only when supported real capture is available. |
+| Current Wave 1 native | DPI/work-area/all-form visual and interaction closure | WAVE1_NATIVE_QA_MATRIX.json | Settings surfaces captured 2026-09-26 | PARTIAL | Capture is available; the Wave 1 structure matrix has not been run against it. |
 | Current Wave 2 code / 2C rollback | Tray renderer/lifecycle/tooltips/tokens, notifications/privacy/history/legacy writes | Tray; Notifications; frozen legacy rollback fixture | None current | PARTIAL | Code baseline accepted; final regression and native completion remain separate. |
-| Current Wave 2 native | Tray/Explorer/toast artwork/activation/Arabic | WAVE2_NATIVE_QA_MATRIX.json | None | ENVIRONMENT BLOCKED | Requires current Windows evidence; code paths alone don't prove icons. |
+| Current Wave 2 native | Tray/Explorer/toast artwork/activation/Arabic | WAVE2_NATIVE_QA_MATRIX.json | None | PARTIAL | Capture is available; tray, Explorer, toast and Arabic evidence are still outstanding. |
 | Current Wave 3 | Complete truthful supported onboarding, security, reliability and fixtures | Provider connection; WAVE3_IMPLEMENTATION_REPORT.md; generated capability matrix schema 2 | None current | PARTIAL | Finish selected-method verification review, per-provider reporting/scenario coverage, stress and final adversarial acceptance. |
-| Current Wave 3 native | Every method/state, Providers page, Light/RTL | WAVE3_NATIVE_QA_MATRIX.json | None | ENVIRONMENT BLOCKED | Prepared cases are READY, not PASS. |
+| Current Wave 3 native | Every method/state, Providers page, Light/RTL | WAVE3_NATIVE_QA_MATRIX.json | None | PARTIAL | Capture is available; prepared cases remain READY, not PASS. |
 | Master Goal A | Reconcile inherited work and preserve changes | GOAL_MODE_MASTER_EXECUTION.md; this matrix; coherent commits | Not required for source inventory | PARTIAL | Inventory exists; complete source/acceptance mapping as work closes. |
 | Master Goal B | Finish Wave 3 | Provider connection | None current | PARTIAL | Above Wave 3 actions. |
 | Master Goal C / Wave 4 | Product-wide backgrounds, IA, pages, controls, responsive/a11y/performance | All UI keys | None current | PARTIAL | Complete current full-product audit and repair actual findings after Wave 3. |
-| Master Goal D | Native Waves 1–4 | Existing Wave 1–3 handoffs; Wave 4 matrix still required | None | ENVIRONMENT BLOCKED | New capability/evidence needed, not repeated prohibited capture attempts. |
+| Master Goal D | Native Waves 1–4 | Existing Wave 1–3 handoffs; Wave 4 matrix still required | Settings surfaces captured 2026-09-26 | PARTIAL | Capability exists; the per-wave matrices still need running. |
 | Master Goal E | Cross-wave security, OSS and rollback | Credential/journal tests; existing legal docs | None current | PARTIAL | Fresh whole-product/dependency/license/installer audit. |
 | Master Goal F | Exact RC/public preparation | Packaging / safety; current repo/CI/release scripts | None current | PARTIAL | Final clean HEAD, version reconciliation, current artifacts/CI and truthful gallery. |
 | Master Goal G | Publish only after every gate | Existing immutable v0.11.0 is not next release | None current | PARTIAL | Closed until code/security/OSS/CI/native gates pass; Personal remains frozen. |
@@ -154,3 +163,27 @@ Use `CROSS_WAVE_REGRESSION_MATRIX.md` for the mandatory interaction sweep; this 
 Verified regressions repaired during current work include unsafe CLI candidate execution/cancellation boundaries, simulated sign-in escaping to live work, and unknown/spend-only rows counted as quota. Their bounded evidence is in WAVE3_IMPLEMENTATION_REPORT.md. Do not call the entire historical feature REGRESSED merely because an adjacent defect was repaired; retain the concrete defect and replacement test.
 
 Next implementation gate is current Wave 3's selected-method/source/account verification and remaining provider-specific evidence, followed by Product Completion. No native, live-account, final accessibility, final performance, installer or release PASS is established by this document.
+
+## Reconciliation update — 2026-09-26
+
+This entry records only what current evidence changed on this date. Rows whose
+underlying evidence was not re-verified here are deliberately left as they are;
+a dated entry is not a blanket reacceptance.
+
+Source checkpoint advanced from `04776618` to `f0a96529`. `main` on
+`iModhish1/Quotalune` matches the local head, and the most recent required CI
+run is green on both `Rust fmt / clippy / test` and
+`Frontend locale / typecheck / tests`.
+
+| Area | Current status | Change | Evidence |
+| --- | --- | --- | --- |
+| Product brand and public identity | PASS (renamed) | The project was renamed from Quotalis to Quotalune end to end: stable binary, installer, portable archive, release artifacts and release scripts. Compatibility identities (`app.quotaarc.desktop`, Inno `AppId`, the Dev AUMID) were deliberately preserved, and `Quotalis.exe` is retained in the updater's legacy list. | `VALIDATION/QUOTALUNE_NAME_CLEARANCE_AND_MIGRATION.md` |
+| Native visual — does the candidate render | PASS | Supersedes the earlier "all-black / ENVIRONMENT BLOCKED" finding, which was a tooling failure. A freshness-proven Dev build (worktree HEAD == embedded HEAD) launches job-owned and paints its WebView2 content. | `VALIDATION/PHASE_NATIVE_VISUAL_EVIDENCE.md`, `VALIDATION/evidence/` |
+| Native visual — full page matrix | PARTIAL | Settings surfaces captured and verified non-blank by pixel analysis. Dashboard tray panel, providers, analytics, the studios, background gallery, Light and Arabic/RTL still require their own captures. The seeded dashboard capture was discarded rather than published because the window was occluded. | `VALIDATION/PHASE_NATIVE_VISUAL_EVIDENCE.md` |
+| Shell / navigation — settings tab routing | PASS (repaired) | `analyticsSources` had drifted out of the Rust `SETTINGS_TAB_IDS` mirror, so `commands/settings.rs` discarded a persisted `lastSettingsTab` of that value and `main.rs` filtered it out of startup routing. Restored, and a structural test now parses the frontend `SettingsTabId` union out of `bridge.ts` at compile time and fails if the mirror rejects any declared tab. The guard is negative-control proven. | `SHELL/surface_target.rs` |
+| Rollback safety — v0.11.0 reader | PASS (repaired) | `frozen_legacy_reader_is_the_published_source` was silently unrunnable on Windows: `core.autocrlf=true` converted the frozen fixture to CRLF, breaking its LF marker search and byte-exact SHA-256. A `.gitattributes` `-text` rule keeps it byte-exact; the committed blob is unchanged. | `.gitattributes`, `CORE/notification_journal/compat_tests.rs` |
+| CI reliability — cold-runner probes | PASS (repaired) | Three separate CI failures shared one root cause: a cold Windows runner where the first child process pays for module autoloading, signing-stack loading and PTY scheduling. Host-environment probes now share one test-only `ENV_PROBE_TIMEOUT`; PTY cancellation and readiness budgets were widened while preserving the property each asserts. `PROBE_TIMEOUT` remains 15s. | `CORE/cli_dependencies.rs`, `CORE/cli/tty_runner.rs` |
+| Public release of v0.12.0 | NOT ATTEMPTED | Source is published and CI is green, but the release is gated on complete native evidence, which is still partial. The published v0.11.0 release and tag are untouched. | `VALIDATION/PHASE_PUBLICATION_AND_NATIVE_EVIDENCE.md` |
+
+No row above was promoted by a green aggregate suite alone. Each cites the
+specific artifact that establishes it.
