@@ -33,7 +33,7 @@ function Assert-ThrowsLike {
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) ("quotalis-smoke-guard-tests-" + [guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $testRoot | Out-Null
 try {
-    $missingInstaller = Join-Path $testRoot "Quotalis-0.11.0-Setup.exe"
+    $missingInstaller = Join-Path $testRoot "Quotalune-0.12.0-Setup.exe"
     $safeInstall = Join-Path $testRoot "install"
 
     Assert-ThrowsLike -Label "missing acknowledgement" -Pattern "*AcknowledgeDisposableTestEnvironment*" -Action {
@@ -100,9 +100,9 @@ try {
             -AcknowledgeDisposableTestEnvironment
     }
 
-    $wrongInstallerName = Join-Path $testRoot "QuotaArc-0.11.0-Setup.exe"
+    $wrongInstallerName = Join-Path $testRoot "QuotaArc-0.12.0-Setup.exe"
     [IO.File]::WriteAllBytes($wrongInstallerName, [byte[]](0))
-    Assert-ThrowsLike -Label "noncanonical installer name" -Pattern "*canonical Quotalis Inno Setup release asset*" -Action {
+    Assert-ThrowsLike -Label "noncanonical installer name" -Pattern "*canonical Quotalune Inno Setup release asset*" -Action {
         & $scriptPath `
             -InstallerPath $wrongInstallerName `
             -DisposableTestRoot $testRoot `
@@ -113,7 +113,7 @@ try {
     if ($source -match '\bStop-Process\b') {
         throw "Smoke script must not stop product processes by name."
     }
-    foreach ($requiredName in @("Quotalis", "QuotalisDev", "QuotaArc", "QuotaArcDev")) {
+    foreach ($requiredName in @("Quotalune", "Quotalis", "QuotalisDev", "QuotaArc", "QuotaArcDev")) {
         if ($source -notmatch [regex]::Escape($requiredName)) {
             throw "Smoke script is missing the process guard for $requiredName."
         }
