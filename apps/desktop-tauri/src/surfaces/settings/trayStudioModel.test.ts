@@ -6,7 +6,8 @@ describe("tray selection truth",()=>{
  it("uses exact reported windows, including extras",()=>{expect(trayLimits(sample).map(w=>w.id)).toEqual(["primary:Session:300","secondary:Weekly:10080","extra:spark:300"]);});
  it("localizes only the canonical weekly display label, preserving observed identity",()=>{
    const limits=trayLimits(sample);
-   const t=(key:string)=>key==="ProviderWeeklyLabel"?"الأسبوعي":key;
+   const t=(key:string)=>key==="ProviderWeeklyLabel"?"الأسبوعي":key==="ProviderSessionLabel"?"الجلسة":key;
+   expect(trayLimitDisplayLabel(limits[0],t)).toBe("الجلسة");
    expect(trayLimitDisplayLabel(limits[1],t)).toBe("الأسبوعي");
    expect(limits[1].id).toBe("secondary:Weekly:10080");
    expect(trayLimitDisplayLabel({...limits[1],label:"Weekly",window:{...limits[1].window,windowMinutes:60}},t)).toBe("Weekly");

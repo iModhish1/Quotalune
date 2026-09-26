@@ -150,14 +150,17 @@ fn tooltip(
         lines.push(header);
     }
     for key in ids.iter().take(3) {
-        let label = s
-            .and_then(|s| {
-                limits(s)
-                    .into_iter()
-                    .find(|l| l.id == *key)
-                    .map(|l| l.label)
-            })
-            .unwrap_or_else(|| t(LocaleKey::TrayStudioLimit));
+        let limit = s.and_then(|s| limits(s).into_iter().find(|l| l.id == *key));
+        let label = match limit.as_ref() {
+            Some(l) if l.label == "Weekly" && l.window.window_minutes == Some(10080) => {
+                t(LocaleKey::ProviderWeeklyLabel)
+            }
+            Some(l) if l.label == "Session" && l.window.window_minutes == Some(300) => {
+                t(LocaleKey::ProviderSessionLabel)
+            }
+            Some(l) => l.label.clone(),
+            None => t(LocaleKey::TrayStudioLimit),
+        };
         let reading = s
             .and_then(|s| value(s, c, key))
             .map(|v| {
@@ -674,7 +677,27 @@ mod tests {
             crate::provider_tray_tokens::fixture_label(Some(987_654), "week", settings.ui_language),
         );
         assert!(tip.contains("78.8%"), "{tip}");
+        assert!(tip.contains("الجلسة"), "{tip}");
         assert!(tip.contains("987654"), "{tip}");
+        assert!(tip.encode_utf16().count() <= TOOLTIP_UTF16_LIMIT);
+    }
+    #[test]
+    fn arabic_weekly_tooltip_translates_canonical_label_without_changing_limit_id() {
+        let s = snapshot(
+            serde_json::json!({"providerId":"codex","sourceLabel":"oauth","errorState":"ready","primaryLabel":"Session","primary":{"usedPercent":21.25,"remainingPercent":78.75,"windowMinutes":300},"secondaryLabel":"Weekly","secondary":{"usedPercent":12.0,"remainingPercent":88.0,"windowMinutes":10080}}),
+        );
+        let settings = Settings {
+            ui_language: quotalis_core::settings::Language::Arabic,
+            ..Settings::default()
+        };
+        let c = ProviderTrayConfig {
+            tooltip_limit_ids: vec!["secondary:Weekly:10080".into()],
+            ..Default::default()
+        };
+        let tip = tooltip("codex", Some(&s), &c, &settings, None);
+        assert!(tip.contains("الأسبوعي"), "{tip}");
+        assert!(!tip.contains("Weekly"), "{tip}");
+        assert!(tip.contains("88.0%"), "{tip}");
         assert!(tip.encode_utf16().count() <= TOOLTIP_UTF16_LIMIT);
     }
     #[test]

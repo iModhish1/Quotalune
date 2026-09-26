@@ -13,7 +13,9 @@ export function trayLimits(snapshot?:ProviderUsageSnapshot) {
 }
 /** Translate only a canonical duration label; provider-defined window names remain verbatim. */
 export function trayLimitDisplayLabel(limit:{label:string;window:RateWindowSnapshot},t:(key:LocaleKey)=>string):string {
- return limit.label==="Weekly"&&limit.window.windowMinutes===10080?t("ProviderWeeklyLabel"):limit.label;
+ if(limit.label==="Weekly"&&limit.window.windowMinutes===10080)return t("ProviderWeeklyLabel");
+ if(limit.label==="Session"&&limit.window.windowMinutes===300)return t("ProviderSessionLabel");
+ return limit.label;
 }
 /** Mirrors provider_tray::healthy: a snapshot the native icon would not measure never shows a reading here. */
 export function trayPercent(s:ProviderUsageSnapshot|undefined,c:ProviderTrayConfig):number|null {
