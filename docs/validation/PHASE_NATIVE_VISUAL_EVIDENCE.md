@@ -172,10 +172,29 @@ Four further surfaces — Provider Display, Themes, Surfaces and Dashboard Studi
 
 That is helix-pilot's own safety cutoff, which triggers when the physical
 cursor rests in the screen's top-left corner. It is not an application fault:
-the app was running and the adapter reported `ok` immediately afterwards. The
-cursor was not moved, because doing so would require taking the user's physical
-mouse, which the operating rules prohibit. Those four surfaces are therefore
-recorded as not captured rather than claimed.
+the app was running and the adapter reported `ok` immediately afterwards.
+
+The alternate capture engine was then tried. `windows-mcp` exposes its own
+`Screenshot` tool, which does not monitor the cursor at all, so it should not be
+subject to that cutoff — but it is refused by the stack's background-only
+guard, which classifies it alongside the input-capable tools:
+
+```
+BACKGROUND_ONLY: This tool can move the real pointer, steal focus, type
+globally, or run unrestricted actions.
+```
+
+So both capture routes are closed to this session for reasons that are
+deliberate safety behaviour rather than application faults:
+
+| Engine | Blocked by | Can it be cleared without input? |
+| --- | --- | --- |
+| helix-pilot `screenshot` | `PilotEmergencyStop` — physical cursor in the top-left corner | No. Only the user moving their mouse clears it; no tool or config exposes a reset |
+| windows-mcp `Screenshot` | background-only input guard | No, by design |
+
+The cursor was not moved and no guard was bypassed, because doing either would
+mean taking the user's physical mouse or defeating a safety control. Those four
+surfaces are therefore recorded as not captured rather than claimed.
 
 ### Session boundary
 
