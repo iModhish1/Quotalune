@@ -59,6 +59,14 @@ separate design concepts remain in `docs/images/product-v3/design/`; they are
 not native proof. This family-level withdrawal does not claim each individual
 image passed a pixel-by-pixel review.
 
+The 71-image Analytics Superstack archive was likewise withdrawn as a family.
+Representative full-resolution frames showed former Quotalis branding and
+observed local token/model totals. The older validation notes explicitly say
+the source was genuine local activity. Audit copies are kept only under ignored
+`.local/historical-analytics-superstack-2026-09-27/`; historical Markdown
+citations now explain that these are no longer public assets. The individual
+frames were conservatively rejected as a family, not individually approved.
+
 ## Remaining scope
 
 Continue visual review of every tracked screenshot, including the remaining

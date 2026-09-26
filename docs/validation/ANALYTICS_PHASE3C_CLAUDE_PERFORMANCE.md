@@ -1,5 +1,10 @@
 # Phase 3C — Claude Local-Activity Performance Fix
 
+Screenshot privacy update (2026-09-27): the historical Analytics Superstack
+captures cited below were withdrawn from the public tree. Ignored audit copies
+remain in `.local/historical-analytics-superstack-2026-09-27/`; no current
+Quotalune release screenshot is claimed from those older frames.
+
 ## Root cause (confirmed by reading the actual call graph, not assumed)
 
 A single `get_provider_chart_data("claude")` IPC call
