@@ -647,3 +647,22 @@ exercise the Demo Dashboard's full scenario matrix or prove other themes.
 - Before: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T13-27-02-quotalune-dev-demo-toggle-restore-202609\s05-after.png`
 - After: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T13-31-05-quotalune-dev-demo-contrast-after-202609\s05-after.png`
 - Verification: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T13-31-05-quotalune-dev-demo-contrast-after-202609\summary.md`
+
+### Demo Dashboard provider-label contrast — 2026-09-26
+
+A separate guarded Dev run followed Settings → Dashboard Studio → enable
+Demo → Dashboard → exit Demo. All seven steps passed, and the exit button
+restored live mode. The before screenshot showed provider names and primary
+quota values rendered dark on the dark provider rail in the light Settings
+theme. The light-theme Settings-wide button rule was overriding the rail's
+own text color. The scoped rail-node rule now retains the analytics text
+token and selected/hover background in this theme. A newly verified Dev
+binary (SHA-256
+`3f3a58abaf71295f500f6c6dc47ce6fee687f9457cefdeffb2bf47e37fe8a5dc`)
+passed the same seven-step scenario. The inspected screenshot shows readable
+provider names and quota values for three visible simulated providers.
+This is not a claim that every Demo scenario or theme is visually accepted.
+
+- Before: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T13-35-34-quotalune-dev-demo-dashboard-exit-202609\s06-after.png`
+- After: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T13-40-14-quotalune-dev-demo-provider-contrast-aft\s06-after.png`
+- Verification: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T13-40-14-quotalune-dev-demo-provider-contrast-aft\summary.md`

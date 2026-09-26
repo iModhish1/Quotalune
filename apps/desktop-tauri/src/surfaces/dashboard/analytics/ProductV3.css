@@ -43,6 +43,10 @@
 .product-v3 .v3-overview-modules>[data-analytics-section]{grid-column:auto}.product-v3 .v3-overview-modules>[data-analytics-section=limits],.product-v3 .v3-overview-modules>[data-analytics-section=overview]{grid-column:1/-1}
 .settings-studio .settings-body .product-v3 .provider-rail__node{background:transparent;border-color:transparent;padding:12px 6px}.settings-studio .settings-body .product-v3 .provider-rail__node[aria-current=true]{background:color-mix(in srgb,var(--qa-analytics-accent) 8%,var(--cosmic-panel));border-color:var(--qa-analytics-accent)}
 .settings-studio .settings-body .product-v3 .provider-rail__node:hover{background:color-mix(in srgb,var(--qa-analytics-accent) 12%,var(--cosmic-panel))}
+/* Light Settings button defaults must not turn text dark inside the rail's dark surface. */
+[data-theme="light"] .settings-studio .settings-body .product-v3 .provider-rail__node{color:var(--qa-analytics-text-primary);background:transparent;border-color:transparent}
+[data-theme="light"] .settings-studio .settings-body .product-v3 .provider-rail__node[aria-current=true]{background:color-mix(in srgb,var(--qa-analytics-accent) 8%,var(--cosmic-panel));border-color:var(--qa-analytics-accent)}
+[data-theme="light"] .settings-studio .settings-body .product-v3 .provider-rail__node:hover{background:color-mix(in srgb,var(--qa-analytics-accent) 12%,var(--cosmic-panel))}
 .product-v3.dashboard-cosmic .dashboard-analytics__kpis{padding-inline:0!important}.product-v3.dashboard-cosmic .dashboard-analytics__kpis-primary{max-width:none;width:100%}
 
 /* Final native pass: keep live summaries visible below the rail at laptop heights. */
