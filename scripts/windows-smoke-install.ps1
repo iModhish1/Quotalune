@@ -285,7 +285,8 @@ $acquireOwnership = {
         throw "Missing per-user Quotalune uninstall registry entry: $canonicalUninstallKey"
     }
     $entry = Get-ItemProperty -LiteralPath $canonicalUninstallKey
-    if ($entry.DisplayName -ne "Quotalune") {
+    $expectedDisplayName = if ($ExpectedVersion) { "Quotalune $ExpectedVersion" } else { "Quotalune" }
+    if ($entry.DisplayName -ne $expectedDisplayName) {
         throw "Unexpected uninstall DisplayName: $($entry.DisplayName)"
     }
     if ($entry.InstallLocation) {
@@ -394,7 +395,7 @@ $cleanupAction = {
     }
 }
 
-$recoveryInstructions = "Inspect $installLog, $installDirPath, and $canonicalUninstallKey inside this disposable environment; remove only artifacts whose paths and Quotalis identity you verify."
+$recoveryInstructions = "Inspect $installLog, $installDirPath, and $canonicalUninstallKey inside this disposable environment; remove only artifacts whose paths and Quotalune identity you verify."
 Invoke-SmokeInstallLifecycle `
     -Install $installAction `
     -AcquireOwnership $acquireOwnership `
