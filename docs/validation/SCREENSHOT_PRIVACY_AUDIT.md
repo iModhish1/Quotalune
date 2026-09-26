@@ -105,6 +105,13 @@ release captures. Audit copies are in ignored
 default to ignored `.local/` output. This family-level decision does not claim
 pixel-by-pixel approval or remove the images from older Git history.
 
+The 12-image Claude-continuation archive was also withdrawn as historical
+Quotalis-era proof. Representative full-resolution inspection included the
+local-activity view, which displayed observed token totals. Both historical
+validation notes now distinguish their earlier observations from current
+release evidence. Ignored local copies are under
+`.local/historical-claude-continuation-2026-09-27/`.
+
 ## Remaining scope
 
 Continue visual review of every tracked screenshot, including the remaining

@@ -1,11 +1,18 @@
 # Claude native control QA + RTL validation — 2026-09-10
 
+Historical evidence note (2026-09-27): the 12 screenshots from this
+Quotalis-era pass were withdrawn from the current public image tree. They
+show the former brand, and the local-activity capture includes observed
+owner readings. Audit copies are retained only in ignored
+`.local/historical-claude-continuation-2026-09-27/`. The observations below
+describe the earlier test and are not current Quotalune release proof.
+
 Wave C §3-5. Real native evidence against a freshly rebuilt,
 `dev-preflight`-verified `QuotalisDev.exe` (rebuilt twice this pass —
 once after the controls migration, again after the theme-propagation fix
 below), driven via the CDP harness (`.local/proof/claude-audit/
 60-control-qa.mjs` and inline follow-up scripts). Screenshots under
-`docs/images/claude-continuation/`.
+the local historical audit directory noted above.
 
 ## Control states (QuotalisSelect, Reset Display's Preset field)
 
