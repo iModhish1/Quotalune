@@ -596,3 +596,13 @@ stopped after each run. Local-only evidence:
 
 Navigation and screenshot inspection do not prove every control, save path,
 provider connection, theme, keyboard flow or detached Collections window.
+
+The same screenshot showed the editor help and save-status text too pale on
+the white theme. A scoped CSS rule now uses the existing secondary-ink token.
+The fresh Dev build after this one-rule change passed preflight/freshness
+(SHA-256 `0f848d00fbe9513b4f5efcd1fc30f2198a6b7ffae4e036761b0259a456aec0e4`).
+The guarded four-step Collections scenario passed and the inspected image
+shows darker, readable help and status text. It remains a single-theme visual
+check, not a measured contrast ratio across the full theme matrix:
+
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T12-48-29-quotalune-collections-help-contrast-2026\s04-after.png`

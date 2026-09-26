@@ -29,6 +29,7 @@
 .collections-targets{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
 .collections-targets button{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .collections-help{margin:0;font-size:12px;line-height:1.5}
+.settings-studio .collections-help,.settings-studio .collections-editor>small{color:var(--qa-ink-2)}
 /* The full-page editor uses the available width, keeping Save near its controls
    instead of beneath a long sidebar opposite an almost empty preview. */
 .collections-page .collections-studio{grid-template-columns:minmax(0,1fr)}
