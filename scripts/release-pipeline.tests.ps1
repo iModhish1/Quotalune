@@ -28,8 +28,8 @@ function Assert-Throws {
     try { & $Block } catch { $thrown = $true }
     Assert-True $thrown $Message
 }
-Assert-QuotalisReleaseOrigin 'https://github.com/iModhish1/Quotalis.git'
-Assert-QuotalisReleaseOrigin 'git@github.com:iModhish1/Quotalis.git'
+Assert-QuotalisReleaseOrigin 'https://github.com/iModhish1/Quotalune.git'
+Assert-QuotalisReleaseOrigin 'git@github.com:iModhish1/Quotalune.git'
 Assert-Throws { Assert-QuotalisReleaseOrigin 'https://github.com/nesszer/Win-CodexBar.git' } 'cached upstream checkout is rejected'
 Assert-Throws { Assert-QuotalisReleaseOrigin '' } 'missing cached origin is rejected'
 
@@ -46,8 +46,8 @@ $prerequisiteText = Get-Content -Raw -LiteralPath (Join-Path $scriptRoot 'instal
 Assert-True ($prerequisiteText -match '\$requiredNodeMajor\s*=\s*24') 'release prerequisite pins Node major 24'
 Assert-True ($prerequisiteText -match '11\\.24\\.0') 'release prerequisite keeps pnpm 11.24.0 pinned'
 
-Assert-Equal (Normalize-GitHubRepository 'https://github.com/iModhish1/Quotalis.git') 'imodhish1/quotalis' 'HTTPS canonical URL'
-Assert-Equal (Normalize-GitHubRepository 'git@github.com:iModhish1/Quotalis.git') 'imodhish1/quotalis' 'SSH canonical URL'
+Assert-Equal (Normalize-GitHubRepository 'https://github.com/iModhish1/Quotalune.git') 'imodhish1/quotalune' 'HTTPS canonical URL'
+Assert-Equal (Normalize-GitHubRepository 'git@github.com:iModhish1/Quotalune.git') 'imodhish1/quotalune' 'SSH canonical URL'
 Assert-True (Test-CanonicalReleaseTag 'v1.2.3') 'canonical release tag accepted'
 Assert-True (-not (Test-CanonicalReleaseTag 'v1.2.3-rc.1')) 'prerelease tag rejected'
 Assert-True (-not (Test-CanonicalReleaseTag 'v01.2.3')) 'leading-zero tag rejected'
@@ -56,15 +56,15 @@ Assert-Throws { Get-ReleaseVersionFromTag 'v0.48.0+build' } 'invalid version ext
 
 $assetNames = Get-RequiredReleaseAssets '0.48.0'
 Assert-Equal $assetNames.Count 6 'exactly six release asset names including sidecars'
-Assert-Equal $assetNames[0] 'Quotalis-0.48.0-Setup.exe' 'installer name'
-Assert-Equal $assetNames[3] 'Quotalis-0.48.0-portable.zip.sha256' 'portable sidecar name'
-Assert-Equal $assetNames[4] 'QuotalisCLI-v0.48.0-windows-x64.zip' 'CLI archive name'
-Assert-Equal $assetNames[5] 'QuotalisCLI-v0.48.0-windows-x64.zip.sha256' 'CLI sidecar name'
+Assert-Equal $assetNames[0] 'Quotalune-0.48.0-Setup.exe' 'installer name'
+Assert-Equal $assetNames[3] 'Quotalune-0.48.0-portable.zip.sha256' 'portable sidecar name'
+Assert-Equal $assetNames[4] 'QuotaluneCLI-v0.48.0-windows-x64.zip' 'CLI archive name'
+Assert-Equal $assetNames[5] 'QuotaluneCLI-v0.48.0-windows-x64.zip.sha256' 'CLI sidecar name'
 
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('win-codexbar-release-tests-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $testRoot | Out-Null
 try {
-    $asset = Join-Path $testRoot 'Quotalis-0.48.0-Setup.exe'
+    $asset = Join-Path $testRoot 'Quotalune-0.48.0-Setup.exe'
     [IO.File]::WriteAllText($asset, 'deterministic fixture')
     $hash = Get-AssetSha256 $asset
     [IO.File]::WriteAllText("$asset.sha256", "$hash  $(Split-Path $asset -Leaf)`n")

@@ -10,7 +10,7 @@ param(
     [Parameter(Mandatory)][string]$OutputDir,
     [Parameter(Mandatory)][string]$Tag,
     [Parameter(Mandatory)][string]$Sha,
-    [string]$Repository = 'iModhish1/Quotalis'
+    [string]$Repository = 'iModhish1/Quotalune'
 )
 
 Set-StrictMode -Version Latest
@@ -23,8 +23,8 @@ if (-not (Test-CanonicalReleaseTag $Tag)) {
 if ($Sha -notmatch '^[0-9a-fA-F]{40}$') {
     throw "Manifest requires a full immutable commit SHA; received '$Sha'."
 }
-if ((Normalize-GitHubRepository $Repository) -ne 'imodhish1/quotalis') {
-    throw "Manifest repository must be canonical iModhish1/Quotalis."
+if ((Normalize-GitHubRepository $Repository) -ne 'imodhish1/quotalune') {
+    throw "Manifest repository must be canonical iModhish1/Quotalune."
 }
 $version = Get-ReleaseVersionFromTag $Tag
 if (-not (Test-Path -LiteralPath $AssetsDir -PathType Container)) {
@@ -38,9 +38,9 @@ foreach ($path in $expectedPaths) {
         throw "Missing expected release asset: $path"
     }
 }
-Assert-AssetMatchesSidecar (Join-Path $AssetsDir "Quotalis-$version-Setup.exe")
-Assert-AssetMatchesSidecar (Join-Path $AssetsDir "Quotalis-$version-portable.zip")
-Assert-AssetMatchesSidecar (Join-Path $AssetsDir "QuotalisCLI-v$version-windows-x64.zip")
+Assert-AssetMatchesSidecar (Join-Path $AssetsDir "Quotalune-$version-Setup.exe")
+Assert-AssetMatchesSidecar (Join-Path $AssetsDir "Quotalune-$version-portable.zip")
+Assert-AssetMatchesSidecar (Join-Path $AssetsDir "QuotaluneCLI-v$version-windows-x64.zip")
 
 # Copy only the six publishable assets and the build logs into the persisted bundle.
 foreach ($path in $expectedPaths) {
@@ -59,7 +59,7 @@ $assetRecords = @(
     }
 )
 $manifest = [ordered]@{
-    repository = 'iModhish1/Quotalis'
+    repository = 'iModhish1/Quotalune'
     tag = $Tag
     version = $version
     commit = $Sha.ToLowerInvariant()

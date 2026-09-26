@@ -15,7 +15,7 @@
 param(
     [Parameter(Mandatory)][string]$AssetsDir,
     [Parameter(Mandatory)][string]$Tag,
-    [string]$Repository = 'iModhish1/Quotalis'
+    [string]$Repository = 'iModhish1/Quotalune'
 )
 
 Set-StrictMode -Version Latest
@@ -149,8 +149,8 @@ function Assert-ManifestAndAssets {
         throw "Missing release manifest: $ManifestPath"
     }
     $manifest = Get-Content -Raw -LiteralPath $ManifestPath | ConvertFrom-Json
-    if (-not $manifest.PSObject.Properties['repository'] -or [string]$manifest.repository -ne 'iModhish1/Quotalis') {
-        throw 'Manifest repository is not canonical iModhish1/Quotalis.'
+    if (-not $manifest.PSObject.Properties['repository'] -or [string]$manifest.repository -ne 'iModhish1/Quotalune') {
+        throw 'Manifest repository is not canonical iModhish1/Quotalune.'
     }
     if (-not $manifest.PSObject.Properties['tag'] -or [string]$manifest.tag -ne $ExpectedTag) {
         throw "Manifest tag does not match $ExpectedTag."
@@ -203,9 +203,9 @@ function Assert-ManifestAndAssets {
             throw "Manifest byte count mismatch for $name."
         }
     }
-    Assert-AssetMatchesSidecar (Join-Path $AssetsDir "Quotalis-$ExpectedVersion-Setup.exe")
-    Assert-AssetMatchesSidecar (Join-Path $AssetsDir "Quotalis-$ExpectedVersion-portable.zip")
-    Assert-AssetMatchesSidecar (Join-Path $AssetsDir "QuotalisCLI-v$ExpectedVersion-windows-x64.zip")
+    Assert-AssetMatchesSidecar (Join-Path $AssetsDir "Quotalune-$ExpectedVersion-Setup.exe")
+    Assert-AssetMatchesSidecar (Join-Path $AssetsDir "Quotalune-$ExpectedVersion-portable.zip")
+    Assert-AssetMatchesSidecar (Join-Path $AssetsDir "QuotaluneCLI-v$ExpectedVersion-windows-x64.zip")
     Write-Host '[ok] manifest, exact six asset names, SHA-256 values, and sidecars verified before API access'
 }
 
@@ -216,8 +216,8 @@ if ([string]::IsNullOrWhiteSpace($env:GH_TOKEN)) {
 if (-not (Test-CanonicalReleaseTag $Tag)) {
     throw "Publisher accepts only canonical vX.Y.Z tags; received '$Tag'."
 }
-if ((Normalize-GitHubRepository $Repository) -ne 'imodhish1/quotalis') {
-    throw "Publisher repository must be canonical iModhish1/Quotalis."
+if ((Normalize-GitHubRepository $Repository) -ne 'imodhish1/quotalune') {
+    throw "Publisher repository must be canonical iModhish1/Quotalune."
 }
 if (-not (Test-Path -LiteralPath $AssetsDir -PathType Container)) {
     throw "Missing persisted release assets directory: $AssetsDir"

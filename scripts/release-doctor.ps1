@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Check whether a Quotalis release is ready or complete.
+    Check whether a Quotalune release is ready or complete.
 
 .DESCRIPTION
     Verifies version-file consistency, changelog presence, optional local
@@ -11,7 +11,7 @@
 
 param(
     [string]$Version = "",
-    [string]$AssetsDir = "C:\code\Quotalis-release\assets",
+    [string]$AssetsDir = "C:\code\Quotalune-release\assets",
     [switch]$SkipGitHub
 )
 
@@ -153,9 +153,9 @@ if (Test-Path $AssetsDir) {
     if ($Version -eq '0.11.0') {
         Write-Warn 'Published v0.11.0 used a historical asset layout; local sidecar checks apply to later releases.'
     } else {
-        Test-AssetHash (Join-Path $AssetsDir "Quotalis-$Version-Setup.exe")
-        Test-AssetHash (Join-Path $AssetsDir "Quotalis-$Version-portable.zip")
-        Test-AssetHash (Join-Path $AssetsDir "QuotalisCLI-v$Version-windows-x64.zip")
+        Test-AssetHash (Join-Path $AssetsDir "Quotalune-$Version-Setup.exe")
+        Test-AssetHash (Join-Path $AssetsDir "Quotalune-$Version-portable.zip")
+        Test-AssetHash (Join-Path $AssetsDir "QuotaluneCLI-v$Version-windows-x64.zip")
     }
 } else {
     Write-Warn "local assets directory not found: $AssetsDir"
@@ -166,9 +166,9 @@ if (-not $SkipGitHub) {
     if ($gh) {
         Push-Location $RepoRoot
         try {
-            $ghJsonPath = Join-Path $env:TEMP "quotalis-release-doctor-gh.json"
-            $ghErrPath = Join-Path $env:TEMP "quotalis-release-doctor-gh.err"
-            & $gh.Source release view $tag -R iModhish1/Quotalis --json assets,url 1>$ghJsonPath 2>$ghErrPath
+            $ghJsonPath = Join-Path $env:TEMP "quotalune-release-doctor-gh.json"
+            $ghErrPath = Join-Path $env:TEMP "quotalune-release-doctor-gh.err"
+            & $gh.Source release view $tag -R iModhish1/Quotalune --json assets,url 1>$ghJsonPath 2>$ghErrPath
             if ($LASTEXITCODE -eq 0) {
                 $release = Get-Content -Raw $ghJsonPath | ConvertFrom-Json
                 Write-Ok "GitHub release exists: $($release.url)"

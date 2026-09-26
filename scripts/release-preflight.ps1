@@ -15,7 +15,7 @@ param(
     [string]$Tag = $env:CIRCLE_TAG,
     [string]$Sha = $env:CIRCLE_SHA1,
     [string]$RepoRoot = '',
-    [string]$Repository = "iModhish1/Quotalis",
+    [string]$Repository = "iModhish1/Quotalune",
     [string]$MainBranch = "main"
 )
 

@@ -78,9 +78,9 @@ Both jobs use CircleCI's hosted Windows executor (`circleci/windows@5.0`).
    package, pnpm 11.24.0, the Rust MSVC target, Git, and Inno Setup 6.
 3. It uses a new temporary `WorkRoot`, runs `release-doctor.ps1`, then runs
    `windows-release-build.ps1` with the immutable SHA and `-SmokeInstall`.
-   It never uploads. Six assets — `Quotalis-<version>-Setup.exe` and its
-   `.sha256` sidecar, `Quotalis-<version>-portable.zip` and its `.sha256`
-   sidecar, `QuotalisCLI-v<version>-windows-x64.zip` and its `.sha256`
+   It never uploads. Six assets — `Quotalune-<version>-Setup.exe` and its
+   `.sha256` sidecar, `Quotalune-<version>-portable.zip` and its `.sha256`
+   sidecar, `QuotaluneCLI-v<version>-windows-x64.zip` and its `.sha256`
    sidecar — plus `release-manifest.json` and build logs are
    persisted to the workspace and stored as CircleCI artifacts.
    The portable ZIP includes the executable, original notification/shortcut
