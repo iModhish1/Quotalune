@@ -115,7 +115,7 @@ impl AccountStore {
                 None => result.push(candidate),
             }
         }
-        result.sort_by_key(|a| a.display_name().to_lowercase());
+        // Preserve the stored order: it is the user's account presentation order.
         Ok(result)
     }
 }

@@ -3,9 +3,12 @@ import { listen } from "@tauri-apps/api/event";
 
 import type { UsageDisplayConfig } from "../design-system/themes";
 import { useProviders } from "./useProviders";
+import { useProviderInstances } from "./useProviderInstances";
+import { composeProviderInstances, DEFAULT_INSTANCE_PRESENTATION } from "../lib/providerInstances";
+import type { ProviderInstancePresentation } from "../types/bridge";
 import { getSettingsSnapshot } from "../lib/tauri";
 import {
-  toStageProviders,
+  toStageProviderInstances,
   usageConfigFromSnapshot,
 } from "../components/orbit/stageProviders";
 import { useResetStageOptions, type ResetStageSettingsSource } from "./useResetStageOptions";
@@ -25,10 +28,16 @@ export function useStageRuntime({
   surface: CatalogSurfaceId;
 }) {
   const live = useProviders({ refreshOnMount: enabled });
+  const accounts = useProviderInstances(enabled);
   const [catalog, setCatalog] = useState(DEFAULT_CATALOG_THEME);
   const [catalogSource, setCatalogSource] = useState<CatalogThemeSource>("default");
   const [usageConfig, setUsageConfig] = useState<UsageDisplayConfig | undefined>();
   const [resetSettings, setResetSettings] = useState<ResetStageSettingsSource>({});
+  const [enabledProviders, setEnabledProviders] = useState<string[] | null>(null);
+  const [instancePresentation, setInstancePresentation] = useState<ProviderInstancePresentation>(DEFAULT_INSTANCE_PRESENTATION);
+  // Fail closed while settings load: account labels must never flash before
+  // the persisted privacy preference is known.
+  const [hidePersonalInfo, setHidePersonalInfo] = useState(true);
   const [settingsError, setSettingsError] = useState<string | null>(null);
 
   const reloadSettings = useCallback(() => {
@@ -39,6 +48,9 @@ export function useStageRuntime({
         setCatalog(resolved.slug);
         setCatalogSource(resolved.source);
         setUsageConfig(usageConfigFromSnapshot(snapshot));
+        setEnabledProviders(snapshot.enabledProviders);
+        setInstancePresentation(snapshot.providerInstancePresentation ?? DEFAULT_INSTANCE_PRESENTATION);
+        setHidePersonalInfo(snapshot.hidePersonalInfo);
         setResetSettings({
           resetPresentation: snapshot.resetPresentation,
           resetPresentationOverrides: snapshot.resetPresentationOverrides,
@@ -60,9 +72,15 @@ export function useStageRuntime({
   }, [enabled, reloadSettings]);
 
   const resetOptions = useResetStageOptions(resetSettings, surface);
+  const instances = useMemo(
+    () => composeProviderInstances(live.providers ?? [], accounts.instances,
+      enabledProviders ?? (live.providers ?? []).map(provider => provider.providerId),
+      instancePresentation),
+    [live.providers, accounts.instances, enabledProviders, instancePresentation],
+  );
   const providers = useMemo(
-    () => toStageProviders(live.providers ?? [], usageConfig, resetOptions),
-    [live.providers, usageConfig, resetOptions],
+    () => toStageProviderInstances(instances, usageConfig, resetOptions, hidePersonalInfo),
+    [instances, usageConfig, resetOptions, hidePersonalInfo],
   );
 
   return {

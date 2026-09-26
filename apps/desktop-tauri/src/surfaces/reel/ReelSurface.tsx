@@ -55,7 +55,7 @@ export default function ReelSurface({ catalog, settings, state, providers, focus
   }, [size.width, size.height]);
 
   return <section ref={root} className="reel-host" aria-label="Orbit Reel provider selector"
-    style={{...surfaceMaterialStyle(theme),"--provider-color":selected?providerColor(theme,selected.id):theme.accent} as CSSProperties}
+    style={{...surfaceMaterialStyle(theme),"--provider-color":selected?providerColor(theme,selected.iconId):theme.accent} as CSSProperties}
     onWheel={(event) => {
       if (event.ctrlKey || providers.length < 2 || settings.interactions?.wheelCycle===false) return;
       const delta = (Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX)
@@ -108,7 +108,7 @@ export default function ReelSurface({ catalog, settings, state, providers, focus
               style={{ "--node-x": `${p.x}px`, "--node-y": `${p.y}px`, "--node-scale": offset === 0 ? 1 : 0.64,
                 opacity: visible ? offset === 0 ? 1 : 0.52 : 0 } as CSSProperties}>
               <span className="reel-gauge">
-                <ArcGaugeV3 remaining={provider.arcFraction} size={46} stroke={2.5} colorOverride={providerColor(theme, provider.id)} ariaLabel={`${provider.name} quota`} />
+                <ArcGaugeV3 remaining={provider.arcFraction} size={46} stroke={2.5} colorOverride={providerColor(theme, provider.iconId)} ariaLabel={`${provider.name} quota`} />
                 <QaProviderIcon providerId={provider.iconId === "openai" ? "codex" : provider.iconId} size={providerGlyphSize(46)} />
               </span>
               <span className="reel-value">{formatPercentage(provider.primaryValue)}</span>

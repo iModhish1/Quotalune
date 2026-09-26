@@ -158,6 +158,74 @@ pub fn codex_accounts_list() -> Result<Vec<CodexAccount>, String> {
     load_codex_accounts()
 }
 
+/// Edit presentation metadata only. Account credentials and CODEX_HOME never change.
+#[tauri::command]
+pub fn codex_account_update_display(
+    app: tauri::AppHandle,
+    id: String,
+    nickname: Option<String>,
+    display_number: Option<u32>,
+) -> Result<(), String> {
+    let normalized = nickname
+        .map(|name| name.trim().to_string())
+        .filter(|name| !name.is_empty());
+    if normalized
+        .as_ref()
+        .is_some_and(|name| name.chars().count() > 80 || name.chars().any(char::is_control))
+    {
+        return Err(
+            "Account name must be at most 80 characters and contain no control characters."
+                .to_string(),
+        );
+    }
+    if display_number.is_some_and(|number| !(2..=999).contains(&number)) {
+        return Err("Account number must be between 2 and 999.".to_string());
+    }
+    let target_id = Uuid::parse_str(&id).map_err(|_| "Invalid Codex account id.".to_string())?;
+    let mut accounts = load_codex_accounts()?;
+    let target_index = accounts
+        .iter()
+        .position(|account| account.id == target_id)
+        .ok_or_else(|| "Codex account not found.".to_string())?;
+    if let Some(number) = display_number
+        && accounts
+            .iter()
+            .enumerate()
+            .any(|(index, account)| index != target_index && account.display_number == Some(number))
+    {
+        return Err("This account number is already in use.".to_string());
+    }
+    accounts[target_index].nickname = normalized;
+    accounts[target_index].display_number = display_number;
+    accounts[target_index].updated_at = chrono::Utc::now();
+    persist_codex_accounts(&accounts)?;
+    events::emit_settings_changed(&app);
+    events::emit_codex_accounts_updated(&app);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn codex_account_move(app: tauri::AppHandle, id: String, direction: i8) -> Result<(), String> {
+    if direction != -1 && direction != 1 {
+        return Err("Direction must be -1 or 1.".to_string());
+    }
+    let target_id = Uuid::parse_str(&id).map_err(|_| "Invalid Codex account id.".to_string())?;
+    let mut accounts = load_codex_accounts()?;
+    let index = accounts
+        .iter()
+        .position(|account| account.id == target_id)
+        .ok_or_else(|| "Codex account not found.".to_string())?;
+    let destination = index as isize + direction as isize;
+    if destination < 0 || destination >= accounts.len() as isize {
+        return Ok(());
+    }
+    accounts.swap(index, destination as usize);
+    persist_codex_accounts(&accounts)?;
+    events::emit_settings_changed(&app);
+    events::emit_codex_accounts_updated(&app);
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn codex_account_add(app: tauri::AppHandle) -> Result<CodexAccount, String> {
     let _operation = super::connection::begin_live_connection(ProviderId::Codex)?;

@@ -479,6 +479,8 @@ fn main() {
             commands::get_deepseek_pricing_status,
             commands::codex_accounts_list,
             commands::codex_account_add,
+            commands::codex_account_update_display,
+            commands::codex_account_move,
             commands::codex_account_remove,
             commands::codex_account_switch,
             commands::codex_account_fetch,

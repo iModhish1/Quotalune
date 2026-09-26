@@ -82,9 +82,10 @@ export default function TopArc({ demo }: TopArcProps) {
   const foldTimer = useRef<number | null>(null);
   const wheel = useRef({ sum: 0, lastAt: -Infinity });
   const nativeRevisionRef = useRef<string | null>(null);
-  // A registered account is not a rendering entitlement. The compact host
-  // receives only resolved values, so it cannot grow into an empty rail.
-  const providers = (qaFixture ? buildStructureQaProviders(qaFixture) : surfaceDemo.enabled ? SURFACE_DEMO_PROVIDERS : demo ? DEMO_PROVIDERS : runtime.providers).filter(hasSurfaceQuotaValue);
+  // Keep registered Codex accounts addressable even before their first quota
+  // fetch. Their gauges remain unavailable until their own snapshot arrives.
+  const providers = (qaFixture ? buildStructureQaProviders(qaFixture) : surfaceDemo.enabled ? SURFACE_DEMO_PROVIDERS : demo ? DEMO_PROVIDERS : runtime.providers)
+    .filter(provider => hasSurfaceQuotaValue(provider) || Boolean(provider.accountId));
   // The QA controller drives real Flow Surface state, not a second
   // renderer: Pinned forces `state="pinned"` the same way the real Pin
   // button does; otherwise a fixture that just activated is nudged out of
