@@ -79,7 +79,7 @@ export function ProviderDetailPane({
   settingsDisabled,
   onSettingsChange,
 }: Props) {
-  const { t } = useLocale();
+  const { t, language } = useLocale();
   const [challenge, setChallenge] = useState<ProviderLoginChallenge | null>(null);
   const loginHandle = useRef<ProviderLoginHandle | null>(null);
   const loginPhaseRef = useRef<ProviderLoginPhaseName | null>(null);
@@ -244,7 +244,7 @@ export function ProviderDetailPane({
   }
   if (!detail) return null;
 
-  const subtitle = buildSubtitle(detail, t);
+  const subtitle = buildSubtitle(detail, t, language);
   const reload = () => void load(detail.id);
   const credKey = `${detail.id}-${credentialRevision}`;
 

@@ -68,6 +68,20 @@ describe("buildSubtitle", () => {
     }
   });
 
+  it("uses Arabic relative time in an Arabic provider subtitle", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-31T12:00:00Z"));
+    try {
+      const detail = baseDetail({ lastUpdated: "2026-07-31T11:59:47Z" });
+      const subtitle = buildSubtitle(detail, t, "ar-SA");
+      expect(subtitle).toContain("oauth · DetailUpdatedPrefix");
+      expect(subtitle).toMatch(/[\u0600-\u06FF]/);
+      expect(subtitle).not.toContain("13s");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("still shows sourceLabel when plan identity is missing (plan does not drive subtitle)", () => {
     const detail = baseDetail({ plan: null, lastUpdated: null, hasSnapshot: true });
     expect(buildSubtitle(detail, t)).toBe("oauth");
