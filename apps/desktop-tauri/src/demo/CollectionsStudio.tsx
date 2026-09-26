@@ -6,6 +6,7 @@ import {QaProviderIcon,formatPercentage} from "../design-system";
 import {NotchGauge} from "../surfaces/notch/NotchGauge";
 import {providerAccent} from "../surfaces/notch/notchGeometry";
 import {useOptionalLocale} from "../hooks/useLocale";
+import type {LocaleKey} from "../i18n/keys";
 import {collectionLayout,DEFAULT_FIELDS,detachItem,mergeItem,moveItem,type Collection,type CollectionView,type ItemFields} from "../surfaces/collections/collectionModel";
 import "./CollectionsStudio.css";
 
@@ -13,6 +14,7 @@ const views:CollectionView[]=["horizontal","vertical","grid"];
 const unavailable=(id:string):StageProvider=>({id,name:id,iconId:id,resolvedMode:"remaining",primaryValue:null,secondaryValue:null,primaryLabel:"remaining",arcFraction:null,reset:"—",status:"offline"});
 export default function CollectionsStudio({providers=SURFACE_DEMO_PROVIDERS,initialLayout,onSave}:{providers?:StageProvider[];initialLayout?:CollectionLayoutSnapshot;onSave?:(layout:CollectionLayoutSnapshot)=>Promise<CollectionLayoutSnapshot>}={}){
   const locale=useOptionalLocale();
+  const t=(key:LocaleKey,fallback:string)=>locale?.t(key)??fallback;
   const initial:Collection[]=[{id:"main",items:providers.map(p=>p.id)}];
   const [groups,setGroups]=useState(initialLayout?.groups.length?initialLayout.groups:initial),[view,setView]=useState<CollectionView>(initialLayout?.view??"horizontal");
   const [fields,setFields]=useState<Record<string,ItemFields>>(initialLayout?.fields??{}),[scale,setScale]=useState(initialLayout?.scale??100);
@@ -38,15 +40,15 @@ export default function CollectionsStudio({providers=SURFACE_DEMO_PROVIDERS,init
     setGroups(next);setPositions(p=>({...p,[id]:{x,y:nextY}}));setPages({});};
   const gather=()=>{setGroups([{id:"main",items:[...new Set([...groups.flatMap(g=>g.items),...providers.map(p=>p.id)])]}]);setPages({});setPositions({});};
   const page=(group:Collection,step:number)=>setPages(p=>({...p,[group.id]:((p[group.id]??0)+step+Math.ceil(group.items.length/3))%Math.ceil(group.items.length/3)}));
-  if(!displayedProviders.length)return <section role="status">No provider data available. Connect a provider before configuring collections.</section>;
+  if(!displayedProviders.length)return <section role="status">{t("CollectionsStudioNoProviders","No provider data available. Connect a provider before configuring collections.")}</section>;
   return <main className="collections-studio">
-    {!onSave && <header><span className="collections-wordmark">Quotalune</span><h1>Collections</h1><p>Interactive design preview · synthetic data · no desktop settings changed</p></header>}
-    <section className="collections-editor" aria-label="Collection editor">
-      <div className="collections-views" role="group" aria-label="Collection view">{views.map(v=><button key={v} aria-pressed={view===v} onClick={()=>setView(v)}><span aria-hidden="true">{v==="grid"?"▦":v==="vertical"?"☷":"⋯"}</span>{v[0].toUpperCase()+v.slice(1)}</button>)}</div>
-      <label>Size <output>{scale}%</output><input aria-label="Collection size" type="range" min="75" max="125" step="5" value={scale} onChange={e=>setScale(Number(e.target.value))}/></label>
-      <label>Configure provider<select aria-label="Configure provider" value={selected} onChange={e=>setSelected(e.target.value)}>{displayedProviders.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-      <fieldset><legend>Visible on this provider</legend>{([['name','Provider name'],['value','Usage value'],['reset','Reset countdown']] as const).map(([key,label])=><label key={key}><input type="checkbox" checked={config[key]} onChange={e=>setFields(f=>({...f,[selected]:{...config,[key]:e.target.checked}}))}/>{label}</label>)}</fieldset>
-      <div className="collections-actions"><button onClick={()=>detach(selected)}>Detach selected</button><button onClick={()=>setGroups(g=>moveItem(g,selected,-1))}>Move earlier</button><button onClick={()=>setGroups(g=>moveItem(g,selected,1))}>Move later</button><button onClick={gather}>Gather all</button></div>
+    {!onSave && <header><span className="collections-wordmark">Quotalune</span><h1>{t("TabCollections","Collections")}</h1><p>{t("CollectionsStudioDemoHelp","Interactive design preview · synthetic data · no desktop settings changed")}</p></header>}
+    <section className="collections-editor" aria-label={t("CollectionsStudioEditor","Collection editor")}>
+      <div className="collections-views" role="group" aria-label={t("CollectionsStudioView","Collection view")}>{views.map(v=><button key={v} aria-pressed={view===v} onClick={()=>setView(v)}><span aria-hidden="true">{v==="grid"?"▦":v==="vertical"?"☷":"⋯"}</span>{t(v==="grid"?"CollectionsStudioGrid":v==="vertical"?"CollectionsStudioVertical":"CollectionsStudioHorizontal",v[0].toUpperCase()+v.slice(1))}</button>)}</div>
+      <label>{t("CollectionsStudioSize","Size")} <output>{scale}%</output><input aria-label={t("CollectionsStudioSize","Collection size")} type="range" min="75" max="125" step="5" value={scale} onChange={e=>setScale(Number(e.target.value))}/></label>
+      <label>{t("CollectionsStudioConfigureProvider","Configure provider")}<select aria-label={t("CollectionsStudioConfigureProvider","Configure provider")} value={selected} onChange={e=>setSelected(e.target.value)}>{displayedProviders.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+      <fieldset><legend>{t("CollectionsStudioVisibleFields","Visible on this provider")}</legend>{([['name','CollectionsStudioProviderName','Provider name'],['value','CollectionsStudioUsageValue','Usage value'],['reset','CollectionsStudioResetCountdown','Reset countdown']] as const).map(([key,labelKey,fallback])=><label key={key}><input type="checkbox" checked={config[key]} onChange={e=>setFields(f=>({...f,[selected]:{...config,[key]:e.target.checked}}))}/>{t(labelKey,fallback)}</label>)}</fieldset>
+      <div className="collections-actions"><button onClick={()=>detach(selected)}>{t("CollectionsStudioDetach","Detach selected")}</button><button onClick={()=>setGroups(g=>moveItem(g,selected,-1))}>{t("CollectionsStudioMoveEarlier","Move earlier")}</button><button onClick={()=>setGroups(g=>moveItem(g,selected,1))}>{t("CollectionsStudioMoveLater","Move later")}</button><button onClick={gather}>{t("CollectionsStudioGather","Gather all")}</button></div>
       {groups.some(g=>g.items.includes(selected))&&groups.length>1&&<fieldset className="collections-targets">
         <legend>{locale?.t("CollectionsMoveTarget")??"Move selected to another collection"}</legend>
         {groups.filter(g=>!g.items.includes(selected)).map(group=>{
@@ -57,9 +59,9 @@ export default function CollectionsStudio({providers=SURFACE_DEMO_PROVIDERS,init
         })}
       </fieldset>}
       <p className="collections-help">{locale?.t("CollectionsArrangeHelp")??"Select a provider, detach it or move it to another collection. Gather all keeps your current order."}</p>
-      <button className="collections-apply" disabled={saving} onClick={()=>{void save();}}>{saving?"Saving…":onSave?"Save collection layout":"Use in this preview"}</button><small role="status">{applied===draft?(onSave?"Layout saved — live in the Collections window":"Preview selection accepted — not saved to desktop"):applied?"Unapplied preview changes":"Draft — changes appear immediately below"}</small>{saveError&&<p role="alert">{saveError}</p>}
+      <button className="collections-apply" disabled={saving} onClick={()=>{void save();}}>{saving?t("CollectionsStudioSaving","Saving…"):onSave?t("CollectionsStudioSave","Save collection layout"):t("CollectionsStudioUsePreview","Use in this preview")}</button><small role="status">{applied===draft?(onSave?t("CollectionsStudioSaved","Layout saved — live in the Collections window"):t("CollectionsStudioPreviewAccepted","Preview selection accepted — not saved to desktop")):applied?t("CollectionsStudioUnapplied","Unapplied preview changes"):t("CollectionsStudioDraft","Draft — changes appear immediately below")}</small>{saveError&&<p role="alert">{saveError}</p>}
     </section>
-    <section className="collections-preview" aria-label="Live collection preview"><h2>Live preview <small>logical px at selected scale</small></h2>
+    <section className="collections-preview" aria-label={t("CollectionsStudioLivePreview","Live collection preview")}><h2>{t("CollectionsStudioPreview","Live preview")} <small>{t("CollectionsStudioLogicalPx","logical px at selected scale")}</small></h2>
       <div ref={canvas} className="collections-canvas" onPointerMove={e=>{const s=start.current;if(!s || Math.hypot(e.clientX-s.x,e.clientY-s.y)<5)return;const r=canvas.current!.getBoundingClientRect();setDrag({item:s.item,x:e.clientX-r.left,y:e.clientY-r.top});}}
         onPointerUp={e=>{const s=start.current;start.current=null;if(!s||!drag)return;const rect=canvas.current!.getBoundingClientRect();const x=e.clientX-rect.left,y=e.clientY-rect.top;
           const target=Array.from(canvas.current!.querySelectorAll<HTMLElement>('[data-group-id]')).find(el=>{const b=el.getBoundingClientRect();return e.clientX>=b.left&&e.clientX<=b.right&&e.clientY>=b.top&&e.clientY<=b.bottom;});
@@ -69,24 +71,24 @@ export default function CollectionsStudio({providers=SURFACE_DEMO_PROVIDERS,init
         {groups.map((group,groupIndex)=>{const offset=((pages[group.id]??0)%Math.ceil(group.items.length/3))*3,ids=group.items.slice(offset,offset+3);
           const layout=collectionLayout(ids,fields,view,scale),pos=positions[group.id]??{x:20,y:24+groupIndex*150};
           return <div className="collections-placement" key={group.id} style={{left:pos.x,top:pos.y,maxWidth:"calc(100% - 24px)"}}>
-            <output data-testid="collection-size">{Math.round(layout.width)} × {Math.round(layout.height)} px · {group.items.length} items</output>
+            <output data-testid="collection-size">{Math.round(layout.width)} × {Math.round(layout.height)} {t("CollectionsStudioPixels","px")} · {group.items.length} {t("CollectionsStudioItems","items")}</output>
             <div data-group-id={group.id} data-testid="collection-group" className="collections-group" data-single={group.items.length===1} style={{width:layout.width,height:layout.height}} onWheel={e=>{if(e.ctrlKey||group.items.length<=3||Math.abs(e.deltaY)<4)return;const now=performance.now();if(now-lastWheel.current<160)return;lastWheel.current=now;page(group,e.deltaY>0?1:-1);}}>
               <div className="collections-grid" style={{gridTemplateColumns:`repeat(${layout.columns},${layout.cellWidth}px)`,gridAutoRows:layout.cellHeight,padding:layout.padding,gap:layout.gap,transform:`scale(${layout.factor})`}}>
-                {ids.map(id=>{const p=displayedProviders.find(p=>p.id===id)!,f=fields[id]??DEFAULT_FIELDS;return <button className="collections-item" key={id} aria-label={`${p.name} quota details`} title="Click for usage · drag to detach or regroup"
+                {ids.map(id=>{const p=displayedProviders.find(p=>p.id===id)!,f=fields[id]??DEFAULT_FIELDS;return <button className="collections-item" key={id} aria-label={t("CollectionsStudioQuotaDetails","{} quota details").replace("{}",p.name)} title={t("CollectionsStudioDragHint","Click for usage · drag to detach or regroup")}
                   onPointerDown={e=>{if(e.button!==0)return;start.current={item:id,x:e.clientX,y:e.clientY};e.currentTarget.setPointerCapture?.(e.pointerId);}}
                   onClick={()=>{if(drag)return;setSelected(id);setDetail(id);}}
                   onMouseEnter={()=>{if(!start.current)setDetail(id);}}>
-                  <span className="collections-dot"><NotchGauge fraction={p.arcFraction} size={36} color={providerAccent(id)} label={`${p.name} quota`}/><QaProviderIcon providerId={p.iconId} size={18}/></span>
-                  {f.name&&<span title={p.name}>{p.name}</span>}{f.value&&<span>{formatPercentage(p.primaryValue)}</span>}{f.reset&&<span className="collections-reset" title={`Resets in ${p.reset}`}>{p.reset}</span>}
+                  <span className="collections-dot"><NotchGauge fraction={p.arcFraction} size={36} color={providerAccent(id)} label={t("CollectionsStudioQuota","{} quota").replace("{}",p.name)}/><QaProviderIcon providerId={p.iconId} size={18}/></span>
+                  {f.name&&<span title={p.name}>{p.name}</span>}{f.value&&<span>{formatPercentage(p.primaryValue)}</span>}{f.reset&&<span className="collections-reset" title={t("CollectionsStudioResetsIn","Resets in {}").replace("{}",p.reset)}>{p.reset}</span>}
                 </button>;})}
               </div>
             </div>
-            {group.items.length>3&&<div className="collections-pagination"><button aria-label="Previous providers" onClick={()=>page(group,-1)}>‹</button><span>{offset+1}–{Math.min(offset+3,group.items.length)} / {group.items.length}</span><button aria-label="Next providers" onClick={()=>page(group,1)}>›</button></div>}
+            {group.items.length>3&&<div className="collections-pagination"><button aria-label={t("CollectionsStudioPrevious","Previous providers")} onClick={()=>page(group,-1)}>‹</button><span>{offset+1}–{Math.min(offset+3,group.items.length)} / {group.items.length}</span><button aria-label={t("CollectionsStudioNext","Next providers")} onClick={()=>page(group,1)}>›</button></div>}
           </div>;
         })}
         {drag&&<div className="collections-drag" style={{left:drag.x-20,top:drag.y-20}}><QaProviderIcon providerId={drag.item} size={20}/></div>}
       </div>
     </section>
-    {detail&&provider&&<section className="collections-details" role="region" aria-label={`${provider.name} usage details`}><header><QaProviderIcon providerId={provider.iconId} size={22}/><h2>{provider.name}</h2><button aria-label="Close details" onClick={()=>setDetail(null)}>×</button></header><strong>{formatPercentage(provider.primaryValue)} {provider.primaryLabel}</strong><p>Resets in {provider.reset}</p><small>{onSave?"Selected quota from provider snapshot. Additional windows are not yet exposed here.":"Selected quota · synthetic preview. Additional quota windows require live provider data."}</small></section>}
+    {detail&&provider&&<section className="collections-details" role="region" aria-label={t("CollectionsStudioUsageDetails","{} usage details").replace("{}",provider.name)}><header><QaProviderIcon providerId={provider.iconId} size={22}/><h2>{provider.name}</h2><button aria-label={t("CollectionsStudioClose","Close details")} onClick={()=>setDetail(null)}>×</button></header><strong>{formatPercentage(provider.primaryValue)} {provider.primaryLabel}</strong><p>{t("CollectionsStudioResetsIn","Resets in {}").replace("{}",provider.reset)}</p><small>{onSave?t("CollectionsStudioLiveDetail","Selected quota from provider snapshot. Additional windows are not yet exposed here."):t("CollectionsStudioDemoDetail","Selected quota · synthetic preview. Additional quota windows require live provider data.")}</small></section>}
   </main>;
 }

@@ -50,6 +50,25 @@ fn test_locale_key_arabic() {
 }
 
 #[test]
+fn collections_controls_and_provider_placeholder_have_arabic_text() {
+    assert_eq!(
+        get_text(Language::Arabic, LocaleKey::CollectionsStudioSave),
+        "حفظ ترتيب المجموعات"
+    );
+    assert_eq!(
+        get_text(Language::Arabic, LocaleKey::CollectionsStudioGrid),
+        "شبكة"
+    );
+    assert_eq!(
+        format_template(
+            &get_text(Language::Arabic, LocaleKey::CollectionsStudioQuotaDetails),
+            &["Claude"]
+        ),
+        "تفاصيل حصة Claude"
+    );
+}
+
+#[test]
 fn test_locale_key_chinese() {
     assert_eq!(get_text(Language::Chinese, LocaleKey::TabGeneral), "通用");
     assert_eq!(get_text(Language::Chinese, LocaleKey::TabCookies), "Cookie");
