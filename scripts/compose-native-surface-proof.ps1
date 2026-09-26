@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [int]$ProcessId,
-    [string]$InputDirectory = "docs/images/v9/native/surfaces"
+    [string]$InputDirectory = ".local/historical-v9-native-captures/surfaces"
 )
 
 $ErrorActionPreference = "Stop"

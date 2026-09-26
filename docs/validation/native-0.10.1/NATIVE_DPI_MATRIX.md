@@ -1,5 +1,9 @@
 # Native DPI matrix — 0.10.1
 
+Historical evidence only. The V9 native image family was withdrawn from the
+current public tree on 2026-09-27 and retained in ignored local audit storage.
+Its old paths below do not identify current Quotalune release captures.
+
 ## Hardware available to this session
 
 Single physical display, 1920×1200, fixed at **150% Windows scale** (DPR 1.5).

@@ -1,5 +1,10 @@
 # Structure Visual QA Matrix — Wave 1D / Wave 1E
 
+Historical path note: V9 native images cited in older rows were withdrawn from
+the current public tree on 2026-09-27. They remain only in ignored local audit
+storage and do not prove the current Quotalune build. The row statuses require
+fresh native acceptance as described in the current reconciliation matrix.
+
 ## Honesty note
 
 This matrix separates two genuinely different kinds of verification:

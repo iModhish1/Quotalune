@@ -1,6 +1,6 @@
 param(
-    [string]$InputDirectory = "docs/images/v9/native/usage",
-    [string]$OutputFile = "docs/images/v9/native/USAGE_NATIVE_PROOF_BOARD.png"
+    [string]$InputDirectory = ".local/historical-v9-native-captures/usage",
+    [string]$OutputFile = ".local/historical-v9-native-captures/USAGE_NATIVE_PROOF_BOARD.png"
 )
 
 $ErrorActionPreference = "Stop"
