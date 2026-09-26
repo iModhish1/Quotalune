@@ -106,3 +106,15 @@ The Codex adapter previously executed the first `codex` found on PATH or in a fi
 The Windows native/current-npm Claude executable is accepted only after a valid Authenticode result whose certificate simple name is `Anthropic, PBC`, following [Anthropic's setup and signing guidance](https://code.claude.com/docs/en/setup). Signature verification runs the OS PowerShell binary, disables module autoload and imports the OS security module by absolute path before calling its qualified command. A synthetic user-module shadow fixture confirms the probe never loads that module. Signed-native acceptance still lacks an Anthropic-signed fixture on this host; no owner Claude executable or credential was used.
 
 Detection, managed login and CLI usage now place discovery off the async executor and apply cancellation and an aggregate discovery deadline to signature subprocesses. Managed login shares its overall timeout with discovery. A read-only adversarial re-review found no remaining concrete regression in those paths; cancellation during a live signed-binary check was not exercised end-to-end. Unix legacy npm `env node` version probing retains the inherited interpreter PATH while keeping supervised output bounds, but Unix runtime compatibility is untested on this Windows host. The earlier PTY blocking-write and descendant-cleanup limitations remain open.
+
+## Dormant unsupported-provider credential status IPC -- 2026-09-26
+
+Gemini CLI and Vertex AI were already marked unsupported for connection/usage,
+but each still exposed an unused Tauri command reporting whether its local
+credential file existed and returning the absolute path to the frontend.
+The corresponding frontend bridge/types and host path helpers had no active
+callers. These IPC commands and helpers were removed. The separate generic
+CLI dependency metadata remains for tooling detection and may still inspect
+file presence when explicitly invoked; it does not read credential contents
+or restore a quota connection. No owner credential was read or changed. This
+is a narrowly scoped privacy cleanup, not a provider-wide credential audit.

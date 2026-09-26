@@ -677,12 +677,6 @@ export function openPath(path: string): Promise<void> {
   return invoke<void>("open_path", { path });
 }
 
-export function getVertexAiStatus(): Promise<
-  import("../types/bridge").VertexAiStatus
-> {
-  return invoke("get_vertexai_status");
-}
-
 export function listJetbrainsDetectedIdes(): Promise<
   import("../types/bridge").JetbrainsIde[]
 > {

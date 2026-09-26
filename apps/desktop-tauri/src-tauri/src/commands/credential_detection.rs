@@ -4,13 +4,6 @@ use super::*;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct VertexAiStatus {
-    pub has_credentials: bool,
-    pub credentials_path: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct JetbrainsIde {
     pub id: String,
     pub display_name: String,
@@ -25,22 +18,8 @@ pub struct KiroStatus {
     pub hint: Option<String>,
 }
 
-fn vertexai_credentials_path_raw() -> Option<std::path::PathBuf> {
-    quotalis_core::host::session::vertexai_credentials_path()
-}
-
 fn jetbrains_detected_ide_paths() -> Vec<std::path::PathBuf> {
     quotalis_core::host::session::jetbrains_detected_ide_paths()
-}
-
-#[tauri::command]
-pub fn get_vertexai_status() -> Result<VertexAiStatus, String> {
-    let path = vertexai_credentials_path_raw();
-    let has = path.as_ref().map(|p| p.exists()).unwrap_or(false);
-    Ok(VertexAiStatus {
-        has_credentials: has,
-        credentials_path: path.map(|p| p.to_string_lossy().into_owned()),
-    })
 }
 
 #[tauri::command]

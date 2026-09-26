@@ -102,29 +102,6 @@ pub fn primary_work_area_pixels() -> Option<WorkAreaPixels> {
 
 // ── Credential detection helpers ─────────────────────────────────────
 
-/// Filesystem path to VertexAI application-default credentials. Respects the
-/// `GOOGLE_APPLICATION_CREDENTIALS` env var when set, otherwise falls back to
-/// the gcloud well-known location under the OS config dir.
-pub fn vertexai_credentials_path() -> Option<std::path::PathBuf> {
-    if let Ok(path) = std::env::var("GOOGLE_APPLICATION_CREDENTIALS")
-        && !path.trim().is_empty()
-    {
-        return Some(std::path::PathBuf::from(path));
-    }
-    dirs::config_dir().map(|config| {
-        config
-            .join("gcloud")
-            .join("application_default_credentials.json")
-    })
-}
-
-/// `true` when VertexAI application-default credentials exist on disk.
-pub fn vertexai_signed_in() -> bool {
-    vertexai_credentials_path()
-        .map(|p| p.exists())
-        .unwrap_or(false)
-}
-
 /// Detect JetBrains / Google-IDE configuration directories under the user's
 /// config home. Returns an empty list if none are present.
 pub fn jetbrains_detected_ide_paths() -> Vec<std::path::PathBuf> {

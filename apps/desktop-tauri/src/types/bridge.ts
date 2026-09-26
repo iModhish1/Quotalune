@@ -1048,11 +1048,6 @@ export interface ProviderSummary {
 
 // ── Phase 4 — credential detection ───────────────────────────────────
 
-export interface VertexAiStatus {
-  hasCredentials: boolean;
-  credentialsPath: string | null;
-}
-
 export interface JetbrainsIde {
   id: string;
   displayName: string;
