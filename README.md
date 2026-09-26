@@ -74,13 +74,15 @@ Quotalune displays provider-reported values and preserves their meaning: quotas,
 
 ## Windows downloads
 
-The [current public release](https://github.com/iModhish1/Quotalis/releases/tag/v0.11.0) was published under the earlier **Quotalis** name. Its original filenames and executable name remain accurate:
+Download the [Quotalune 0.12.0 prerelease](https://github.com/iModhish1/Quotalune/releases/tag/v0.12.0) for Windows x64:
 
 | Download | Use |
 | --- | --- |
-| `Quotalis-0.11.0-x64-Setup.exe` | Per-user installation with desktop integration and runtime setup |
-| `Quotalis-0.11.0-x64-Portable.zip` | Extract the complete folder and open `Quotalis.exe` |
-| `Quotalis-0.11.0-x64-CLI.zip` | Command-line tools for usage and configuration |
+| `Quotalune-0.12.0-Setup.exe` | Per-user installation with desktop integration and runtime setup |
+| `Quotalune-0.12.0-portable.zip` | Extract the complete folder and open `Quotalune.exe` |
+| `QuotaluneCLI-v0.12.0-windows-x64.zip` | Command-line tool for usage and configuration |
+
+Each download has a matching `.sha256` checksum file. The [earlier Quotalis 0.11.0 release](https://github.com/iModhish1/Quotalune/releases/tag/v0.11.0) remains available with its original filenames.
 
 Windows x64, Microsoft Edge WebView2 Runtime and the Microsoft Visual C++ x64 runtime are required. Setup can install missing runtimes. The ZIP edition uses the normal per-user settings and history location; keep its supplied icons beside the executable.
 

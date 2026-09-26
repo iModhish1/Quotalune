@@ -1,10 +1,10 @@
 # Changelog
 
-All notable changes to QuotaArc are documented here. Format based on
+All notable changes to Quotalune are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/); versioning: [semver](https://semver.org/).
 The inherited Win-CodexBar history is archived in `docs/UPSTREAM_CHANGELOG.md`.
 
-## [0.12.0] — Unreleased
+## [0.12.0] — 2026-09-26
 
 ### Added
 
