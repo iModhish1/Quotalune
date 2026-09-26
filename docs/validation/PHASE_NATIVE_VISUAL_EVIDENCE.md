@@ -61,6 +61,24 @@ which is exactly the separation the Dev channel exists to provide.
 - Size: 1920x1200 PNG, 979,542 bytes
 - SHA-256: `94829D67B4FF272A270F6F2BD2EABADD78FB307589ACFA5FCA56181C85E86A5D`
 
+### Additional per-surface captures
+
+The application's own Dev proof harness
+(`CODEXBAR_PROOF_MODE=<surface>`, `CODEXBAR_SEED_PROVIDERS_JSON`) was used to
+open specific surfaces at startup, so no activation or pointer input was
+needed. Each capture was cropped to the application window rectangle so the
+README gallery shows the product rather than the surrounding desktop.
+
+| Surface | File | Size | Mean luminance | Variance |
+| --- | --- | --- | --- | --- |
+| Settings (default) | `PHASE_NATIVE_quotalune_settings_2026-09-26.png` | 1920x1200 | 32.9 | 1318.2 |
+| Settings / menu bar | `PHASE_NATIVE_settings_menubar_2026-09-26.png` | 1846x1088 | 33.3 | 1347.0 |
+| Settings / about | `PHASE_NATIVE_settings_about_2026-09-26.png` | 1846x1088 | 28.9 | 1270.3 |
+
+Every capture has a luminance variance above 1200 across a sampled grid, so
+none of them is a blank or all-black frame. The Settings window renders at
+1846x1088 and the crop excludes neighbouring windows.
+
 ### Objective proof the image is not blank
 
 A direct pixel analysis of the captured PNG (not a visual impression):
@@ -97,18 +115,24 @@ running application and that the WebView2 surface paints correctly.
 This evidence closes the "does the app render at all" question. It does **not**
 by itself complete the full native matrix the master goal asks for:
 
-- Only the Settings surface was captured. The Dashboard, Providers, Analytics,
-  Appearance, Surface Studio, Tray Studio, background gallery, Light mode and
-  Arabic/RTL surfaces each still need their own real capture.
+- The captured surfaces are all inside Settings. The Dashboard tray panel,
+  Providers, Analytics, Appearance, Surface Studio, Tray Studio, background
+  gallery, Light mode and Arabic/RTL surfaces each still need their own real
+  capture.
+- The seeded six-provider bundle renders into the tray panel, but that window
+  was measured at a rectangle extending past the right edge of the 1920px
+  screen and it was occluded by other foreground windows, so the seeded
+  dashboard has **not** been captured cleanly yet.
 - Tray icons, multi-tray lifecycle, tooltips, and Windows notification
   appearance have not been captured natively in this session.
 - Installer upgrade and shortcut migration on a disposable Windows
   environment is still unproven.
 
-Page-to-page navigation inside the app requires activating controls, and every
-focus-stealing or pointer-moving tool is refused by the adapter's background
-guard. Reaching the remaining surfaces needs either an app-owned route argument
-or a fresh, specific user approval for that one action. No guard was bypassed.
+Reaching the remaining surfaces through in-app navigation requires activating
+controls, and every focus-stealing or pointer-moving tool is refused by the
+adapter's background guard. No guard was bypassed. The productive path is to
+extend the Dev proof harness with explicit startup targets for the remaining
+surfaces, so each one can be opened and captured without any synthetic input.
 
 ## Verdict
 
@@ -119,5 +143,6 @@ proven Quotalune Dev binary launches under its own identity, opens a real
 window, paints its WebView2 content, and displays the Quotalune brand. The
 Personal installation was never modified.
 
-NATIVE VISUAL (full page-by-page matrix): **PARTIAL — remaining surfaces
-require per-surface captures that are not yet recorded.**
+NATIVE VISUAL (full page-by-page matrix): **PARTIAL — three Settings surfaces
+captured and verified; the remaining product surfaces still require their own
+captures.**
