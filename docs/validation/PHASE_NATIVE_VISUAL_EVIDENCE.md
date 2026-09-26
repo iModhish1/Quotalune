@@ -194,7 +194,35 @@ deliberate safety behaviour rather than application faults:
 
 The cursor was not moved and no guard was bypassed, because doing either would
 mean taking the user's physical mouse or defeating a safety control. Those four
-surfaces are therefore recorded as not captured rather than claimed.
+surfaces were therefore recorded as not captured rather than claimed.
+
+### Those four surfaces were subsequently captured — 2026-09-26
+
+The emergency stop later cleared on its own, because the cursor was moved
+outside the corner by the user rather than by any agent. The four surfaces
+were then captured with the same method as the rest of the gallery: one
+`CODEXBAR_PROOF_MODE=settings:<tab>` launch and one screenshot each, with no
+synthetic input.
+
+| Surface | File | Bytes | Luminance variance |
+| --- | --- | --- | --- |
+| Provider Display | `PHASE_NATIVE_provider_display_2026-09-26.png` | 1,418,856 | 1296.0 |
+| Themes | `PHASE_NATIVE_themes_2026-09-26.png` | 1,439,588 | 1230.6 |
+| Surfaces | `PHASE_NATIVE_surfaces_2026-09-26.png` | 1,170,374 | 746.2 |
+| Dashboard Studio | `PHASE_NATIVE_dashboard_studio_2026-09-26.png` | 1,164,120 | 669.5 |
+
+The display scale had changed to 250% by this point, so the Settings window
+rendered full-screen at 3072x1944 device pixels; the crop rect was scaled
+into image coordinates rather than reused from the earlier 150% session.
+
+The local vision model read the Themes surface back as application "Quotalune
+Dev", window title "QUOTALUNE Appearance", with Themes / Provider Display /
+Reset Display tabs and the workspace background categories (All, Static,
+Animated, My backgrounds) — confirming the captures show the product and not
+incidental desktop content.
+
+The gallery now holds ten verified captures, and every README image path was
+checked to resolve to a tracked file.
 
 ### Session boundary
 

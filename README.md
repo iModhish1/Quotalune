@@ -38,9 +38,25 @@ Provider connections:
 
 ![Quotalune providers](docs/validation/evidence/PHASE_NATIVE_providers_2026-09-26.png)
 
+Themes and workspace backgrounds:
+
+![Quotalune themes](docs/validation/evidence/PHASE_NATIVE_themes_2026-09-26.png)
+
+Provider presentation:
+
+![Quotalune provider display](docs/validation/evidence/PHASE_NATIVE_provider_display_2026-09-26.png)
+
+Floating surfaces:
+
+![Quotalune surfaces](docs/validation/evidence/PHASE_NATIVE_surfaces_2026-09-26.png)
+
+Dashboard studio:
+
+![Quotalune dashboard studio](docs/validation/evidence/PHASE_NATIVE_dashboard_studio_2026-09-26.png)
+
 These are real captures of the current release candidate on Windows. Previews
-of the appearance, surface and tray studios, the background gallery, Light mode
-and Arabic/RTL are published as they are captured from the verified build.
+of Light mode, Arabic/RTL and the tray surfaces are published as they are
+captured from the verified build.
 
 ## A workspace that feels like yours
 
