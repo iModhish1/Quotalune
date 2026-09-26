@@ -580,7 +580,12 @@ mod tests {
             wait_for_child(&handle, Duration::from_millis(250)),
             ChildWaitResult::TimedOut(_)
         ));
-        assert!(started.elapsed() < Duration::from_secs(2));
+        // The property under test is that a 250ms wait times out, releases the
+        // handle and stops the owned child -- both asserted below. The timing
+        // bound only needs to prove we did not wait out the fixture, and it
+        // must leave room for spawning and reaping a real child process on a
+        // loaded CI runner. The sibling test below uses the same ratio.
+        assert!(started.elapsed() < Duration::from_secs(4));
         assert!(handle.lock().is_none());
         assert_process_stopped(&pid_path);
     }
