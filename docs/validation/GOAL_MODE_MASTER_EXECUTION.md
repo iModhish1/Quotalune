@@ -9,13 +9,38 @@ The active objective is the owner's MASTER GOAL MODE EXECUTION and historical-wa
 | A — reconciliation | Preserve inherited work and establish actual source state | Preserved Claude's dirty Wave 3 implementation from `d066226d9edb`; integrated in `881d675d`, `2b21f848`, `7533a844`. No reset or history rewrite. |
 | B — provider onboarding | Derived capability model, working supported onboarding, protected credentials, cancellation and isolated QA | All 70 provider method rows modeled; simulated login transport, cancellation and evidence-propagation repairs tested. Remaining closure includes full provider-specific reporting/scenario coverage. See `WAVE3_IMPLEMENTATION_REPORT.md`. Live-account acceptance is distinct from fixture coverage. |
 | C — product completion | Backgrounds, navigation, studios, page consistency, responsive/accessibility/performance | OPEN. Audit current implementations against the product-completion sections of the master request; do not replace finished systems gratuitously or drop older owner requirements. |
-| D — native closure | Fresh Dev Windows evidence for Waves 1–4 | ENVIRONMENT BLOCKED historically; no new native PASS. Do not retry prohibited capture/CDP/UIA routes without actual new capability. Continue independent code work. |
+| D — native closure | Fresh Dev Windows evidence for Waves 1–4 | PARTIAL. The historical ENVIRONMENT BLOCKED verdict is withdrawn: the prior all-black capture was a tooling-path failure, and a freshness-proven Dev build now launches and paints its WebView2 content. Settings surfaces are captured and verified; the remaining product surfaces, tray and notification appearance are not. No physical pointer or keyboard input was used and no guard was bypassed. See `PHASE_NATIVE_VISUAL_EVIDENCE.md`. |
 | E — security and OSS | Cross-wave privacy, dependencies, licenses and rollback | OPEN. Wave 3 focused checks are not a whole-product audit. |
-| F — final RC and GitHub preparation | Exact source/build identity, packaging, public presentation and canonical CI | OPEN. Existing published v0.11.0 is immutable. Final release version and remote state require reconciliation. |
-| G — publication | Every required code, native, security, OSS and CI gate passes | CLOSED. No publication or Personal promotion from a partial/native-blocked state. |
+| F — final RC and GitHub preparation | Exact source/build identity, packaging, public presentation and canonical CI | DONE for source. Renamed to `iModhish1/Quotalune` with the old URL redirecting, description/topics/homepage set, full history pushed by fast-forward, and required CI green. Existing published v0.11.0 is untouched. Release artifacts are not yet built. |
+| G — publication | Every required code, native, security, OSS and CI gate passes | CLOSED. Source is published and CI is green, but the v0.12.0 release is deliberately not published while native evidence is partial. No Personal promotion. |
 | Historical appendix | Every ledger wave explicitly reconciled and cross-wave regression tested | PARTIAL. Both matrices exist; all three historical ledgers were read and indexed. Full cross-wave acceptance is still open. Historical PASS prose alone is not fresh evidence. |
 
-## Verified checkpoint before the next packet
+## Current verified checkpoint
+
+`7e4c0506` on `release/quotalune-integration`, clean worktree, in sync with
+`iModhish1/Quotalune` `main`. Frontend 1652 tests / 230 files, desktop 586
+passed / one existing real-history test ignored, core 1944, CLI one, doctests
+zero. Clippy `-D warnings`, formatting, TypeScript, production build, locale
+parity, secret scan and diff checks pass, and the required CI run is green.
+Counts are observations, not acceptance targets.
+
+Repairs made against this checkpoint, each with its own evidence:
+
+- the `analyticsSources` settings tab had drifted out of the Rust mirror, so it
+  did not round-trip through `lastSettingsTab` persistence or startup routing;
+  a structural guard now parses the frontend union at compile time;
+- the frozen v0.11.0 reader fixture was silently unrunnable on Windows because
+  `core.autocrlf` broke its byte-exact drift check;
+- three separate CI failures shared one cold-runner root cause and now have
+  test-only budgets, with production `PROBE_TIMEOUT` unchanged at 15s.
+
+## Historical checkpoint (superseded)
+
+Everything below records the state at an earlier commit. Identifiers quoted
+here (for example `app.quotalis.desktop.dev`) are accurate for that checkpoint
+and are preserved as provenance. The current brand is **Quotalune**; the Dev
+AUMID is deliberately still `app.quotalis.desktop.dev` for Dev/Personal
+isolation. Do not read a historical value below as a current one.
 
 `7533a844012a38d38c3fe4839af272b6c9ba5283`, clean worktree, canonical `node scripts/build-dev-verified.mjs` succeeded. Embedded HEAD `7533a844012a`; source and proof-copy SHA256 `52c03acc355074fe48ace5718b43c803e5459988408be3c7d78d4eaf1061ce63`. Channel `dev`, identifier `app.quotalis.desktop.dev`, data identity `QuotaArc-Dev`. Local log `.local/wave3-final-build.log` and report `.local/wave3-final-report.md` retain exact evidence. This is a historical checkpoint once source changes again; never use its binary as proof for later edits.
 
