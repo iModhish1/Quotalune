@@ -34,6 +34,11 @@ Native Dev visual/interaction acceptance, other settings locale coverage and
 the installer smoke test remain open. This source change is newer than the
 published `v0.12.0` prerelease tag and is not included in its assets.
 
+The first native Advanced capture exposed English shortcut buttons inside a
+nested component. These are now translated and a fresh Dev build from
+`197b8513` verified «تسجيل» and «مسح» in the real RTL Settings window. See
+`PHASE_NATIVE_VISUAL_EVIDENCE.md`; full native acceptance remains open.
+
 ## Current verified checkpoint
 
 `7e4c0506` on `release/quotalune-integration`, clean worktree, in sync with

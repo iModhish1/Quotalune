@@ -394,3 +394,23 @@ refresh text. Local QA evidence:
 The dashboard image contains live provider usage; it remains local and is not
 part of the public README. This capture verifies the rebuilt General section,
 not the remaining untranslated Arabic settings pages or every app control.
+
+### Advanced settings Arabic verification — 2026-09-26
+
+The Dev-only build from `197b85131463` passed `build-dev-verified.mjs` with
+matching source/proof SHA-256
+`2973bdb0b41f8cf53810373f4c3608631f981add8036b87df84a0b1ae6f691c2`.
+The guarded Desktop Visual QA orchestrator launched this binary with `--tray`,
+opened Settings through its UIA button, selected the Arabic «متقدم» item and
+verified both «تسجيل» and «مسح» shortcut buttons. All five steps passed.
+The final screenshot was inspected visually: the shortcut controls, proxy
+fields, Codex log notice and agent-session controls are legible in Arabic and
+the right-side RTL navigation remains visible. Evidence stays local:
+
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T10-25-03-quotalune-arabic-shortcut-controls-197b8\s05-after.png`
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T10-25-03-quotalune-arabic-shortcut-controls-197b8\summary.md`
+
+The QA adapter was stopped afterward. This is visual verification of the
+Advanced page's visible state, not an exhaustive native interaction pass or a
+test of the production installer. Display and Usage & Spend translations have
+source-backed tests but still require their own native captures.
