@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const here = import.meta.dirname!;
@@ -24,6 +24,30 @@ describe("Arabic settings coverage", () => {
     for (const key of keys) {
       if (key === "AppName") continue; // The official product name is intentionally Latin script.
       expect(translations.get(key), `${tab}: ${key}`).toMatch(/[\u0600-\u06FF]/);
+    }
+  });
+
+  it("covers every key referenced by the provider detail subtree", () => {
+    const arabic = readFileSync(`${here}/../../../../../rust/src/locale/ar-SA.ftl`, "utf8");
+    const translations = new Map(
+      [...arabic.matchAll(/^([A-Za-z][A-Za-z0-9]*)\s*=\s*(.*)$/gm)]
+        .map((match) => [match[1], match[2]]),
+    );
+    const files = (directory: string): string[] => readdirSync(directory, { withFileTypes: true })
+      .flatMap((entry) => {
+        const path = `${directory}/${entry.name}`;
+        if (entry.isDirectory()) return files(path);
+        return entry.name.endsWith(".tsx") && !entry.name.includes(".test.") ? [path] : [];
+      });
+    const keys = new Set(files(`${here}/providers`).flatMap((path) =>
+      [...readFileSync(path, "utf8").matchAll(/\bt\(\s*["']([A-Za-z][A-Za-z0-9]*)["']/g)]
+        .map((match) => match[1]),
+    ));
+
+    expect(keys.size).toBeGreaterThan(200);
+    for (const key of keys) expect(translations.has(key), key).toBe(true);
+    for (const key of ["QuickActions", "ActionRefresh", "DetailPaceTitle", "Plan", "LastUpdated"]) {
+      expect(translations.get(key), key).toMatch(/[\u0600-\u06FF]/);
     }
   });
 });
