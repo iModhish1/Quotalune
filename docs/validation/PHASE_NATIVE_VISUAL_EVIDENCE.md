@@ -698,3 +698,19 @@ other providers.
 
 - Final: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T15-00-52-quotalune-dev-gemini-fullwidth-unavailab\s06-after.png`
 - Verification: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T15-00-52-quotalune-dev-gemini-fullwidth-unavailab\summary.md`
+
+### Provider detail pane density — 2026-09-26
+
+The verified Dev build at `312e1c88` showed a full-height white provider
+detail and sidebar when Gemini had one short unsupported-source card. A
+scoped Settings layout change makes both columns follow their content and
+caps long lists/details with independent scrolling. In the verified build
+at `da984785`, the six-step Gemini scenario passed and the screenshot shows
+the white cards ending directly below their content; the background is
+visible beneath them. A separate five-step Codex run passed and shows a
+populated detail pane retaining its internal scrollbar. These images prove
+the inspected Arabic wide-window states, not every viewport or provider.
+
+- Before: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T16-04-39-quotalune-dev-gemini-fullwidth-unavailab\s06-after.png`
+- After: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T16-13-09-quotalune-dev-gemini-fullwidth-unavailab\s06-after.png`
+- Populated: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T16-14-35-quotalune-dev-codex-pane-density\s05-after.png`
