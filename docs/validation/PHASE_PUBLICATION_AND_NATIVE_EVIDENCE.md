@@ -39,7 +39,10 @@ Settings surfaces are captured so far.
 | Run | Commit | Result |
 | --- | --- | --- |
 | 36212728173 | c8a76e39 | failure — one test |
-| 36213734968 | 1fdf1d0a | **success** |
+| 36213734968 | 1fdf1d0a | success |
+| 36214389620 | 20287078 | success |
+| 36214828487 | bba1d74e | failure — three tests |
+| 36215467841 | 450912e0 | **success** |
 
 The first CI run failed on exactly one test,
 `providers::antigravity::tests::powershell_discovery_cmdlets_are_available_without_a_user_profile`,
@@ -51,8 +54,47 @@ with a 120s budget now backs those environment probes. `PROBE_TIMEOUT` itself is
 unchanged, because it is a user-facing responsiveness guarantee for interactive
 provider probes and must not be weakened to satisfy a test.
 
-The second run is green on both required jobs: `Rust fmt / clippy / test` and
-`Frontend locale / typecheck / tests`.
+The next failure was the same root cause in three different tests, none of which
+this work changes behaviour in, and all of which pass locally:
+
+- `claude_signature_probe_never_loads_user_shadow_module` timed out. It asserts a
+  real security property by running PowerShell with an isolated `PSModulePath`
+  and calling `Get-AuthenticodeSignature`. It now shares the single
+  `ENV_PROBE_TIMEOUT` constant with the Antigravity probe.
+- `live_pty_cancellation_returns_before_wall_timeout` required cancellation in
+  under 5s. The property that matters is that cancellation returns well before
+  the command's own 15s timeout, so the bound is now 10s and still
+  distinguishes cancel from timeout.
+- `aborting_async_owner_stops_a_live_pty_worker` required the PTY child to
+  create its readiness marker within 5s. Readiness is "the child ran our
+  command", not a performance measurement, so the deadline is 30s. The
+  abort-and-terminate assertions are untouched.
+
+`PROBE_TIMEOUT` remains 15s throughout. The final run is green on both required
+jobs: `Rust fmt / clippy / test` and `Frontend locale / typecheck / tests`.
+
+## Settings-tab whitelist drift
+
+`surface_target.rs` documents that its `SETTINGS_TAB_IDS` whitelist must mirror
+the frontend `SettingsTabId` union, and its own regression comment records that
+this drift had already happened once before.
+
+`analyticsSources` had drifted. It is declared in the frontend `SettingsTabId`
+union, listed in the live `TAB_META`, rendered by `Settings.tsx` as
+`<AnalyticsSourcesTab />`, categorised in the settings centre and covered by
+frontend tests — but it appeared nowhere in Rust. The consequence was real, not
+cosmetic: `settings:analyticsSources` was rejected by the proof harness, and
+`commands/settings.rs` silently discarded a persisted `lastSettingsTab` of
+`analyticsSources` while `main.rs` filtered it out of startup routing, so the
+tab did not round-trip.
+
+The entry is restored, and a structural test now parses the `SettingsTabId`
+union out of `bridge.ts` at compile time and fails if the whitelist rejects any
+tab the frontend declares. That guard is proven rather than assumed: removing
+the entry makes it fail with the offending tab named, and restoring it passes.
+
+`surface_target.rs` is the only place in the Rust tree that claims to mirror a
+frontend list, so this was the only instance of the defect class.
 
 ## Native visual evidence
 
@@ -85,6 +127,20 @@ still need their own real captures, and tray and notification appearance has not
 been captured natively. The seeded dashboard screenshot was discarded rather
 than published because the window was occluded and ran off the right screen
 edge.
+
+An earlier draft of this document proposed extending the Dev proof harness so
+the remaining surfaces could be opened without synthetic input. That work turned
+out to be unnecessary: the harness already accepts `settings:<tab>` for every
+tab in the shell, including `dashboard`, `analytics`, `providers`,
+`providerDisplay`, `themes`, `surfaces` and `dashboardStudio`. The remaining
+work is capture only, and each surface is one launch plus one screenshot with
+no synthetic input at all. The one genuine harness defect found along the way
+was the missing `analyticsSources` entry described above.
+
+What actually blocks the remaining captures is not tooling. The Desktop Visual
+QA adapter reported `DESKTOP_QA_PAUSED: User has control`, and per the stack's
+rules a user pause is never cleared or worked around; only a user Resume
+reopens it. Nothing about the application prevents the remaining captures.
 
 Publishing a tagged release with artifacts now would overstate what has been
 verified. The honest next step is to capture the remaining surfaces, then
