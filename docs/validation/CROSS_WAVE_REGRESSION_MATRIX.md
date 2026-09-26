@@ -4,6 +4,14 @@ Scope: the 22 minimum interactions in historical appendix A66, plus defects foun
 
 Status **PARTIAL** means implementation or component evidence exists, but the complete interaction has not been established. No row below is a current native PASS. Paths are repository-relative. The frontend checkpoint for this increment is `.local/wave3-reporting-full-front.log` (1568 tests / 228 files); Rust results and exact candidate identity are recorded in `WAVE3_IMPLEMENTATION_REPORT.md` when complete. A suite pass supports only assertions the tests actually exercise.
 
+**Native status re-verified 2026-09-26.** This tracker previously stated that native
+closure was blocked by the environment. That is no longer accurate: the prior
+all-black capture was a tooling-path failure, not an application defect, and a
+freshness-proven Dev build now launches and paints its WebView2 content. See
+`PHASE_NATIVE_VISUAL_EVIDENCE.md` and `evidence/`. No row above is promoted by
+that change, because the captures cover the Settings surfaces only; the native
+evidence each row still requires is unchanged.
+
 | ID | Interaction | Located implementation / test evidence | Status | Required closure |
 |---|---|---|---|---|
 | CW01 | Provider connection → Dashboard | `ProviderDetailPane.test.tsx` proves real completion refreshes and simulated completion does not; `useDashboardSnapshot.test.ts` covers provider-refresh reload | PARTIAL | Exercise one connected provider through the real shared event/cache boundary, then native display; disconnected/error/empty must remain distinct |
@@ -38,4 +46,4 @@ Static reporting policy now requires response evidence instead of treating legac
 
 ## Execution order
 
-Finish Wave 3's remaining source/capability and scenario coverage first. Use CW01–06 and CW18–23 as its integration gates. Reconcile the full historical ledger before declaring older waves current; then execute CW07–17 alongside product completion. Native closure remains blocked under the current environment boundary. No release or Personal promotion follows from this tracker.
+Finish Wave 3's remaining source/capability and scenario coverage first. Use CW01–06 and CW18–23 as its integration gates. Reconcile the full historical ledger before declaring older waves current; then execute CW07–17 alongside product completion. No release or Personal promotion follows from this tracker.
