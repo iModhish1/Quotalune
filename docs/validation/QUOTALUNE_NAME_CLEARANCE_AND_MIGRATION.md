@@ -221,3 +221,42 @@ The stable shipping identity now carries the Quotalune brand end to end.
   returned an all-black WebView2 image, so the mandatory native gate is
   still open and the public release remains gated.
 - Repository rename on GitHub, then CI verification on the renamed remote.
+
+## Full quality-gate results at the Quotalune rename HEAD
+
+Run on the release candidate after the packaging rename and the fixture fix.
+
+| Gate | Result |
+| --- | --- |
+| `cargo test --workspace -- --test-threads=4` | PASS — desktop 584 (+1 intentionally ignored manual test), core 1944/1944, CLI 1, doctests 0 |
+| `cargo clippy --workspace --all-targets -- -D warnings` | PASS — clean |
+| `cargo fmt --all -- --check` | PASS — clean |
+| `cargo test -p quotalis_core paths::` | PASS — 5/5 |
+| `cargo test -p quotalis_core updater::` | PASS — 25/25 |
+| `cargo test -p quotalis_core notifications::` | PASS — 48/48 |
+| `cargo test -p quotalis_core locale::` (parity) | PASS — 20/20 |
+| `tsc --noEmit` | PASS |
+| `pnpm build` (production) | PASS |
+| Frontend suite (vitest) | PASS — 1652/1652 across 230 files (verified twice at HEAD) |
+| `scripts/windows-portable.tests.ps1` | PASS |
+| `node scripts/scan-secrets.mjs` | PASS — clean, 1348 files |
+| skip/focus scan | PASS — no `.only`; 1 pre-existing intentionally-ignored manual DB test |
+| `git diff --check` | PASS |
+
+### Incidental fix: frozen v0.11.0 reader fixture
+
+`notification_journal::compat_tests::frozen_legacy_reader_is_the_published_source`
+panicked on Windows because the CRLF checkout (from `core.autocrlf=true`)
+broke its LF marker search and byte-exact SHA-256. The committed blob is
+unchanged; a `.gitattributes` `-text` rule now keeps the fixture byte-exact
+on every platform, so the rollback drift guard is runnable again.
+
+### Known pre-existing test sensitivity (not introduced here)
+
+- The process-spawning tests in `login::` and `cli_dependencies::` assert
+  wall-clock bounds and can fail under heavy parallel load; they pass in
+  isolation and in a `--test-threads=4` full run. This matches the
+  previously recorded timing sensitivity.
+- The frontend `DashboardTab` shell test has shown occasional full-suite
+  flakes from async leakage between test files; it passes reliably at HEAD
+  and frontend `src/` is byte-identical to the pre-rename baseline.
