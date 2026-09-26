@@ -1,21 +1,42 @@
 use super::*;
 
+/// Wall-clock budget for the PowerShell process this test module spawns.
+///
+/// These are *environment-capability* probes, not interactive provider probes,
+/// so they deliberately do not use the production
+/// `cli_dependencies::PROBE_TIMEOUT`. On a cold Windows CI runner the first
+/// PowerShell start pays for module autoloading (`Get-NetTCPConnection` pulls
+/// in NetTCPIP), which can exceed the 15s interactive budget even though the
+/// host is perfectly healthy. Production probe timeouts are a user-facing
+/// responsiveness guarantee and are left unchanged; only these assertions
+/// about the host environment get the longer, more forgiving budget.
 #[cfg(windows)]
-fn project_fake_processes(fake_source: &str) -> String {
+const ENV_PROBE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
+
+/// Run a PowerShell snippet for an environment-capability assertion.
+#[cfg(windows)]
+fn run_env_powershell(script: &str) -> cli_dependencies::CliReadOutput {
     let powershell = system_powershell().expect("system PowerShell");
-    let script = PROCESS_DISCOVERY_SCRIPT.replacen("Get-CimInstance Win32_Process", fake_source, 1);
-    let output = cli_dependencies::read_provider_cli_sync(
+    let output = cli_dependencies::read_provider_cli_sync_with_timeout(
         &powershell,
         &[
             "-NoLogo",
             "-NoProfile",
             "-NonInteractive",
             "-Command",
-            &script,
+            script,
         ],
+        ENV_PROBE_TIMEOUT,
     )
-    .expect("synthetic process projection");
+    .expect("environment PowerShell probe");
     assert_eq!(output.exit_code, Some(0));
+    output
+}
+
+#[cfg(windows)]
+fn project_fake_processes(fake_source: &str) -> String {
+    let script = PROCESS_DISCOVERY_SCRIPT.replacen("Get-CimInstance Win32_Process", fake_source, 1);
+    let output = run_env_powershell(&script);
     String::from_utf8(output.stdout).expect("UTF-8 output")
 }
 
@@ -73,19 +94,9 @@ fn powershell_projection_handles_cli_only_and_no_matching_process() {
 #[cfg(windows)]
 #[test]
 fn powershell_discovery_cmdlets_are_available_without_a_user_profile() {
-    let powershell = system_powershell().expect("system PowerShell");
-    let output = cli_dependencies::read_provider_cli_sync(
-        &powershell,
-        &[
-            "-NoLogo",
-            "-NoProfile",
-            "-NonInteractive",
-            "-Command",
-            "Get-Command Get-CimInstance,Get-NetTCPConnection -ErrorAction Stop | Select-Object -ExpandProperty Name",
-        ],
-    )
-    .expect("cmdlet discovery");
-    assert_eq!(output.exit_code, Some(0));
+    let output = run_env_powershell(
+        "Get-Command Get-CimInstance,Get-NetTCPConnection -ErrorAction Stop | Select-Object -ExpandProperty Name",
+    );
     let names = String::from_utf8(output.stdout).expect("UTF-8 output");
     assert!(names.contains("Get-CimInstance"));
     assert!(names.contains("Get-NetTCPConnection"));

@@ -1045,6 +1045,36 @@ pub(crate) fn read_provider_cli_sync(
     )
 }
 
+/// Same as [`read_provider_cli_sync`] but with a caller-supplied wall-clock
+/// budget.
+///
+/// Production provider probes use [`PROBE_TIMEOUT`] because it is a
+/// user-facing responsiveness guarantee: a slow provider CLI must not freeze
+/// the interface. Environment-capability assertions in tests are a different
+/// concern; on a cold Windows CI runner the first PowerShell start pays for
+/// module autoloading and can exceed 15s even on a healthy host, so those
+/// callers pass a longer budget instead of weakening the production timeout.
+#[cfg(test)]
+pub(crate) fn read_provider_cli_sync_with_timeout(
+    program: &Path,
+    args: &[&str],
+    timeout: Duration,
+) -> Result<CliReadOutput, ProbeFailure> {
+    let (_tx, rx) = watch::channel(false);
+    let output = run_capture_blocking(
+        program.to_path_buf(),
+        args.iter().map(OsString::from).collect::<Vec<_>>(),
+        timeout,
+        rx,
+        None,
+    )?;
+    Ok(CliReadOutput {
+        exit_code: output.exit_code,
+        stdout: output.stdout,
+        stderr: output.stderr,
+    })
+}
+
 pub(crate) fn read_provider_cli_sync_os(
     program: &Path,
     args: &[OsString],
