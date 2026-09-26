@@ -70,9 +70,17 @@ describe("CollectionsNativeView",()=>{
     expect(screen.getByRole("button",{name:"Claude quota details"})).toBeInTheDocument();
   });
 
-  it("surfaces a settings error instead of silently showing nothing",async()=>{
+  it("shows a safe settings error instead of exposing raw details",async()=>{
     stageRuntimeMock.mockReturnValue({providers:[],settingsError:"Settings unavailable"});
     render(<CollectionsNativeView/>);
-    expect(await screen.findByRole("alert")).toHaveTextContent("Settings unavailable");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Collection settings are unavailable.");
+    expect(screen.getByRole("alert")).not.toHaveTextContent("Settings unavailable");
+  });
+
+  it("does not expose a failed layout read's underlying error",async()=>{
+    getCollectionLayoutMock.mockRejectedValue(new Error("private-path\\account.json"));
+    render(<CollectionsNativeView/>);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not load collection layout.");
+    expect(screen.getByRole("alert")).not.toHaveTextContent("private-path");
   });
 });

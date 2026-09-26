@@ -1053,6 +1053,11 @@ CollectionsStudioUsageDetails = تفاصيل استخدام { "{}" }
 CollectionsStudioClose = إغلاق التفاصيل
 CollectionsStudioLiveDetail = الحصة المحددة من لقطة المزوّد. لا تُعرض النوافذ الإضافية هنا بعد.
 CollectionsStudioDemoDetail = حصة محددة · معاينة تجريبية. تتطلب النوافذ الإضافية بيانات حقيقية من المزوّد.
+CollectionsNativeLoadError = تعذّر تحميل ترتيب المجموعات.
+CollectionsNativeSettingsError = إعدادات المجموعات غير متاحة.
+CollectionsNativeLoading = جارٍ تحميل المجموعات…
+CollectionsNativeEmpty = لم تُحفظ مجموعات بعد. افتح الإعدادات ← المجموعات لتجميع المزوّدين واختيار الترتيب ثم احفظه هنا.
+CollectionsNativeLive = مباشر · اضغط على مزوّد لعرض التفاصيل
 
 AboutIdentityEyebrow = مساحة عملك مع الذكاء الاصطناعي
 AboutMadeBy = صُنع بواسطة

@@ -1788,6 +1788,11 @@ CollectionsStudioUsageDetails = { "{}" } usage details
 CollectionsStudioClose = Close details
 CollectionsStudioLiveDetail = Selected quota from provider snapshot. Additional windows are not yet exposed here.
 CollectionsStudioDemoDetail = Selected quota · synthetic preview. Additional quota windows require live provider data.
+CollectionsNativeLoadError = Could not load collection layout.
+CollectionsNativeSettingsError = Collection settings are unavailable.
+CollectionsNativeLoading = Loading collections…
+CollectionsNativeEmpty = No collections saved yet. Open Settings → Collections to group providers, choose a layout and save it here.
+CollectionsNativeLive = Live · click a provider for details
 
 AboutIdentityEyebrow = YOUR AI WORKSPACE, IN VIEW
 AboutMadeBy = Made by
