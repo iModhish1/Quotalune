@@ -49,6 +49,16 @@ too. All ten audit copies are in ignored
 `.local/historical-real-data-2026-09-27/`. This is a current-tree withdrawal,
 not a claim that every historical screenshot or old Git object is cleared.
 
+Representative full-resolution review of Product V3's native Dashboard,
+Providers, RTL, theme and large-provider captures found former Quotalis
+branding, observed readings and the already documented channel-isolation
+caveat for early iterations. Conservatively, all 43 historical native captures
+and five review boards assembled from them were withdrawn from the public tree
+to ignored `.local/historical-product-v3-native-2026-09-27/`. The eleven
+separate design concepts remain in `docs/images/product-v3/design/`; they are
+not native proof. This family-level withdrawal does not claim each individual
+image passed a pixel-by-pixel review.
+
 ## Remaining scope
 
 Continue visual review of every tracked screenshot, including the remaining
