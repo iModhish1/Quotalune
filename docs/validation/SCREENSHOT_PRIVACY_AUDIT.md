@@ -40,6 +40,42 @@ current-tree copies were withdrawn; local audit copies are under ignored
 `.local/historical-images-post-release/`. The historical handoff now points
 there instead of to the public images directory.
 
+Seven more historical captures explicitly labeled `REAL_DATA` were reviewed
+across Analytics V3/V4, Dashboard phases 3/5/final and Product V2. They show
+the former Quotalis brand; several also show observed provider readings. Three
+Phase 3 `AUTH_REQUIRED` / `NO_COST` captures were byte-for-byte copies of the
+withdrawn real-data captures (SHA-256 verified), so those copies were removed
+too. All ten audit copies are in ignored
+`.local/historical-real-data-2026-09-27/`. This is a current-tree withdrawal,
+not a claim that every historical screenshot or old Git object is cleared.
+
+Representative full-resolution review of Product V3's native Dashboard,
+Providers, RTL, theme and large-provider captures found former Quotalis
+branding, observed readings and the already documented channel-isolation
+caveat for early iterations. Conservatively, all 43 historical native captures
+and five review boards assembled from them were withdrawn from the public tree
+to ignored `.local/historical-product-v3-native-2026-09-27/`. The eleven
+separate design concepts remain in `docs/images/product-v3/design/`; they are
+not native proof. This family-level withdrawal does not claim each individual
+image passed a pixel-by-pixel review.
+
+The 71-image Analytics Superstack archive was likewise withdrawn as a family.
+Representative full-resolution frames showed former Quotalis branding and
+observed local token/model totals. The older validation notes explicitly say
+the source was genuine local activity. Audit copies are kept only under ignored
+`.local/historical-analytics-superstack-2026-09-27/`; historical Markdown
+citations now explain that these are no longer public assets. The individual
+frames were conservatively rejected as a family, not individually approved.
+
+Eight V9 Settings artifacts were withdrawn after full-resolution inspection:
+six obsolete or failed QuotaArc-era Settings captures, the old theme-gallery
+capture, and its evidence manifest. Several frames include unrelated desktop
+work behind the application window; one is entirely black. Local audit copies
+are under ignored `.local/historical-v9-settings-2026-09-27/`. The old direct
+CUA capture script is retired so it cannot repopulate the public image path;
+current native QA must use the guarded desktop-visual-qa adapter. This does
+not establish that the rest of V9 or the repository image archive is clean.
+
 ## Remaining scope
 
 Continue visual review of every tracked screenshot, including the remaining

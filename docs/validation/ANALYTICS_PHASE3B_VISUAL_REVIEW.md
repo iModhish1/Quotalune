@@ -1,5 +1,11 @@
 # Analytics Superstack — Phase 3B Native Visual Review
 
+Screenshot privacy update (2026-09-27): the 71 historical PNGs formerly at
+`docs/images/analytics-superstack/` were withdrawn from the current public
+tree. The audit copies are retained only in ignored
+`.local/historical-analytics-superstack-2026-09-27/`. File paths below are
+historical references, not current public links or Quotalune release images.
+
 Native pass against a real, freshly-built `QuotalisDev.exe` (dev-channel,
 preflight-verified: `channel=dev exe=QuotalisDev.exe app_dir_name=QuotaArc-Dev`)
 on a real machine with genuine Codex and Claude local activity history (497+

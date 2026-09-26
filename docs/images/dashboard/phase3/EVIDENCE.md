@@ -81,6 +81,12 @@ spawned-task suggestion.
 
 ## Screenshots (all `Page.captureScreenshot`, `fromSurface: true`, real render)
 
+Privacy update (2026-09-27): the `REAL_DATA`, `AUTH_REQUIRED`, `NO_COST`
+and refined real/auth PNGs listed below were withdrawn from the public tree.
+The auth/no-cost files were exact copies of the corresponding real-data files.
+Their historical descriptions remain here, but the audit copies are available
+only in ignored `.local/historical-real-data-2026-09-27/`.
+
 | File | State | Real or dev-state injected? |
 |---|---|---|
 | `QUOTALIS_2D_REAL_DATA.png` | Default 7-day range, real snapshot above | 100% real |

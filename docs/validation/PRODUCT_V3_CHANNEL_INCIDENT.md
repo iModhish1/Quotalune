@@ -10,7 +10,7 @@ Normal application startup may also have persisted refresh/history/log and notif
 
 ## Evidence status
 
-ITERATION1_* and ITERATION2_* plus DASHBOARD_REAL images under product-v3/native are UI evidence from the incorrectly configured build, NOT isolated Dev acceptance evidence. Later Dev evidence must use an explicit DEV_ prefix and verified feature gating.
+ITERATION1_* and ITERATION2_* plus DASHBOARD_REAL were UI evidence from the incorrectly configured build, NOT isolated Dev acceptance evidence. Their public image-tree copies were withdrawn on 2026-09-27; ignored local audit copies remain in `.local/historical-product-v3-native-2026-09-27/`. Later Dev evidence must use an explicit DEV_ prefix and verified feature gating.
 
 ## Prevention and recovery scope
 

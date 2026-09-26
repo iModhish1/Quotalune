@@ -205,7 +205,9 @@ via the real `get_cached_providers` command (sanitized, no tokens/IDs):
 ]}
 ```
 
-`QUOTALIS_3D_REAL_DATA.png` shows exactly this: 2 real bodies (dimmed —
+The historical `QUOTALIS_3D_REAL_DATA.png` capture was withdrawn from the
+public image tree during the screenshot privacy audit; an ignored local audit
+copy remains. It showed exactly this: 2 real bodies (dimmed —
 `authState !== "ready"`) around the core, no fabricated third state.
 
 A genuinely **empty** real state was found for free during the profile-
