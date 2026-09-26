@@ -825,3 +825,21 @@ and the capture remains private.
 
 - After capture: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T18-01-49-quotalune-dev-history-chip-contrast-afte\s04-after.png`
 - Guarded scenario: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T18-01-49-quotalune-dev-history-chip-contrast-afte\summary.md`
+
+### Dashboard navigation from the live Dev window — 2026-09-26
+
+At source HEAD `bfd8027b` (verified Dev SHA-256
+`52bc70cca4cdf20312090c0c5bb54b98f80712003a2a11f5f8c7ddd4e76500bf`),
+the guarded native scenario clicked the Dashboard entry from the provider
+identity gallery. The visual verifier reported `verify_failed` after describing
+the result as another gallery. Manual inspection of its actual screenshot
+contradicts that classification: the sidebar highlights `لوحة المعلومات`, and
+the main pane contains Dashboard's `نظرة عامة`, `الحدود الآن`, provider rail,
+reset horizon, and action cards. Thus this capture is evidence that the click
+reached the Arabic Dashboard at this viewport; the scenario's automated verdict
+is **not** a pass. Provider values in the image are local Dev observations,
+so the screenshot stays private. This does not prove every Dashboard control,
+other themes, narrower layouts, or account-order persistence.
+
+- Capture: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T21-05-40-quotalune-dev-dashboard-navigation\s02-expect0.png`
+- Guarded scenario and failed classifier: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T21-05-40-quotalune-dev-dashboard-navigation\summary.md`
