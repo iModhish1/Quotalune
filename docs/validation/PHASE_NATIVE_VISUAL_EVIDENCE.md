@@ -495,3 +495,29 @@ adapter was stopped. Private evidence:
 
 - `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T11-38-25-quotalune-arabic-provider-age-33b21339\s05-after.png`
 - `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T11-38-25-quotalune-arabic-provider-age-33b21339\summary.md`
+
+### Analytics source names and header contrast — 2026-09-26
+
+The first Dev Analytics/Overview capture from `33b21339` exposed five English
+source names from the structured Rust registry and an English freshness value.
+It also showed white page-header text against a bright nebula region. The
+`894dcbae` source-label adapter now maps the registry's five stable IDs to
+localized presentation names in both Analytics Overview and Settings → Data
+Sources, without changing the registry's scope, capabilities or availability.
+Arabic relative-update strings were added. `df018353` gave the page header an
+opaque analytics surface for readable text over any background.
+
+`build-dev-verified.mjs` verified a fresh Dev-isolated binary from
+`df018353afc2`, SHA-256
+`aa70866dc2e79325b203236203439f66ac904a4b30c3797036ffe3a51244224d`.
+The guarded five-step native scenario passed and its screenshot was visually
+inspected: source names and freshness are Arabic, and the header/title/help
+now sit on a dark surface. Evidence remains local because the Dev app shows
+real availability/history data:
+
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T11-56-30-quotalune-analytics-contrast-df018353\s05-after.png`
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T11-56-30-quotalune-analytics-contrast-df018353\summary.md`
+
+This single view does not establish visual quality or functional correctness
+for all Analytics tabs, ranges, Demo states, backgrounds, themes or window
+sizes. The adapter was stopped after the run.
