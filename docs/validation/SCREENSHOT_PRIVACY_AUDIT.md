@@ -67,6 +67,15 @@ the source was genuine local activity. Audit copies are kept only under ignored
 citations now explain that these are no longer public assets. The individual
 frames were conservatively rejected as a family, not individually approved.
 
+Eight V9 Settings artifacts were withdrawn after full-resolution inspection:
+six obsolete or failed QuotaArc-era Settings captures, the old theme-gallery
+capture, and its evidence manifest. Several frames include unrelated desktop
+work behind the application window; one is entirely black. Local audit copies
+are under ignored `.local/historical-v9-settings-2026-09-27/`. The old direct
+CUA capture script is retired so it cannot repopulate the public image path;
+current native QA must use the guarded desktop-visual-qa adapter. This does
+not establish that the rest of V9 or the repository image archive is clean.
+
 ## Remaining scope
 
 Continue visual review of every tracked screenshot, including the remaining
