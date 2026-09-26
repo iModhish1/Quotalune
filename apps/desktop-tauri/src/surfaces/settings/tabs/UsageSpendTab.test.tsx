@@ -24,8 +24,12 @@ it('renders a structured responsive dashboard rather than loose inline control r
   // native <select> -- no "combobox" role for its non-searchable option count.
   expect(await screen.findByRole('button',{name:'CostSummaryDisplayStyle'})).toBeEnabled();
   expect(screen.getByText('UsageSpendTitle')).toBeInTheDocument();
-  expect(screen.getByLabelText('Usage and spend actions')).toHaveClass('usage-spend__toolbar');
-  expect(screen.getByRole('group',{name:'History period'})).toHaveClass('usage-spend__periods');
+  expect(screen.getByLabelText('UsageSpendActions')).toHaveClass('usage-spend__toolbar');
+  expect(screen.getByRole('group',{name:'UsageSpendHistoryPeriod'})).toHaveClass('usage-spend__periods');
+  expect(screen.getByText('UsageSpendEyebrow')).toBeInTheDocument();
+  expect(screen.getByText('UsageSpendLocalData')).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'UsageSpendCol7d'})).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'UsageSpendCol30d'})).toBeInTheDocument();
   expect(container.querySelector('.usage-spend__table-frame > .usage-spend-table')).not.toBeNull();
   expect(container.querySelector('.usage-spend__header')).not.toHaveAttribute('style');
   expect(container.querySelector('.usage-spend__filters')).not.toHaveAttribute('style');

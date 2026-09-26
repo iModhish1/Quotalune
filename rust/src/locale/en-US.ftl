@@ -572,6 +572,10 @@ HooksEnableHelper = Master switch. hooks.json must also set enabled=true and lis
 HooksConfigPathHint = Config path: %APPDATA%\QuotaArc\hooks.json (same folder as settings.json). Events: quota_low, quota_reached, quota_reset. No shell; env is limited to PATH/HOME/USER/TEMP plus CODEXBAR_*.
 UsageSpendTitle = Usage & Spend
 UsageSpendCaption = Local activity history for Codex and Claude (JSONL logs), plus provider-reported spend snapshots when available. Local cost estimates are unavailable until billing-channel eligibility is established.
+UsageSpendEyebrow = Quota insights
+UsageSpendLocalData = Local data
+UsageSpendActions = Usage and spend actions
+UsageSpendHistoryPeriod = History period
 UsageSpendModels = Models
 UsageSpendAllTime = All time
 UsageSpendOpenCodexImport = OpenCodex import

@@ -256,16 +256,16 @@ export default function UsageSpendTab(_props: TabProps) {
     <section className="settings-section usage-spend">
       <header className="usage-spend__header">
         <div>
-          <span className="usage-spend__eyebrow">Quota intelligence</span>
+          <span className="usage-spend__eyebrow">{t("UsageSpendEyebrow")}</span>
           <h3 className="settings-section__title settings-section__title--bold">
             {t("UsageSpendTitle")}
           </h3>
           <p className="settings-section__caption">{t("UsageSpendCaption")}</p>
         </div>
-        <span className="usage-spend__live"><i aria-hidden="true" />Live local data</span>
+        <span className="usage-spend__live"><i aria-hidden="true" />{t("UsageSpendLocalData")}</span>
       </header>
 
-      <div className="usage-spend__toolbar" aria-label="Usage and spend actions">
+      <div className="usage-spend__toolbar" aria-label={t("UsageSpendActions")}>
         <button
           type="button"
           className="credential-btn credential-btn--secondary"
@@ -301,7 +301,7 @@ export default function UsageSpendTab(_props: TabProps) {
       </div>
 
       <div className="usage-spend__filters">
-        <div className="usage-spend__periods" role="group" aria-label="History period">
+        <div className="usage-spend__periods" role="group" aria-label={t("UsageSpendHistoryPeriod")}>
         {([7, 30, 0] as const).map((days) => (
           <button
             key={days}
@@ -310,7 +310,7 @@ export default function UsageSpendTab(_props: TabProps) {
             aria-pressed={selectedDays === days}
             onClick={() => setSelectedDays(days)}
           >
-            {days === 0 ? t("UsageSpendAllTime") : `${days}d`}
+            {days === 0 ? t("UsageSpendAllTime") : t(days === 7 ? "UsageSpendCol7d" : "UsageSpendCol30d")}
           </button>
         ))}
         </div>
