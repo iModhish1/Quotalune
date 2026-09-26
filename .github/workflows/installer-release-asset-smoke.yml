@@ -58,5 +58,6 @@ jobs:
             -ExpectedVersion $version `
             -DisposableTestRoot $smokeRoot `
             -InstallDir (Join-Path $smokeRoot 'install') `
+            -AllowOwnedAppShutdown `
             -AcknowledgeDisposableTestEnvironment
           if ($LASTEXITCODE -ne 0) { throw "Disposable installer lifecycle failed: $LASTEXITCODE" }

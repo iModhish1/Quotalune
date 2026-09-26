@@ -12,7 +12,9 @@ param(
 
     [switch]$AcknowledgeDisposableTestEnvironment,
 
-    [switch]$LeaveInstalled
+    [switch]$LeaveInstalled,
+
+    [switch]$AllowOwnedAppShutdown
 )
 
 $ErrorActionPreference = "Stop"
@@ -93,6 +95,15 @@ function Assert-NoReparsePointInPath {
             throw "Could not reach the required root while checking path ancestors: $Path"
         }
         $current = Get-NormalizedPath -Path $parent -Label "reparse-check parent"
+    }
+}
+
+function Assert-DisposableAppProcess {
+    param([string]$ProcessPath, [string]$ExpectedExe)
+    $actual = Get-NormalizedPath -Path $ProcessPath -Label "running application path"
+    $expected = Get-NormalizedPath -Path $ExpectedExe -Label "disposable application path"
+    if (-not $actual.Equals($expected, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to stop an application outside the disposable installation: $actual"
     }
 }
 
@@ -376,6 +387,22 @@ $verifyAction = {
 
 $cleanupAction = {
     param($owned)
+
+    if ($AllowOwnedAppShutdown) {
+        # v0.12.1 and older do not understand /NOLAUNCH and can start the GUI
+        # after silent installation. This opt-in is for a disposable runner only.
+        # Never stop a process by name without checking its executable path.
+        $expectedExe = Get-NormalizedPath -Path (Resolve-Path -LiteralPath $desktopExe).ProviderPath -Label "disposable application"
+        foreach ($process in @(Get-Process -Name "Quotalune" -ErrorAction SilentlyContinue)) {
+            if ($process.HasExited) { continue }
+            Assert-DisposableAppProcess -ProcessPath $process.Path -ExpectedExe $expectedExe
+            Write-Step "stopping disposable installed app PID $($process.Id) before uninstall"
+            $process.Kill()
+            if (-not $process.WaitForExit(10000)) {
+                throw "Disposable installed app did not exit before uninstall: PID $($process.Id)"
+            }
+        }
+    }
 
     $uninstallLog = Join-Path $logDir "uninstall.log"
     Write-Step "running silent uninstall"

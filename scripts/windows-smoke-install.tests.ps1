@@ -138,6 +138,33 @@ try {
     }
     Invoke-Expression $lifecycleDefinition.Extent.Text
 
+    $processGuardDefinition = $ast.Find(
+        {
+            param($node)
+            $node -is [Management.Automation.Language.FunctionDefinitionAst] -and
+                $node.Name -eq "Assert-DisposableAppProcess"
+        },
+        $true
+    )
+    $pathNormalizerDefinition = $ast.Find(
+        {
+            param($node)
+            $node -is [Management.Automation.Language.FunctionDefinitionAst] -and
+                $node.Name -eq "Get-NormalizedPath"
+        },
+        $true
+    )
+    if ($null -eq $processGuardDefinition -or $null -eq $pathNormalizerDefinition) {
+        throw "Smoke script is missing its disposable process identity guard."
+    }
+    Invoke-Expression $pathNormalizerDefinition.Extent.Text
+    Invoke-Expression $processGuardDefinition.Extent.Text
+    $expectedDisposableExe = Join-Path $testRoot "install\Quotalune.exe"
+    Assert-DisposableAppProcess -ProcessPath $expectedDisposableExe -ExpectedExe $expectedDisposableExe
+    Assert-ThrowsLike -Label "foreign application process" -Pattern "*outside the disposable installation*" -Action {
+        Assert-DisposableAppProcess -ProcessPath (Join-Path $testRoot "other\Quotalune.exe") -ExpectedExe $expectedDisposableExe
+    }
+
     $failureState = [pscustomobject]@{ Verified = 0; Cleaned = 0 }
     Assert-ThrowsLike -Label "verification failure cleanup" -Pattern "*verification failed*cleaned up*" -Action {
         Invoke-SmokeInstallLifecycle `
