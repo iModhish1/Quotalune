@@ -35,12 +35,13 @@
 .settings-studio .provider-workspace__toolbar {padding:6px;gap:6px;flex-wrap:wrap;border-radius:10px}
 .settings-studio .provider-workspace__toolbar button {min-height:30px;padding:5px 9px;font-size:11px}
 .settings-studio .provider-analytics-link {flex-shrink:0;font-size:11px;padding:5px 8px;min-height:30px}
-.settings-studio .provider-workspace>.provider-split {display:grid;grid-template-columns:var(--provider-pane-width,256px) 10px minmax(0,1fr);gap:0;min-height:0;overflow:hidden}
+.settings-studio .provider-workspace {height:auto}
+.settings-studio .provider-workspace>.provider-split {display:grid;grid-template-columns:var(--provider-pane-width,256px) 10px minmax(0,1fr);gap:0;height:auto;min-height:0;align-items:start;overflow:visible}
 .settings-studio .provider-pane-resizer {grid-area:auto;justify-self:center;margin:0;width:10px;z-index:3}
-.settings-studio .providers-sidebar-shell {min-width:0;min-height:0;overflow:hidden;padding:4px;box-sizing:border-box}
+.settings-studio .providers-sidebar-shell {height:auto;max-height:min(72vh,680px);min-width:0;min-height:0;overflow:hidden;padding:4px;box-sizing:border-box}
 .settings-studio .providers-sidebar-search {padding:6px}
 .settings-studio .providers-sidebar-search__input {min-height:32px;padding:7px 9px}
-.settings-studio .providers-sidebar {scrollbar-gutter:stable;overscroll-behavior:contain;padding:0 2px 6px}
+.settings-studio .providers-sidebar {flex:0 1 auto;max-height:calc(min(72vh,680px) - 54px);scrollbar-gutter:stable;overscroll-behavior:contain;padding:0 2px 6px}
 .settings-studio .providers-sidebar__row {min-height:64px;margin:3px 2px;padding:8px;gap:7px;box-sizing:border-box}
 .settings-studio .providers-sidebar__text {min-width:0}
 .settings-studio .providers-sidebar__name {font-size:12px}
@@ -48,7 +49,7 @@
 .settings-studio .providers-sidebar__handle {display:none}
 .settings-studio .providers-sidebar__reorder-controls {gap:2px}
 .settings-studio .providers-sidebar__reorder-button {min-height:22px;width:22px;padding:0;font-size:11px}
-.settings-studio .provider-detail {padding:12px;scrollbar-gutter:stable;overflow:auto;box-sizing:border-box;isolation:isolate;scroll-padding-block:12px}
+.settings-studio .provider-detail {height:auto;max-height:min(72vh,680px);padding:12px;scrollbar-gutter:stable;overflow:auto;box-sizing:border-box;isolation:isolate;scroll-padding-block:12px}
 .settings-studio .provider-workspace .provider-detail-header-block {position:static;top:auto;margin:0 0 12px;padding:12px}
 .settings-studio .provider-detail-header {flex-wrap:wrap}
 .settings-studio .provider-detail-section {padding:12px;min-width:0;overflow-wrap:anywhere}
@@ -58,7 +59,7 @@
 .settings-studio .provider-workspace>.provider-split[data-narrow=true] {display:flex;flex-direction:column;overflow:auto;gap:10px}
 .settings-studio .provider-split[data-narrow=true]>.providers-sidebar-shell {flex:0 0 220px}
 .settings-studio .provider-split[data-narrow=true]>.provider-pane-resizer {display:none}
-.settings-studio .provider-split[data-narrow=true]>.provider-detail {flex:0 0 auto;overflow:visible}
+.settings-studio .provider-split[data-narrow=true]>.provider-detail {flex:0 0 auto;max-height:none;overflow:visible}
 .settings-studio .about-section {max-width:1000px;width:100%;margin-inline:auto;box-sizing:border-box;padding:20px;border:1px solid var(--workspace-edge);border-radius:16px;background:var(--workspace-surface)}
 .settings-studio .about-section {text-align:start}
 .settings-studio .about-header {display:flex;flex-direction:row;align-items:center;justify-content:flex-start;padding:8px 0 16px;border-bottom:1px solid var(--workspace-edge);gap:24px}
