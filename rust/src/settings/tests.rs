@@ -846,19 +846,84 @@ fn test_start_at_login_repairs_legacy_desktop_command_after_update() {
 
 #[test]
 fn legacy_startup_migration_only_claims_a_sibling_product_executable() {
-    let current = std::path::PathBuf::from(r"C:\Users\Test\Programs\Quotalune\Quotalune.exe");
+    let root = tempfile::tempdir().expect("temporary install root");
+    let install_path = root.path().join("Installed Product");
+    std::fs::create_dir(&install_path).expect("install directory with spaces");
+    let other = tempfile::tempdir().expect("other installation");
+    let current = install_path.join(if cfg!(feature = "dev-channel") {
+        "QuotalisDev.exe"
+    } else {
+        "Quotalune.exe"
+    });
+    let legacy = install_path.join(if cfg!(feature = "dev-channel") {
+        "QuotalisDev.exe"
+    } else {
+        "Quotalis.exe"
+    });
+    std::fs::write(&current, b"current").expect("current executable");
+    std::fs::write(&legacy, b"legacy").expect("legacy executable");
+    #[cfg(target_os = "windows")]
+    assert!(!crate::updater::is_registered_windows_install(&current));
+    let owned = format!("\"{}\"", legacy.display());
     assert!(Settings::legacy_startup_command_is_owned(
-        r#""C:\Users\Test\Programs\Quotalune\Quotalis.exe""#,
-        &current,
+        &owned, &current, true,
     ));
+    assert!(Settings::legacy_startup_command_is_owned(
+        &legacy.display().to_string(),
+        &current,
+        true,
+    ));
+    // A portable copy has no matching uninstall registration.
     assert!(!Settings::legacy_startup_command_is_owned(
-        r#""C:\Users\Test\Other\Quotalis.exe""#,
-        &current,
+        &owned, &current, false,
     ));
+    assert!(Settings::startup_command_is_owned(
+        &Settings::start_at_login_command(&current),
+        &current,
+        false,
+    ));
+    assert!(!Settings::startup_command_is_owned(
+        r#""C:\Other\Quotalune.exe""#,
+        &current,
+        true,
+    ));
+    let other_legacy = other.path().join("Quotalis.exe");
+    std::fs::write(&other_legacy, b"other").expect("other executable");
     assert!(!Settings::legacy_startup_command_is_owned(
-        r#""C:\Users\Test\Programs\Quotalune\unrelated.exe""#,
+        &format!("\"{}\"", other_legacy.display()),
         &current,
+        true,
     ));
+    let unrelated = install_path.join("unrelated.exe");
+    std::fs::write(&unrelated, b"unrelated").expect("unrelated executable");
+    assert!(!Settings::legacy_startup_command_is_owned(
+        &format!("\"{}\"", unrelated.display()),
+        &current,
+        true,
+    ));
+    for command in [
+        format!("{owned} --background"),
+        format!("{owned} menubar"),
+        format!("\"{}\"", install_path.join("missing.exe").display()),
+        format!("\"{}\"", install_path.join("QuotalisDev.exe").display()),
+        format!("\"{}\"", install_path.join("QuotaArc.exe").display()),
+    ] {
+        if command == owned {
+            continue;
+        }
+        assert!(
+            !Settings::legacy_startup_command_is_owned(&command, &current, true),
+            "{command}"
+        );
+    }
+    #[cfg(target_os = "windows")]
+    if !cfg!(feature = "dev-channel") {
+        assert!(Settings::legacy_startup_command_is_owned(
+            &format!("\"{}\"", legacy.display()).to_uppercase(),
+            &current,
+            true,
+        ));
+    }
 }
 
 #[test]

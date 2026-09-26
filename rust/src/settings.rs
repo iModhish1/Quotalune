@@ -2212,8 +2212,39 @@ impl Settings {
         existing != Self::start_at_login_command(current_exe)
     }
 
-    fn legacy_startup_command_is_owned(existing: &str, current_exe: &std::path::Path) -> bool {
-        let legacy_exe = std::path::Path::new(existing.trim().trim_matches('"'));
+    fn startup_command_is_owned(
+        existing: &str,
+        current_exe: &std::path::Path,
+        registered_install: bool,
+    ) -> bool {
+        existing == Self::start_at_login_command(current_exe)
+            || Self::legacy_startup_command_is_owned(existing, current_exe, registered_install)
+    }
+
+    fn legacy_startup_command_is_owned(
+        existing: &str,
+        current_exe: &std::path::Path,
+        registered_install: bool,
+    ) -> bool {
+        if !registered_install {
+            return false;
+        }
+        let command = existing.trim();
+        let executable = if let Some(quoted) = command.strip_prefix('"') {
+            let Some(path) = quoted.strip_suffix('"') else {
+                return false;
+            };
+            if path.contains('"') {
+                return false;
+            }
+            path
+        } else {
+            if command.contains('"') {
+                return false;
+            }
+            command
+        };
+        let legacy_exe = std::path::Path::new(executable);
         let Some(name) = legacy_exe.file_name().and_then(|name| name.to_str()) else {
             return false;
         };
@@ -2222,17 +2253,38 @@ impl Settings {
         } else {
             "Quotalune.exe"
         };
-        let known_name = name.eq_ignore_ascii_case(expected_name)
-            || name.eq_ignore_ascii_case("Quotalis.exe")
-            || name.eq_ignore_ascii_case("QuotaArc.exe");
+        let known_name = if cfg!(feature = "dev-channel") {
+            name.eq_ignore_ascii_case(expected_name)
+        } else {
+            name.eq_ignore_ascii_case(expected_name)
+                || name.eq_ignore_ascii_case("Quotalis.exe")
+                || name.eq_ignore_ascii_case("QuotaArc.exe")
+        };
+        let current_name_matches = current_exe
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.eq_ignore_ascii_case(expected_name));
+        let same_directory =
+            match (legacy_exe.canonicalize(), current_exe.canonicalize()) {
+                (Ok(legacy), Ok(current)) => {
+                    legacy.parent().zip(current.parent()).is_some_and(
+                        |(legacy_dir, current_dir)| {
+                            legacy_dir
+                                .to_string_lossy()
+                                .eq_ignore_ascii_case(&current_dir.to_string_lossy())
+                        },
+                    ) && legacy
+                        .file_name()
+                        .and_then(|name| name.to_str())
+                        .is_some_and(|canonical_name| canonical_name.eq_ignore_ascii_case(name))
+                }
+                _ => false,
+            };
         known_name
-            && legacy_exe.parent().is_some_and(|parent| {
-                current_exe.parent().is_some_and(|current_parent| {
-                    parent
-                        .to_string_lossy()
-                        .eq_ignore_ascii_case(&current_parent.to_string_lossy())
-                })
-            })
+            && current_name_matches
+            && legacy_exe.is_file()
+            && current_exe.is_file()
+            && same_directory
     }
 
     #[cfg(target_os = "windows")]
@@ -2248,23 +2300,39 @@ impl Settings {
 
         if enabled {
             let exe_path = std::env::current_exe()?;
+            let registered = crate::updater::is_registered_windows_install(&exe_path);
+            if run_key
+                .get_value::<String, _>(crate::paths::REGISTRY_RUN_VALUE)
+                .is_ok_and(|old| !Self::startup_command_is_owned(&old, &exe_path, registered))
+            {
+                anyhow::bail!("The Quotalune startup entry is already used by another command");
+            }
             let command = Self::start_at_login_command(&exe_path);
             run_key.set_value(crate::paths::REGISTRY_RUN_VALUE, &command)?;
             if run_key
                 .get_value::<String, _>(crate::paths::LEGACY_REGISTRY_RUN_VALUE)
-                .is_ok_and(|old| Self::legacy_startup_command_is_owned(&old, &exe_path))
+                .is_ok_and(|old| Self::legacy_startup_command_is_owned(&old, &exe_path, registered))
             {
                 run_key.delete_value(crate::paths::LEGACY_REGISTRY_RUN_VALUE)?;
             }
         } else {
-            // Best-effort removal; a missing value means the desired state already.
-            let _removed_value = run_key.delete_value(crate::paths::REGISTRY_RUN_VALUE);
-            if let Ok(exe_path) = std::env::current_exe()
-                && run_key
+            if let Ok(exe_path) = std::env::current_exe() {
+                let registered = crate::updater::is_registered_windows_install(&exe_path);
+                if run_key
+                    .get_value::<String, _>(crate::paths::REGISTRY_RUN_VALUE)
+                    .is_ok_and(|old| Self::startup_command_is_owned(&old, &exe_path, registered))
+                {
+                    let _removed_value = run_key.delete_value(crate::paths::REGISTRY_RUN_VALUE);
+                }
+                if run_key
                     .get_value::<String, _>(crate::paths::LEGACY_REGISTRY_RUN_VALUE)
-                    .is_ok_and(|old| Self::legacy_startup_command_is_owned(&old, &exe_path))
-            {
-                let _removed_legacy = run_key.delete_value(crate::paths::LEGACY_REGISTRY_RUN_VALUE);
+                    .is_ok_and(|old| {
+                        Self::legacy_startup_command_is_owned(&old, &exe_path, registered)
+                    })
+                {
+                    let _removed_legacy =
+                        run_key.delete_value(crate::paths::LEGACY_REGISTRY_RUN_VALUE);
+                }
             }
         }
 
@@ -2286,12 +2354,27 @@ impl Settings {
 
         match std::env::current_exe() {
             Ok(exe_path) => {
-                let legacy_owned = run_key
+                let legacy = run_key
                     .get_value::<String, _>(crate::paths::LEGACY_REGISTRY_RUN_VALUE)
-                    .is_ok_and(|old| Self::legacy_startup_command_is_owned(&old, &exe_path));
+                    .ok();
                 let existing = run_key
                     .get_value::<String, _>(crate::paths::REGISTRY_RUN_VALUE)
                     .ok();
+                if existing.is_none() && legacy.is_none() {
+                    return false;
+                }
+                let registered = crate::updater::is_registered_windows_install(&exe_path);
+                let legacy_owned = legacy.as_deref().is_some_and(|old| {
+                    Self::legacy_startup_command_is_owned(old, &exe_path, registered)
+                });
+                if existing
+                    .as_deref()
+                    .is_some_and(|old| !Self::startup_command_is_owned(old, &exe_path, registered))
+                {
+                    // The shared value name is occupied by another command.
+                    // Never rewrite it merely because this app started.
+                    return false;
+                }
                 if existing.is_none() && !legacy_owned {
                     return false;
                 }
@@ -2328,8 +2411,8 @@ impl Settings {
 
     /// Set start at login (updates Windows registry)
     pub fn set_start_at_login(&mut self, enabled: bool) -> anyhow::Result<()> {
-        self.start_at_login = enabled;
         Self::apply_start_at_login_registry(enabled)?;
+        self.start_at_login = enabled;
         Ok(())
     }
 
@@ -2341,9 +2424,18 @@ impl Settings {
 
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
         if let Ok(run_key) = hkcu.open_subkey(r"Software\Microsoft\Windows\CurrentVersion\Run") {
+            let Ok(exe_path) = std::env::current_exe() else {
+                return false;
+            };
             run_key
                 .get_value::<String, _>(crate::paths::REGISTRY_RUN_VALUE)
-                .is_ok()
+                .is_ok_and(|old| {
+                    Self::startup_command_is_owned(
+                        &old,
+                        &exe_path,
+                        crate::updater::is_registered_windows_install(&exe_path),
+                    )
+                })
         } else {
             false
         }

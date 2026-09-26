@@ -361,6 +361,13 @@ fn detect_windows_package_family(current_exe: &Path) -> WindowsPackageFamily {
     WindowsPackageFamily::PortableOrUnknown
 }
 
+/// Startup-key migration is only valid for a registered installation. A portable
+/// copy in an otherwise similar directory must not claim another Run value.
+#[cfg(target_os = "windows")]
+pub(crate) fn is_registered_windows_install(current_exe: &Path) -> bool {
+    detect_windows_package_family(current_exe) != WindowsPackageFamily::PortableOrUnknown
+}
+
 #[cfg(target_os = "windows")]
 fn is_stable_windows_binary_name(path: &Path) -> bool {
     path.file_name()
