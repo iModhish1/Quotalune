@@ -1,7 +1,7 @@
 # Publication and native-evidence status — Quotalune
 
-Date: 2026-09-26. Working branch `release/quotalune-integration`, HEAD
-`1fdf1d0a15c5faf717dbe9a384d54e742d33ab5e`.
+Date: 2026-09-26. This record includes earlier checkpoints and the later
+`v0.12.0` prerelease tagged at `f1d758cfdcd9f248ca78a0005ad6b2dfa0fa6f1c`.
 
 ## Repository rename
 
@@ -29,10 +29,10 @@ The owner repository was renamed from `iModhish1/Quotalis` to
 | Default branch | main |
 | Topics | ai, analytics, claude, codex, dashboard, desktop-app, local-first, open-source, privacy, quota, react, rust, tauri, usage-tracking, windows |
 
-The README now carries three real interface previews captured from a
-freshness-proven Windows build, cropped to the application window so no
-operating-system title bar is shown. The gallery states plainly that only the
-Settings surfaces are captured so far.
+The README now carries a multi-surface gallery captured from a verified
+Windows build, cropped to the application window so no operating-system title
+bar is shown. Later local Arabic/RTL QA captures contain live usage and remain
+outside the public gallery.
 
 ## CI
 
@@ -137,19 +137,24 @@ See `PHASE_NATIVE_VISUAL_EVIDENCE.md`.
 - All physical mouse and keyboard input stayed disabled and no guard was
   bypassed. A user pause later ended further capture and was not worked around.
 
-## Release gate
+## Release gate — current status
 
-Source is published and CI is green. The **v0.12.0 release is deliberately not
-published yet.**
+The owner subsequently requested immediate publication. `v0.12.0` is now
+published as a **prerelease** at
+`https://github.com/iModhish1/Quotalune/releases/tag/v0.12.0`, tagged at the
+exact built commit `f1d758cfdcd9f248ca78a0005ad6b2dfa0fa6f1c`. The Setup,
+portable ZIP, CLI ZIP and three SHA-256 sidecars were read back from GitHub;
+release-doctor passed from the matching candidate checkout. Source CI passed
+for that commit. The public release page describes features and labels the
+release as prerelease; it does not claim full production acceptance.
 
-The master goal makes a public release conditional on complete mandatory native
-visual evidence. That evidence is currently PARTIAL: the Settings surfaces are
-captured, while the dashboard tray panel, providers, analytics, the appearance,
-surface and tray studios, the background gallery, Light mode and Arabic/RTL
-still need their own real captures, and tray and notification appearance has not
-been captured natively. The seeded dashboard screenshot was discarded rather
-than published because the window was occluded and ran off the right screen
-edge.
+Native evidence remains PARTIAL. A rebuilt Dev capture now confirms Arabic/RTL
+and Light mode in General Settings, while all page states, tray and notification
+appearance are not exhaustively captured. The Setup is unsigned, and installer
+upgrade/smoke testing was not run because this host is not an isolated disposable
+Windows environment. The owner's Personal installation was not touched.
+
+The following paragraphs record the historical pre-publication investigation.
 
 An earlier draft of this document proposed extending the Dev proof harness so
 the remaining surfaces could be opened without synthetic input. That work turned
@@ -165,6 +170,6 @@ QA adapter reported `DESKTOP_QA_PAUSED: User has control`, and per the stack's
 rules a user pause is never cleared or worked around; only a user Resume
 reopens it. Nothing about the application prevents the remaining captures.
 
-Publishing a tagged release with artifacts now would overstate what has been
-verified. The honest next step is to capture the remaining surfaces, then
-publish.
+The later prerelease publication above supersedes this former publication
+gate. Complete native capture and installer proof remain prerequisites for a
+final production acceptance claim.

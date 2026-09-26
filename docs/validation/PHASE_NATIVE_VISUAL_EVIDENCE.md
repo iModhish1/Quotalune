@@ -375,3 +375,22 @@ section, including the startup destination and refresh controls. The missing
 Arabic locale entries were added in the source after the capture. Locale tests
 and key parity passed; a native capture from a rebuilt binary is still needed
 to verify those new strings visually.
+
+### Rebuilt Dev verification — 2026-09-26
+
+`node scripts/build-dev-verified.mjs` produced `QuotalisDev.exe` from
+`f1d758cfdcd9` with SHA-256
+`a8a9026cdf8739561fcda3127efde418b8b570beecc7c1e4460ffe8f1caeb9e9`.
+Its embedded HEAD matched the worktree, and `dev-preflight` confirmed the Dev
+channel, `app.quotalis.desktop.dev`, and `QuotaArc-Dev` data root. The guarded
+desktop adapter launched it with `--tray`, captured the Arabic compact dashboard,
+then invoked its Settings control and captured the Settings window in Light/RTL.
+The General controls in that fresh capture now display Arabic startup and
+refresh text. Local QA evidence:
+
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T09-23-09-quotalune-fresh-dev-dashboard-real\s01-after.png`
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T09-26-23-quotalune-fresh-dev-settings-visual\s04-after.png`
+
+The dashboard image contains live provider usage; it remains local and is not
+part of the public README. This capture verifies the rebuilt General section,
+not the remaining untranslated Arabic settings pages or every app control.
