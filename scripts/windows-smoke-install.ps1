@@ -253,6 +253,7 @@ $installArgs = @(
     "/VERYSILENT",
     "/SUPPRESSMSGBOXES",
     "/NORESTART",
+    "/NOLAUNCH",
     "/DIR=`"$installDirPath`"",
     "/LOG=`"$installLog`""
 )

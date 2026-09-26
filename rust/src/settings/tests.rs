@@ -845,6 +845,23 @@ fn test_start_at_login_repairs_legacy_desktop_command_after_update() {
 }
 
 #[test]
+fn legacy_startup_migration_only_claims_a_sibling_product_executable() {
+    let current = std::path::PathBuf::from(r"C:\Users\Test\Programs\Quotalune\Quotalune.exe");
+    assert!(Settings::legacy_startup_command_is_owned(
+        r#""C:\Users\Test\Programs\Quotalune\Quotalis.exe""#,
+        &current,
+    ));
+    assert!(!Settings::legacy_startup_command_is_owned(
+        r#""C:\Users\Test\Other\Quotalis.exe""#,
+        &current,
+    ));
+    assert!(!Settings::legacy_startup_command_is_owned(
+        r#""C:\Users\Test\Programs\Quotalune\unrelated.exe""#,
+        &current,
+    ));
+}
+
+#[test]
 fn test_language_defaults_to_english() {
     let settings = Settings::default();
     assert_eq!(settings.ui_language, Language::English);

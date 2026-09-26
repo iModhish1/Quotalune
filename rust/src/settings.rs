@@ -2212,6 +2212,29 @@ impl Settings {
         existing != Self::start_at_login_command(current_exe)
     }
 
+    fn legacy_startup_command_is_owned(existing: &str, current_exe: &std::path::Path) -> bool {
+        let legacy_exe = std::path::Path::new(existing.trim().trim_matches('"'));
+        let Some(name) = legacy_exe.file_name().and_then(|name| name.to_str()) else {
+            return false;
+        };
+        let expected_name = if cfg!(feature = "dev-channel") {
+            "QuotalisDev.exe"
+        } else {
+            "Quotalune.exe"
+        };
+        let known_name = name.eq_ignore_ascii_case(expected_name)
+            || name.eq_ignore_ascii_case("Quotalis.exe")
+            || name.eq_ignore_ascii_case("QuotaArc.exe");
+        known_name
+            && legacy_exe.parent().is_some_and(|parent| {
+                current_exe.parent().is_some_and(|current_parent| {
+                    parent
+                        .to_string_lossy()
+                        .eq_ignore_ascii_case(&current_parent.to_string_lossy())
+                })
+            })
+    }
+
     #[cfg(target_os = "windows")]
     pub fn apply_start_at_login_registry(enabled: bool) -> anyhow::Result<()> {
         use winreg::RegKey;
@@ -2227,9 +2250,22 @@ impl Settings {
             let exe_path = std::env::current_exe()?;
             let command = Self::start_at_login_command(&exe_path);
             run_key.set_value(crate::paths::REGISTRY_RUN_VALUE, &command)?;
+            if run_key
+                .get_value::<String, _>(crate::paths::LEGACY_REGISTRY_RUN_VALUE)
+                .is_ok_and(|old| Self::legacy_startup_command_is_owned(&old, &exe_path))
+            {
+                run_key.delete_value(crate::paths::LEGACY_REGISTRY_RUN_VALUE)?;
+            }
         } else {
             // Best-effort removal; a missing value means the desired state already.
             let _removed_value = run_key.delete_value(crate::paths::REGISTRY_RUN_VALUE);
+            if let Ok(exe_path) = std::env::current_exe()
+                && run_key
+                    .get_value::<String, _>(crate::paths::LEGACY_REGISTRY_RUN_VALUE)
+                    .is_ok_and(|old| Self::legacy_startup_command_is_owned(&old, &exe_path))
+            {
+                let _removed_legacy = run_key.delete_value(crate::paths::LEGACY_REGISTRY_RUN_VALUE);
+            }
         }
 
         Ok(())
@@ -2248,23 +2284,38 @@ impl Settings {
             return false;
         };
 
-        let Ok(existing) = run_key.get_value::<String, _>(crate::paths::REGISTRY_RUN_VALUE) else {
-            return false;
-        };
-
         match std::env::current_exe() {
-            Ok(exe_path) if Self::start_at_login_command_needs_repair(&existing, &exe_path) => {
+            Ok(exe_path) => {
+                let legacy_owned = run_key
+                    .get_value::<String, _>(crate::paths::LEGACY_REGISTRY_RUN_VALUE)
+                    .is_ok_and(|old| Self::legacy_startup_command_is_owned(&old, &exe_path));
+                let existing = run_key
+                    .get_value::<String, _>(crate::paths::REGISTRY_RUN_VALUE)
+                    .ok();
+                if existing.is_none() && !legacy_owned {
+                    return false;
+                }
                 let command = Self::start_at_login_command(&exe_path);
-                if let Err(error) = run_key.set_value(crate::paths::REGISTRY_RUN_VALUE, &command) {
-                    tracing::warn!("Failed to repair QuotaArc start-at-login command: {error}");
+                if existing
+                    .as_deref()
+                    .is_none_or(|old| Self::start_at_login_command_needs_repair(old, &exe_path))
+                    && let Err(error) =
+                        run_key.set_value(crate::paths::REGISTRY_RUN_VALUE, &command)
+                {
+                    tracing::warn!("Failed to repair Quotalune start-at-login command: {error}");
+                    return true;
+                }
+                if legacy_owned {
+                    let _removed_legacy =
+                        run_key.delete_value(crate::paths::LEGACY_REGISTRY_RUN_VALUE);
                 }
             }
             Err(error) => {
                 tracing::warn!(
                     "Failed to resolve current executable for start-at-login sync: {error}"
                 );
+                return false;
             }
-            _ => {}
         }
 
         true

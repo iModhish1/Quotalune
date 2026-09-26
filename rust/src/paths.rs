@@ -66,12 +66,15 @@ pub const APP_DIR_NAME: &str = if cfg!(feature = "dev-channel") {
     "QuotaArc"
 };
 
-/// LEGACY_SECURITY_COMPATIBILITY: value name for the
-/// `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` entry used by
-/// start-at-login. Intentionally still "QuotaArc" this phase -- renaming it
-/// would leave a stale Run-key entry under the old name for any user who
-/// already enabled start-at-login, since nothing would know to remove it.
+/// User-facing Windows Startup Apps entry. `settings.rs` migrates a matching
+/// legacy value so an upgrade does not create a second startup launch.
 pub const REGISTRY_RUN_VALUE: &str = if cfg!(feature = "dev-channel") {
+    "Quotalune Dev"
+} else {
+    "Quotalune"
+};
+
+pub const LEGACY_REGISTRY_RUN_VALUE: &str = if cfg!(feature = "dev-channel") {
     "QuotaArc Dev"
 } else {
     "QuotaArc"
@@ -219,11 +222,11 @@ mod tests {
     fn app_dir_name_matches_channel() {
         if cfg!(feature = "dev-channel") {
             assert_eq!(APP_DIR_NAME, "QuotaArc-Dev");
-            assert_eq!(REGISTRY_RUN_VALUE, "QuotaArc Dev");
+            assert_eq!(REGISTRY_RUN_VALUE, "Quotalune Dev");
             assert_eq!(TOAST_AUMID, "app.quotalis.desktop.dev");
         } else {
             assert_eq!(APP_DIR_NAME, "QuotaArc");
-            assert_eq!(REGISTRY_RUN_VALUE, "QuotaArc");
+            assert_eq!(REGISTRY_RUN_VALUE, "Quotalune");
             assert_eq!(TOAST_AUMID, "app.quotaarc.desktop");
         }
     }

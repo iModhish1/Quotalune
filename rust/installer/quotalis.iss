@@ -52,6 +52,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; Flags: unchecked
+Name: "startatlogin"; Description: "Start Quotalune when I sign in to Windows (recommended for floating surfaces)"; Flags: unchecked
 
 [Files]
 Source: "{#TargetBinDir}\Quotalune.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -83,6 +84,9 @@ Name: "{autoprograms}\Quotalune"; Filename: "{app}\Quotalune.exe"; Parameters: "
 Name: "{autodesktop}\Quotalune"; Filename: "{app}\Quotalune.exe"; Parameters: "menubar"; WorkingDir: "{app}"; Tasks: desktopicon; IconFilename: "{app}\icon.ico"; AppUserModelID: "app.quotaarc.desktop"
 
 [Registry]
+; Explicit opt-in at install. The in-app General setting reads this value and
+; can switch it later; unattended installs do not turn startup on by default.
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Quotalune"; ValueData: """{app}\Quotalune.exe"""; Tasks: startatlogin; Flags: uninsdeletevalue
 ; Give this installer the same stable Windows notification identity as the
 ; Tauri package. This prevents Windows from substituting the generic app
 ; glyph. app.quotaarc.desktop preserved unchanged (Option A); the
@@ -234,6 +238,13 @@ begin
 end;
 
 function CanLaunchQuotalis(): Boolean;
+var
+  I: Integer;
 begin
   Result := not NeedsVCRedistRestart and not NeedsWebView2Restart;
+  { Disposable installer QA suppresses the automatic silent-upgrade relaunch.
+    Ordinary silent upgrades still restore the tray application. }
+  for I := 1 to ParamCount do
+    if CompareText(ParamStr(I), '/NOLAUNCH') = 0 then
+      Result := False;
 end;
