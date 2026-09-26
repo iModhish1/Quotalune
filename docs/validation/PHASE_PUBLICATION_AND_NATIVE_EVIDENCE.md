@@ -42,7 +42,10 @@ Settings surfaces are captured so far.
 | 36213734968 | 1fdf1d0a | success |
 | 36214389620 | 20287078 | success |
 | 36214828487 | bba1d74e | failure — three tests |
-| 36215467841 | 450912e0 | **success** |
+| 36215467841 | 450912e0 | success |
+| 36215947066 | f0a96529 | success |
+| 36216616185 | ce1254e4 | failure — one test (docs-only commit) |
+| 36217158271 | 8f99cbfa | **success** |
 
 The first CI run failed on exactly one test,
 `providers::antigravity::tests::powershell_discovery_cmdlets_are_available_without_a_user_profile`,
@@ -69,6 +72,26 @@ this work changes behaviour in, and all of which pass locally:
   create its readiness marker within 5s. Readiness is "the child ran our
   command", not a performance measurement, so the deadline is 30s. The
   abort-and-terminate assertions are untouched.
+
+A fourth failure followed on a docs-only commit, which proved these were
+independent flakes rather than one regression, and prompted a sweep instead of
+another single fix. Every wall-clock assertion in the tree was enumerated and
+classified. Most are production TTL and cache logic and were left alone. Of the
+tight test bounds, only two spawn a real child process:
+
+- `host::command_runner::tests::command_timeout_is_a_wall_clock_bound_even_without_output`
+  sets a 100ms timeout and asserted a return under 2s; CI measured 2.676s. The
+  property is that a 100ms timeout returns long before the command's own 5s
+  sleep, which a 4s bound still establishes.
+- `codex_accounts::login_runner::timeout_stops_and_releases_the_owned_process`
+  spawns a fixture child, waits 250ms, and asserted completion under 2s. It now
+  uses the same wait-to-bound ratio as its sibling test. The release-and-stop
+  assertions are untouched.
+
+Two other tight bounds were deliberately not changed because they spawn nothing:
+`tty_runner::cancellation_interrupts_delay` is a thread sleep plus a signal, and
+the Copilot device-expiry test is a pure async timer. Widening those would trade
+real signal for nothing.
 
 `PROBE_TIMEOUT` remains 15s throughout. The final run is green on both required
 jobs: `Rust fmt / clippy / test` and `Frontend locale / typecheck / tests`.
