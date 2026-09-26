@@ -264,7 +264,11 @@ $verifyExecutablesScript = Join-Path (Split-Path -Parent $PSScriptRoot) "scripts
 
 $installAction = {
     Write-Step "running silent install"
-    $install = Start-Process -FilePath $installer -ArgumentList $installArgs -Wait -PassThru
+    # Start-Process -Wait follows the entire descendant process tree on Windows.
+    # The existing installer can launch the GUI after setup, so waiting on the
+    # tree never returns. Wait only for the Inno Setup process itself.
+    $install = Start-Process -FilePath $installer -ArgumentList $installArgs -PassThru
+    $install.WaitForExit()
     if ($install.ExitCode -notin @(0, 3010)) {
         throw "Installer exited with $($install.ExitCode). Log: $installLog"
     }
