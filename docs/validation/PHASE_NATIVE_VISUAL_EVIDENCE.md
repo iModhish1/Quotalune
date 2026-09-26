@@ -458,3 +458,29 @@ Local-only evidence:
 Both adapters were stopped. The screenshots may contain local plan/usage data
 and are not public release artwork. Native control interactions, provider
 onboarding and installer behavior remain separate acceptance work.
+
+### Providers Arabic detail follow-up — 2026-09-26
+
+The 158 missing direct provider-detail keys were added in `7276e8ab`. The
+`7276e8ab` native image showed their labels in Arabic but exposed further
+fallback through state maps and canonical backend status text. Commit
+`07517233` translated mapped pace/auth states, account switching and the
+updated prefix. Commit `64ffac9a` localized only the known
+`RateWindow::no_active_session()` description and the generic Session/Weekly
+metadata labels; provider-authored descriptions remain untouched.
+
+`build-dev-verified.mjs` verified a fresh Dev-isolated binary from
+`64ffac9ac3ed`, SHA-256
+`a3381470d6f21a2facaa1c97ccb55597bebd6533c56a9511ca426823dbf6bd1c`.
+The guarded native scenario passed five of five steps and its final Arabic
+Providers screenshot was inspected: «تبديل الحساب», «متأخر قليلًا»,
+«الجلسة» and «لا توجد جلسة نشطة لخمس ساعات» are visible. Evidence is local:
+
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T11-28-03-quotalune-arabic-session-final-64ffac9a\s05-after.png`
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T11-28-03-quotalune-arabic-session-final-64ffac9a\summary.md`
+
+This verifies one visible provider/detail state, not every provider, tab,
+connection method, theme or Demo state. The image still contains intentionally
+untranslated provider/plan/source proper names and a truncated Claude sidebar
+subtitle at this window width. The screenshot is private because the Dev view
+contains local plan and usage data. The adapter was stopped after the run.
