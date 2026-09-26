@@ -53,6 +53,15 @@ download filename. Frontend 1659/1659 tests across 231 files, production
 build, TypeScript, 1982-key locale parity, 22 locale-filtered core tests and
 Rust formatting pass. Actual Windows export rendering remains unverified.
 
+A source scan of the remaining Settings tabs found 16 missing Arabic values in
+About, seven in Providers and one each in Profiles and Collections. All 25
+were added, and the source-backed coverage test now spans those four tabs in
+addition to Advanced, Display, Usage & Spend and the nested shortcut control.
+This closes direct `t("key")` fallback in the scanned tab components; nested
+widgets and prose generated outside those tabs still require a separate audit.
+Focused frontend coverage (8/8) and core locale tests (22/22) pass. About and
+Providers need native RTL visual verification on a fresh Dev binary.
+
 ## Current verified checkpoint
 
 `7e4c0506` on `release/quotalune-integration`, clean worktree, in sync with
