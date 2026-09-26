@@ -283,8 +283,27 @@ i.e. no brighter than dark. Publishing it would have been a mislabelled
 screenshot, so it was discarded rather than used.
 
 There is no CLI surface for `theme` or `ui_language`. The only writer is
-the Tauri command `update_settings` in `commands/settings.rs`, which is
-reachable only from the application's own settings UI, so switching either
-requires the activation and click input the desktop guard correctly refuses.
-Theme preference and language are therefore left at their defaults and no Light
-or Arabic/RTL image is published.
+the Tauri command `update_settings` in `commands/settings.rs`, reachable only
+from the application's own settings UI.
+
+The background UIA route was then tested directly rather than assumed. The
+adapter's `desktop_qa_background_control` inspect path works and returns a
+real, populated control tree for the running WebView2 window — 83 Text, 56
+Button, 31 Group, 14 Pane, 7 ListItem and others, including addressable
+controls such as `Silver` / `Arctic` / `Aurora` (Buttons), `Compact` /
+`Balanced` / `Prominent` (Buttons) and `All` / `Static backgrounds` /
+`Animated backgrounds` (Buttons).
+
+So the UIA ceiling is narrower than an earlier note suggested, and that earlier
+note was corrected for the same reason. But the colour-mode options are still
+out of reach: `Light` and `Dark` occur in the tree only inside helper prose
+("Light and Dark override it"), never as standalone selectable nodes, and the
+`Color Mode` ListItem exposes only the current value, `Auto (system)`. The
+segmented control's inactive options are not separately addressable.
+
+Every sanctioned route has now been tested rather than assumed: the protected
+settings envelope, the absence of a CLI writer, and the UIA tree. All three
+close the same way, on requiring the application's own settings UI, which needs
+the activation and click input the desktop guard correctly refuses. Theme
+preference and language are left at their defaults and no Light or Arabic/RTL
+image is published.
