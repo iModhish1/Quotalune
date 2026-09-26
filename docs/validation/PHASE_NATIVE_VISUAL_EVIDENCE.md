@@ -625,3 +625,25 @@ The editor's failed-save alert was then given the same boundary: it keeps the
 unsaved draft and offers a localized retry instruction, without rendering a
 raw persistence exception. A focused test injects a private-looking path and
 proves it is absent from the alert. No real save was attempted in native QA.
+
+### Demo Studio accessibility and contrast — 2026-09-26
+
+The Arabic Dashboard Studio in a Dev-isolated, freshly verified native build
+exposed a real readability defect: its Demo description sat directly over the
+bright galaxy background. The Demo section now uses the existing raised
+surface and ink theme tokens. Its provider-count stepper's accessible names
+and custom-provider search placeholder are localized instead of English-only.
+
+The guarded native scenario opened Dashboard Studio, turned Demo Mode on,
+verified the localized stepper control appeared, then restored Demo Mode to
+off; all six steps passed. The after-fix screenshot was inspected and shows
+the description on a readable white surface. The Dev binary after the fix
+passed freshness/preflight with SHA-256
+`40de1d944c29cb1a6c9fef69c058ace13749e69dd6f04b7258eda7521461419d`.
+The focused frontend suite passed 13/13 tests, Rust locale tests 23/23, and
+the verified build reported 2036 matching locale keys. These runs do not
+exercise the Demo Dashboard's full scenario matrix or prove other themes.
+
+- Before: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T13-27-02-quotalune-dev-demo-toggle-restore-202609\s05-after.png`
+- After: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T13-31-05-quotalune-dev-demo-contrast-after-202609\s05-after.png`
+- Verification: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T13-31-05-quotalune-dev-demo-contrast-after-202609\summary.md`

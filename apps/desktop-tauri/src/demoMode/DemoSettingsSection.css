@@ -1,3 +1,11 @@
+.demo-settings {
+  padding: 16px;
+  border: 1px solid var(--qa-hairline-strong);
+  border-radius: 14px;
+  background: var(--qa-material-raised);
+  color: var(--qa-ink-1);
+}
+
 .demo-settings__description {
   color: var(--qa-ink-muted, #8a94a3);
   font-size: 13px;

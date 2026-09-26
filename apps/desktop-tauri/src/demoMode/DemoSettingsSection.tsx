@@ -133,7 +133,7 @@ export default function DemoSettingsSection({ settings, catalog, update }: DemoS
               <div className="demo-settings__stepper">
                 <button
                   type="button"
-                  aria-label="Decrease simulated provider count"
+                  aria-label={t("DemoProviderCountDecrease", "Decrease simulated provider count")}
                   disabled={providerCount <= MIN_DEMO_PROVIDER_COUNT}
                   onClick={() => setCount(providerCount - 1)}
                 >
@@ -144,7 +144,7 @@ export default function DemoSettingsSection({ settings, catalog, update }: DemoS
                 </output>
                 <button
                   type="button"
-                  aria-label="Increase simulated provider count"
+                  aria-label={t("DemoProviderCountIncrease", "Increase simulated provider count")}
                   disabled={providerCount >= maxProviderCount}
                   onClick={() => setCount(providerCount + 1)}
                 >
@@ -163,7 +163,7 @@ export default function DemoSettingsSection({ settings, catalog, update }: DemoS
                 id="demo-provider-picker"
                 type="search"
                 className="demo-settings__picker-search"
-                placeholder="Search…"
+                placeholder={t("DemoProviderSearchPlaceholder", "Search…")}
                 value={pickerFilter}
                 onChange={(e) => setPickerFilter(e.target.value)}
               />
