@@ -484,3 +484,14 @@ connection method, theme or Demo state. The image still contains intentionally
 untranslated provider/plan/source proper names and a truncated Claude sidebar
 subtitle at this window width. The screenshot is private because the Dev view
 contains local plan and usage data. The adapter was stopped after the run.
+
+Commit `33b21339` also localized the provider subtitle's elapsed-time unit
+through `Intl.RelativeTimeFormat` while retaining the existing English compact
+format. A second fresh Dev build embedded `33b213395785` with SHA-256
+`ebcb25bb9ad4fe6b85cb37f2c2ee22581644981e00189ee6d8ab3c421bc697d0`.
+Its five-step native scenario passed; the inspected screenshot shows
+«آخر تحديث قبل 13 ثانية» where the prior capture showed `13s`. The UIA
+adapter was stopped. Private evidence:
+
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T11-38-25-quotalune-arabic-provider-age-33b21339\s05-after.png`
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T11-38-25-quotalune-arabic-provider-age-33b21339\summary.md`
