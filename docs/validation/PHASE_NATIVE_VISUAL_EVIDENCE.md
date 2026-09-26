@@ -250,3 +250,27 @@ Personal installation was never modified.
 NATIVE VISUAL (full page-by-page matrix): **PARTIAL — three Settings surfaces
 captured and verified; the remaining product surfaces still require their own
 captures.**
+
+### Light mode and Arabic/RTL — attempted, not captured
+
+Both were attempted and **both are recorded as not captured**. The reason is
+worth stating precisely, because the first attempt produced a plausible-looking
+image that was wrong.
+
+The Dev channel's `settings.json` is not plain JSON. It is a protected
+envelope — `format`, `version`, `protection`, `payload` — so writing `theme` or
+`ui_language` at the top level has no effect: the app ignored the write and
+persisted the defaults back. The attempt was reverted from a backup taken
+first, and only the Dev-isolated file was ever touched; Personal settings were
+not read or written.
+
+A capture taken after that write looked superficially fine but was **not
+Light**: its mean luminance was 26.1 against 28.0 for a known-dark capture,
+i.e. no brighter than dark. Publishing it would have been a mislabelled
+screenshot, so it was discarded rather than used.
+
+There is no CLI surface for `theme` or `ui_language`, so switching either
+requires the application's own settings UI, which needs the activation and
+click input the desktop guard correctly refuses. Theme preference and language
+are therefore left at their defaults and no Light or Arabic/RTL image is
+published.
