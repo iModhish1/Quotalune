@@ -606,3 +606,17 @@ shows darker, readable help and status text. It remains a single-theme visual
 check, not a measured contrast ratio across the full theme matrix:
 
 - `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T12-48-29-quotalune-collections-help-contrast-2026\s04-after.png`
+
+The detached Collections renderer was also audited in source. It now reuses
+the editor's translated provider/detail labels, localizes its own live,
+loading and empty states, and substitutes a generic localized error for raw
+layout/settings error text that could include local paths. A focused failure
+test supplies a private-looking path and proves it is absent from the rendered
+alert. The detached native window itself has not yet been visually exercised;
+this extension is supported by component tests and locale parity only.
+The integrated offline gate after this extension passed frontend 1670/1670
+across 232 files, Rust desktop 586 passed/1 pre-existing ignored, core 1945,
+CLI 1, toast-resource tests 2 and doctests 0. TypeScript, production build,
+strict workspace Clippy, formatting, 2032-key locale parity, 4796-file secret
+scan and diff checks passed. The native binary/screenshot above predates this
+detached-window-only extension; no detached-window pixel claim is made.
