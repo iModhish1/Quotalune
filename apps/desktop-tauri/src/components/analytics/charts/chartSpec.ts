@@ -10,6 +10,20 @@ export interface ChartSpec {option:ChartOption; label:string; height:number; poi
 export interface ChartLabels {current:string; previous:string; used:string; samples:string; missing:string; zoom:string; source:string;}
 export interface ChartContext {theme:QuotalisChartTheme; range:AnalyticsRange; date:(time:number)=>string; number:(n:number)=>string; labels:ChartLabels; style:"precision"|"minimal"|"detailed"; lowCpu:boolean; highFidelity?:boolean; rtl?:boolean;}
 const escape=(s:string)=>s.replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]!));
+function readablePointLabelTimes(points:readonly {observedAt:number;usedPercent:number}[],range:AnalyticsRange,peakTime:number|null):Set<number> {
+ // A label is roughly 30px wide on the smallest supported chart. Use a
+ // conservative share of the visible time span because ECharts lays each
+ // reset-separated segment out as its own series; hideOverlap cannot resolve
+ // collisions between their labels. Prefer the peak, then later observations.
+ const nearSeconds=(range.until-range.since)/55;
+ const chosen:{observedAt:number;usedPercent:number}[]=[];
+ const ordered=[...points].sort((a,b)=>(b.observedAt===peakTime?1:0)-(a.observedAt===peakTime?1:0) || b.observedAt-a.observedAt);
+ for(const point of ordered) {
+  if(chosen.some(other=>Math.abs(point.observedAt-other.observedAt)<nearSeconds && Math.abs(point.usedPercent-other.usedPercent)<4))continue;
+  chosen.push(point);
+ }
+ return new Set(chosen.map(point=>point.observedAt*1000));
+}
 function base(ctx:ChartContext,label:string):ChartOption {
  const {theme}=ctx;
  // `aria:{enabled:false}` is deliberate (owner Phase 3N accessibility
@@ -49,10 +63,15 @@ export function createTrendChartSpec(rows:readonly QuotaSeries[],title:(r:QuotaS
    const peak=!previous && !compact && ctx.highFidelity && row.current.length
      ? row.current.reduce((a,b)=>a.usedPercent>b.usedPercent?a:b)
      : null;
+   const visibleLabelTimes=readablePointLabelTimes(row.current,ctx.range,peak?.observedAt??null);
    segments.forEach((segment,index)=>{
     points+=segment.length;
     lines.push({id:`${row.key}:${previous}:${index}`,name,type:"line",connectNulls:false,smooth:false,clip:true,
       data:segment.map(p=>[p.time,p.value,p.sourceTime]),
+      // Distinct observations can land only minutes apart in a seven-day
+      // chart. Keep every point and tooltip, but let ECharts suppress labels
+      // whose actual rendered bounds collide across nearby segments.
+      labelLayout:{hideOverlap:true},
       symbol:"circle",symbolSize:compact?3:5,showSymbol:segment.length===1 || (segment.length<30 && !ctx.lowCpu),
       // Data items stay plain [time,value,sourceTime] tuples -- axis-bounds
       // (below) and the accessible-table `readings` builder both index into
@@ -64,7 +83,7 @@ export function createTrendChartSpec(rows:readonly QuotaSeries[],title:(r:QuotaS
       // everywhere, only the rendered text differs.
       label:{show:!previous&&!compact&&!ctx.lowCpu&&ctx.style!=="minimal"&&segment.length<=10,position:"top",fontSize:9,color:ctx.theme.text,formatter:params=>{
         const point=params.value as number[];
-        if(peak && point[0]===peak.observedAt*1000) return "";
+        if(!visibleLabelTimes.has(point[0]) || (peak && point[0]===peak.observedAt*1000)) return "";
         return ctx.number(point[1])+"%";
       }},
       lineStyle:{color:ctx.theme.series(row.provider),width:previous?1.5:2,type:previous?"dashed":"solid",opacity:1},itemStyle:{color:ctx.theme.series(row.provider)},

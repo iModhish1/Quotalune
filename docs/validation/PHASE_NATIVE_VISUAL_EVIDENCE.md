@@ -737,3 +737,60 @@ is claimed from it. Both runs released their owned Dev processes.
 
 - Before: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T16-45-47-quotalune-dev-settings-analytics-native-\s03-after.png`
 - After: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T16-49-15-quotalune-settings-header-contrast-after\s03-expect1.png`
+
+### Analytics overview — 2026-09-26
+
+A verified Dev build of `29dd38a0` (SHA-256
+`e9257bddaf6f4ce42b6134cc5fb3395c45ce4da4a7a5f9abaf088d3f4e5a298a`)
+opened the real Arabic Analytics destination through the Settings navigation.
+All four guarded UIA steps passed, and the captured page visibly renders its
+range control, provider filter, analytics sections and data-source overview.
+The screenshot remains local because it can reflect the owner's observed
+history. This is one wide-window initial state; chart interactions, other
+periods/providers, smaller widths and full RTL accessibility remain open.
+
+- Capture: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T17-15-56-quotalune-dev-analytics-page-native\s04-after.png`
+- Scenario: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T17-15-56-quotalune-dev-analytics-page-native\summary.md`
+
+The same verified Dev binary then opened Analytics → Tokens → Models →
+Monetary through the native UIA tree. All seven actions and their text
+assertions passed. The Tokens capture was taken during an ellipsis loading
+state, so it does not prove final token totals. The Models capture shows
+populated local breakdown rows without visible clipping at this viewport. The
+Monetary capture correctly presents an unavailable state when no provider
+reported a usable amount in the selected scope; no dollar total was inferred.
+These observations do not validate the numerical accuracy of private local
+history or all filter and range combinations.
+
+- Subsection scenario: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T17-23-12-quotalune-dev-analytics-subsections-nati\summary.md`
+- Tokens / Models / Monetary captures: `s05-after.png`, `s06-after.png`,
+  `s07-after.png` in that run directory.
+
+The same binary then opened Analytics → Trends → Reset Horizon → History →
+Data Quality. All eight guarded native steps passed. The Trends screenshot
+exposed a real presentation defect: nearby observations rendered overlapping
+percentage labels (22%/26% and 44%/45%), although the individual dots and
+underlying observed readings remained separate. The Reset Horizon capture
+shows the available Codex reset card, while History and Data Quality opened
+with their observed-data and provenance states. This verifies navigation and
+these visible states only; it does not validate every filter combination,
+numerical value or hidden portion of the pages.
+
+- Subsection scenario: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T17-26-45-quotalune-dev-analytics-history-quality-\summary.md`
+- Trends / Reset Horizon / History / Data Quality captures: `s05-after.png`,
+  `s06-after.png`, `s07-after.png`, `s08-after.png` in that run directory.
+
+After a first `labelLayout.hideOverlap` attempt, a fresh Dev screenshot still
+showed the same collisions: ECharts treated reset-separated line segments as
+independent series. A second change chooses legible labels deterministically
+within the visible time span while preserving every observation, tooltip and
+accessible reading. Focused chart tests (17/17), TypeScript and a fresh Dev
+build passed. A guarded five-step native recheck of that binary (SHA-256
+`0871c71e6cbc117fdd0678e0a6e0af567657ba8248f92381c5e1ffa2da520f38`)
+passed. Visual comparison now shows separated 22%/26% labels and a single
+45% label over the neighboring 44%/45% points. This is evidence for the
+observed wide, seven-day state, not every range or viewport.
+
+- Failed first attempt: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T17-32-40-quotalune-dev-trend-labels-after-native\s05-after.png`
+- Verified after: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T17-35-42-quotalune-dev-trend-declutter-after-nati\s05-after.png`
+- Verified scenario: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T17-35-42-quotalune-dev-trend-declutter-after-nati\summary.md`

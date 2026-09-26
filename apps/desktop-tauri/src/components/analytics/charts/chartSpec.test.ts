@@ -61,6 +61,17 @@ describe("professional chart contracts",()=>{
   expect(withMarkPoint.label.formatter({value:peakTuple})).toBe("");
   expect(withMarkPoint.label.formatter({value:otherTuple})).not.toBe("");
  });
+ it("declutters colliding point labels without dropping observations or accessible readings",()=>{
+  const near=data.slice(8,12).map((p,i)=>({...p,bucketStart:range.since+i*60,observedAt:range.since+i*60,usedPercent:22+i,remainingPercent:78-i}));
+  const rows=buildQuotaAnalytics(near,range);
+  const spec=createTrendChartSpec(rows,r=>r.provider,context);
+  const lines=spec.option.series as {labelLayout?:{hideOverlap:boolean};data:number[][]}[];
+  expect(lines.every(line=>line.labelLayout?.hideOverlap===true)).toBe(true);
+  expect(lines.flatMap(line=>line.data).map(point=>point[1])).toEqual([22,23,24,25]);
+  expect(spec.readings?.map(reading=>reading.value)).toEqual(["22%","23%","24%","25%"]);
+  const shown=lines.flatMap(line=>line.data.map(point=>(line as typeof line & {label:{formatter:(p:{value:number[]})=>string}}).label.formatter({value:point}))).filter(Boolean);
+  expect(shown).toEqual(["25%"]);
+ });
  it("theme/preset changes affect styling without changing values",()=>{const rows=buildQuotaAnalytics(data,range);const one=createTrendChartSpec(rows,r=>r.provider,context);const two=createTrendChartSpec(rows,r=>r.provider,{...context,lowCpu:true,theme:{...context.theme,text:"#000000",grid:"#cccccc"}});expect((one.option.series as {data:unknown}[])[0].data).toEqual((two.option.series as {data:unknown}[])[0].data);expect(two.option.animation).toBe(false);});
  it("structure tokens are sourced from the catalog",()=>{for(const theme of [CANONICAL_THEME]){const mapped=chartTheme(theme,()=>"#123456");expect(mapped.background).toBe(theme.core);expect(mapped.accent).toBe(theme.accent);expect(mapped.series("codex")).toBe("#123456");}});
  it("coalesces resize and disposes observer/frame/engine exactly once",()=>{
