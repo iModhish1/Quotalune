@@ -11,7 +11,9 @@ from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "docs" / "validation" / "evidence"
+# Raw desktop captures include the Desktop QA control panel and must remain
+# local. Only reviewed application-window crops belong in the public tree.
+SOURCE = ROOT / ".local" / "native-evidence-2026-09-26"
 DESTINATION = ROOT / "docs" / "images" / "showcase"
 NAMES = (
     "quotalune_settings",
@@ -31,6 +33,11 @@ def main() -> None:
     DESTINATION.mkdir(parents=True, exist_ok=True)
     for name in NAMES:
         source = SOURCE / f"PHASE_NATIVE_{name}_2026-09-26.png"
+        if not source.is_file():
+            raise FileNotFoundError(
+                f"Local native evidence is unavailable: {source}. "
+                "Capture a fresh verified Dev build before preparing public images."
+            )
         with Image.open(source) as image:
             if image.width < 1846 or image.height < 1088:
                 raise ValueError(f"unexpected native capture dimensions: {source}")
