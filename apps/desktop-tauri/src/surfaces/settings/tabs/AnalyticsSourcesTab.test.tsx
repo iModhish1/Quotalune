@@ -45,6 +45,8 @@ vi.mock("../../../hooks/useLocale", () => ({
         AnalyticsSourceInspectorPathsNote: "Absolute file paths and raw cached records are never shown here.",
         AnalyticsSourceInspectorOpen: "Details",
         AnalyticsSourceInspectorClose: "Close",
+        AnalyticsSourceClaudeLocalActivity: "Claude local activity",
+        AnalyticsSourceProviderReportedMonetary: "Provider-reported monetary data",
       })[key] ?? key,
   }),
 }));
@@ -73,7 +75,7 @@ function source(overrides: Partial<AnalyticsSourceDescriptor> = {}): AnalyticsSo
 }
 
 describe("AnalyticsSourcesTab", () => {
-  it("renders the real registry verbatim -- label, scope, capability chips, and privacy lines", async () => {
+  it("renders the localized source label and real registry scope, capabilities, and privacy facts", async () => {
     tauriMocks.getAnalyticsSourceRegistry.mockResolvedValue([source()]);
     render(<AnalyticsSourcesTab />);
     await waitFor(() => expect(screen.getByText("Claude local activity")).toBeInTheDocument());

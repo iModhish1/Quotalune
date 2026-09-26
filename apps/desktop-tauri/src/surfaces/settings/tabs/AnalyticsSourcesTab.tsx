@@ -3,6 +3,7 @@ import { useLocale } from "../../../hooks/useLocale";
 import { useAnalyticsSources } from "../../../hooks/useAnalyticsSources";
 import type { AnalyticsAvailability, AnalyticsCapabilities, AnalyticsScope, AnalyticsSourceDescriptor, AnalyticsSourceFact } from "../../../types/bridge";
 import type { LocaleKey } from "../../../i18n/keys";
+import { analyticsSourceLabel } from "../../../lib/analytics/sourceLabels";
 import "./AnalyticsSourcesTab.css";
 
 const STATUS_KEY: Record<AnalyticsAvailability, LocaleKey> = {
@@ -51,8 +52,8 @@ const SOURCE_FACT_KEY: Record<AnalyticsSourceFact, LocaleKey> = {
 /**
  * Settings -> Analytics -> Data Sources (owner section 3). Renders the
  * real analytics source registry (`get_analytics_source_registry`)
- * verbatim -- every label, scope, capability chip, and read/does-not-read
- * line comes straight from `rust/src/analytics_sources.rs`, not a
+ * with names localized by stable source ID. Scope, capabilities, and
+ * read/does-not-read facts come from `rust/src/analytics_sources.rs`, not a
  * second, hand-maintained copy of the capability rules. Uninstalled
  * third-party tools (ccusage, OpenLIT, etc.) never appear here as rows --
  * the registry itself only has real Quotalis-native sources.
@@ -91,7 +92,7 @@ function SourceInspector({ source, triggerRef, onClose, t }: { source: Analytics
       }}
     >
       <dl>
-        <div><dt>{t("AnalyticsSourceInspectorIdentity")}</dt> <dd><bdi>{source.label}</bdi></dd></div>
+        <div><dt>{t("AnalyticsSourceInspectorIdentity")}</dt> <dd><bdi>{analyticsSourceLabel(source, t)}</bdi></dd></div>
         <div><dt>{t("AnalyticsSourceInspectorAvailability")}</dt> <dd>{t(STATUS_KEY[source.availability])}</dd></div>
         <div><dt>{t("AnalyticsSourceInspectorScope")}</dt> <dd>{t(SCOPE_KEY[source.scope])}</dd></div>
         <div>
@@ -134,7 +135,7 @@ export default function AnalyticsSourcesTab() {
             return (
               <li key={source.id} className="analytics-sources-tab__row" data-availability={source.availability}>
                 <div className="analytics-sources-tab__row-header">
-                  <strong><bdi>{source.label}</bdi></strong>
+                  <strong><bdi>{analyticsSourceLabel(source, t)}</bdi></strong>
                   <span className={`analytics-sources-tab__status analytics-sources-tab__status--${source.availability}`}>
                     {t(STATUS_KEY[source.availability])}
                   </span>

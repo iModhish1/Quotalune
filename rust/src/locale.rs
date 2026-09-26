@@ -1181,6 +1181,11 @@ locale_keys! {
 
     // Provider detail - Usage section
     ProviderSessionLabel,
+    AnalyticsSourceProviderCurrentState,
+    AnalyticsSourceProviderHistory,
+    AnalyticsSourceProviderReportedMonetary,
+    AnalyticsSourceCodexLocalActivity,
+    AnalyticsSourceClaudeLocalActivity,
     ProviderNoActive5hSession,
     ProviderWeeklyLabel,
     ProviderCodeReviewLabel,

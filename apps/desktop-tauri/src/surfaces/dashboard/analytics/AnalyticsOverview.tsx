@@ -4,6 +4,7 @@ import { useAnalyticsSources } from '../../../hooks/useAnalyticsSources';
 import { getCodexWorkspacesSnapshot, getProviderChartData } from '../../../lib/tauri';
 import { formatCompactTokens } from '../../../lib/analytics/formatTokens';
 import { formatRelativeUpdated } from '../../../lib/relativeTime';
+import { analyticsSourceLabel } from '../../../lib/analytics/sourceLabels';
 import { availableHistoryDays } from './dashboardSelectors';
 import type { AnalyticsAvailability, AnalyticsScope, DashboardSnapshot, SettingsSnapshot } from '../../../types/bridge';
 import type { LocaleKey } from '../../../i18n/keys';
@@ -157,7 +158,7 @@ export default function AnalyticsOverview({
               <li key={source.id} className={`analytics-overview-source analytics-overview-source--${source.availability}`}>
                 <span className="analytics-overview-source__dot" aria-hidden="true" />
                 <div className="analytics-overview-source__body">
-                  <strong>{source.label}</strong>
+                  <strong>{analyticsSourceLabel(source, t)}</strong>
                   <span className="analytics-overview-source__meta">
                     {t(SOURCE_STATUS_KEY[source.availability])}
                     {' · '}
