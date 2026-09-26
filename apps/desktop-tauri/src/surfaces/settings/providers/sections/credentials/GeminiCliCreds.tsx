@@ -17,24 +17,24 @@ interface Props {
  *
  * Port of the `ProviderId::Gemini` branch in
  * `rust/src/native_ui/preferences.rs::render_provider_detail_panel` (~5570).
- * Shows OAuth-credential presence + path + a button that opens the
+ * Shows OAuth-credential presence + a home-relative location and a button that opens the
  * credentials folder (when signed in) or a hint to install the CLI.
  */
 export function GeminiCliCreds({ providerId, t }: Props) {
   const [status, setStatus] = useState<GeminiCliStatus | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     getGeminiCliSignedIn()
       .then((s) => !cancelled && setStatus(s))
-      .catch((e) => !cancelled && setError(String(e)));
+      .catch(() => !cancelled && setError(true));
     return () => {
       cancelled = true;
     };
   }, []);
 
-  if (!status) return null;
+  if (!status) return error ? <div role="alert" className="provider-detail-error">{t("CredsActionUnavailable")}</div> : null;
 
   const statusLabel = status.signedIn
     ? t("CredsStatusAuthenticated")
@@ -42,13 +42,15 @@ export function GeminiCliCreds({ providerId, t }: Props) {
 
   const handleOpenFolder = () => {
     if (!status.credentialsPath) return;
-    void openPath(status.credentialsPath).catch((e) => setError(String(e)));
+    setError(false);
+    void openPath(status.credentialsPath).catch(() => setError(true));
   };
 
   const handleSetup = () => {
     // No CLI-install auto-flow; we open the upstream project page via the
     // provider's dashboard invariant (Gemini provider advertises it).
-    void openProviderDashboard(providerId).catch((e) => setError(String(e)));
+    setError(false);
+    void openProviderDashboard(providerId).catch(() => setError(true));
   };
 
   return (
@@ -63,7 +65,7 @@ export function GeminiCliCreds({ providerId, t }: Props) {
           <div style={{ display: "contents" }}>
             <dt>{t("CredsGeminiCliHelperPrefix")}</dt>
             <dd className="provider-detail-grid__mono">
-              {status.credentialsPath}
+              <bdi dir="ltr">~/.gemini/oauth_creds.json</bdi>
             </dd>
           </div>
         )}
@@ -89,7 +91,7 @@ export function GeminiCliCreds({ providerId, t }: Props) {
           </button>
         )}
       </div>
-      {error && <div className="provider-detail-error">{error}</div>}
+      {error && <div role="alert" className="provider-detail-error">{t("CredsActionUnavailable")}</div>}
     </section>
   );
 }

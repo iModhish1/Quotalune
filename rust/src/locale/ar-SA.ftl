@@ -1579,6 +1579,7 @@ CredsStatusDetected = تم اكتشافه
 CredsStatusNotDetected = لم يُكتشف
 CredsStatusNotSignedIn = لم يُسجّل الدخول
 CredsStatusUnavailable = غير متوفر
+CredsActionUnavailable = تعذّر إكمال إجراء بيانات الاعتماد. حاول مرة أخرى.
 DetailChartCost = التكلفة (30 يوماً)
 DetailChartCredits = وحدات الائتمان المستخدمة (30 يوماً)
 DetailChartEmpty = لا توجد بيانات للرسم البياني بعد.

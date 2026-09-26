@@ -1761,6 +1761,7 @@ locale_keys! {
     CredsStatusNotDetected,
     CredsStatusAvailable,
     CredsStatusUnavailable,
+    CredsActionUnavailable,
     CredsOpenFolderAction,
     CredsRefreshDetectionAction,
     CredsSavePathAction,

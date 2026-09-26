@@ -1357,6 +1357,7 @@ export const ALL_LOCALE_KEYS = [
   "CredsStatusNotDetected",
   "CredsStatusAvailable",
   "CredsStatusUnavailable",
+  "CredsActionUnavailable",
   "CredsOpenFolderAction",
   "CredsRefreshDetectionAction",
   "CredsSavePathAction",

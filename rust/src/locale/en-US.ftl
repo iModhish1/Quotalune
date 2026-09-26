@@ -923,6 +923,7 @@ CredsStatusDetected = Detected
 CredsStatusNotDetected = Not detected
 CredsStatusAvailable = Available
 CredsStatusUnavailable = Unavailable
+CredsActionUnavailable = Could not complete the credential action. Try again.
 CredsOpenFolderAction = Open credentials folder
 CredsRefreshDetectionAction = Refresh detection
 CredsSavePathAction = Save path

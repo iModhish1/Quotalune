@@ -666,3 +666,19 @@ This is not a claim that every Demo scenario or theme is visually accepted.
 - Before: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T13-35-34-quotalune-dev-demo-dashboard-exit-202609\s06-after.png`
 - After: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T13-40-14-quotalune-dev-demo-provider-contrast-aft\s06-after.png`
 - Verification: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T13-40-14-quotalune-dev-demo-provider-contrast-aft\summary.md`
+
+### Gemini credential location in Providers — 2026-09-26
+
+A guarded Dev run opened Providers, filtered to Gemini and selected its
+Connections & accounts tab. The first successful screenshot displayed an
+absolute OAuth credential path with the Windows account directory. A source
+fix substituted a home-relative path and replaced raw credential-action
+errors with a localized generic message. A second screenshot showed the
+relative path but also exposed right-to-left character reordering; a
+left-to-right isolated span corrected this. The final six-step native run
+passed, and its screenshot was inspected. The credential itself was neither
+opened nor modified; these local screenshots must not be published.
+
+- Before: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T13-57-36-quotalune-dev-gemini-tabitem-inspect-202\s06-after.png`
+- Final: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T14-10-47-quotalune-dev-gemini-bidi-after-20260926\s06-after.png`
+- Verification: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T14-10-47-quotalune-dev-gemini-bidi-after-20260926\summary.md`

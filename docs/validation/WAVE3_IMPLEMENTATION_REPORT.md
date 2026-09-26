@@ -431,3 +431,19 @@ The final integrated serial Rust suite passed desktop **582/1 existing ignored**
 ## Codex CLI version-probe boundary — 2026-09-23
 
 Codex PAT usage formerly ran a filename/PATH-selected CLI with unbounded `--version` capture to populate only the request's user-agent version. That metadata path now uses the curated dependency resolver and supervised 15-second/capped read. When no trusted CLI resolves, the existing version-unavailable user agent is used and the PAT fetch proceeds. The provider's actual OAuth/PAT authentication paths are unchanged. Claude's interactive CLI usage path remains a separate audit item; do not infer its safety from this metadata-only repair. Codex-specific tests passed (35). The first workspace suite, run concurrently with strict Clippy, failed seven unrelated process-start/timing fixtures; rerunning the workspace suite alone passed desktop **582/1 ignored**, core **1933**, CLI **1**, doctests **0**. Logs: `.local/codex-version-{final-rust,rust-serial,final-clippy}.log`. Stress reliability under concurrent heavy build load remains unproven.
+
+## Gemini credential-location privacy in native Providers — 2026-09-26
+
+The Dev-only native Providers → Gemini → Connections & accounts screenshot
+exposed the absolute OAuth credential file path, including the Windows user
+directory. The visible location is now `~/.gemini/oauth_creds.json` in an
+isolated left-to-right span; the actual path is retained only for the
+user-triggered Open Folder action. Status, folder and setup failures render a
+generic localized retry message instead of a raw exception that may contain
+private paths. Three focused frontend tests cover the displayed path, the
+unchanged Open Folder argument and private-looking failure text. The fresh
+Dev build passed preflight/freshness (SHA-256
+`b5701b3f1943016e4f0fbb78d309a1d5284c29f5a09b4135d70a47409ea87db1`),
+and its guarded six-step native scenario passed; the after screenshot was
+visually inspected. This did not attempt a live Gemini sign-in, open the
+credentials file, or validate other providers' credential surfaces.
