@@ -312,11 +312,24 @@ renders only its current value, `Auto (system)`, as `Text`. `Light` and
 `Dark` appear solely inside the helper prose "Light and Dark override it".
 Re-inspecting after invoking the section does not change this.
 
-So the specific obstacle is that the colour-mode selector is a custom
-segmented widget whose options are not exposed as UIA-invokable controls,
-while the native buttons beside it are. That is a genuine accessibility
-finding about the product, not only a capture limitation, and is worth
-recording as a defect to fix rather than a boundary to work around.
+That earlier reading was wrong, and it is retracted. Reading the source
+settled it: the colour-mode control is a `Select` in `GeneralTab.tsx`
+rendering `QuotalisSelect`, which is correctly built. The trigger is a real
+`<button>` carrying `aria-haspopup="listbox"` and `aria-expanded`, and the
+panel renders `role="listbox"` with each option as a
+`<button role="option">` carrying `aria-selected`.
+
+The options are absent from the UIA tree simply because the dropdown was
+closed, which is correct ARIA behaviour rather than a defect: the panel is
+rendered only while open, and the trigger is invokable. Invoking the `Themes`
+sub-tab succeeded through `InvokePattern`, confirming background activation
+works on this surface.
+
+There is therefore no accessibility defect in this control, and the earlier
+commit in this session claiming one is withdrawn. The practical consequence
+is that the Light and Arabic/RTL captures need the dropdown to be open, which
+is a pointer-driven interaction the desktop guard refuses. The setting is
+reachable and correctly implemented; it is the capture that is unavailable.
 
 Every sanctioned route has now been tested rather than assumed: the protected
 settings envelope, the absence of a CLI writer, and the UIA tree. All three
