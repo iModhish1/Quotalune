@@ -1,0 +1,62 @@
+name: Installer release asset smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag whose draft/published installer is tested
+        required: true
+        type: string
+      expected_sha:
+        description: Exact source commit for that tag
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  asset-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify release identity and smoke-install downloaded asset
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          if ($env:RELEASE_TAG -cnotmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw 'Invalid release tag' }
+          if ($env:EXPECTED_SHA -cnotmatch '^[0-9a-f]{40}$') { throw 'Invalid expected SHA' }
+          $tagCommit = (& git rev-parse "refs/tags/$($env:RELEASE_TAG)^{}").Trim()
+          if ($LASTEXITCODE -ne 0 -or $tagCommit -cne $env:EXPECTED_SHA) {
+            throw "Release tag commit does not match expected SHA: $tagCommit"
+          }
+          $version = $env:RELEASE_TAG.Substring(1)
+          $installerName = "Quotalune-$version-Setup.exe"
+          $assetDir = Join-Path $env:RUNNER_TEMP 'quotalune-release-asset'
+          New-Item -ItemType Directory -Path $assetDir | Out-Null
+          & gh release download $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --pattern $installerName --pattern "$installerName.sha256" --dir $assetDir
+          if ($LASTEXITCODE -ne 0) { throw 'Release asset download failed' }
+          $installerPath = Join-Path $assetDir $installerName
+          $checksumPath = "$installerPath.sha256"
+          if (-not (Test-Path -LiteralPath $installerPath -PathType Leaf) -or -not (Test-Path -LiteralPath $checksumPath -PathType Leaf)) {
+            throw 'Installer or checksum asset missing'
+          }
+          $expectedLine = (Get-Content -LiteralPath $checksumPath -Raw).Trim()
+          $actualLine = '{0}  {1}' -f (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash.ToLowerInvariant(), $installerName
+          if ($expectedLine -cne $actualLine) { throw 'Downloaded installer checksum mismatch' }
+          $smokeRoot = Join-Path $env:RUNNER_TEMP 'quotalune-release-installer-smoke'
+          New-Item -ItemType Directory -Path $smokeRoot | Out-Null
+          & powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/windows-smoke-install.ps1 `
+            -InstallerPath $installerPath `
+            -ExpectedVersion $version `
+            -DisposableTestRoot $smokeRoot `
+            -InstallDir (Join-Path $smokeRoot 'install') `
+            -AcknowledgeDisposableTestEnvironment
+          if ($LASTEXITCODE -ne 0) { throw "Disposable installer lifecycle failed: $LASTEXITCODE" }

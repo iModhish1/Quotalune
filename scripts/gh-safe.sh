@@ -51,14 +51,30 @@ done
 # the confirmed authenticated owner, and exactly one public repository creation.
 # No --source/--push/import or arbitrary forwarded create options are accepted.
 if [[ "$verify_kind" == workflow ]]; then
-  [[ "$target" == installer-candidate-smoke.yml ]] || { echo 'Only the installer candidate smoke workflow is allowlisted.' >&2; exit 3; }
-  [[ ${#gh_args[@]} == 5 && "${gh_args[0]}" == workflow && "${gh_args[1]}" == run && "${gh_args[2]}" == "$target" && "${gh_args[3]}" == --ref && "${gh_args[4]}" == main ]] || {
-    echo 'Workflow mutation requires exactly: workflow run installer-candidate-smoke.yml --ref main.' >&2; exit 3;
-  }
+  case "$target" in
+    installer-candidate-smoke.yml)
+      [[ ${#gh_args[@]} == 5 && "${gh_args[0]}" == workflow && "${gh_args[1]}" == run && "${gh_args[2]}" == "$target" && "${gh_args[3]}" == --ref && "${gh_args[4]}" == main ]] || {
+        echo 'Candidate workflow mutation requires exactly: workflow run installer-candidate-smoke.yml --ref main.' >&2; exit 3;
+      }
+      ;;
+    installer-release-asset-smoke.yml)
+      [[ ${#gh_args[@]} == 9 && "${gh_args[0]}" == workflow && "${gh_args[1]}" == run && "${gh_args[2]}" == "$target" && "${gh_args[3]}" == --ref && "${gh_args[4]}" == main && "${gh_args[5]}" == -f && "${gh_args[7]}" == -f ]] || {
+        echo 'Release asset smoke requires exact --ref main and release_tag/expected_sha inputs.' >&2; exit 3;
+      }
+      [[ "${gh_args[6]}" =~ ^release_tag=(v[0-9]+\.[0-9]+\.[0-9]+)$ && "${gh_args[8]}" =~ ^expected_sha=([0-9a-f]{40})$ ]] || {
+        echo 'Release asset smoke inputs are malformed.' >&2; exit 3;
+      }
+      release_tag="${gh_args[6]#release_tag=}"
+      release_sha="${gh_args[8]#expected_sha=}"
+      local_tag_sha="$(git rev-parse "refs/tags/$release_tag^{}")"
+      [[ "$local_tag_sha" == "$release_sha" ]] || { echo 'Local release tag does not resolve to the requested commit.' >&2; exit 3; }
+      ;;
+    *) echo 'Workflow is not allowlisted.' >&2; exit 3 ;;
+  esac
   readback="$(gh repo view "$repo" --json url,nameWithOwner --jq '.nameWithOwner + "|" + .url')"
   [[ "${readback,,}" == "${repo,,}|https://github.com/${repo,,}" ]] || { echo 'Repository read-back mismatch.' >&2; exit 4; }
   workflow_state="$(gh api "repos/$repo/actions/workflows/$target" --jq '.path + "|" + .state')"
-  [[ "$workflow_state" == '.github/workflows/installer-candidate-smoke.yml|active' ]] || { echo "Unexpected workflow path or state: $workflow_state" >&2; exit 4; }
+  [[ "$workflow_state" == ".github/workflows/$target|active" ]] || { echo "Unexpected workflow path or state: $workflow_state" >&2; exit 4; }
   if ((what_if == 1)); then echo "WhatIf: gh workflow run $target --ref main --repo $repo"; exit 0; fi
   gh "${gh_args[@]}" --repo "$repo"
   exit
