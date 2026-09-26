@@ -134,6 +134,49 @@ adapter's background guard. No guard was bypassed. The productive path is to
 extend the Dev proof harness with explicit startup targets for the remaining
 surfaces, so each one can be opened and captured without any synthetic input.
 
+### Gallery captures — 2026-09-26, second session
+
+The user pause on the desktop QA adapter was lifted, so the remaining gallery
+was captured. The build was refreshed first so the captures are provably from
+current source rather than a stale binary:
+
+- worktree HEAD == embedded HEAD == `12508667bef4`
+- `QuotalisDev.exe` SHA-256 `2cd972ce61a0c53d2c41432e9d761f6a74363db2538ea7d420e93d65d24b0c80`
+- `scripts/dev-preflight.mjs` PASS: `channel=dev`, `app.quotalis.desktop.dev`, `QuotaArc-Dev`
+
+Each surface was opened by the application's own Dev proof harness
+(`CODEXBAR_PROOF_MODE=settings:<tab>`), so **no synthetic input was used** —
+one launch and one screenshot per surface, with no clicking, typing or pointer
+movement. Each capture was then cropped to the application window rectangle
+(8, 8, 1846x1088), which the adapter independently confirmed as the
+`Quotalune Dev` window bounds, so no surrounding desktop is included and no
+operating-system title bar is shown.
+
+| Surface | File | Bytes | Luminance variance |
+| --- | --- | --- | --- |
+| Dashboard | `PHASE_NATIVE_dashboard_2026-09-26.png` | 994,045 | 619.4 |
+| Analytics | `PHASE_NATIVE_analytics_2026-09-26.png` | 1,133,434 | 724.4 |
+| Providers | `PHASE_NATIVE_providers_2026-09-26.png` | 730,764 | 878.6 |
+
+All three carry variance far above the ~0 that a blank or all-black frame would
+show, so each is real rendered content.
+
+### What the adapter emergency stop blocked
+
+Four further surfaces — Provider Display, Themes, Surfaces and Dashboard Studio
+— were launched successfully but the capture was refused with:
+
+```
+"error": "Mouse in top-left corner", "error_type": "PilotEmergencyStop"
+```
+
+That is helix-pilot's own safety cutoff, which triggers when the physical
+cursor rests in the screen's top-left corner. It is not an application fault:
+the app was running and the adapter reported `ok` immediately afterwards. The
+cursor was not moved, because doing so would require taking the user's physical
+mouse, which the operating rules prohibit. Those four surfaces are therefore
+recorded as not captured rather than claimed.
+
 ### Session boundary
 
 Further native capture in this session stopped because the Desktop Visual QA

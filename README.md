@@ -26,9 +26,21 @@ The About surface, where version, license and third-party notices live:
 
 ![Quotalune about](docs/validation/evidence/PHASE_NATIVE_settings_about_2026-09-26.png)
 
+The provider dashboard:
+
+![Quotalune dashboard](docs/validation/evidence/PHASE_NATIVE_dashboard_2026-09-26.png)
+
+Analytics:
+
+![Quotalune analytics](docs/validation/evidence/PHASE_NATIVE_analytics_2026-09-26.png)
+
+Provider connections:
+
+![Quotalune providers](docs/validation/evidence/PHASE_NATIVE_providers_2026-09-26.png)
+
 These are real captures of the current release candidate on Windows. Previews
-of the dashboard tray panel, providers, analytics and the appearance, surface
-and tray studios are published as they are captured from the verified build.
+of the appearance, surface and tray studios, the background gallery, Light mode
+and Arabic/RTL are published as they are captured from the verified build.
 
 ## A workspace that feels like yours
 
