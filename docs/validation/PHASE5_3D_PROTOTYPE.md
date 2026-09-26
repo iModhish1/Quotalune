@@ -289,7 +289,10 @@ horizontal overflow.
 
 Real `prefers-reduced-motion: reduce` emulation. Confirmed
 `data-qa-motion="reduced"` on the component root and
-`matchMedia(...).matches === true`. `QUOTALIS_3D_REDUCED_MOTION.png`.
+`matchMedia(...).matches === true`. The formerly listed
+`QUOTALIS_3D_REDUCED_MOTION.png` was withdrawn because it was byte-identical
+to the narrow-window capture; it does not independently prove reduced-motion
+appearance. The DOM and frame-delta observations remain historical evidence.
 Demand-render proof re-run under this condition: frame delta 0 over 10s
 (see above).
 

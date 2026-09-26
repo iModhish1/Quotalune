@@ -86,6 +86,16 @@ the old documentation still describe earlier experiments, not current native
 acceptance. This family-level withdrawal does not certify every frame or
 remove older public Git objects.
 
+A SHA-256 scan of the remaining 444 tracked images found 11 byte-identical
+groups with 15 redundant files. All 15 redundant copies were verified against
+their retained counterpart before moving to ignored
+`.local/duplicate-screenshot-audit-2026-09-27/`. Some duplicates had different
+scenario names (Trend/Reset Horizon, Heatmap/Data Quality, narrow/reduced
+motion, RTL/reduced motion); their historical validation documents now state
+that the withdrawn copy was not independent visual proof. This eliminates
+byte-identical duplicates from the current image tree, not visually similar
+copies or the need for current Quotalune captures.
+
 ## Remaining scope
 
 Continue visual review of every tracked screenshot, including the remaining
