@@ -16,43 +16,43 @@ application window so no operating-system title bar is shown.
 
 Settings, with the Monitor, Workspace and Appearance sections:
 
-![Quotalune settings](docs/validation/evidence/PHASE_NATIVE_quotalune_settings_2026-09-26.png)
+![Quotalune settings](docs/images/showcase/quotalune_settings.png)
 
 The menu bar configuration workspace:
 
-![Quotalune menu bar settings](docs/validation/evidence/PHASE_NATIVE_settings_menubar_2026-09-26.png)
+![Quotalune menu bar settings](docs/images/showcase/settings_menubar.png)
 
 The About surface, where version, license and third-party notices live:
 
-![Quotalune about](docs/validation/evidence/PHASE_NATIVE_settings_about_2026-09-26.png)
+![Quotalune about](docs/images/showcase/settings_about.png)
 
 The provider dashboard:
 
-![Quotalune dashboard](docs/validation/evidence/PHASE_NATIVE_dashboard_2026-09-26.png)
+![Quotalune dashboard](docs/images/showcase/dashboard.png)
 
 Analytics:
 
-![Quotalune analytics](docs/validation/evidence/PHASE_NATIVE_analytics_2026-09-26.png)
+![Quotalune analytics](docs/images/showcase/analytics.png)
 
 Provider connections:
 
-![Quotalune providers](docs/validation/evidence/PHASE_NATIVE_providers_2026-09-26.png)
+![Quotalune providers](docs/images/showcase/providers.png)
 
 Themes and workspace backgrounds:
 
-![Quotalune themes](docs/validation/evidence/PHASE_NATIVE_themes_2026-09-26.png)
+![Quotalune themes](docs/images/showcase/themes.png)
 
 Provider presentation:
 
-![Quotalune provider display](docs/validation/evidence/PHASE_NATIVE_provider_display_2026-09-26.png)
+![Quotalune provider display](docs/images/showcase/provider_display.png)
 
 Floating surfaces:
 
-![Quotalune surfaces](docs/validation/evidence/PHASE_NATIVE_surfaces_2026-09-26.png)
+![Quotalune surfaces](docs/images/showcase/surfaces.png)
 
 Dashboard studio:
 
-![Quotalune dashboard studio](docs/validation/evidence/PHASE_NATIVE_dashboard_studio_2026-09-26.png)
+![Quotalune dashboard studio](docs/images/showcase/dashboard_studio.png)
 
 These are real captures of the current release candidate on Windows. Previews
 of Light mode, Arabic/RTL and the tray surfaces are published as they are
