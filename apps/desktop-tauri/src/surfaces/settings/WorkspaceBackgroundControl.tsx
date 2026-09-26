@@ -82,7 +82,7 @@ export default function WorkspaceBackgroundControl({settings, navigation, update
     {busy&&<p role="status">{t("WorkspaceBackgroundWorking")}</p>}
     {error&&<p role="alert">{t("WorkspaceBackgroundFailure")}</p>}
     <div className="workspace-background-choices" role="group" aria-label={t("WorkspaceBackgroundTitle")}>
-      {BACKGROUND_CATALOG.filter(item=>filter==="all"||filter===item.kind).map(item => <button type="button" key={item.id} disabled={unavailable}
+      {BACKGROUND_CATALOG.filter(item=>filter==="all"?item.kind==="static":filter===item.kind).map(item => <button type="button" key={item.id} disabled={unavailable}
         aria-pressed={(prefs?.background ?? "cosmic") === item.id} onClick={() => set({background:item.id as WorkspacePreferences["background"],...(item.kind==="animated"?{backgroundMotion:"interactive" as const}:{})})}>
         <span className="workspace-background-preview" data-background={item.id} style={item.art ? {"--workspace-art":item.art} as CSSProperties : undefined} aria-hidden="true"/>
         <strong>{t(item.title)}</strong><small>{t(item.kind==="animated"?"WorkspaceBackgroundAnimated":"WorkspaceBackgroundStaticOnly")}{item.batch>0&&` · ${t("WorkspaceBackgroundBatch")} ${item.batch}`}</small>
@@ -98,8 +98,8 @@ export default function WorkspaceBackgroundControl({settings, navigation, update
     <div className="workspace-background-options">
       <fieldset disabled={unavailable}><legend>{t("WorkspaceBackgroundMotion")}</legend>
         <div className="workspace-background-segments">
-          <button type="button" aria-pressed={motion === "static"} onClick={() => set({backgroundMotion:"static"})}>{t("WorkspaceBackgroundStatic")}</button>
-          <button type="button" aria-pressed={motion === "interactive"} onClick={() => set({backgroundMotion:"interactive"})}>{t("WorkspaceBackgroundInteractive")}</button>
+          <button type="button" aria-pressed={motion === "static"} onClick={() => set({backgroundMotion:"static",...(prefs?.background?.startsWith("motion-")?{background:prefs.background.replace("motion-","atmosphere-") as WorkspacePreferences["background"]}:{})})}>{t("WorkspaceBackgroundStatic")}</button>
+          <button type="button" aria-pressed={motion === "interactive"} onClick={() => set({backgroundMotion:"interactive",...(prefs?.background?.startsWith("atmosphere-")?{background:prefs.background.replace("atmosphere-","motion-") as WorkspacePreferences["background"]}:{})})}>{t("WorkspaceBackgroundInteractive")}</button>
         </div>
       </fieldset>
       <fieldset disabled={unavailable}><legend>{t("WorkspaceBackgroundIntensity")}</legend>

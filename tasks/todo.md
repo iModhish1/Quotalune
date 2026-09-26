@@ -1,5 +1,27 @@
 # Active product backlog
 
+## 2026-09-26 continuation — Codex account lanes and release hygiene
+
+- In progress, not released: Structures now project the same provider-instance
+  lanes as Dashboard, including additional Codex accounts with unavailable
+  values until that account has its own observation. The old seven-provider
+  truncation is removed. Account display name, number, and persisted order are
+  editable; Structure labels respect `hidePersonalInfo` from the first frame.
+- In progress, not released: the installer offers opt-in Windows startup,
+  General explains the setting when off, and app-owned legacy Run values migrate
+  to the new product name. Installer QA has a no-launch path for clean uninstall
+  testing. The real install/upgrade/uninstall cycle remains open.
+- Public gallery cleanup in progress: remove the screenshot containing the QA
+  panel and a duplicate theme screenshot; avoid showing static/animated copies
+  of one scene twice in the All gallery. Fresh sanitized replacements remain open.
+- Current source gates: `cargo test --workspace -- --test-threads 1` passed
+  (desktop 589 discovered, core 1,942 passed, CLI 1, toast resource 2, doctests 0);
+  frontend 1,677/1,677 tests across 233 files, TypeScript, production build,
+  locale parity 2,137 keys, Clippy with warnings denied, Rust format, secret
+  scan (8,198 files), installer harness guards, and `git diff --check` passed.
+  These checks do not establish native visual, startup persistence, or installer
+  acceptance. Published v0.12.1 remains unchanged; next release is gated.
+
 Authority: `MASTER_REQUIREMENTS.md`; sequence and acceptance: `plan.md`.
 
 - 2026-09-06 provider-display + shared-interaction continuation: separated

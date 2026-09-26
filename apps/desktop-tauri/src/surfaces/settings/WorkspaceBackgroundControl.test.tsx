@@ -35,6 +35,12 @@ describe("background choices",()=>{
     expect(screen.getByText("WorkspaceBackgroundEmpty")).toBeInTheDocument();
     await waitFor(()=>expect(listWorkspaceBackgrounds).toHaveBeenCalled());
   });
+  it("shows each scene artwork once in All while retaining animated variants in their category",async()=>{
+    render(<WorkspaceBackgroundControl settings={{} as unknown as SettingsSnapshot} navigation="side" update={vi.fn()} disabled={false}/>);
+    expect(screen.getAllByRole("button",{name:/^WorkspaceScene/})).toHaveLength(4);
+    fireEvent.click(screen.getByRole("button",{name:"WorkspaceBackgroundAnimated"}));
+    expect(screen.getAllByRole("button",{name:/^WorkspaceScene/})).toHaveLength(4);
+  });
   it("persists the fallback before deleting the selected custom image",async()=>{
     const id="03c5b5a4-d164-486a-86b2-c5b8394e055f";
     vi.mocked(listWorkspaceBackgrounds).mockResolvedValueOnce([{id,name:"my-photo",thumbnailDataUrl:"data:image/png;base64,"}]);

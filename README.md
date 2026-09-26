@@ -9,7 +9,7 @@ Quotalune brings AI-provider limits, reset schedules and usage history into a cu
 [Explore the desktop experience](#a-workspace-that-feels-like-yours) · [Get started](docs/GETTING_STARTED.md) · [Build from source](#build-from-source) · [Windows downloads](#windows-downloads)
 
 The official application mark is unchanged. The interface previews below were
-captured from a verified Windows build of this release, cropped to the
+captured from a verified Windows build, cropped to the
 application window so no operating-system title bar is shown.
 
 ## Interface previews
@@ -38,14 +38,6 @@ Provider connections:
 
 ![Quotalune providers](docs/images/showcase/providers.png)
 
-Themes and workspace backgrounds:
-
-![Quotalune themes](docs/images/showcase/themes.png)
-
-Provider presentation:
-
-![Quotalune provider display](docs/images/showcase/provider_display.png)
-
 Floating surfaces:
 
 ![Quotalune surfaces](docs/images/showcase/surfaces.png)
@@ -54,7 +46,7 @@ Dashboard studio:
 
 ![Quotalune dashboard studio](docs/images/showcase/dashboard_studio.png)
 
-These are real captures of the current release candidate on Windows. Previews
+These are real captures of a verified Windows build. Previews
 of Light mode, Arabic/RTL and the tray surfaces are published as they are
 captured from the verified build.
 
@@ -74,13 +66,13 @@ Quotalune displays provider-reported values and preserves their meaning: quotas,
 
 ## Windows downloads
 
-Download the [Quotalune 0.12.0 prerelease](https://github.com/iModhish1/Quotalune/releases/tag/v0.12.0) for Windows x64:
+Download the [Quotalune 0.12.1 prerelease](https://github.com/iModhish1/Quotalune/releases/tag/v0.12.1) for Windows x64:
 
 | Download | Use |
 | --- | --- |
-| `Quotalune-0.12.0-Setup.exe` | Per-user installation with desktop integration and runtime setup |
-| `Quotalune-0.12.0-portable.zip` | Extract the complete folder and open `Quotalune.exe` |
-| `QuotaluneCLI-v0.12.0-windows-x64.zip` | Command-line tool for usage and configuration |
+| `Quotalune-0.12.1-Setup.exe` | Per-user installation with desktop integration and runtime setup |
+| `Quotalune-0.12.1-portable.zip` | Extract the complete folder and open `Quotalune.exe` |
+| `QuotaluneCLI-v0.12.1-windows-x64.zip` | Command-line tool for usage and configuration |
 
 Each download has a matching `.sha256` checksum file. The [earlier Quotalis 0.11.0 release](https://github.com/iModhish1/Quotalune/releases/tag/v0.11.0) remains available with its original filenames.
 

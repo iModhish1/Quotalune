@@ -2,19 +2,19 @@
 
 ## Supported versions
 
-Only the latest release of QuotaArc is supported. Security fixes are made
+Only the latest release of Quotalune is supported. Security fixes are made
 against the current release line; older releases are not patched.
 
 ## Reporting a vulnerability
 
 Please use GitHub's private vulnerability reporting: open the
-[Security tab](https://github.com/quotaarc/quotaarc/security) and click
+[Security tab](https://github.com/iModhish1/Quotalune/security) and click
 "Report a vulnerability".
 
 Do **not** open a public GitHub issue for a vulnerability. Public issues and
 the bug report template are for non-security problems only.
 
-QuotaArc handles provider cookies, OAuth tokens, and API keys locally, so
+Quotalune handles provider cookies, OAuth tokens, and API keys locally, so
 reports touching that surface — credential extraction, storage, redaction, or
 leakage — are taken seriously. Please keep report details private and do not
 paste secrets, cookies, or tokens into any report.
