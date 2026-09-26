@@ -1725,6 +1725,7 @@ locale_keys! {
     ProviderIssueFetchNeedsAttention,
     ProviderIssueCopy,
     ProviderIssueUnsupportedSourceModePrefix,
+    ProviderUsageSourceUnsupportedHelp,
     ProviderIssueAuthRequired,
     ProviderIssueSessionExpired,
     ProviderIssueLocalRuntimeOffline,

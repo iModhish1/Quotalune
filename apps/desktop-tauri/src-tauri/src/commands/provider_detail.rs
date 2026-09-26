@@ -303,6 +303,7 @@ mod tests {
         assert!(build_provider_detail("codex").unwrap().can_connect);
         assert!(build_provider_detail("copilot").unwrap().can_connect);
         assert!(!build_provider_detail("vertexai").unwrap().can_connect);
+        assert!(!build_provider_detail("gemini").unwrap().can_connect);
         assert!(build_provider_detail("mistral").unwrap().can_connect);
         assert!(build_provider_detail("sub2api").unwrap().can_connect);
     }
@@ -376,6 +377,6 @@ mod tests {
             .map(|id| id.cli_name())
             .collect();
 
-        assert_eq!(unsupported, vec!["vertexai"]);
+        assert_eq!(unsupported, vec!["gemini", "vertexai"]);
     }
 }

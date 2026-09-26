@@ -427,13 +427,13 @@ export function ProviderDetailPane({
           t={t}
           onChanged={reload}
         />
-        <CookieSourceSection
+        {detail.canConnect !== false && <CookieSourceSection
           providerId={detail.id}
           currentValue={detail.cookieSource}
           options={cookieOptions}
           t={t}
           onChanged={reload}
-        />
+        />}
         <RegionSection
           providerId={detail.id}
           currentValue={detail.region}
@@ -441,6 +441,13 @@ export function ProviderDetailPane({
           t={t}
           onChanged={reload}
         />
+        {detail.canConnect === false && (
+          <section className="provider-detail-section provider-detail-section--wide" role="status">
+            <h4>{t("V2AuthUnsupported")}</h4>
+            <p>{t("ProviderUsageSourceUnsupportedHelp")}</p>
+          </section>
+        )}
+        {detail.canConnect !== false && <>
         <CredentialsDispatcher providerId={detail.id} t={t} />
         {detail.id === "codex" && <CodexUsageOptions t={t} />}
         {detail.id === "codex" && <CodexAccountsSection t={t} />}
@@ -463,6 +470,7 @@ export function ProviderDetailPane({
           providerId={detail.id}
           cookieDomain={cookieDomain}
         />
+        </>}
         </>}
         presentation={<>
         <MenuBarMetricSection

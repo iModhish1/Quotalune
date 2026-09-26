@@ -447,3 +447,55 @@ Dev build passed preflight/freshness (SHA-256
 and its guarded six-step native scenario passed; the after screenshot was
 visually inspected. This did not attempt a live Gemini sign-in, open the
 credentials file, or validate other providers' credential surfaces.
+
+## Gemini CLI OAuth source quarantine — 2026-09-26
+
+Google's current [Gemini CLI FAQ](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/faq.md)
+warns against third-party software piggybacking on Gemini CLI OAuth to access
+its backend services. The former Quotalune adapter read and could rewrite
+`~/.gemini/oauth_creds.json`, then called Google's undocumented
+`v1internal:loadCodeAssist` and `v1internal:retrieveUserQuota` endpoints.
+That code pattern appears to fall within the warning; this is an engineering
+policy assessment, not a formal legal opinion. No owner credential, CLI or
+Google endpoint was accessed during the review.
+
+The direct OAuth/private-endpoint adapter was removed. Gemini remains in the
+70-provider registry but fetches fail closed for every source mode before
+reading credentials or making a network call. Its connection capability and
+verification now report unsupported/unavailable. The provider detail no
+longer offers the Gemini CLI credential widget, browser cookie import, or an
+AI Studio link posing as the CLI usage dashboard. Its connection pane shows
+an explicit localized unsupported-source explanation. Existing stored credentials
+are untouched. The nine older localized CLI setup hints were corrected to
+run `gemini` per Google's [get-started guide](https://github.com/google-gemini/gemini-cli/blob/main/docs/get-started/index.md),
+but that setup surface is no longer offered as a working quota connection.
+AI Studio API quotas are a separate billing channel and cannot stand in for
+personal Gemini CLI subscription quota. A future adapter needs a documented
+supported, plan-equivalent usage source and new verification evidence.
+
+This closes the identified *runtime path*, not the whole-product release gate:
+remaining providers and native/installer/security checks still need their own
+evidence. Historical Gemini observations are not rewritten and must not be
+described as fresh data from the new adapter.
+
+The derived 70-provider matrix was regenerated; its Gemini row is unsupported
+with no methods and unavailable verification. The full serial Rust suite
+passed (desktop 586/1 existing ignored, core 1941, CLI 1, integration 2), as
+did strict Clippy and formatting. The frontend registry fixture passed 69/69
+after updating its explicit unsupported list; TypeScript, production build and
+2037-key locale parity passed before the final empty-state key (2038 keys
+now pass). An initial parallel Rust run failed seven
+process-timing fixtures under simultaneous heavy frontend work; the serial
+run passed. A verified Dev build and guarded six-step native scenario captured
+an intermediate disabled-connection state. Visual review then found the
+remaining cookie UI and misleading AI Studio link; these were removed. The
+final explanation passed a fresh six-step native scenario in the verified
+Dev build (SHA-256
+`19a3d3180950e9ec5a4d533ea9944d9265b87f7d569e2425902540f107768dfc`).
+The inspected Arabic screenshot shows one full-width explanatory card and no
+CLI setup, browser-cookie or AI Studio usage action. The 2038-key parity and
+TypeScript checks passed after the final copy/layout change. The final
+frontend suite passed 1668 tests across 232 files, strict workspace Clippy
+passed again, and the secret scan of 4794 tracked files was clean. This is
+source/visual closure for Gemini, not a claim that every remaining provider or
+the public installer is accepted.

@@ -237,7 +237,7 @@
         "sessionDetection": "authFile",
         "tool": "Gemini CLI"
       },
-      "dashboardUrl": "https://aistudio.google.com",
+      "dashboardUrl": null,
       "displayName": "Gemini",
       "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
       "iconSource": {
@@ -246,15 +246,7 @@
       },
       "liveVerification": "NOT VERIFIED",
       "localSessionReader": false,
-      "methods": [
-        {
-          "browserDomain": null,
-          "envVar": null,
-          "helpUrl": "https://github.com/google-gemini/gemini-cli",
-          "method": "cliSession",
-          "rank": "recommended"
-        }
-      ],
+      "methods": [],
       "planSource": "Provider-reported plan when present; never inferred from a credential",
       "provider": "gemini",
       "quotaWindowEvidence": "Dynamic adapter response; no universal static window promise",
@@ -266,11 +258,11 @@
         "resetTimes": "inspectProviderResponse"
       },
       "resetSource": "Valid timestamp in a non-informational quota row of a verified provider response",
-      "status": "supported",
+      "status": "unsupported",
       "statusPageUrl": "https://status.cloud.google.com",
       "supportedQuotaWindows": null,
       "tokenSource": null,
-      "verification": "usageFetch"
+      "verification": "unavailable"
     },
     {
       "adapterSource": {

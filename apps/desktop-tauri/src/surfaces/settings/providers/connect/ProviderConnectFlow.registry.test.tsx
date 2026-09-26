@@ -120,7 +120,7 @@ describe("ProviderConnectFlow registry lifecycle fixtures", () => {
     expect(matrix.providers).toHaveLength(matrix.providerCount);
     expect(activeProviders.length + deprecatedProviders.length + unsupportedProviders.length).toBe(matrix.providerCount);
     expect(deprecatedProviders).toHaveLength(2);
-    expect(unsupportedProviders.map((provider) => provider.provider)).toEqual(["vertexai"]);
+    expect(unsupportedProviders.map((provider) => provider.provider)).toEqual(["gemini", "vertexai"]);
   });
 
   it.each(activeProviders.map((provider) => [provider.provider, provider, recommendedMethod(provider)] as const))(

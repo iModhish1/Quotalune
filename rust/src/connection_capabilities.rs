@@ -357,9 +357,10 @@ const CLI_LOGIN_SUPERVISED: &[ProviderId] =
 /// Providers whose CLI owns sign-in: the supervised logins above plus CLIs
 /// whose credential file or status command the adapter reads directly.
 fn cli_owns_sign_in(provider: ProviderId) -> bool {
-    // Its current adapter probes gcloud/project metadata, not a measured
-    // Vertex usage source. Installation/sign-in cannot verify a usage link.
-    if provider == ProviderId::VertexAI {
+    // Neither provider currently has a supported usage fetch: Vertex only
+    // had project metadata, while Gemini's CLI OAuth/private-API source was
+    // removed. Installation/sign-in cannot verify a usage link for either.
+    if matches!(provider, ProviderId::VertexAI | ProviderId::Gemini) {
         return false;
     }
     cli_dependency(provider).is_some_and(|d| {
@@ -476,7 +477,7 @@ pub fn connection_capabilities(provider: ProviderId) -> ProviderConnectionCapabi
     let mut seen = std::collections::HashSet::new();
     methods.retain(|m| seen.insert(m.method));
     let verification = match provider {
-        ProviderId::VertexAI => VerificationStrategy::Unavailable,
+        ProviderId::VertexAI | ProviderId::Gemini => VerificationStrategy::Unavailable,
         ProviderId::Wayfinder => VerificationStrategy::GatewayProbe,
         ProviderId::Windsurf | ProviderId::JetBrains => VerificationStrategy::LocalDetection,
         _ => VerificationStrategy::UsageFetch,
@@ -628,7 +629,13 @@ mod tests {
             .filter(|c| c.status == SupportStatus::Unsupported)
             .map(|c| c.provider.cli_name())
             .collect();
-        assert_eq!(unsupported, vec![ProviderId::VertexAI.cli_name()]);
+        assert_eq!(
+            unsupported,
+            vec![
+                ProviderId::Gemini.cli_name(),
+                ProviderId::VertexAI.cli_name()
+            ]
+        );
     }
 
     #[test]

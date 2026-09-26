@@ -615,6 +615,7 @@ V2AuthCli = تسجيل دخول المزوّد مع متابعة الحالة
 V2AuthExternal = لوحة خارجية فقط · دون ربط حساب
 V2AuthDetection = اكتشاف جلسة محلية موجودة
 V2AuthUnsupported = الاتصال من داخل التطبيق غير متاح
+ProviderUsageSourceUnsupportedHelp = لا يوجد مصدر استخدام متحقق منه لهذا المزوّد. يبقى السجل السابق ظاهراً، ولا يُعرض تسجيل دخول.
 
 V2CurrentState = الحالة الحالية
 V2Stale = متقادم
@@ -1560,7 +1561,7 @@ CreditsLabel = وحدات الائتمان
 CredsGeminiCliHelperPrefix = يستخدم بيانات اعتماد OAuth من
 CredsGeminiCliLabel = أداة Gemini CLI
 CredsGeminiCliSetupAction = إعداد Gemini CLI
-CredsGeminiCliSetupHelp = ثبّت Gemini CLI ثم شغّل `gemini auth login` لتسجيل الدخول.
+CredsGeminiCliSetupHelp = ثبّت Gemini CLI ثم شغّل `gemini` لتسجيل الدخول.
 CredsJetBrainsCustomPathLabel = مسار مخصص
 CredsJetBrainsCustomPathPlaceholder = %APPDATA%/JetBrains/IntelliJIdea...
 CredsJetBrainsHelperCustomPrefix = يستخدم المسار المخصص لملفات بيئة التطوير

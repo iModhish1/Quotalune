@@ -1,23 +1,20 @@
-//! Gemini provider implementation
+//! Gemini provider registration.
 //!
-//! Fetches usage data from Google's Cloud Code API using OAuth credentials
-//! stored by the Gemini CLI in ~/.gemini/oauth_creds.json
-
-mod api;
+//! Google's Gemini CLI FAQ warns against third-party tools piggybacking on
+//! its OAuth credentials to access backend services. The former adapter did
+//! exactly that through undocumented `v1internal` endpoints. Until a
+//! documented, plan-equivalent usage source exists, Gemini remains visible
+//! but cannot return a measured quota or initiate a connection.
 
 use async_trait::async_trait;
 
 use crate::core::{
     FetchContext, Provider, ProviderError, ProviderFetchResult, ProviderId, ProviderMetadata,
-    SourceMode, UsageSnapshot,
+    SourceMode,
 };
 
-pub use api::GeminiApi;
-
-/// Gemini provider for fetching AI usage limits
 pub struct GeminiProvider {
     metadata: ProviderMetadata,
-    api: GeminiApi,
 }
 
 impl GeminiProvider {
@@ -30,12 +27,11 @@ impl GeminiProvider {
                 weekly_label: "Daily",
                 supports_opus: false,
                 supports_credits: false,
-                default_enabled: true,
+                default_enabled: false,
                 is_primary: false,
-                dashboard_url: Some("https://aistudio.google.com"),
+                dashboard_url: None,
                 status_page_url: Some("https://status.cloud.google.com"),
             },
-            api: GeminiApi::new(),
         }
     }
 }
@@ -56,34 +52,45 @@ impl Provider for GeminiProvider {
         &self.metadata
     }
 
-    async fn fetch_usage(&self, ctx: &FetchContext) -> Result<ProviderFetchResult, ProviderError> {
-        tracing::debug!("Fetching Gemini usage via API");
-
-        match self.api.fetch_quota(ctx).await {
-            Ok((primary, model_specific, email, plan)) => {
-                let mut usage = UsageSnapshot::new(primary);
-                if let Some(ms) = model_specific {
-                    usage = usage.with_model_specific(ms);
-                }
-                if let Some(e) = email {
-                    usage = usage.with_email(e);
-                }
-                usage = usage.with_login_method(plan.unwrap_or_else(|| "Gemini CLI".to_string()));
-
-                Ok(ProviderFetchResult::new(usage, "cli"))
-            }
-            Err(e) => {
-                tracing::warn!("Gemini API fetch failed: {}", e);
-                Err(e)
-            }
-        }
+    async fn fetch_usage(&self, _ctx: &FetchContext) -> Result<ProviderFetchResult, ProviderError> {
+        Err(ProviderError::Other(
+            "Gemini CLI quota is unavailable: no supported third-party usage source".into(),
+        ))
     }
 
     fn available_sources(&self) -> Vec<SourceMode> {
-        vec![SourceMode::Auto, SourceMode::Cli]
+        Vec::new()
     }
 
     fn supports_cli(&self) -> bool {
-        true
+        false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn all_source_modes_fail_closed_without_reading_oauth_or_network() {
+        let provider = GeminiProvider::new();
+        for source_mode in [
+            SourceMode::Auto,
+            SourceMode::Web,
+            SourceMode::Cli,
+            SourceMode::OAuth,
+        ] {
+            let ctx = FetchContext {
+                source_mode,
+                ..FetchContext::default()
+            };
+            assert!(matches!(
+                provider.fetch_usage(&ctx).await,
+                Err(ProviderError::Other(_))
+            ));
+        }
+        assert!(provider.available_sources().is_empty());
+        assert!(!provider.supports_cli());
+        assert!(provider.metadata().dashboard_url.is_none());
     }
 }

@@ -678,7 +678,23 @@ relative path but also exposed right-to-left character reordering; a
 left-to-right isolated span corrected this. The final six-step native run
 passed, and its screenshot was inspected. The credential itself was neither
 opened nor modified; these local screenshots must not be published.
+The later Gemini OAuth-source quarantine removed that credential widget
+entirely; the historical before/after images remain internal diagnosis only.
 
 - Before: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T13-57-36-quotalune-dev-gemini-tabitem-inspect-202\s06-after.png`
 - Final: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T14-10-47-quotalune-dev-gemini-bidi-after-20260926\s06-after.png`
 - Verification: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T14-10-47-quotalune-dev-gemini-bidi-after-20260926\summary.md`
+
+### Gemini unsupported usage source — 2026-09-26
+
+Google's published Gemini CLI policy triggered removal of the adapter that
+used CLI OAuth credentials and private quota endpoints. The first native
+inspection caught lingering browser-cookie controls; the second caught an
+empty two-column pane. After both fixes, the verified Dev build showed an
+Arabic, full-width explanation, with no setup, cookie or AI Studio usage
+action. All six guarded steps passed. This visual evidence covers the Gemini
+connection pane only; it does not test live account authentication or the
+other providers.
+
+- Final: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T15-00-52-quotalune-dev-gemini-fullwidth-unavailab\s06-after.png`
+- Verification: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T15-00-52-quotalune-dev-gemini-fullwidth-unavailab\summary.md`
