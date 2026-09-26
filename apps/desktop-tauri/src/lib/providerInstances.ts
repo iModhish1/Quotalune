@@ -32,6 +32,25 @@ export function composeProviderInstances(
   return result.sort((a, b) => (ranks.get(a.instanceId) ?? Infinity) - (ranks.get(b.instanceId) ?? Infinity));
 }
 
+/** Floating Structures follow the stored account sequence, while the Dashboard
+ * owns its independently persisted carousel order. Old account IDs in a saved
+ * Dashboard order intentionally remain Dashboard-only after this separation. */
+export function composeStructureInstances(
+  providers: readonly ProviderUsageSnapshot[],
+  instances: readonly ProviderInstanceSnapshot[],
+  enabledIds: readonly string[],
+): ProviderInstanceSnapshot[] {
+  const result = composeProviderInstances(providers, instances, enabledIds);
+  const ranks = new Map(instances.filter(row=>row.providerId==="codex")
+    .map((row,index)=>[row.instanceId,index]));
+  const codexSlots = result.flatMap((row,index)=>row.providerId==="codex"?[index]:[]);
+  const codexRank = (id:string) => ranks.get(id) ?? (id==="codex" ? -1 : Infinity);
+  const codexRows = codexSlots.map(index=>result[index])
+    .sort((a,b)=>codexRank(a.instanceId)-codexRank(b.instanceId));
+  codexSlots.forEach((slot,index)=>{result[slot]=codexRows[index];});
+  return result;
+}
+
 export function moveProviderInstance(ids: readonly string[], id: string, delta: number): string[] {
   const result = [...ids];
   const from = result.indexOf(id);

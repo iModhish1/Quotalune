@@ -137,6 +137,42 @@ pub(crate) fn build_provider_instances(
         });
     }
 
+    // The account store owns Structure order, including the ordinary ambient
+    // lane when its identity is uniquely known. Keep non-Codex provider slots
+    // fixed; Dashboard carousel order is a separate presentation preference.
+    let ranks: HashMap<Uuid, usize> = accounts
+        .iter()
+        .enumerate()
+        .map(|(index, account)| (account.id, index))
+        .collect();
+    let codex_slots: Vec<usize> = instances
+        .iter()
+        .enumerate()
+        .filter_map(|(index, instance)| (instance.provider_id == "codex").then_some(index))
+        .collect();
+    let mut codex_rows: Vec<ProviderInstanceSnapshot> = codex_slots
+        .iter()
+        .map(|&index| instances[index].clone())
+        .collect();
+    codex_rows.sort_by_key(|instance| {
+        if instance.instance_id == "codex" {
+            // An unproven ambient identity stays in its ordinary lane.
+            ambient_account_id
+                .and_then(|id| ranks.get(&id).copied())
+                .unwrap_or(0)
+        } else {
+            instance
+                .account_id
+                .as_deref()
+                .and_then(|id| Uuid::parse_str(id).ok())
+                .and_then(|id| ranks.get(&id).copied())
+                .unwrap_or(usize::MAX)
+        }
+    });
+    for (slot, row) in codex_slots.into_iter().zip(codex_rows) {
+        instances[slot] = row;
+    }
+
     instances
 }
 
@@ -567,6 +603,35 @@ mod tests {
             instances[3].instance_id,
             format!("codex:{}", same_time_low_id.id)
         );
+    }
+
+    #[test]
+    fn ambient_codex_lane_follows_the_persisted_account_order_without_attributing_cached_quota() {
+        let managed = account(
+            "22222222-2222-2222-2222-222222222222",
+            2,
+            CodexAccountSource::ManagedByApp,
+            Some("managed"),
+        );
+        let ambient = account(
+            "11111111-1111-1111-1111-111111111111",
+            1,
+            CodexAccountSource::Ambient,
+            Some("ambient"),
+        );
+        let instances = build_provider_instances(
+            &[
+                provider_snapshot("codex", 30.0),
+                provider_snapshot("claude", 10.0),
+            ],
+            &[managed.clone(), ambient],
+            &HashMap::new(),
+            &Settings::default(),
+        );
+        assert_eq!(instances[0].instance_id, format!("codex:{}", managed.id));
+        assert_eq!(instances[1].instance_id, "claude");
+        assert_eq!(instances[2].instance_id, "codex");
+        assert!(instances[2].account_id.is_none());
     }
 
     #[test]
