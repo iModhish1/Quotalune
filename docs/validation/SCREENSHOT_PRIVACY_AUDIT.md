@@ -34,6 +34,12 @@ current, verified Dev captures rather than trimming inside the app or painting
 over defects. Use an isolated/demo state or redact private readings before
 public display, with demo data clearly identified.
 
+Seven additional post-release Dev screenshots were then reviewed. They carried
+the former Quotalis name, and several displayed real activity readings. Their
+current-tree copies were withdrawn; local audit copies are under ignored
+`.local/historical-images-post-release/`. The historical handoff now points
+there instead of to the public images directory.
+
 ## Remaining scope
 
 Continue visual review of every tracked screenshot, including the remaining

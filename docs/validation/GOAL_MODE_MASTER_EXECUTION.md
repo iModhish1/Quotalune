@@ -22,6 +22,8 @@ OS/development overlays were removed from the current tracked tree. Raw native
 evidence remains only in ignored local storage; the README showcase still
 needs clean current Dev replacements. See `SCREENSHOT_PRIVACY_AUDIT.md`.
 This change does not erase earlier Git objects from public history.
+Seven further post-release Dev captures with old branding and real activity
+readings were subsequently withdrawn into ignored local audit storage.
 
 ## Settings Arabic and shortcut reliability — 2026-09-26
 
