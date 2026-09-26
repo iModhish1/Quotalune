@@ -568,3 +568,31 @@ This is one theme, locale and window size, not a theme-matrix acceptance.
 
 - `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T12-25-20-quotalune-native-analytics-tab-contrast-\s04-after.png`
 - `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T12-25-20-quotalune-native-analytics-tab-contrast-\summary.md`
+
+### Main-page scan and Arabic Collections controls — 2026-09-26
+
+A guarded native scan visited Dashboard and Usage & Spend, then stopped at
+Notifications because its UIA name includes the dynamic unread count. The
+fallback vision request exceeded the local model's context limit; this was an
+adapter selector failure, not evidence of an app crash. A second scan used
+the stable `settings-tab-*` automation IDs and passed all nine steps through
+Notifications, Providers, Profiles, Collections, Appearance and Settings.
+The screenshots were visually inspected. Settings is an expandable navigation
+parent; invoking it from Appearance left the child page visible, as designed.
+
+The Collections screenshot exposed English editor/view/action/preview labels
+in an Arabic UI. `CollectionsStudio` now reads these labels from locale keys,
+including accessible names and status text. Locale parity reached 2027 keys;
+focused frontend tests, TypeScript and 22 locale tests passed. A fresh
+Dev-isolated binary from the then-dirty `35c8b062590a` tree had SHA-256
+`6e259d82b050e86273cddbc191aae3bf1ce91bfc79f9b5461966ddc0b6184e9b`.
+Its four-step native Collections scenario passed, and the inspected screenshot
+shows Arabic view, field, action, save and preview labels. The adapter was
+stopped after each run. Local-only evidence:
+
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T12-28-21-quotalune-native-six-main-pages-20260926\summary.md`
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T12-30-44-quotalune-native-stable-main-pages-20260\summary.md`
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T12-39-42-quotalune-arabic-collections-controls-20\s04-after.png`
+
+Navigation and screenshot inspection do not prove every control, save path,
+provider connection, theme, keyboard flow or detached Collections window.
