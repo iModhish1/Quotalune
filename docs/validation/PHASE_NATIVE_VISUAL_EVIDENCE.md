@@ -548,3 +548,23 @@ the screenshots are not metric fixtures. Local-only evidence:
 These navigation checks do not prove the correctness of every chart value,
 every filter/range, hidden disclosures, Demo fixtures or narrow layouts. The
 adapter was stopped after each run; none of these images are public artwork.
+
+### Analytics tab contrast — 2026-09-26
+
+The Data Quality screenshot above also showed transparent Analytics tabs over
+bright nebula art. `ProductV3.css` now puts the existing Structure Theme's
+opaque analytics surface behind the tab row and keeps selected-state color
+inside that surface. The change affects the tab chrome only; it does not alter
+analytics data, navigation, or the user's chosen background.
+
+The production frontend build and TypeScript check passed. A fresh Dev-only
+binary was verified by `build-dev-verified.mjs` with SHA-256
+`9cdeadbc82cc9411dabdf1438328dcc12a6c4e560063b334ffd60d4594f4f299`;
+its source and embedded HEAD both reported `0277e230d9cb (dirty)`, matching
+the then-uncommitted CSS change. The guarded four-step native scenario passed
+and the screenshot was visually inspected: Arabic tab labels and the current
+tab remain readable against the bright background. The adapter was stopped.
+This is one theme, locale and window size, not a theme-matrix acceptance.
+
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T12-25-20-quotalune-native-analytics-tab-contrast-\s04-after.png`
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T12-25-20-quotalune-native-analytics-tab-contrast-\summary.md`
