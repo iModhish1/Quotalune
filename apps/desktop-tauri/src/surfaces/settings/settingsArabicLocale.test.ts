@@ -5,6 +5,7 @@ const here = import.meta.dirname!;
 const tabs = [
   "AdvancedTab.tsx", "DisplayTab.tsx", "UsageSpendTab.tsx",
   "AboutTab.tsx", "CollectionsTab.tsx", "ProfilesTab.tsx", "ProvidersTab.tsx",
+  "AboutProductIdentity.tsx",
   "../../../components/ShortcutCapture.tsx",
 ];
 
@@ -19,8 +20,9 @@ describe("Arabic settings coverage", () => {
         .map((match) => [match[1], match[2]]),
     );
 
-    expect(keys.length).toBeGreaterThan(tab.includes("ShortcutCapture") ? 3 : tab.includes("CollectionsTab") ? 1 : 10);
+    expect(keys.length).toBeGreaterThan(tab.includes("ShortcutCapture") ? 3 : tab.includes("CollectionsTab") ? 1 : tab.includes("AboutProductIdentity") ? 8 : 10);
     for (const key of keys) {
+      if (key === "AppName") continue; // The official product name is intentionally Latin script.
       expect(translations.get(key), `${tab}: ${key}`).toMatch(/[\u0600-\u06FF]/);
     }
   });

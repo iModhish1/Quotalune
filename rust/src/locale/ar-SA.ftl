@@ -1446,6 +1446,7 @@ ProviderSourceKiroEnvShort = بيئة Kiro
 ProviderSourceOauthShort = مصادقة OAuth
 ProviderSourceWebShort = ويب
 WaitingForUsage = في انتظار بيانات الاستخدام
+Version = الإصدار
 UsageSpendLoading = جارٍ الفحص…
 UsageSpendRefreshing = جارٍ التحديث…
 UsageSpendRefresh = تحديث
