@@ -39,6 +39,13 @@ nested component. These are now translated and a fresh Dev build from
 `197b8513` verified «تسجيل» and «مسح» in the real RTL Settings window. See
 `PHASE_NATIVE_VISUAL_EVIDENCE.md`; full native acceptance remains open.
 
+The next native capture found inconsistent Arabic Spend navigation and English
+eyebrow/status/period labels. Source commit `be094b6f` corrects these with
+1981-key locale parity, passing focused tests, TypeScript, core locale tests,
+formatting and production frontend build. A fresh Dev binary and a five-step
+RTL UIA run visually verified the new labels. The eventual spend-data state,
+share-card localization and full settings navigation remain to be audited.
+
 ## Current verified checkpoint
 
 `7e4c0506` on `release/quotalune-integration`, clean worktree, in sync with

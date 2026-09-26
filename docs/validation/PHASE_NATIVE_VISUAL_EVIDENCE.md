@@ -412,5 +412,27 @@ the right-side RTL navigation remains visible. Evidence stays local:
 
 The QA adapter was stopped afterward. This is visual verification of the
 Advanced page's visible state, not an exhaustive native interaction pass or a
-test of the production installer. Display and Usage & Spend translations have
-source-backed tests but still require their own native captures.
+test of the production installer. At that checkpoint, Display and Usage & Spend
+translations had source-backed tests but no native captures; the Usage & Spend
+capture below closes only its visible initial state.
+
+### Usage & Spend Arabic capture — 2026-09-26
+
+The first native Usage & Spend capture from `197b8513` exposed an inconsistent
+navigation label («الاستخدام والتكلفة»), English eyebrow/status text and `7d`/
+`30d` buttons in the Arabic window. These were corrected in `be094b6f`.
+`build-dev-verified.mjs` proved a fresh Dev-only binary with matching embedded
+HEAD and SHA-256
+`b379c11dc6e3b6e3eb2d53cf322081f01618fd63aea258628829eb22cfc82836`.
+The guarded orchestrator opened Settings and the «الاستخدام والإنفاق» page;
+five of five steps passed, including UIA verification of «رؤى الحصص»,
+«بيانات محلية» and the «7 أيام» period button. The final screenshot was
+visually inspected. Evidence remains local:
+
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T10-35-59-quotalune-arabic-spend-labels-be094b6f\s05-after.png`
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T10-35-59-quotalune-arabic-spend-labels-be094b6f\summary.md`
+
+At 3.5 seconds after navigation the page was still scanning, so this capture
+does not establish the final data or empty state, export correctness or scan
+latency. The image is not suitable for the public project because the Dev app
+uses local account data. The adapter was stopped after the run.
