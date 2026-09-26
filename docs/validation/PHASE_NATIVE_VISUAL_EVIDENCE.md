@@ -134,6 +134,20 @@ adapter's background guard. No guard was bypassed. The productive path is to
 extend the Dev proof harness with explicit startup targets for the remaining
 surfaces, so each one can be opened and captured without any synthetic input.
 
+### Session boundary
+
+Further native capture in this session stopped because the Desktop Visual QA
+adapter reported `DESKTOP_QA_PAUSED: User has control`. Per the stack's rules a
+user pause is never cleared, worked around, or retried automatically; only a
+user Resume re-opens it. No pause file was touched and no paused action was
+replayed. The Dev process was stopped, and the seeded provider data lived only
+in an ephemeral Dev fixture file, never in Personal.
+
+The seeded six-provider dashboard capture (`quotalune-dashboard-seeded.png`)
+exists but is **not** published as evidence, because the tray-panel window was
+occluded by other foreground windows and extended past the right screen edge,
+so it does not honestly show the product.
+
 ## Verdict
 
 NATIVE VISUAL (does the release candidate render): **PASS**
