@@ -15,6 +15,25 @@ The active objective is the owner's MASTER GOAL MODE EXECUTION and historical-wa
 | G — publication | Every required code, native, security, OSS and CI gate passes | `v0.12.0` published as a **prerelease**, not final production acceptance, at `https://github.com/iModhish1/Quotalune/releases/tag/v0.12.0`. The tag points to built commit `f1d758cf`; six verified assets are present. Full native and installer acceptance remain open. No Personal promotion. |
 | Historical appendix | Every ledger wave explicitly reconciled and cross-wave regression tested | PARTIAL. Both matrices exist; all three historical ledgers were read and indexed. Full cross-wave acceptance is still open. Historical PASS prose alone is not fresh evidence. |
 
+## Settings Arabic and shortcut reliability — 2026-09-26
+
+The Advanced, Display and Usage & Spend tabs now have Arabic values for every
+directly referenced locale key (41, 33 and 50 keys respectively). A source-backed
+frontend regression test checks this coverage. The English and Arabic Codex
+log/spend descriptions now explain that local cost estimates require billing
+channel eligibility rather than promising a dollar history from JSONL logs.
+The Advanced keychain section is localized. A failed global-shortcut registration
+or removal now leaves the saved shortcut unchanged and displays the failure;
+both paths have interaction tests.
+
+Validation at this checkpoint: frontend 1657/1657 tests across 231 files,
+22/22 locale-filtered core tests, 1977-key Rust/TypeScript parity, TypeScript,
+production frontend build, full workspace Clippy with warnings denied, Rust
+format check and diff check pass. The Vite build still warns about large chunks.
+Native Dev visual/interaction acceptance, other settings locale coverage and
+the installer smoke test remain open. This source change is newer than the
+published `v0.12.0` prerelease tag and is not included in its assets.
+
 ## Current verified checkpoint
 
 `7e4c0506` on `release/quotalune-integration`, clean worktree, in sync with

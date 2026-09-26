@@ -1138,6 +1138,8 @@ export const ALL_LOCALE_KEYS = [
   "AvoidKeychainPromptsHelper",
   "DisableAllKeychainLabel",
   "DisableAllKeychainHelper",
+  "KeychainAccessTitle",
+  "KeychainAccessCaption",
   "SectionTheme",
   "ThemeLabel",
   "ThemeHelper",

@@ -1530,6 +1530,8 @@ locale_keys! {
     AvoidKeychainPromptsHelper,
     DisableAllKeychainLabel,
     DisableAllKeychainHelper,
+    KeychainAccessTitle,
+    KeychainAccessCaption,
     // Tauri desktop shell — Theme (Phase 12)
     SectionTheme,
     ThemeLabel,

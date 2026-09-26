@@ -65,7 +65,7 @@ export default function AdvancedTab({ settings, set, saving }: TabProps) {
     async (accelerator: string) => {
       setShortcutError(null);
       try {
-        await registerGlobalShortcut(accelerator).catch(() => {});
+        await registerGlobalShortcut(accelerator);
         set({ globalShortcut: accelerator });
       } catch (err: unknown) {
         setShortcutError(err instanceof Error ? err.message : String(err));
@@ -77,7 +77,7 @@ export default function AdvancedTab({ settings, set, saving }: TabProps) {
   const clearShortcut = useCallback(async () => {
     setShortcutError(null);
     try {
-      await unregisterGlobalShortcut().catch(() => {});
+      await unregisterGlobalShortcut();
       set({ globalShortcut: "" });
     } catch (err: unknown) {
       setShortcutError(err instanceof Error ? err.message : String(err));
@@ -298,11 +298,10 @@ export default function AdvancedTab({ settings, set, saving }: TabProps) {
       {/* ── Keychain access ──────────────────────────────────────── */}
       <section className="settings-section">
         <h3 className="settings-section__title settings-section__title--bold">
-          KEYCHAIN ACCESS
+          {t("KeychainAccessTitle")}
         </h3>
         <p className="settings-section__caption">
-          Disable all Keychain reads and writes. Browser cookie import is
-          unavailable; paste Cookie headers manually in Providers.
+          {t("KeychainAccessCaption")}
         </p>
         <div className="settings-section__group">
           <Field

@@ -126,4 +126,27 @@ describe("AdvancedTab", () => {
       ).toBeGreaterThan(0);
     });
   });
+
+  it("does not persist a shortcut when global registration fails", async () => {
+    const set = vi.fn();
+    tauriMocks.registerGlobalShortcut.mockRejectedValueOnce(new Error("shortcut already taken"));
+    render(<AdvancedTab settings={settings} set={set} saving={false} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "ShortcutRecordButton" }));
+    fireEvent.keyDown(window, { key: "k", code: "KeyK", ctrlKey: true });
+
+    await waitFor(() => expect(screen.getByText("shortcut already taken")).toBeTruthy());
+    expect(set).not.toHaveBeenCalledWith({ globalShortcut: "Ctrl+K" });
+  });
+
+  it("keeps the saved shortcut when global removal fails", async () => {
+    const set = vi.fn();
+    tauriMocks.unregisterGlobalShortcut.mockRejectedValueOnce(new Error("could not remove shortcut"));
+    render(<AdvancedTab settings={{ ...settings, globalShortcut: "Ctrl+K" }} set={set} saving={false} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "ShortcutClearButton" }));
+
+    await waitFor(() => expect(screen.getByText("could not remove shortcut")).toBeTruthy());
+    expect(set).not.toHaveBeenCalledWith({ globalShortcut: "" });
+  });
 });
