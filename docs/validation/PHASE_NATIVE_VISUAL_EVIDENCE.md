@@ -794,3 +794,18 @@ observed wide, seven-day state, not every range or viewport.
 - Failed first attempt: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T17-32-40-quotalune-dev-trend-labels-after-native\s05-after.png`
 - Verified after: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T17-35-42-quotalune-dev-trend-declutter-after-nati\s05-after.png`
 - Verified scenario: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T17-35-42-quotalune-dev-trend-declutter-after-nati\summary.md`
+
+### Providers page — 2026-09-26
+
+The same verified Dev build used for the second Trends recheck opened the
+Arabic/RTL Providers page under the light theme. All four guarded UIA actions
+passed. The captured wide-window state shows the provider filters, searchable
+list, monitoring switches, account plan and connection details, and the
+per-provider action tabs. The initial automated assertion used a different
+Arabic spelling and failed despite reaching the correct page; the corrected
+scenario passed. This evidence covers initial rendering only. No credential,
+sign-in, toggle, disconnect, search or account-switch action was performed,
+and the private observed data in the screenshot remains local.
+
+- Corrected scenario: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T17-40-47-quotalune-dev-providers-page-native-corr\summary.md`
+- Capture: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T17-40-47-quotalune-dev-providers-page-native-corr\s04-after.png`

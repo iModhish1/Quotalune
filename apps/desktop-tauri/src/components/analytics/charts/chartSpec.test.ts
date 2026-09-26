@@ -72,6 +72,14 @@ describe("professional chart contracts",()=>{
   const shown=lines.flatMap(line=>line.data.map(point=>(line as typeof line & {label:{formatter:(p:{value:number[]})=>string}}).label.formatter({value:point}))).filter(Boolean);
   expect(shown).toEqual(["25%"]);
  });
+ it("omits point text for dense histories while retaining all chart data and readings",()=>{
+  const dense=Array.from({length:81},(_,i)=>({...data[0],bucketStart:range.since+i*60,observedAt:range.since+i*60,usedPercent:i,remainingPercent:100-i}));
+  const spec=createTrendChartSpec(buildQuotaAnalytics(dense,range),r=>r.provider,context);
+  const lines=spec.option.series as {data:number[][];label:{formatter:(p:{value:number[]})=>string}}[];
+  expect(lines.flatMap(line=>line.data)).toHaveLength(81);
+  expect(spec.readings).toHaveLength(81);
+  expect(lines.every(line=>line.data.every(point=>line.label.formatter({value:point})===""))).toBe(true);
+ });
  it("theme/preset changes affect styling without changing values",()=>{const rows=buildQuotaAnalytics(data,range);const one=createTrendChartSpec(rows,r=>r.provider,context);const two=createTrendChartSpec(rows,r=>r.provider,{...context,lowCpu:true,theme:{...context.theme,text:"#000000",grid:"#cccccc"}});expect((one.option.series as {data:unknown}[])[0].data).toEqual((two.option.series as {data:unknown}[])[0].data);expect(two.option.animation).toBe(false);});
  it("structure tokens are sourced from the catalog",()=>{for(const theme of [CANONICAL_THEME]){const mapped=chartTheme(theme,()=>"#123456");expect(mapped.background).toBe(theme.core);expect(mapped.accent).toBe(theme.accent);expect(mapped.series("codex")).toBe("#123456");}});
  it("coalesces resize and disposes observer/frame/engine exactly once",()=>{

@@ -63,7 +63,11 @@ export function createTrendChartSpec(rows:readonly QuotaSeries[],title:(r:QuotaS
    const peak=!previous && !compact && ctx.highFidelity && row.current.length
      ? row.current.reduce((a,b)=>a.usedPercent>b.usedPercent?a:b)
      : null;
-   const visibleLabelTimes=readablePointLabelTimes(row.current,ctx.range,peak?.observedAt??null);
+   // Dense series use the tooltip and readings table; resolving individual
+   // labels there adds quadratic work without producing a legible chart.
+   const visibleLabelTimes=!previous && !compact && !ctx.lowCpu && ctx.style!=="minimal" && row.current.length<=80
+     ? readablePointLabelTimes(row.current,ctx.range,peak?.observedAt??null)
+     : new Set<number>();
    segments.forEach((segment,index)=>{
     points+=segment.length;
     lines.push({id:`${row.key}:${previous}:${index}`,name,type:"line",connectNulls:false,smooth:false,clip:true,
