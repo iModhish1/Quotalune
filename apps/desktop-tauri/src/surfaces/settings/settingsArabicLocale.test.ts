@@ -37,7 +37,7 @@ describe("Arabic settings coverage", () => {
       .flatMap((entry) => {
         const path = `${directory}/${entry.name}`;
         if (entry.isDirectory()) return files(path);
-        return entry.name.endsWith(".tsx") && !entry.name.includes(".test.") ? [path] : [];
+        return /\.tsx?$/.test(entry.name) && !entry.name.includes(".test.") ? [path] : [];
       });
     const keys = new Set(files(`${here}/providers`).flatMap((path) =>
       [...readFileSync(path, "utf8").matchAll(/\bt\(\s*["']([A-Za-z][A-Za-z0-9]*)["']/g)]
@@ -46,6 +46,14 @@ describe("Arabic settings coverage", () => {
 
     expect(keys.size).toBeGreaterThan(200);
     for (const key of keys) expect(translations.has(key), key).toBe(true);
+    // State maps and conditional actions reference locale keys without a direct t("Key") call.
+    for (const key of [
+      "ActionSwitchAccount", "DetailPaceOnTrack", "DetailPaceSlightlyAhead",
+      "DetailPaceAhead", "DetailPaceFarAhead", "DetailPaceSlightlyBehind",
+      "DetailPaceBehind", "DetailPaceFarBehind", "DetailUpdatedPrefix",
+      "ProviderIssueAuthRequired", "ProviderIssueLocalRuntimeOffline",
+      "ProviderUsageNotFetchedYet",
+    ]) expect(translations.get(key), key).toMatch(/[\u0600-\u06FF]/);
     for (const key of ["QuickActions", "ActionRefresh", "DetailPaceTitle", "Plan", "LastUpdated"]) {
       expect(translations.get(key), key).toMatch(/[\u0600-\u06FF]/);
     }
