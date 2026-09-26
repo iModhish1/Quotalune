@@ -1,4 +1,25 @@
 TabGeneral = عام
+StartupDestination = الصفحة التي تُفتح عند التشغيل
+StartupDestinationHelper = الصفحة التي يفتحها التشغيل المعتاد من قائمة ابدأ أو سطح المكتب مباشرةً
+StartupDestinationDashboard = لوحة المعلومات المنبثقة
+StartupDestinationProviderDisplay = عرض المزوّدين
+StartupDestinationLastOpened = آخر صفحة مفتوحة
+RefreshIntervalLabel = فترة التحديث
+RefreshIntervalHelper = المدة بالثواني بين تحديثات المزوّدين التلقائية (0 = تحديث يدوي).
+RefreshAllProvidersOnMenuOpen = التحديث عند فتح القائمة
+RefreshAllProvidersOnMenuOpenHelper = تحديث المزوّدين المفعّلين عند كل فتح لقائمة منطقة الإعلام.
+LowPowerMode = وضع الطاقة المنخفضة
+LowPowerModeHelper = عند تشغيله، يقتصر التحديث التلقائي في الخلفية على مرة كل 30 دقيقة. يبقى التحديث اليدوي فورياً. يتبع الوضع التلقائي ميزة توفير البطارية في Windows.
+LowPowerModeOff = إيقاف
+LowPowerModeOn = تشغيل
+LowPowerModeAutomatic = تلقائي
+HighUsageWarningHelper = أظهر تنبيهاً عندما تتجاوز نسبة الاستخدام هذه القيمة.
+CriticalUsageWarningHelper = أظهر تنبيهاً حرجاً عندما تتجاوز نسبة الاستخدام هذه القيمة.
+NotificationTestSound = اختبار الصوت
+NotificationTestSoundPlaying = جارٍ التشغيل…
+ProviderNameClaude = Claude
+ProviderNameCodex = Codex
+ThemeHelper = يتبع الوضع التلقائي ألوان النظام. يفرض الوضع الفاتح أو الداكن اللون الذي تختاره.
 TabProviders = مزودو الخدمة
 TabDashboard = لوحة المعلومات
 TabProviderDisplay = هوية عرض المزودين
