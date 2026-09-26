@@ -1770,6 +1770,7 @@ CollectionsStudioSaving = Saving…
 CollectionsStudioSave = Save collection layout
 CollectionsStudioUsePreview = Use in this preview
 CollectionsStudioSaved = Layout saved — live in the Collections window
+CollectionsStudioSaveError = Could not save the collection layout. Reload and try again.
 CollectionsStudioPreviewAccepted = Preview selection accepted — not saved to desktop
 CollectionsStudioUnapplied = Unapplied preview changes
 CollectionsStudioDraft = Draft — changes appear immediately below

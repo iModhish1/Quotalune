@@ -1035,6 +1035,7 @@ CollectionsStudioSaving = جارٍ الحفظ…
 CollectionsStudioSave = حفظ ترتيب المجموعات
 CollectionsStudioUsePreview = استخدام في هذه المعاينة
 CollectionsStudioSaved = حُفظ الترتيب وأصبح ظاهراً في نافذة المجموعات
+CollectionsStudioSaveError = تعذّر حفظ ترتيب المجموعات. أعد تحميل الصفحة وحاول مرة أخرى.
 CollectionsStudioPreviewAccepted = تم اعتماد المعاينة دون حفظها في التطبيق
 CollectionsStudioUnapplied = تغييرات معاينة لم تُطبّق
 CollectionsStudioDraft = مسودة — تظهر التغييرات فوراً أدناه

@@ -795,6 +795,7 @@ export const ALL_LOCALE_KEYS = [
   "CollectionsStudioSave",
   "CollectionsStudioUsePreview",
   "CollectionsStudioSaved",
+  "CollectionsStudioSaveError",
   "CollectionsStudioPreviewAccepted",
   "CollectionsStudioUnapplied",
   "CollectionsStudioDraft",

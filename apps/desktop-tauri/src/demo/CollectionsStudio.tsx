@@ -23,14 +23,14 @@ export default function CollectionsStudio({providers=SURFACE_DEMO_PROVIDERS,init
   const [drag,setDrag]=useState<{item:string;x:number;y:number}|null>(null);
   const start=useRef<{item:string;x:number;y:number}|null>(null),canvas=useRef<HTMLDivElement>(null),serial=useRef(0),lastWheel=useRef(0);
   const [applied,setApplied]=useState<string|null>(null);
-  const [revision,setRevision]=useState(initialLayout?.revision??0),[saving,setSaving]=useState(false),[saveError,setSaveError]=useState<string|null>(null);
+  const [revision,setRevision]=useState(initialLayout?.revision??0),[saving,setSaving]=useState(false),[saveError,setSaveError]=useState(false);
   const displayedProviders=[...providers,...groups.flatMap(g=>g.items).filter(id=>!providers.some(p=>p.id===id)).map(unavailable)];
   const config=fields[selected]??DEFAULT_FIELDS,provider=displayedProviders.find(p=>p.id===(detail??selected));
   const draft=JSON.stringify({groups,view,fields,scale,positions});
-  const save=async()=>{if(!onSave){setApplied(draft);return;}setSaving(true);setSaveError(null);
+  const save=async()=>{if(!onSave){setApplied(draft);return;}setSaving(true);setSaveError(false);
     const ids=new Set(groups.flatMap(g=>g.items));
     try{const saved=await onSave({version:1,revision,view,scale,groups:groups.map((g,i)=>({...g,...(positions[g.id]??{x:20,y:24+i*150})})),fields:Object.fromEntries(Object.entries(fields).filter(([id])=>ids.has(id)))});setRevision(saved.revision);setApplied(draft);}
-    catch(error){setSaveError(error instanceof Error?error.message:String(error));}finally{setSaving(false);}};
+    catch{setSaveError(true);}finally{setSaving(false);}};
   const detach=(item:string,x=20,y?:number)=>{
     let id:string;
     do{id=`solo-${++serial.current}`;}while(groups.some(g=>g.id===id) || positions[id]);
@@ -59,7 +59,7 @@ export default function CollectionsStudio({providers=SURFACE_DEMO_PROVIDERS,init
         })}
       </fieldset>}
       <p className="collections-help">{locale?.t("CollectionsArrangeHelp")??"Select a provider, detach it or move it to another collection. Gather all keeps your current order."}</p>
-      <button className="collections-apply" disabled={saving} onClick={()=>{void save();}}>{saving?t("CollectionsStudioSaving","Saving…"):onSave?t("CollectionsStudioSave","Save collection layout"):t("CollectionsStudioUsePreview","Use in this preview")}</button><small role="status">{applied===draft?(onSave?t("CollectionsStudioSaved","Layout saved — live in the Collections window"):t("CollectionsStudioPreviewAccepted","Preview selection accepted — not saved to desktop")):applied?t("CollectionsStudioUnapplied","Unapplied preview changes"):t("CollectionsStudioDraft","Draft — changes appear immediately below")}</small>{saveError&&<p role="alert">{saveError}</p>}
+      <button className="collections-apply" disabled={saving} onClick={()=>{void save();}}>{saving?t("CollectionsStudioSaving","Saving…"):onSave?t("CollectionsStudioSave","Save collection layout"):t("CollectionsStudioUsePreview","Use in this preview")}</button><small role="status">{applied===draft?(onSave?t("CollectionsStudioSaved","Layout saved — live in the Collections window"):t("CollectionsStudioPreviewAccepted","Preview selection accepted — not saved to desktop")):applied?t("CollectionsStudioUnapplied","Unapplied preview changes"):t("CollectionsStudioDraft","Draft — changes appear immediately below")}</small>{saveError&&<p role="alert">{t("CollectionsStudioSaveError","Could not save the collection layout. Reload and try again.")}</p>}
     </section>
     <section className="collections-preview" aria-label={t("CollectionsStudioLivePreview","Live collection preview")}><h2>{t("CollectionsStudioPreview","Live preview")} <small>{t("CollectionsStudioLogicalPx","logical px at selected scale")}</small></h2>
       <div ref={canvas} className="collections-canvas" onPointerMove={e=>{const s=start.current;if(!s || Math.hypot(e.clientX-s.x,e.clientY-s.y)<5)return;const r=canvas.current!.getBoundingClientRect();setDrag({item:s.item,x:e.clientX-r.left,y:e.clientY-r.top});}}

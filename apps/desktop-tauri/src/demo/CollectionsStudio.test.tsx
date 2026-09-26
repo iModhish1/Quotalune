@@ -56,11 +56,12 @@ it("keeps grouped items safe when a live provider snapshot disappears",()=>{
   rerender(<CollectionsStudio providers={SURFACE_DEMO_PROVIDERS.slice(1)}/>);
   expect(screen.getByRole("button",{name:"claude quota details"})).toBeInTheDocument();
 });
-it("retains the draft on failed persistence and reports success only after saving",async()=>{
-  const save=vi.fn().mockRejectedValueOnce(new Error("revision conflict")).mockImplementationOnce(async layout=>({...layout,revision:1}));
+it("retains the draft on failed persistence without exposing private errors",async()=>{
+  const save=vi.fn().mockRejectedValueOnce(new Error("private-path\\account.json")).mockImplementationOnce(async layout=>({...layout,revision:1}));
   render(<CollectionsStudio onSave={save}/>);
   fireEvent.click(screen.getByRole("button",{name:"Save collection layout"}));
-  expect(await screen.findByRole("alert")).toHaveTextContent("revision conflict");
+  expect(await screen.findByRole("alert")).toHaveTextContent("Could not save the collection layout. Reload and try again.");
+  expect(screen.getByRole("alert")).not.toHaveTextContent("private-path");
   expect(screen.queryByText("Layout saved — live in the Collections window")).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button",{name:"Save collection layout"}));
   await waitFor(()=>expect(screen.getByText("Layout saved — live in the Collections window")).toBeInTheDocument());

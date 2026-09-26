@@ -1164,6 +1164,7 @@ locale_keys! {
     CollectionsStudioSave,
     CollectionsStudioUsePreview,
     CollectionsStudioSaved,
+    CollectionsStudioSaveError,
     CollectionsStudioPreviewAccepted,
     CollectionsStudioUnapplied,
     CollectionsStudioDraft,
