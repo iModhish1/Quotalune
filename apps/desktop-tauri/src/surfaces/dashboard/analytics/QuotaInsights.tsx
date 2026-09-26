@@ -3,6 +3,7 @@ import {defaultResetPresentationConfig, resolveResetTimeZone} from "../../../lib
 import {summarizeCoverage} from "../../../lib/analytics/dashboardIntelligence";
 import {useMemo, useState} from "react";
 import {useLocale} from "../../../hooks/useLocale";
+import {resolveIntlLocale} from "../../../i18n/resolveIntlLocale";
 import {useResetStageOptions} from "../../../hooks/useResetStageOptions";
 import {AnalyticsSection, AnalyticsTable, CoveragePanel, MetricRibbon, ComparisonStat} from "../../../components/analytics/AnalyticsPrimitives";
 import {Select} from "../../../components/FormControls";
@@ -18,10 +19,13 @@ const REASONS: Record<NonNullable<MetricResult["reason"]>, LocaleKey> = {
   counterDecrease: "V2CounterDecrease", missingData: "DashboardValueUnavailable",
 };
 export function QuotaCoverage({series, snapshot, settings}: {series: QuotaSeries[]; snapshot: DashboardSnapshot | null; settings: SettingsSnapshot}) {
-  const {t} = useLocale();
+  const {t,language} = useLocale();
   const options = useResetStageOptions(settings,"dashboard");
-  const number = new Intl.NumberFormat(options.locale,{maximumFractionDigits:0,numberingSystem:"latn"});
-  const date = new Intl.DateTimeFormat(options.locale,{dateStyle:"medium",timeZone:resolveResetTimeZone({...defaultResetPresentationConfig(),...options.config}),numberingSystem:"latn"});
+  // Analytics dates follow the UI language; reset presentation settings only
+  // supply the user's timezone, not the language of this data view.
+  const uiLocale = resolveIntlLocale(language);
+  const number = new Intl.NumberFormat(uiLocale,{maximumFractionDigits:0,numberingSystem:"latn"});
+  const date = new Intl.DateTimeFormat(uiLocale,{dateStyle:"medium",timeZone:resolveResetTimeZone({...defaultResetPresentationConfig(),...options.config}),numberingSystem:"latn"});
   const {samples,first,last,missingBuckets}=summarizeCoverage(series);
   return <MetricRibbon>
     <ComparisonStat label={t("DashboardSelectedRangeEyebrow")} state={snapshot ? "available" : "unavailable"} value={snapshot ? <bdi>{date.format(snapshot.rangeSince*1000)} — {date.format(snapshot.rangeUntil*1000)}</bdi> : t("DashboardValueUnavailable")} detail={t("V2PhysicalWindow")}/>
@@ -52,12 +56,12 @@ export function QuotaComparison({series, providers, settings}: {series: QuotaSer
 }
 
 export function QuotaHistory({series, snapshot, settings, preferences}: {series: QuotaSeries[]; snapshot: DashboardSnapshot | null; settings: SettingsSnapshot; preferences: AnalyticsPreferences}) {
-  const {t} = useLocale();
+  const {t,language} = useLocale();
   const options = useResetStageOptions(settings,"dashboard");
   const [selected, setSelected] = useState("");
   const candidates = series.filter(row => row.current.length && !row.invalid);
   const active = candidates.find(row => row.key === selected) ?? candidates[0];
-  const time = new Intl.DateTimeFormat(options.locale, {numberingSystem:"latn",month:"short",day:"numeric",hour:"numeric",minute:"2-digit", timeZone: resolveResetTimeZone({...defaultResetPresentationConfig(), ...options.config})});
+  const time = new Intl.DateTimeFormat(resolveIntlLocale(language), {numberingSystem:"latn",month:"short",day:"numeric",hour:"numeric",minute:"2-digit", timeZone: resolveResetTimeZone({...defaultResetPresentationConfig(), ...options.config})});
   const number = new Intl.NumberFormat(options.locale,{maximumFractionDigits:1,numberingSystem:"latn"});
   const points = useMemo(() => active?.current.map(p => ({time:p.observedAt,value:p.usedPercent,cycle:p.resetsAt})) ?? [],[active]);
   return <AnalyticsSection title={t("V2DetailedHistory")} description={t("V2HistoryHelp")} action={candidates.length > 0 && <Select ariaLabel={t("V2HistorySeries")} value={active?.key ?? ""} onChange={setSelected} options={candidates.map(row=>({value:row.key, label:`${row.provider} · ${physicalWindowLabel(row.windowLabel,t)} · ${observedAccountLabel(row,series,t)}`}))}/>}>
