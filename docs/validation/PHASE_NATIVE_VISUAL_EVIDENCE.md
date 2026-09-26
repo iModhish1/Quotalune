@@ -337,3 +337,23 @@ close the same way, on requiring the application's own settings UI, which needs
 the activation and click input the desktop guard correctly refuses. Theme
 preference and language are left at their defaults and no Light or Arabic/RTL
 image is published.
+
+### Note on background activation (2026-09-26, later session)
+
+Background activation works on this surface. Invoking the `Themes` sub-tab
+succeeded through the adapter's `InvokePattern` with no pointer movement, and
+invoking the `Color Mode` ListItem succeeded through
+`LegacyIAccessible.DoDefaultAction`. The `Select` trigger is also a real
+`<button>` with `aria-haspopup="listbox"`.
+
+The one control the trigger could not be reached by name is the colour-mode
+`Select`, whose accessible name `Theme` also matches the field's `Text` label
+and helper copy, so the adapter's "match exactly once" rule rejects the
+ambiguous selector. Resolving it by screen point is possible in principle, but
+the point tool expects window-image-relative coordinates and the device-pixel
+rectangles reported here are in a different space under 250% DPI, so a
+reliable point could not be derived. The control was not forced.
+
+This does not change the conclusion: the colour-mode and language selectors are
+correctly implemented, and capturing Light or Arabic requires the dropdown to
+be open, which is the pointer-driven step the desktop guard refuses.
