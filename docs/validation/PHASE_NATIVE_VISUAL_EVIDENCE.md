@@ -521,3 +521,30 @@ real availability/history data:
 This single view does not establish visual quality or functional correctness
 for all Analytics tabs, ranges, Demo states, backgrounds, themes or window
 sizes. The adapter was stopped after the run.
+
+### Analytics tab navigation and coverage dates — 2026-09-26
+
+Two read-only guarded Dev scenarios navigated the Arabic Analytics tabs for
+Tokens, Models, Reset Horizon, Activity, Monetary, History and Data Quality.
+All 15 scenario steps passed. The inspected images show source-backed token
+and model panels, an honest empty Monetary state, and quota-history/data-
+quality disclosures. They also exposed English month names in Data Quality:
+the quota coverage/history formatters were borrowing the reset-presentation
+locale even when the UI language was Arabic. Commit `3028dc32` changed only
+those analytics date formatters to the UI language, preserving the configured
+timezone and the original observation timestamps.
+
+`build-dev-verified.mjs` verified a fresh Dev-only binary from `3028dc325747`,
+SHA-256 `23bd042b69d4b573498a08cd7ede8d48f9332cc0d8bbecbd0fe784792ed67c1d`.
+A final five-step native scenario passed; its image shows Arabic-locale
+numeric dates in Data Quality where the prior image showed English `Sep`.
+The visible 70/71 sample count varied as real local observations continued;
+the screenshots are not metric fixtures. Local-only evidence:
+
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T12-00-05-quotalune-analytics-tabs-visual-audit-b4\summary.md`
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T12-03-27-quotalune-analytics-more-tabs-b421a028\summary.md`
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T12-11-22-quotalune-arabic-coverage-dates-3028dc32\s05-after.png`
+
+These navigation checks do not prove the correctness of every chart value,
+every filter/range, hidden disclosures, Demo fixtures or narrow layouts. The
+adapter was stopped after each run; none of these images are public artwork.
