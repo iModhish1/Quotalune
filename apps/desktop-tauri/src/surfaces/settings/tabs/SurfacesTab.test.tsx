@@ -11,7 +11,15 @@ const bridge = vi.hoisted(() => ({
 const { locale } = vi.hoisted(() => ({
   locale: {
     t: (key: string) =>
-      ({ TrayShowEdgeArc: "Show Edge Arc", TrayShowTopArc: "Show Top Arc", TabSurfaces: "Surfaces" } as Record<string, string>)[
+      ({ TrayShowEdgeArc: "Show Edge Arc", TrayShowTopArc: "Show Top Arc", TabSurfaces: "Surfaces",
+        SurfaceStudioHover: "Show details on hover", SurfaceStudioWheel: "Cycle with the mouse wheel",
+        SurfaceStudioFold: "Fold details automatically", SurfaceStudioFoldDelayMs: "Fold delay (ms)",
+        SurfaceStudioSmall: "Small", SurfaceStudioDefault: "Default", SurfaceStudioLarge: "Large",
+        SurfaceStudioScale: "Scale", SurfaceStudioOpacity: "Opacity", SurfaceStudioShowToggle: "Show Quotalune Surface",
+        SurfaceStudioPositionToggle: "Quotalune surface position", SurfaceAnchorTop: "Top wall",
+        SurfaceAnchorRight: "Right wall", SurfaceAnchorLeft: "Left wall", SurfaceFormHorizonName: "Horizon",
+        SurfaceFormLensName: "Lens",
+      } as Record<string, string>)[
         key
       ] ?? key,
   },

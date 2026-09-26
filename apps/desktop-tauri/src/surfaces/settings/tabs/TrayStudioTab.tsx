@@ -7,7 +7,7 @@ import QuotalisSelect from "../../../components/analytics/QuotalisSelect";
 import {QuotalisRefreshingBadge} from "../../../design-system/QuotalisLoadingStates";
 import type {ProviderCatalogEntry,ProviderTrayConfig} from "../../../types/bridge";
 import type {TabProps} from "../settingsTabs";
-import {DEFAULT_PROVIDER_TRAY,TRAY_STYLE_OPTIONS,effectiveTokenRange,filterTrayProviders,trayLimits,trayPercent,trayTokenPeriodOptions} from "../trayStudioModel";
+import {DEFAULT_PROVIDER_TRAY,TRAY_STYLE_OPTIONS,effectiveTokenRange,filterTrayProviders,trayLimitDisplayLabel,trayLimits,trayPercent,trayTokenPeriodOptions} from "../trayStudioModel";
 import {getTrayTokenPeriods,type TokenPeriodCapability} from "../../../lib/trayQa";
 import {TrayNativePreview} from "./TrayNativePreview";
 import "./TrayStudioTab.css";
@@ -45,10 +45,10 @@ export default function TrayStudioTab({settings,set,saving,catalog}:TabProps&{ca
     <div className="tray-studio__templates">{TRAY_STYLE_OPTIONS.map(([style,label])=><button key={style} type="button" aria-pressed={c.style===style} disabled={saving} onClick={()=>patch({style})}><span className={`tray-template tray-template--${style}`} aria-hidden="true"><ProviderIcon providerId={id} size={25}/></span>{t(label)}</button>)}</div>
     <section className="settings-section">
      <Field label={t('TrayStudioIdentity')}><Select value={c.identity??"provider"} disabled={saving} onChange={v=>patch({identity:v as ProviderTrayConfig['identity']})} options={([['provider','TrayStudioIdentityProvider'],['quotalis','TrayStudioIdentityQuotalis']] as const).map(([value,key])=>({value,label:t(key)}))}/></Field>
-     <Field label={t('TrayStudioLimit')}><Select value={c.limitId} options={[{value:'',label:t('TrayStudioUnselected')},...limits.map(w=>({value:w.id,label:w.label}))]} disabled={saving} onChange={limitId=>patch({limitId})}/></Field>
+     <Field label={t('TrayStudioLimit')}><Select value={c.limitId} options={[{value:'',label:t('TrayStudioUnselected')},...limits.map(w=>({value:w.id,label:trayLimitDisplayLabel(w,t)}))]} disabled={saving} onChange={limitId=>patch({limitId})}/></Field>
      {!snapshot||snapshot.error||limits.length===0?<p role="status">{t('TrayStudioUnavailable')}</p>:null}
      <Field label={t('TrayStudioUsed')}><Select value={c.showAsUsed?'used':'remaining'} options={[{value:'used',label:t('TrayStudioUsed')},{value:'remaining',label:t('TrayStudioRemaining')}]} onChange={v=>patch({showAsUsed:v==='used'})} disabled={saving}/></Field>
-     <Field label={t('TrayStudioHover')}><QuotalisSelect label={t('TrayStudioHover')} multiple={c.tooltipLimitIds} value="" onChange={()=>{}} options={limits.map(w=>({value:w.id,label:w.label,disabled:c.tooltipLimitIds.length>=3&&!c.tooltipLimitIds.includes(w.id)}))} onMultipleChange={ids=>patch({tooltipLimitIds:ids.slice(0,3)})} disabled={saving}/></Field>
+     <Field label={t('TrayStudioHover')}><QuotalisSelect label={t('TrayStudioHover')} multiple={c.tooltipLimitIds} value="" onChange={()=>{}} options={limits.map(w=>({value:w.id,label:trayLimitDisplayLabel(w,t),disabled:c.tooltipLimitIds.length>=3&&!c.tooltipLimitIds.includes(w.id)}))} onMultipleChange={ids=>patch({tooltipLimitIds:ids.slice(0,3)})} disabled={saving}/></Field>
      <div className="tray-studio__toggles"><Toggle label={t('TrayStudioName')} checked={c.showName} disabled={saving} onChange={showName=>patch({showName})}/><Toggle label={t('TrayStudioPlan')} checked={c.showPlan} disabled={saving} onChange={showPlan=>patch({showPlan})}/></div>
      <Field label={t('TrayStudioTokens')} description={t(periods.length?'TrayStudioTokenHelp':'TrayStudioTokenUnsupported')}><Select value={effectiveTokenRange(c.tokenRange,periods)} disabled={saving||!periods.length} onChange={v=>patch({tokenRange:v as ProviderTrayConfig['tokenRange']})} options={trayTokenPeriodOptions(periods,t)}/></Field>
      <Field label={t('TrayStudioColor')} description={followsAppearance?t('TrayStudioFollowsAppearance'):undefined}><Select value={c.color} disabled={saving||followsAppearance} onChange={v=>patch({color:v as ProviderTrayConfig['color']})} options={([['provider','TrayStudioProviderColor'],['identity','TrayStudioAppColor'],['silver','TrayStudioSilver']] as const).map(([value,key])=>({value,label:t(key)}))}/></Field>
