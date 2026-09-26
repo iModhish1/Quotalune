@@ -96,7 +96,7 @@ only in ignored `.local/historical-real-data-2026-09-27/`.
 | `QUOTALIS_2D_NARROW.png` | 480×900 via CDP `Emulation.setDeviceMetricsOverride` (native window untouched) | Real render, emulated viewport |
 | `QUOTALIS_2D_RTL.png` | Real `set_ui_language("arabic")` IPC call — genuine `dir="rtl"`, real Arabic translations from the shipped `.ftl` files, not a forced DOM attribute hack | 100% real |
 | `QUOTALIS_2D_MAXIMIZED.png` | Real "Maximize window" button click | 100% real |
-| `QUOTALIS_2D_BEFORE_AFTER.png` | Composited: old orbital-hero Dashboard (`docs/images/v9/audit/02-aurora-bloom/dashboard.png`, pre-Phase-3) vs the real capture above | Composite of two real captures |
+| `QUOTALIS_2D_BEFORE_AFTER.png` | Historical composite of the former orbital Dashboard and a then-current capture. Its V9 source image was withdrawn from the public tree; this board is not current Quotalune release proof. | Historical composite |
 | `QUOTALIS_2D_REVIEW_BOARD.png` | 6-up grid of the states above | Composite of real captures |
 
 No `QUOTALIS_2D_COLLECTING` or other injected DEV-ONLY fixture state was
