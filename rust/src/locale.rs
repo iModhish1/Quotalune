@@ -1181,6 +1181,7 @@ locale_keys! {
 
     // Provider detail - Usage section
     ProviderSessionLabel,
+    ProviderNoActive5hSession,
     ProviderWeeklyLabel,
     ProviderCodeReviewLabel,
     ResetsInShort,

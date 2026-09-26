@@ -184,6 +184,7 @@ ProviderUsage = الاستخدام
 ProviderSession = الجلسة
 ProviderWeekly = الأسبوعي
 ProviderSessionLabel = الجلسة
+ProviderNoActive5hSession = لا توجد جلسة نشطة لخمس ساعات
 ProviderWeeklyLabel = الأسبوعي
 PanelFiveHours = 5 ساعات
 AuthType = المصادقة

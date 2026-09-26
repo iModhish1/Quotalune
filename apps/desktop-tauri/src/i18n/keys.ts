@@ -822,6 +822,7 @@ export const ALL_LOCALE_KEYS = [
   "Plan",
   "Account",
   "ProviderSessionLabel",
+  "ProviderNoActive5hSession",
   "ProviderWeeklyLabel",
   "ProviderCodeReviewLabel",
   "ResetsInShort",

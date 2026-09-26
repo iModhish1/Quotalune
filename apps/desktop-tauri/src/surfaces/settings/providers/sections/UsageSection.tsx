@@ -29,14 +29,16 @@ export function UsageSection({ provider, resetTimeRelative, t }: Props) {
   if (provider.session) {
     bars.push({
       key: "session",
-      label: provider.sessionLabel || t("ProviderSessionLabel"),
+      label: provider.sessionLabel && provider.sessionLabel !== "Session"
+        ? provider.sessionLabel : t("ProviderSessionLabel"),
       rate: provider.session,
     });
   }
   if (provider.weekly) {
     bars.push({
       key: "weekly",
-      label: provider.weeklyLabel || t("ProviderWeeklyLabel"),
+      label: provider.weeklyLabel && provider.weeklyLabel !== "Weekly"
+        ? provider.weeklyLabel : t("ProviderWeeklyLabel"),
       rate: provider.weekly,
     });
   }
@@ -99,9 +101,13 @@ function UsageBar({
   const usedPct = validUsage ? rate.usedPercent : 0;
   const pct = Math.min(100, usedPct);
   const isInformational = rate.isInformational === true;
+  // This exact sentinel is emitted by RateWindow::no_active_session(), not
+  // provider-authored text. Keep every other backend description verbatim.
+  const description = rate.isInformational && rate.resetDescription === "No active 5h session"
+    ? t("ProviderNoActive5hSession") : rate.resetDescription;
   const formattedReset = useFormattedResetTime(
     rate.resetsAt,
-    rate.resetDescription,
+    description,
     resetTimeRelative,
   );
   const resetHint = formattedReset
@@ -119,7 +125,7 @@ function UsageBar({
           data-exhausted={rate.isExhausted || undefined}
         >
           {isInformational
-            ? rate.resetDescription?.trim() || formattedReset || "—"
+            ? description?.trim() || formattedReset || "—"
             : !validUsage ? t("DashboardValueUnavailable")
             : rate.isExhausted
             ? usedPct > 100

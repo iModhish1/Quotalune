@@ -97,8 +97,20 @@ describe("UsageSection", () => {
     );
 
     const label = await screen.findByText("ProviderSessionLabel");
-    expect(label.parentElement).toHaveTextContent("No active 5h session");
+    expect(label.parentElement).toHaveTextContent("ProviderNoActive5hSession");
     expect(label.parentElement?.querySelector(".provider-usage-bar__track")).toBeNull();
+  });
+
+  it("preserves provider-authored informational descriptions", async () => {
+    const detail = provider();
+    detail.session = {
+      ...rateWindow(0),
+      isInformational: true,
+      resetDescription: "Provider-specific maintenance",
+    };
+    render(<LocaleProvider><UsageSection provider={detail} resetTimeRelative={true} t={(key) => key} /></LocaleProvider>);
+    expect((await screen.findByText("ProviderSessionLabel")).parentElement)
+      .toHaveTextContent("Provider-specific maintenance");
   });
 });
 

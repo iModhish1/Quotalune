@@ -486,6 +486,7 @@ AllSystemsOperational = All systems operational
 Plan = Plan
 Account = Account
 ProviderSessionLabel = Session
+ProviderNoActive5hSession = No active 5h session
 ProviderWeeklyLabel = Weekly
 ProviderCodeReviewLabel = Code review
 ResetsInShort = Resets in
