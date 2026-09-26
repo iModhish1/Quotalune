@@ -45,8 +45,10 @@ confirmed running and untouched at every checkpoint.
    Resets in 23h 59m · STATUS Connected · Demo · MONETARY STATE Not
    available"` — a real DEMO badge, "Connected · Demo" wording (not a
    bare "Connected"), and an honest "Not available" for an unclassified
-   provider's monetary state. `QUOTALIS_DEMO_3D_SIX_SELECTED.png` /
-   `QUOTALIS_DEMO_PROVIDER_DETAIL.png`.
+   provider's monetary state. `QUOTALIS_DEMO_3D_SIX_SELECTED.png` is the
+   retained capture. The formerly listed `QUOTALIS_DEMO_PROVIDER_DETAIL.png`
+   was a byte-identical copy and was withdrawn; there was no separate
+   detail-panel capture.
 4. **Open 2D Dashboard, same demo universe** — switched
    `dashboardMode: "analytics2d"` via real `update_settings`; the same
    six providers rendered with a real Usage Trend chart per provider

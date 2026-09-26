@@ -82,7 +82,7 @@ the same fixture used for every prior phase's evidence.
 | `QUOTALIS_SPATIAL_SINGLE.png` | 1 provider — centered hero instrument |
 | `QUOTALIS_SPATIAL_TWELVE.png` | 12 providers — 3 depth tiers, no overlap |
 | `QUOTALIS_SPATIAL_RTL.png` | Arabic UI language — DOM chrome mirrors, provider names stay LTR-isolated, node positions intentionally unmirrored (owner section 40: "do not mirror arbitrarily") |
-| `QUOTALIS_SPATIAL_REDUCED_MOTION.png` | `prefers-reduced-motion: reduce` emulated |
+| `QUOTALIS_SPATIAL_REDUCED_MOTION.png` | Withdrawn: byte-identical to the RTL capture; it does not independently prove reduced-motion appearance. |
 
 ### Section 51 quality-bar check (six providers)
 

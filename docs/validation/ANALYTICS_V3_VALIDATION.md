@@ -97,10 +97,10 @@ No Providers redesign or subsequent wave was started.
    - `QUOTALIS_ANALYTICS_V3_ATTENTION.png`
    - `QUOTALIS_ANALYTICS_V3_TREND.png`
    - `QUOTALIS_ANALYTICS_V3_COMPARISON.png`
-   - `QUOTALIS_ANALYTICS_V3_RESET_HORIZON.png`
+   - `QUOTALIS_ANALYTICS_V3_RESET_HORIZON.png` (withdrawn: byte-identical to Trend; no distinct image evidence)
    - `QUOTALIS_ANALYTICS_V3_HEATMAP.png`
    - `QUOTALIS_ANALYTICS_V3_PROVIDER_TABLE.png`
-   - `QUOTALIS_ANALYTICS_V3_DATA_QUALITY.png`
+   - `QUOTALIS_ANALYTICS_V3_DATA_QUALITY.png` (withdrawn: byte-identical to Heatmap; no distinct image evidence)
    - `QUOTALIS_ANALYTICS_V3_RTL.png`
    - `QUOTALIS_ANALYTICS_V3_DENSE.png`
    - `QUOTALIS_ANALYTICS_V3_REAL_DATA.png` (withdrawn from the public image tree; ignored local audit copy retained)

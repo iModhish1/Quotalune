@@ -44,7 +44,7 @@ All paths are under `docs/images/product-v2/`:
 - QUOTALIS_V2_DASHBOARD_DENSE.png
 - QUOTALIS_V2_DASHBOARD_RTL.png
 - QUOTALIS_V2_DASHBOARD_NARROW.png
-- QUOTALIS_V2_DASHBOARD_MAXIMIZED.png
+- QUOTALIS_V2_DASHBOARD_MAXIMIZED.png (withdrawn: byte-identical to DASHBOARD_OVERVIEW; no distinct maximized-state image evidence)
 - QUOTALIS_V2_REAL_DATA.png (withdrawn from the public image tree; ignored local audit copy retained)
 - QUOTALIS_DASHBOARD_V1_VS_V2.png
 
