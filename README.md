@@ -8,7 +8,27 @@ Quotalune brings AI-provider limits, reset schedules and usage history into a cu
 
 [Explore the desktop experience](#a-workspace-that-feels-like-yours) · [Get started](docs/GETTING_STARTED.md) · [Build from source](#build-from-source) · [Windows downloads](#windows-downloads)
 
-The official application mark is unchanged. Interface previews for the next release will be added after capture from the verified Windows build, with the operating-system title bar excluded.
+The official application mark is unchanged. The interface previews below were
+captured from a verified Windows build of this release, cropped to the
+application window so no operating-system title bar is shown.
+
+## Interface previews
+
+Settings, with the Monitor, Workspace and Appearance sections:
+
+![Quotalune settings](docs/validation/evidence/PHASE_NATIVE_quotalune_settings_2026-09-26.png)
+
+The menu bar configuration workspace:
+
+![Quotalune menu bar settings](docs/validation/evidence/PHASE_NATIVE_settings_menubar_2026-09-26.png)
+
+The About surface, where version, license and third-party notices live:
+
+![Quotalune about](docs/validation/evidence/PHASE_NATIVE_settings_about_2026-09-26.png)
+
+These are real captures of the current release candidate on Windows. Previews
+of the dashboard tray panel, providers, analytics and the appearance, surface
+and tray studios are published as they are captured from the verified build.
 
 ## A workspace that feels like yours
 
