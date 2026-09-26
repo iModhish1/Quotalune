@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   CodexAccount,
@@ -11,6 +11,8 @@ import type {
 const tauriMocks = vi.hoisted(() => ({
   getCodexAccountsState: vi.fn(),
   codexAccountAdd: vi.fn(),
+  codexAccountMove: vi.fn(),
+  codexAccountUpdateDisplay: vi.fn(),
   codexAccountFetch: vi.fn(),
   codexAccountRemove: vi.fn(),
   codexAccountSwitch: vi.fn(),
@@ -115,6 +117,23 @@ describe("CodexAccountsSection", () => {
     expect(tauriMocks.codexAccountAdd).toHaveBeenCalledTimes(1);
   });
 
+  it("saves a nickname and display number, and reorders accounts", async () => {
+    tauriMocks.getCodexAccountsState.mockResolvedValue({
+      accounts: [account("1"), account("2")], snapshots: {},
+    } as CodexAccountsStateBridge);
+    tauriMocks.codexAccountUpdateDisplay.mockResolvedValue(undefined);
+    tauriMocks.codexAccountMove.mockResolvedValue(undefined);
+    render(<CodexAccountsSection t={t} />);
+    await waitFor(() => expect(screen.getAllByText("CodexAccountsEditButton")).toHaveLength(2));
+    fireEvent.click(screen.getAllByText("CodexAccountsEditButton")[0]);
+    fireEvent.change(screen.getByLabelText("CodexAccountsNicknameLabel"), { target: { value: "Work" } });
+    fireEvent.change(screen.getByLabelText("CodexAccountsNumberLabel"), { target: { value: "7" } });
+    fireEvent.click(screen.getByText("CodexAccountsSaveButton"));
+    await waitFor(() => expect(tauriMocks.codexAccountUpdateDisplay).toHaveBeenCalledWith("1", "Work", 7));
+    fireEvent.click(screen.getByRole("button", { name: "CodexAccountsMoveEarlier user-2@example.com" }));
+    await waitFor(() => expect(tauriMocks.codexAccountMove).toHaveBeenCalledWith("2", -1));
+  });
+
   it("switches an account and offers a desktop restart when a session can be restored", async () => {
     tauriMocks.getCodexAccountsState.mockResolvedValue(
       { accounts: [account("1")], snapshots: {} } as CodexAccountsStateBridge,
@@ -188,6 +207,7 @@ describe("CodexAccountsSection containment styles", () => {
       ".codex-accounts-card .credential-card__actions",
     );
     expect(actions).toContain("flex-shrink: 0");
-    expect(actions).toContain("nowrap");
+    expect(actions).toContain("flex-wrap: wrap");
+    expect(actions).toContain("max-width:");
   });
 });

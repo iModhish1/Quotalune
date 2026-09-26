@@ -28,6 +28,8 @@ export interface StageUsageWindow {
 /** Render-ready provider data shared by every catalog-themed surface. */
 export interface StageProvider {
   id: string;
+  /** Stable account identity; the icon and theme continue to use iconId. */
+  accountId?: string | null;
   name: string;
   iconId: string;
   resolvedMode: UsageMode;

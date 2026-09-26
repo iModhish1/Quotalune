@@ -454,6 +454,7 @@ export default function GeneralTab({
       </section>}
       {mode === "general" && <section className="settings-section general-settings-card general-settings-card--startup">
         <h3 className="settings-section__title">{t("StartupSettings")}</h3>
+        {!settings.startAtLogin && <p className="settings-section__hint">{t("StartAtLoginRecommendation")}</p>}
         <div className="settings-section__group">
           <Field label={t("StartAtLogin")} description={t("StartAtLoginHelper")} leading>
             <Toggle

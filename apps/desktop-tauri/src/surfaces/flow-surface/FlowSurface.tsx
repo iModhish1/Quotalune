@@ -315,7 +315,7 @@ export default function FlowSurface({
               provider={provider}
               index={index}
               active={index === focus}
-              color={providerColor(theme, provider.id)}
+              color={providerColor(theme, provider.iconId)}
               gaugeSize={settings.form === "orbital" || settings.form === "lens" ? 25 : 31}
               onFocus={onFocusProvider}
               onHover={settings.interactions?.hoverDetails === false ? undefined : onFocusProvider}
@@ -425,7 +425,7 @@ export default function FlowSurface({
           )}
           <div className="flow-surface__detail-body">
             <div className="flow-surface__detail-metrics">
-              {focused?.windows ? <div style={{"--provider-color":providerMeterFillColor(providerColor(theme,focused.id),focused.limitPresentation?.identity,theme)} as CSSProperties}><UsageWindowList providerId={focused.id} windows={focused.windows} hidden={focused.detailsHidden} presentation={focused.limitPresentation}/></div> : <div className="flow-surface__metric">
+              {focused?.windows ? <div style={{"--provider-color":providerMeterFillColor(providerColor(theme,focused.iconId),focused.limitPresentation?.identity,theme)} as CSSProperties}><UsageWindowList providerId={focused.iconId} windows={focused.windows} hidden={focused.detailsHidden} presentation={focused.limitPresentation}/></div> : <div className="flow-surface__metric">
                 <strong>{formatPercentage(focused?.primaryValue)}</strong>
                 <span>{focused?.primaryLabel ?? "unavailable"}</span>
                 {/* Wave 1F §13/§14: same DOM slot regardless of which case
@@ -448,7 +448,7 @@ export default function FlowSurface({
                   provider={provider}
                   index={index}
                   active={index === focus}
-                  color={providerColor(theme, provider.id)}
+                  color={providerColor(theme, provider.iconId)}
                   gaugeSize={settings.form === "orbital" || settings.form === "lens" ? 25 : 31}
                   onFocus={onFocusProvider}
                   onHover={settings.interactions?.hoverDetails === false ? undefined : onFocusProvider}

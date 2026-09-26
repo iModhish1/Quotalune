@@ -22,7 +22,7 @@ function footerStatusText(status: StageProvider["status"], t: (key: LocaleKey) =
   return "Quota unavailable";
 }
 
-export function NotchDetails({provider,rect,demo,pinned,onClose,onPin,color=providerAccent(provider.id)}:{provider:StageProvider;rect:Rect;demo?:boolean;pinned:boolean;onClose?:()=>void;onPin?:()=>void;color?:string}) {
+export function NotchDetails({provider,rect,demo,pinned,onClose,onPin,color=providerAccent(provider.iconId)}:{provider:StageProvider;rect:Rect;demo?:boolean;pinned:boolean;onClose?:()=>void;onPin?:()=>void;color?:string}) {
   const { t } = useLocale();
   return <section className="notch-detail" style={{left:rect.x,top:rect.y,width:rect.width,height:rect.height,"--provider-color":color} as CSSProperties}
     role="region" aria-label={`${provider.name} usage details`}>

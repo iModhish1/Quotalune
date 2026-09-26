@@ -3,7 +3,8 @@ import {
   resolveUsageMode,
   type UsageDisplayConfig,
 } from "../../design-system/themes";
-import type { ProviderUsageSnapshot, RateWindowSnapshot } from "../../types/bridge";
+import type { ProviderInstanceSnapshot, ProviderUsageSnapshot, RateWindowSnapshot } from "../../types/bridge";
+import { providerInstanceName } from "../../lib/providerInstances";
 import type { StageProvider } from "./stageTypes";
 import {isLimitPresentation,resolveLimitPresentation} from '../../design-system/limitPresentation';
 import {
@@ -89,7 +90,7 @@ export function toStageProviders(
   config: UsageDisplayConfig | undefined,
   resetOptions?: StageResetOptions,
 ): StageProvider[] {
-  return providers.slice(0, 7).map((provider) => {
+  return providers.map((provider) => {
     const limitOrder = config?.providerLimitOrder?.[provider.providerId];
     const ranks = limitOrder === undefined ? undefined : new Map(
       [...new Set(limitOrder)].map((id, index) => [id, index]),
@@ -144,6 +145,40 @@ export function toStageProviders(
           primaryValue:resolved.value,primaryLabel:resolved.label,arcFraction:resolved.arc,
           reset:formatWindowReset(window,resetOptions),resetsAt:window.resetsAt??null}];
       }).sort((a,b) => ranks ? ranks.get(a.id)! - ranks.get(b.id)! : 0),
+    };
+  });
+}
+
+/** The same account lanes as the Dashboard, projected into every Structure.
+ * A registered account without a quota remains visible with unavailable
+ * values; another account's ambient snapshot is never borrowed for it. */
+export function toStageProviderInstances(
+  instances: readonly ProviderInstanceSnapshot[],
+  config: UsageDisplayConfig | undefined,
+  resetOptions?: StageResetOptions,
+  hidePersonalInfo = false,
+): StageProvider[] {
+  return instances.map((instance) => {
+    const stage = instance.snapshot
+      ? toStageProviders([instance.snapshot], config, resetOptions)[0]
+      : null;
+    return {
+      ...(stage ?? {
+        resolvedMode: "remaining" as const,
+        arcFraction: null,
+        primaryValue: null,
+        secondaryValue: null,
+        primaryLabel: "remaining" as const,
+        reset: "—",
+        status: "offline" as const,
+      }),
+      id: instance.instanceId,
+      accountId: instance.accountId,
+      iconId: instance.providerId,
+      name: instance.accountLabel && !hidePersonalInfo
+        ? `${providerInstanceName(instance)} · ${instance.accountLabel}`
+        : providerInstanceName(instance),
+      accountLabel: hidePersonalInfo ? null : instance.accountLabel,
     };
   });
 }

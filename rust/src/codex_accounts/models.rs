@@ -99,6 +99,9 @@ impl CodexAccountSource {
 pub struct CodexAccount {
     pub id: Uuid,
     pub nickname: Option<String>,
+    /// User-chosen display number; independent of the account's auth identity.
+    #[serde(default)]
+    pub display_number: Option<u32>,
     pub email_hint: Option<String>,
     pub auth_subject: Option<String>,
     pub provider_account_id: Option<String>,
@@ -129,6 +132,7 @@ impl CodexAccount {
         Self {
             id,
             nickname,
+            display_number: None,
             email_hint,
             auth_subject,
             provider_account_id,

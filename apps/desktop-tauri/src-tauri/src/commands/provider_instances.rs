@@ -99,18 +99,28 @@ pub(crate) fn build_provider_instances(
         })
         .collect();
 
-    let mut additional_accounts: Vec<&CodexAccount> = accounts
+    let additional_accounts: Vec<&CodexAccount> = accounts
         .iter()
         .filter(|account| Some(account.id) != ambient_account_id)
         .collect();
-    additional_accounts.sort_by(|left, right| {
-        left.created_at
-            .cmp(&right.created_at)
-            .then_with(|| left.id.cmp(&right.id))
-    });
+    // `load_codex_accounts` preserves persisted user order.
+    let mut used_numbers: std::collections::HashSet<u32> = additional_accounts
+        .iter()
+        .filter_map(|account| account.display_number)
+        .collect();
+    used_numbers.insert(1); // The ordinary Codex lane owns number one.
 
-    for (index, account) in additional_accounts.into_iter().enumerate() {
-        let ordinal = u32::try_from(index).unwrap_or(u32::MAX).saturating_add(2);
+    let mut next_number = 2;
+    for account in additional_accounts {
+        let ordinal = account.display_number.unwrap_or_else(|| {
+            while used_numbers.contains(&next_number) {
+                next_number = next_number.saturating_add(1);
+            }
+            let assigned = next_number;
+            used_numbers.insert(assigned);
+            next_number = next_number.saturating_add(1);
+            assigned
+        });
         instances.push(ProviderInstanceSnapshot {
             instance_id: format!("codex:{}", account.id),
             provider_id: "codex".to_string(),
@@ -514,7 +524,7 @@ mod tests {
     }
 
     #[test]
-    fn extra_account_identity_and_order_are_stable_by_creation_then_id() {
+    fn extra_account_identity_and_order_follow_persisted_user_order() {
         let later = account(
             "33333333-3333-3333-3333-333333333333",
             3,
@@ -535,16 +545,17 @@ mod tests {
         );
         let instances = build_provider_instances(
             &[provider_snapshot("claude", 10.0)],
-            &[later, same_time_high_id.clone(), same_time_low_id.clone()],
+            &[
+                later.clone(),
+                same_time_high_id.clone(),
+                same_time_low_id.clone(),
+            ],
             &HashMap::new(),
             &Settings::default(),
         );
 
         assert_eq!(instances[0].instance_id, "claude");
-        assert_eq!(
-            instances[1].instance_id,
-            format!("codex:{}", same_time_low_id.id)
-        );
+        assert_eq!(instances[1].instance_id, format!("codex:{}", later.id));
         assert_eq!(instances[1].account_ordinal, Some(2));
         assert_eq!(
             instances[2].instance_id,
@@ -552,6 +563,35 @@ mod tests {
         );
         assert_eq!(instances[2].account_ordinal, Some(3));
         assert_eq!(instances[3].account_ordinal, Some(4));
+        assert_eq!(
+            instances[3].instance_id,
+            format!("codex:{}", same_time_low_id.id)
+        );
+    }
+
+    #[test]
+    fn custom_display_number_is_preserved_and_auto_numbers_skip_it() {
+        let mut chosen = account(
+            "22222222-2222-2222-2222-222222222222",
+            2,
+            CodexAccountSource::ManagedByApp,
+            None,
+        );
+        chosen.display_number = Some(2);
+        let ordinary = account(
+            "33333333-3333-3333-3333-333333333333",
+            3,
+            CodexAccountSource::ManagedByApp,
+            None,
+        );
+        let instances = build_provider_instances(
+            &[],
+            &[ordinary, chosen],
+            &HashMap::new(),
+            &Settings::default(),
+        );
+        assert_eq!(instances[0].account_ordinal, Some(3));
+        assert_eq!(instances[1].account_ordinal, Some(2));
     }
 
     #[test]

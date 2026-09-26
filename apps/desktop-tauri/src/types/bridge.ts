@@ -1156,6 +1156,7 @@ export type CodexAccountSource = "ambient" | "managedByApp";
 export interface CodexAccount {
   id: string;
   nickname: string | null;
+  displayNumber?: number | null;
   emailHint: string | null;
   authSubject: string | null;
   providerAccountId: string | null;
