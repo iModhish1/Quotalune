@@ -162,10 +162,13 @@ Later checkpoint/evidence commits are documentation only.
   Settings → Data Sources. Real Dev data, Demo off, original logos, dark main
   window, 1216 × 688 CSS viewport; no root horizontal overflow or visible error
   boundary. Slow Activity loading was allowed to settle before final capture.
-- Evidence under `docs/images/post-release/`: `DEV_DASHBOARD.png`,
+- Historical evidence is now retained only under ignored
+  `.local/historical-images-post-release/`: `DEV_DASHBOARD.png`,
   `DEV_ANALYTICS_OVERVIEW.png`, `DEV_TOKENS.png`, `DEV_MODELS.png`,
   `DEV_ACTIVITY.png`, `DEV_DATA_SOURCES.png`, `DEV_NATIVE_WINDOW.png`.
-  This is a smoke baseline, not a repeat of the closed full Analytics QA matrix,
+  The seven public copies were withdrawn in the screenshot privacy audit
+  because they contain the earlier brand and real activity readings. This is a
+  smoke baseline, not a repeat of the closed full Analytics QA matrix,
   not an end-to-end re-audit of token totals and not performance acceptance.
 - Privacy presentation was temporarily enabled for screenshots; the saved Dev
   privacy/last-tab fields were restored and read back. No credential/account
