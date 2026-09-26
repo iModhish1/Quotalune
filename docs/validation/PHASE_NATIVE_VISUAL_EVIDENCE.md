@@ -714,3 +714,26 @@ the inspected Arabic wide-window states, not every viewport or provider.
 - Before: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T16-04-39-quotalune-dev-gemini-fullwidth-unavailab\s06-after.png`
 - After: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T16-13-09-quotalune-dev-gemini-fullwidth-unavailab\s06-after.png`
 - Populated: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T16-14-35-quotalune-dev-codex-pane-density\s05-after.png`
+
+### Settings heading contrast — 2026-09-26
+
+The light-theme Arabic Settings screenshot showed its section heading and
+description directly on the galaxy image, reducing readability. The shared
+Settings and Workspace header now uses the existing theme surface and border
+tokens with compact padding. The verified Dev build used for the after image
+has SHA-256 `39d6d6c8231711c01092c42b81e3cb0221baad8652510ab51351f47716bca2c6`,
+channel `dev`, identifier `app.quotalis.desktop.dev` and `QuotaArc-Dev` data
+identity. Visual inspection of the after screenshot confirms that the Arabic
+heading, description and search label sit on a readable white surface. This
+check covers only this wide, light-theme Settings state.
+
+The guarded scenario opened Settings and switched to its window (three native
+actions succeeded). Its automated visual assertion returned malformed JSON
+from the local vision model, so the orchestrator reported verification failure;
+manual screenshot inspection is the evidence for the visual result. The
+separate attempt to open Analytics Sources failed because that nested tab was
+not visible in the initial Settings navigation; no Analytics Sources coverage
+is claimed from it. Both runs released their owned Dev processes.
+
+- Before: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T16-45-47-quotalune-dev-settings-analytics-native-\s03-after.png`
+- After: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T16-49-15-quotalune-settings-header-contrast-after\s03-expect1.png`

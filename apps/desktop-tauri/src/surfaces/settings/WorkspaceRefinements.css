@@ -1,7 +1,7 @@
 /* Shared density and safe scrolling across every primary destination. */
 .settings-studio .settings-body {padding:10px 12px;min-width:0}
 .settings-studio .settings-studio-toolbar {padding:4px 10px;min-height:40px}
-.settings-studio .settings-center__header {padding-block:0 8px;margin-bottom:10px;gap:10px}
+.settings-studio .settings-center__header {padding-block:8px;margin-bottom:10px;gap:10px}
 .settings-studio .settings-center__header p {margin-top:2px;font-size:11px}
 .settings-studio .settings-center__section-title {margin-bottom:10px}
 .settings-studio .settings-center__section-title h2 {font-size:17px}
