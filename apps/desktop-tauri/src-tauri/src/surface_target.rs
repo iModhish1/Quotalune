@@ -17,6 +17,7 @@ const SETTINGS_TAB_IDS: &[&str] = &[
     "profiles",
     "resetDisplay",
     "dashboardStudio",
+    "analyticsSources",
     "notifications",
     "menuBar",
     "menu",
@@ -213,5 +214,60 @@ mod tests {
     #[test]
     fn supported_settings_tabs_include_dashboard_studio() {
         assert!(is_supported_settings_tab("dashboardStudio"));
+    }
+
+    /// Analytics Sources is a real, shipped tab: it is in the frontend
+    /// `SettingsTabId` union, in the live `TAB_META` in `settingsTabs.ts`, and
+    /// `Settings.tsx` renders `<AnalyticsSourcesTab />` for it. It was
+    /// missing here, so `settings:analyticsSources` was rejected by the proof
+    /// harness and the tab silently fell back in `lastSettingsTab`
+    /// persistence and `resolve_startup_destination` — the exact drift this
+    /// whitelist exists to prevent.
+    #[test]
+    fn supported_settings_tabs_include_analytics_sources() {
+        assert!(is_supported_settings_tab("analyticsSources"));
+    }
+
+    /// Structural drift guard: parse the frontend `SettingsTabId` union out of
+    /// the TypeScript source and require this whitelist to contain every tab
+    /// it declares.
+    ///
+    /// The per-tab assertions above only cover tabs we already know about. This
+    /// one fails automatically the next time the frontend adds a tab and this
+    /// mirror is not updated, which is the failure mode that let
+    /// `analyticsSources` ship unsupported.
+    #[test]
+    fn settings_tab_whitelist_mirrors_the_frontend_tab_union() {
+        let bridge = include_str!("../../src/types/bridge.ts");
+        let union_start = bridge
+            .find("export type SettingsTabId =")
+            .expect("SettingsTabId union is declared");
+        let union = &bridge[union_start..];
+        let union_end = union.find(';').expect("SettingsTabId union is terminated");
+
+        let declared: Vec<&str> = union[..union_end]
+            .lines()
+            .filter_map(|line| line.trim().strip_prefix('|'))
+            .filter_map(|literal| {
+                literal
+                    .trim()
+                    .strip_prefix('"')
+                    .and_then(|rest| rest.split('"').next())
+            })
+            .collect();
+
+        assert!(
+            declared.len() >= 18,
+            "expected to parse the full SettingsTabId union, parsed {}",
+            declared.len()
+        );
+        let missing: Vec<&&str> = declared
+            .iter()
+            .filter(|tab| !is_supported_settings_tab(tab))
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "frontend SettingsTabId declares tabs this whitelist rejects: {missing:?}"
+        );
     }
 }
