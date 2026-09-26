@@ -1,18 +1,5 @@
 use super::*;
 
-/// Wall-clock budget for the PowerShell process this test module spawns.
-///
-/// These are *environment-capability* probes, not interactive provider probes,
-/// so they deliberately do not use the production
-/// `cli_dependencies::PROBE_TIMEOUT`. On a cold Windows CI runner the first
-/// PowerShell start pays for module autoloading (`Get-NetTCPConnection` pulls
-/// in NetTCPIP), which can exceed the 15s interactive budget even though the
-/// host is perfectly healthy. Production probe timeouts are a user-facing
-/// responsiveness guarantee and are left unchanged; only these assertions
-/// about the host environment get the longer, more forgiving budget.
-#[cfg(windows)]
-const ENV_PROBE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
-
 /// Run a PowerShell snippet for an environment-capability assertion.
 #[cfg(windows)]
 fn run_env_powershell(script: &str) -> cli_dependencies::CliReadOutput {
@@ -26,7 +13,7 @@ fn run_env_powershell(script: &str) -> cli_dependencies::CliReadOutput {
             "-Command",
             script,
         ],
-        ENV_PROBE_TIMEOUT,
+        cli_dependencies::ENV_PROBE_TIMEOUT,
     )
     .expect("environment PowerShell probe");
     assert_eq!(output.exit_code, Some(0));

@@ -978,7 +978,12 @@ mod tests {
             matches!(result, Err(TtyCommandError::Cancelled)),
             "{result:?}"
         );
-        assert!(started.elapsed() < Duration::from_secs(5));
+        // The property under test is that cancellation returns long before the
+        // command's own 15s timeout would fire -- not that a cold CI runner
+        // spawns a PTY child within five seconds. Keep the bound tied to the
+        // timeout it is actually distinguishing from, with headroom for
+        // runner speed.
+        assert!(started.elapsed() < Duration::from_secs(10));
         assert!(!marker.exists(), "cancelled command was still submitted");
     }
 
@@ -1010,7 +1015,10 @@ mod tests {
             worker.await.expect("PTY worker task");
             drop(guard);
         });
-        let readiness_deadline = Instant::now() + Duration::from_secs(5);
+        // Readiness is "the PTY child actually ran our command", not a
+        // performance measurement. A cold Windows runner can take longer than
+        // five seconds to schedule cmd.exe under a pseudo-terminal.
+        let readiness_deadline = Instant::now() + Duration::from_secs(30);
         while !marker.exists() && Instant::now() < readiness_deadline {
             tokio::time::sleep(Duration::from_millis(25)).await;
         }

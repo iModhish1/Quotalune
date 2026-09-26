@@ -22,6 +22,21 @@ pub const INSTALL_TIMEOUT: Duration = Duration::from_secs(600);
 /// Bytes of stdout/stderr retained from any child process.
 pub const OUTPUT_CAP: usize = 16 * 1024;
 
+/// Wall-clock budget for tests that assert a *host-environment* property by
+/// spawning a real child process.
+///
+/// [`PROBE_TIMEOUT`] is deliberately short because it is a user-facing
+/// responsiveness guarantee: a slow provider CLI must never freeze the
+/// interface. Tests that only assert "this capability exists on this host" are
+/// a different concern, and on a cold CI runner the first PowerShell start
+/// pays for module autoloading and signing-stack loading, which can exceed 15s
+/// on an otherwise healthy machine.
+///
+/// This does not weaken any production timeout, and it does not relax what the
+/// tests assert — it only gives the child enough time to actually answer.
+#[cfg(test)]
+pub(crate) const ENV_PROBE_TIMEOUT: Duration = Duration::from_secs(120);
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum CliStatus {
@@ -1537,7 +1552,10 @@ mod tests {
             .into_iter()
             .map(OsString::from)
             .collect(),
-            PROBE_TIMEOUT,
+            // A security assertion about module isolation, not an interactive
+            // provider probe. See ENV_PROBE_TIMEOUT for why this uses the
+            // test-only budget rather than the production PROBE_TIMEOUT.
+            ENV_PROBE_TIMEOUT,
             receiver,
             None,
             &[
