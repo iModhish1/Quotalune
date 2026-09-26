@@ -4,8 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import type { UsageDisplayConfig } from "../design-system/themes";
 import { useProviders } from "./useProviders";
 import { useProviderInstances } from "./useProviderInstances";
-import { composeProviderInstances, DEFAULT_INSTANCE_PRESENTATION } from "../lib/providerInstances";
-import type { ProviderInstancePresentation } from "../types/bridge";
+import { composeStructureInstances } from "../lib/providerInstances";
 import { getSettingsSnapshot } from "../lib/tauri";
 import {
   toStageProviderInstances,
@@ -34,7 +33,6 @@ export function useStageRuntime({
   const [usageConfig, setUsageConfig] = useState<UsageDisplayConfig | undefined>();
   const [resetSettings, setResetSettings] = useState<ResetStageSettingsSource>({});
   const [enabledProviders, setEnabledProviders] = useState<string[] | null>(null);
-  const [instancePresentation, setInstancePresentation] = useState<ProviderInstancePresentation>(DEFAULT_INSTANCE_PRESENTATION);
   // Fail closed while settings load: account labels must never flash before
   // the persisted privacy preference is known.
   const [hidePersonalInfo, setHidePersonalInfo] = useState(true);
@@ -49,7 +47,6 @@ export function useStageRuntime({
         setCatalogSource(resolved.source);
         setUsageConfig(usageConfigFromSnapshot(snapshot));
         setEnabledProviders(snapshot.enabledProviders);
-        setInstancePresentation(snapshot.providerInstancePresentation ?? DEFAULT_INSTANCE_PRESENTATION);
         setHidePersonalInfo(snapshot.hidePersonalInfo);
         setResetSettings({
           resetPresentation: snapshot.resetPresentation,
@@ -73,10 +70,9 @@ export function useStageRuntime({
 
   const resetOptions = useResetStageOptions(resetSettings, surface);
   const instances = useMemo(
-    () => composeProviderInstances(live.providers ?? [], accounts.instances,
-      enabledProviders ?? (live.providers ?? []).map(provider => provider.providerId),
-      instancePresentation),
-    [live.providers, accounts.instances, enabledProviders, instancePresentation],
+    () => composeStructureInstances(live.providers ?? [], accounts.instances,
+      enabledProviders ?? (live.providers ?? []).map(provider => provider.providerId)),
+    [live.providers, accounts.instances, enabledProviders],
   );
   const providers = useMemo(
     () => toStageProviderInstances(instances, usageConfig, resetOptions, hidePersonalInfo),

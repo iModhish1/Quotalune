@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { composeProviderInstances } from "../../lib/providerInstances";
+import { composeStructureInstances } from "../../lib/providerInstances";
 import type { ProviderInstanceSnapshot, ProviderUsageSnapshot } from "../../types/bridge";
 import { toStageProviderInstances, toStageProviders } from "./stageProviders";
 
@@ -15,7 +15,7 @@ const managed: ProviderInstanceSnapshot = {
 
 describe("Structure account lanes", () => {
   it("shows a second Codex account immediately without borrowing ambient quota", () => {
-    const instances = composeProviderInstances([ambient], [managed], ["codex"]);
+    const instances = composeStructureInstances([ambient], [managed], ["codex"]);
     const stage = toStageProviderInstances(instances, undefined);
     expect(stage.map(row => row.id)).toEqual(["codex", "codex:managed"]);
     expect(stage.map(row => row.iconId)).toEqual(["codex", "codex"]);
@@ -31,6 +31,23 @@ describe("Structure account lanes", () => {
       ...ambient, providerId: `provider-${i}`, displayName: `Provider ${i}`,
     }));
     expect(toStageProviders(rows, undefined)).toHaveLength(70);
+  });
+
+  it.each([1, 2, 3, 6, 12])("retains all %i configured Codex accounts with mixed providers", (count) => {
+    const accounts = Array.from({length:count}, (_,index): ProviderInstanceSnapshot => ({
+      ...managed,
+      accountId:`account-${index}`,
+      instanceId:`codex:account-${index}`,
+      accountOrdinal:index+2,
+      accountLabel:`Account ${index+2}`,
+    }));
+    const claude = {...ambient, providerId:"claude", displayName:"Claude"};
+    const instances = composeStructureInstances([ambient,claude],accounts,["codex","claude"]);
+    const stage = toStageProviderInstances(instances, undefined);
+    expect(stage).toHaveLength(count+2);
+    expect(new Set(stage.map(row=>row.id)).size).toBe(count+2);
+    expect(stage.slice(2).map(row=>row.id)).toEqual(accounts.map(row=>row.instanceId));
+    expect(stage.slice(2).every(row=>row.primaryValue===null && row.iconId==="codex")).toBe(true);
   });
 
   it("does not expose account labels when personal information is hidden", () => {
