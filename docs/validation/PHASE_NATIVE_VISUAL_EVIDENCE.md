@@ -620,3 +620,8 @@ CLI 1, toast-resource tests 2 and doctests 0. TypeScript, production build,
 strict workspace Clippy, formatting, 2032-key locale parity, 4796-file secret
 scan and diff checks passed. The native binary/screenshot above predates this
 detached-window-only extension; no detached-window pixel claim is made.
+
+The editor's failed-save alert was then given the same boundary: it keeps the
+unsaved draft and offers a localized retry instruction, without rendering a
+raw persistence exception. A focused test injects a private-looking path and
+proves it is absent from the alert. No real save was attempted in native QA.
