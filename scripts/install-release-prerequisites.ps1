@@ -513,7 +513,7 @@ if (-not $corepack) {
 if (-not $corepack) {
     throw "Corepack is required with Node $requiredNodeMajor to activate pinned pnpm $expectedPnpm."
 }
-$pnpmShimDir = Join-Path $env:LOCALAPPDATA 'Quotalis\release-toolchain\pnpm'
+$pnpmShimDir = Join-Path $env:LOCALAPPDATA 'Quotalune\release-toolchain\pnpm'
 if (-not $AssertOnly) {
     New-Item -ItemType Directory -Force -Path $pnpmShimDir | Out-Null
     Invoke-Native $corepack @('enable', '--install-directory', $pnpmShimDir)

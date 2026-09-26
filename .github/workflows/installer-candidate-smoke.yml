@@ -1,0 +1,38 @@
+name: Installer candidate smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Provision release build tools
+        shell: powershell
+        run: |
+          & powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/install-release-prerequisites.ps1 -RepoRoot $env:GITHUB_WORKSPACE
+          if ($LASTEXITCODE -ne 0) { throw "Release prerequisites failed: $LASTEXITCODE" }
+      - name: Build exact commit and smoke-install in disposable runner
+        shell: powershell
+        run: |
+          $workRoot = Join-Path $env:RUNNER_TEMP 'quotalune-candidate'
+          $smokeRoot = Join-Path $env:RUNNER_TEMP 'quotalune-installer-smoke'
+          New-Item -ItemType Directory -Path $smokeRoot | Out-Null
+          & powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/windows-release-build.ps1 `
+            -Ref $env:GITHUB_SHA `
+            -WorkRoot $workRoot `
+            -SmokeInstall `
+            -SmokeDisposableTestRoot $smokeRoot `
+            -SmokeInstallDir (Join-Path $smokeRoot 'install') `
+            -AcknowledgeDisposableSmokeEnvironment
+          if ($LASTEXITCODE -ne 0) { throw "Candidate build or disposable installer lifecycle failed: $LASTEXITCODE" }
+          Get-ChildItem -LiteralPath (Join-Path $workRoot 'assets') -File |
+            Where-Object Name -Like 'Quotalune*' |
+            ForEach-Object { "{0}  {1}" -f (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash.ToLowerInvariant(), $_.Name }

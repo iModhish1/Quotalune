@@ -45,6 +45,7 @@ Assert-Throws { Assert-NodeMajor 'v23.11.0' 24 } 'non-24 Node major rejected by 
 $prerequisiteText = Get-Content -Raw -LiteralPath (Join-Path $scriptRoot 'install-release-prerequisites.ps1')
 Assert-True ($prerequisiteText -match '\$requiredNodeMajor\s*=\s*24') 'release prerequisite pins Node major 24'
 Assert-True ($prerequisiteText -match '11\\.24\\.0') 'release prerequisite keeps pnpm 11.24.0 pinned'
+Assert-True ($prerequisiteText.Contains("'Quotalune\release-toolchain\pnpm'")) 'prerequisite pnpm shim path matches release builder path'
 
 Assert-Equal (Normalize-GitHubRepository 'https://github.com/iModhish1/Quotalune.git') 'imodhish1/quotalune' 'HTTPS canonical URL'
 Assert-Equal (Normalize-GitHubRepository 'git@github.com:iModhish1/Quotalune.git') 'imodhish1/quotalune' 'SSH canonical URL'
@@ -90,5 +91,11 @@ Assert-True ($publisherText -notmatch $clobberFlag) 'publisher has no clobber fl
 $circleConfig = Get-Content -Raw -LiteralPath (Join-Path (Split-Path -Parent $scriptRoot) '.circleci/config.yml')
 Assert-True ($circleConfig.Contains("`$manifest.repository -ne 'iModhish1/Quotalune'")) 'CircleCI publisher checks the owner repository'
 Assert-True (-not $circleConfig.Contains("`$manifest.repository -ne 'nesszer/Win-CodexBar'")) 'CircleCI publisher does not target upstream'
+$circleBuilderText = Get-Content -Raw -LiteralPath (Join-Path $scriptRoot 'circleci-release-build.ps1')
+$buildCall = $circleBuilderText.IndexOf("Invoke-LoggedPowerShell (Join-Path `$RepoRoot 'scripts\windows-release-build.ps1')")
+$smokeCall = $circleBuilderText.IndexOf("Invoke-LoggedPowerShell (Join-Path `$RepoRoot 'scripts\windows-smoke-install.ps1')")
+$manifestCall = $circleBuilderText.IndexOf("Invoke-LoggedPowerShell (Join-Path `$RepoRoot 'scripts\emit-release-manifest.ps1')")
+Assert-True ($buildCall -ge 0 -and $smokeCall -gt $buildCall -and $manifestCall -gt $smokeCall) 'release build must smoke-install before emitting publishable assets'
+Assert-True ($circleBuilderText.Contains("`$env:CIRCLECI -ne 'true' -or `$env:CIRCLE_JOB -ne 'release-build'")) 'smoke install requires the disposable CircleCI release-build executor'
 
 Write-Host 'Release pipeline focused tests passed.'

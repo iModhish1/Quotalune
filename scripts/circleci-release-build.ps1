@@ -104,6 +104,20 @@ try {
         '-RepoUrl', $Repository,
         '-WorkRoot', $workRoot
     ) $buildLog
+    # The release-build job uses CircleCI's disposable Windows executor. Its
+    # canonical installer identity must never be installed on a developer host.
+    if ($env:CIRCLECI -ne 'true' -or $env:CIRCLE_JOB -ne 'release-build') {
+        throw 'Installer smoke requires the disposable CircleCI release-build executor.'
+    }
+    $smokeRoot = Join-Path $workRoot ('installer-smoke-' + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $smokeRoot | Out-Null
+    Invoke-LoggedPowerShell (Join-Path $RepoRoot 'scripts\windows-smoke-install.ps1') @(
+        '-InstallerPath', (Join-Path $assetsDir "Quotalune-$version-Setup.exe"),
+        '-ExpectedVersion', $version,
+        '-DisposableTestRoot', $smokeRoot,
+        '-InstallDir', (Join-Path $smokeRoot 'install'),
+        '-AcknowledgeDisposableTestEnvironment'
+    ) (Join-Path $OutputDir 'installer-smoke.log')
     Invoke-LoggedPowerShell (Join-Path $RepoRoot 'scripts\emit-release-manifest.ps1') @(
         '-AssetsDir', $assetsDir,
         '-OutputDir', $OutputDir,
