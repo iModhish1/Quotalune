@@ -131,6 +131,11 @@ where
     })
 }
 
+fn should_open_main_workspace_from_args(args: &[String]) -> bool {
+    args.iter()
+        .any(|arg| arg.eq_ignore_ascii_case("--open-workspace"))
+}
+
 fn nonblank_launch_args<I, S>(args: I) -> Vec<String>
 where
     I: IntoIterator<Item = S>,
@@ -169,7 +174,7 @@ where
         .find_map(|arg| quotalis_core::notifications::parse_notification_uri(arg))
     {
         InstanceActivation::Notification(destination)
-    } else if args.is_empty() {
+    } else if args.is_empty() || should_open_main_workspace_from_args(&args) {
         InstanceActivation::MainWorkspace
     } else if should_open_primary_window_from_args(&args) {
         InstanceActivation::CompactSurface
@@ -219,6 +224,7 @@ where
 {
     let args = nonblank_launch_args(args);
     let explicit_primary_launch = should_open_primary_window_from_args(&args);
+    let explicit_workspace_launch = should_open_main_workspace_from_args(&args);
     let plain_desktop_launch = args.is_empty();
     // A compact QuotaArc surface is itself the non-interrupting desktop
     // launch. Do not also raise a window over the user's work in that case;
@@ -227,7 +233,8 @@ where
 
     LaunchBehavior {
         open_primary_window_at_start: force_visible || explicit_primary_launch,
-        open_main_workspace_at_start: plain_desktop_launch && unattended_by_compact_surface,
+        open_main_workspace_at_start: explicit_workspace_launch
+            || (plain_desktop_launch && unattended_by_compact_surface),
         suppress_blur_dismiss: force_visible,
     }
 }
@@ -942,6 +949,22 @@ mod tests {
                 open_main_workspace_at_start: false,
                 suppress_blur_dismiss: false,
             }
+        );
+    }
+
+    #[test]
+    fn explicit_workspace_launch_opens_main_even_with_compact_surface_enabled() {
+        assert_eq!(
+            launch_behavior(false, true, true, ["--open-workspace"]),
+            LaunchBehavior {
+                open_primary_window_at_start: false,
+                open_main_workspace_at_start: true,
+                suppress_blur_dismiss: false,
+            }
+        );
+        assert_eq!(
+            instance_activation(["--open-workspace"]),
+            InstanceActivation::MainWorkspace
         );
     }
 
