@@ -112,6 +112,12 @@ validation notes now distinguish their earlier observations from current
 release evidence. Ignored local copies are under
 `.local/historical-claude-continuation-2026-09-27/`.
 
+The Product Upgrade archive was withdrawn after representative full-resolution
+review found former Quotalis branding and real provider readings. Its nine
+PNGs and 13 JSON companions are retained in ignored
+`.local/historical-product-upgrade-2026-09-27/`. The historical validation
+document now names the earlier states without links to withdrawn public files.
+
 ## Remaining scope
 
 Continue visual review of every tracked screenshot, including the remaining

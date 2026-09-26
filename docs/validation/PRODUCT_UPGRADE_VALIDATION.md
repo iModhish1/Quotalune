@@ -64,8 +64,8 @@ file by atomic replacement. Temporary files are cleaned up on failure. A concurr
 reader test rejects partial JSON. Fresh read-only review found no P1/P2 in this
 repair scope. Native repetition with both surfaces open passed all 12 readbacks.
 
-Evidence: [before](../images/product-upgrade/persistence-before.json),
-[after](../images/product-upgrade/persistence-repeat.json).
+Historical evidence: `persistence-before.json` and
+`persistence-repeat.json` (withdrawn to the ignored local archive noted below).
 Other legacy settings writers and separate processes are outside this endpoint's
 transaction mutex; no application-wide serialization guarantee is claimed.
 
@@ -89,12 +89,18 @@ transaction mutex; no application-wide serialization guarantee is claimed.
 Local raw logs: `.local/upgrade-settings-recovery-tests.log`,
 `.local/upgrade-frontend-recovery.log`, `.local/upgrade-final-fixture-test.log`,
 `.local/upgrade-clippy-recovery.log`, `.local/upgrade-native-verified-build.log`.
-Tracked scan result: [source scan](../images/product-upgrade/upgrade-source-scans.json).
+Historical source scan: `upgrade-source-scans.json` (withdrawn to the ignored
+local archive noted below).
 Vite retains a large-chunk warning; this phase makes no new CPU/FPS or bundle-size
 performance claim. Failed intermediate test/build attempts were repaired rather
 than hidden with skipped tests.
 
 ## Native visual evidence
+
+These former-brand Quotalis captures and JSON companions were withdrawn from
+the current public tree on 2026-09-27. Audit copies are retained only in
+ignored `.local/historical-product-upgrade-2026-09-27/`. The rows below
+describe the earlier Dev run; they are not current Quotalune release images.
 
 Captured from the freshly built Dev process, not a browser mock. CUA restored and
 resized its real window; CDP captured its WebView2 contents. JSON companions record
@@ -103,15 +109,15 @@ indicator on General is not evidence that its persisted Demo setting is off.
 
 | Capture | Verified state |
 | --- | --- |
-| [Providers dark](../images/product-upgrade/PROVIDERS_REAL_DARK.png) | Real data, enabled filter, Codex/Claude operational states and action rail. |
-| [Connections](../images/product-upgrade/PROVIDERS_CONNECTIONS.png) | Real connection panel; no external sign-in submitted. |
-| [Providers light](../images/product-upgrade/PROVIDERS_REAL_LIGHT.png) | Ceramic Pearl, readable provider chrome. |
-| [Arabic Demo](../images/product-upgrade/PROVIDERS_DEMO_RTL_LIGHT.png) | Six simulated providers, RTL, explicit read-only explanation. |
-| [Demo controls](../images/product-upgrade/DEMO_CONTROLS.png) | Actual configuration controls, visibly simulated. |
-| [Narrow](../images/product-upgrade/PROVIDERS_NARROW.png) | 624 CSS pixels wide, stacked content, no root horizontal overflow. |
-| [Preferences](../images/product-upgrade/PREFERENCES_COMPACT_TOP.png) | Compact density and top navigation. |
-| [Dashboard Demo](../images/product-upgrade/DASHBOARD_DEMO.png) | Six simulated current-limit cards; money/credits differentiated. |
-| [Quota comparison](../images/product-upgrade/DASHBOARD_QUOTA_COMPARISON.png) | Simulated trend panels and independent observations with explicit scope caption. |
+| Providers dark | Real data, enabled filter, Codex/Claude operational states and action rail. |
+| Connections | Real connection panel; no external sign-in submitted. |
+| Providers light | Ceramic Pearl, readable provider chrome. |
+| Arabic Demo | Six simulated providers, RTL, explicit read-only explanation. |
+| Demo controls | Actual configuration controls, visibly simulated. |
+| Narrow | 624 CSS pixels wide, stacked content, no root horizontal overflow. |
+| Preferences | Compact density and top navigation. |
+| Dashboard Demo | Six simulated current-limit cards; money/credits differentiated. |
+| Quota comparison | Simulated trend panels and independent observations with explicit scope caption. |
 
 All standard captures are 1040×688 CSS pixels. Captures preserve actual content;
 no metrics, UI text or pixels were substituted. Presentation was restored to
