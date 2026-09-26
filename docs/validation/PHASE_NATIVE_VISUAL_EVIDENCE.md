@@ -295,11 +295,28 @@ controls such as `Silver` / `Arctic` / `Aurora` (Buttons), `Compact` /
 `Animated backgrounds` (Buttons).
 
 So the UIA ceiling is narrower than an earlier note suggested, and that earlier
-note was corrected for the same reason. But the colour-mode options are still
-out of reach: `Light` and `Dark` occur in the tree only inside helper prose
-("Light and Dark override it"), never as standalone selectable nodes, and the
-`Color Mode` ListItem exposes only the current value, `Auto (system)`. The
-segmented control's inactive options are not separately addressable.
+note was corrected for the same reason.
+
+The `invoke` mechanism itself works, so this is not a UIA-accessibility
+ceiling. Invoking the `Color Mode` ListItem succeeded via
+`LegacyIAccessible.DoDefaultAction` with no pointer movement, which shows
+background activation is available in general.
+
+The contrast inside that same panel identifies the obstacle. Every native
+control on the Appearance page is exposed as an invokable `Button`:
+`Silver`, `Arctic`, `Aurora`, `Ember` and `Violet` for logo finish;
+`Compact`, `Balanced` and `Prominent` for logo prominence; and `All`,
+`Static backgrounds`, `Animated backgrounds`, `My backgrounds` and
+`Add from device`. The colour-mode selector alone exposes no Buttons and
+renders only its current value, `Auto (system)`, as `Text`. `Light` and
+`Dark` appear solely inside the helper prose "Light and Dark override it".
+Re-inspecting after invoking the section does not change this.
+
+So the specific obstacle is that the colour-mode selector is a custom
+segmented widget whose options are not exposed as UIA-invokable controls,
+while the native buttons beside it are. That is a genuine accessibility
+finding about the product, not only a capture limitation, and is worth
+recording as a defect to fix rather than a boundary to work around.
 
 Every sanctioned route has now been tested rather than assumed: the protected
 settings envelope, the absence of a CLI writer, and the UIA tree. All three
