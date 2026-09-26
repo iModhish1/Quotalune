@@ -809,3 +809,19 @@ and the private observed data in the screenshot remains local.
 
 - Corrected scenario: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T17-40-47-quotalune-dev-providers-page-native-corr\summary.md`
 - Capture: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T17-40-47-quotalune-dev-providers-page-native-corr\s04-after.png`
+
+### Analytics history-chip contrast — 2026-09-26
+
+The Analytics overview's real history-span chip was nearly invisible when its
+transparent surface and tertiary text sat directly over the bright galaxy
+background. The chip now uses the resolved analytics surface, primary text and
+strong hairline. A fresh Dev build (SHA-256
+`94366bd81bfb61c77e460e772f38ab65129568faec8568ec3021959306965b8b`)
+passed preflight and all four native UIA steps. The after screenshot visibly
+shows the Arabic `22 أيام من السجل` value on an opaque dark pill. This is a
+contrast observation for the current light/RTL view, not a measurement across
+every theme. The history value comes from the owner's real local Dev history
+and the capture remains private.
+
+- After capture: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T18-01-49-quotalune-dev-history-chip-contrast-afte\s04-after.png`
+- Guarded scenario: `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T18-01-49-quotalune-dev-history-chip-contrast-afte\summary.md`

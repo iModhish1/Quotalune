@@ -18,7 +18,7 @@
 .dashboard-analytics__range-btn{padding:5px 10px;border:none;border-radius:999px;background:transparent;color:var(--qa-analytics-text-tertiary,var(--qa-ink-3));font:inherit;font-size:11px;cursor:pointer;white-space:nowrap}
 .dashboard-analytics__range-btn--active{background:var(--qa-analytics-selection,color-mix(in srgb,var(--qa-accent) 26%,var(--qa-material-raised)));color:var(--qa-analytics-text-primary,var(--qa-ink-1))}
 .dashboard-analytics__provider-filter{padding:5px 10px;border:1px solid var(--qa-analytics-hairline,var(--qa-hairline));border-radius:10px;background:color-mix(in srgb,var(--qa-graphite-1) 60%,transparent);color:var(--qa-analytics-text-secondary,var(--qa-ink-2));font:inherit;font-size:11px}
-.dashboard-analytics__history-chip{padding:4px 10px;border:1px solid var(--qa-analytics-hairline,var(--qa-hairline));border-radius:999px;color:var(--qa-analytics-text-tertiary,var(--qa-ink-3));font-size:10px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dashboard-analytics__history-chip{padding:4px 10px;border:1px solid var(--qa-analytics-hairline-strong,var(--qa-hairline-strong));border-radius:999px;background:var(--qa-analytics-surface-primary,var(--qa-material-raised));color:var(--qa-analytics-text-primary,var(--qa-ink-1));font-size:10px;font-variant-numeric:tabular-nums;white-space:nowrap}
 
 /* ── Section eyebrows (Phase 3.5 sections 7/8/9) ─────────────────────────
    Explicit "Selected Range" vs "Current Status" labeling so the one
