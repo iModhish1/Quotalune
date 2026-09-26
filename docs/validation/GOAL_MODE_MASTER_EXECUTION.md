@@ -15,6 +15,14 @@ The active objective is the owner's MASTER GOAL MODE EXECUTION and historical-wa
 | G — publication | Every required code, native, security, OSS and CI gate passes | `v0.12.0` published as a **prerelease**, not final production acceptance, at `https://github.com/iModhish1/Quotalune/releases/tag/v0.12.0`. The tag points to built commit `f1d758cf`; six verified assets are present. Full native and installer acceptance remain open. No Personal promotion. |
 | Historical appendix | Every ledger wave explicitly reconciled and cross-wave regression tested | PARTIAL. Both matrices exist; all three historical ledgers were read and indexed. Full cross-wave acceptance is still open. Historical PASS prose alone is not fresh evidence. |
 
+## Public screenshot privacy cleanup — 2026-09-27
+
+Twenty-four archived images with Desktop QA chrome, owner activity or
+OS/development overlays were removed from the current tracked tree. Raw native
+evidence remains only in ignored local storage; the README showcase still
+needs clean current Dev replacements. See `SCREENSHOT_PRIVACY_AUDIT.md`.
+This change does not erase earlier Git objects from public history.
+
 ## Settings Arabic and shortcut reliability — 2026-09-26
 
 The Advanced, Display and Usage & Spend tabs now have Arabic values for every

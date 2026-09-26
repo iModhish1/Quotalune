@@ -48,8 +48,7 @@ The Dev binary was launched under the guarded owned-job adapter and observed as:
 
 ## Personal installation was not touched
 
-The owner's frozen Personal install (`Quotalis.exe`, PID 4396,
-`%LOCALAPPDATA%\Programs\Quotalis\Quotalis.exe`) was running throughout. It was
+The owner's frozen Personal install was running throughout. It was
 only ever observed read-only via process listing. It was never launched,
 closed, focused, screenshotted, or written to. The Dev build runs under its own
 isolated identity (`channel=dev`, `app.quotalis.desktop.dev`, `QuotaArc-Dev`),
@@ -57,7 +56,14 @@ which is exactly the separation the Dev channel exists to provide.
 
 ## Captured evidence
 
-- File: `docs/validation/evidence/PHASE_NATIVE_quotalune_settings_2026-09-26.png`
+The ten raw captures include the Desktop QA control panel. They were removed
+from the tracked repository on 2026-09-27 and retained only under the ignored
+`.local/native-evidence-2026-09-26/` directory for private audit. The hashes
+and measurements below remain historical evidence; this document does not
+publish the raw frames. Do not recommit them or derive new public images from
+them without checking the full frame for private content and external overlays.
+
+- Local file: `.local/native-evidence-2026-09-26/PHASE_NATIVE_quotalune_settings_2026-09-26.png`
 - Size: 1920x1200 PNG, 979,542 bytes
 - SHA-256: `94829D67B4FF272A270F6F2BD2EABADD78FB307589ACFA5FCA56181C85E86A5D`
 
