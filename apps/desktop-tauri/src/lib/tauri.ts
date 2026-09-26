@@ -677,12 +677,6 @@ export function openPath(path: string): Promise<void> {
   return invoke<void>("open_path", { path });
 }
 
-export function getGeminiCliSignedIn(): Promise<
-  import("../types/bridge").GeminiCliStatus
-> {
-  return invoke("get_gemini_cli_signed_in");
-}
-
 export function getVertexAiStatus(): Promise<
   import("../types/bridge").VertexAiStatus
 > {

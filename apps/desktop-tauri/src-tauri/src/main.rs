@@ -527,7 +527,6 @@ fn main() {
             commands::set_provider_workspace_id,
             commands::set_provider_gateway_url,
             commands::get_provider_workspace_id,
-            commands::get_gemini_cli_signed_in,
             commands::get_vertexai_status,
             commands::list_jetbrains_detected_ides,
             commands::set_jetbrains_ide_path,

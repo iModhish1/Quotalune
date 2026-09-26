@@ -499,3 +499,11 @@ frontend suite passed 1668 tests across 232 files, strict workspace Clippy
 passed again, and the secret scan of 4794 tracked files was clean. This is
 source/visual closure for Gemini, not a claim that every remaining provider or
 the public installer is accepted.
+
+Follow-up cleanup removed the now-unreachable Tauri `get_gemini_cli_signed_in`
+command, its frontend bridge/type and the host helper that exposed the local
+OAuth file path. This closes a stale credential-presence IPC surface after the
+connection widget was removed; it does not alter stored credentials or the
+already quarantined provider fetch. The general CLI dependency catalogue
+still describes Google's separate Gemini CLI installation, but no Gemini
+quota connection method is offered by Quotalune.

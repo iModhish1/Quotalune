@@ -102,20 +102,6 @@ pub fn primary_work_area_pixels() -> Option<WorkAreaPixels> {
 
 // ── Credential detection helpers ─────────────────────────────────────
 
-/// Filesystem path to the Gemini CLI's stored OAuth credentials, if a home
-/// directory is available on this machine.
-pub fn gemini_cli_credentials_path() -> Option<std::path::PathBuf> {
-    dirs::home_dir().map(|home| home.join(".gemini").join("oauth_creds.json"))
-}
-
-/// `true` when the Gemini CLI's credentials file exists (i.e. the user has
-/// signed in via `gemini auth login` locally).
-pub fn gemini_cli_signed_in() -> bool {
-    gemini_cli_credentials_path()
-        .map(|p| p.exists())
-        .unwrap_or(false)
-}
-
 /// Filesystem path to VertexAI application-default credentials. Respects the
 /// `GOOGLE_APPLICATION_CREDENTIALS` env var when set, otherwise falls back to
 /// the gcloud well-known location under the OS config dir.

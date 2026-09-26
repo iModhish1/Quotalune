@@ -1048,11 +1048,6 @@ export interface ProviderSummary {
 
 // ── Phase 4 — credential detection ───────────────────────────────────
 
-export interface GeminiCliStatus {
-  signedIn: boolean;
-  credentialsPath: string | null;
-}
-
 export interface VertexAiStatus {
   hasCredentials: boolean;
   credentialsPath: string | null;

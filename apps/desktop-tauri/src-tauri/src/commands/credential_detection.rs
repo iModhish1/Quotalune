@@ -4,13 +4,6 @@ use super::*;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct GeminiCliStatus {
-    pub signed_in: bool,
-    pub credentials_path: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct VertexAiStatus {
     pub has_credentials: bool,
     pub credentials_path: Option<String>,
@@ -32,26 +25,12 @@ pub struct KiroStatus {
     pub hint: Option<String>,
 }
 
-fn gemini_cli_credentials_path() -> Option<std::path::PathBuf> {
-    quotalis_core::host::session::gemini_cli_credentials_path()
-}
-
 fn vertexai_credentials_path_raw() -> Option<std::path::PathBuf> {
     quotalis_core::host::session::vertexai_credentials_path()
 }
 
 fn jetbrains_detected_ide_paths() -> Vec<std::path::PathBuf> {
     quotalis_core::host::session::jetbrains_detected_ide_paths()
-}
-
-#[tauri::command]
-pub fn get_gemini_cli_signed_in() -> Result<GeminiCliStatus, String> {
-    let path = gemini_cli_credentials_path();
-    let signed_in = path.as_ref().map(|p| p.exists()).unwrap_or(false);
-    Ok(GeminiCliStatus {
-        signed_in,
-        credentials_path: path.map(|p| p.to_string_lossy().into_owned()),
-    })
 }
 
 #[tauri::command]
