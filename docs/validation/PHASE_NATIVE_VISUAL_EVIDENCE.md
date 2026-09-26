@@ -436,3 +436,25 @@ At 3.5 seconds after navigation the page was still scanning, so this capture
 does not establish the final data or empty state, export correctness or scan
 latency. The image is not suitable for the public project because the Dev app
 uses local account data. The adapter was stopped after the run.
+
+### About and Providers RTL inspection — 2026-09-26
+
+`build-dev-verified.mjs` produced a fresh Dev binary from `64b779ea2eff`,
+embedded HEAD matched, and source/proof SHA-256 was
+`b714cde906c6cda073c2ff317d33bdadf916ac8c9f9dc6975ee7265e9cc44225`.
+Two guarded native scenarios (five steps each) opened About and Providers in
+the Arabic Light-mode window. The inspected About image shows «الإصدار» on
+the version badge and Arabic update controls; the product, OS and license
+names remain proper names. The Providers image confirms RTL layout and the
+68-provider catalog but exposes English fallback inside nested detail widgets
+(for example the account-switch button, quick actions and Pace card). A static
+source scan found 158 distinct keys referenced in the Providers subtree that
+lack Arabic values. These have not been translated or visually closed here.
+Local-only evidence:
+
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T11-02-46-quotalune-arabic-about-version-64b779ea\s05-after.png`
+- `N:\AI-Tools\Desktop-Visual-QA\reports\runs\2026-09-26T11-03-55-quotalune-arabic-providers-64b779ea\s05-after.png`
+
+Both adapters were stopped. The screenshots may contain local plan/usage data
+and are not public release artwork. Native control interactions, provider
+onboarding and installer behavior remain separate acceptance work.

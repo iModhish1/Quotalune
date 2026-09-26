@@ -62,6 +62,14 @@ widgets and prose generated outside those tabs still require a separate audit.
 Focused frontend coverage (8/8) and core locale tests (22/22) pass. About and
 Providers need native RTL visual verification on a fresh Dev binary.
 
+Fresh Dev RTL captures from `64b779ea` now cover the About and Providers
+initial views. About's nested version badge is localized. Providers remains
+PARTIAL: its nested detail components reference 158 distinct keys without
+Arabic values, and the screenshot visibly mixes English into quick actions,
+connection detail and Pace. This is the next localized UI packet; the direct
+tab-key coverage above does not imply whole-page translation. The captured
+images stay local because they may include personal plan/usage readings.
+
 ## Current verified checkpoint
 
 `7e4c0506` on `release/quotalune-integration`, clean worktree, in sync with
