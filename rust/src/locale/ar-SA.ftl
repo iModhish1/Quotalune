@@ -1418,6 +1418,7 @@ UsageSpendEyebrow = رؤى الحصص
 UsageSpendLocalData = بيانات محلية
 UsageSpendActions = إجراءات الاستخدام والإنفاق
 UsageSpendHistoryPeriod = فترة السجل
+UsageSpendShareSubtitle = Quotalune · قراءات حسب المصدر · دون عناوين بريد إلكتروني
 UsageSpendLoading = جارٍ الفحص…
 UsageSpendRefreshing = جارٍ التحديث…
 UsageSpendRefresh = تحديث

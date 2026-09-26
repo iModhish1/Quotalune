@@ -44,7 +44,14 @@ eyebrow/status/period labels. Source commit `be094b6f` corrects these with
 1981-key locale parity, passing focused tests, TypeScript, core locale tests,
 formatting and production frontend build. A fresh Dev binary and a five-step
 RTL UIA run visually verified the new labels. The eventual spend-data state,
-share-card localization and full settings navigation remain to be audited.
+share-card native export and full settings navigation remain to be audited.
+
+The share-card source then removed the old `quotaarc-usage-spend` filename and
+uses localized subtitle, headers, empty-state text and token labels. A
+component test exercises the PNG canvas path and verifies the Quotalune
+download filename. Frontend 1659/1659 tests across 231 files, production
+build, TypeScript, 1982-key locale parity, 22 locale-filtered core tests and
+Rust formatting pass. Actual Windows export rendering remains unverified.
 
 ## Current verified checkpoint
 

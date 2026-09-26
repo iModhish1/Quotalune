@@ -1370,6 +1370,7 @@ locale_keys! {
     UsageSpendColCurrency,
     UsageSpendColSource,
     UsageSpendShare,
+    UsageSpendShareSubtitle,
     UsageSpendCopyJson,
     UsageSpendSaveJson,
     UsageSpendShareEmpty,

@@ -1003,6 +1003,7 @@ export const ALL_LOCALE_KEYS = [
   "UsageSpendShareFailed",
   "UsageSpendShareEmpty",
   "UsageSpendShare",
+  "UsageSpendShareSubtitle",
   "UsageSpendCopyJson",
   "UsageSpendSaveJson",
   "AgentSessionsTitle",

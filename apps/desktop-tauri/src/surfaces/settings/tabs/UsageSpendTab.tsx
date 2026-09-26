@@ -49,7 +49,11 @@ function formatSpendMetric(
 }
 
 /** Sanitized share-card PNG (no account emails) — upstream #2112. */
-function renderSharePng(summary: UsageSpendSummary, title: string): string {
+function renderSharePng(
+  summary: UsageSpendSummary,
+  title: string,
+  labels: { subtitle: string; headers: string[]; empty: string; tokens: string },
+): string {
   const rows = summary.rows ?? [];
   const pad = 24;
   const rowH = 28;
@@ -77,9 +81,9 @@ function renderSharePng(summary: UsageSpendSummary, title: string): string {
 
   ctx.fillStyle = "#8b9bb4";
   ctx.font = "12px system-ui,Segoe UI,sans-serif";
-  ctx.fillText("Quotalune · source-specific readings · no account emails", pad, pad + 36);
+  ctx.fillText(labels.subtitle, pad, pad + 36);
 
-  const headers = ["Provider", "7 days", "30 days", "Currency", "Source"];
+  const headers = labels.headers;
   let x = pad;
   const y0 = pad + headerH;
   ctx.fillStyle = "#9fb0c8";
@@ -98,14 +102,14 @@ function renderSharePng(summary: UsageSpendSummary, title: string): string {
   ctx.font = "13px system-ui,Segoe UI,sans-serif";
   if (rows.length === 0) {
     ctx.fillStyle = "#8b9bb4";
-    ctx.fillText("No spend data yet.", pad, y0 + rowH);
+    ctx.fillText(labels.empty, pad, y0 + rowH);
   } else {
     rows.forEach((row, idx) => {
       const y = y0 + (idx + 1) * rowH;
       const cells = [
         row.displayName,
-        formatSpendMetric(row.sevenDay, row.sevenDayTokens, row.currency, "tokens"),
-        formatSpendMetric(row.thirtyDay, row.thirtyDayTokens, row.currency, "tokens"),
+        formatSpendMetric(row.sevenDay, row.sevenDayTokens, row.currency, labels.tokens),
+        formatSpendMetric(row.thirtyDay, row.thirtyDayTokens, row.currency, labels.tokens),
         row.currency || "USD",
         row.source,
       ];
@@ -214,13 +218,24 @@ export default function UsageSpendTab(_props: TabProps) {
       return;
     }
     try {
-      const dataUrl = renderSharePng(summary, t("UsageSpendTitle"));
+      const dataUrl = renderSharePng(summary, t("UsageSpendTitle"), {
+        subtitle: t("UsageSpendShareSubtitle"),
+        headers: [
+          t("UsageSpendColProvider"),
+          t("UsageSpendCol7d"),
+          t("UsageSpendCol30d"),
+          t("UsageSpendColCurrency"),
+          t("UsageSpendColSource"),
+        ],
+        empty: t("UsageSpendEmpty"),
+        tokens: t("UsageSpendTokens"),
+      });
       if (!dataUrl) {
         setShareError(t("UsageSpendShareFailed"));
         return;
       }
       const stamp = new Date().toISOString().slice(0, 10);
-      downloadDataUrl(dataUrl, `quotaarc-usage-spend-${stamp}.png`);
+      downloadDataUrl(dataUrl, `quotalune-usage-spend-${stamp}.png`);
     } catch {
       setShareError(t("UsageSpendShareFailed"));
     }

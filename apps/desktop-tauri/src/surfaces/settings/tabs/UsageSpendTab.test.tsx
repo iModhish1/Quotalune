@@ -1,5 +1,5 @@
-import {render,screen} from '@testing-library/react';
-import {beforeEach,expect,it,vi} from 'vitest';
+import {fireEvent,render,screen,waitFor} from '@testing-library/react';
+import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 
 const bridge=vi.hoisted(()=>({
   getSettingsSnapshot:vi.fn(),getUsageSpendSummary:vi.fn(),updateSettings:vi.fn(),writeUsageSpendExport:vi.fn(),
@@ -18,6 +18,8 @@ beforeEach(()=>{
   bridge.getUsageSpendSummary.mockReturnValue(new Promise(()=>{}));
 });
 
+afterEach(() => vi.restoreAllMocks());
+
 it('renders a structured responsive dashboard rather than loose inline control rows',async()=>{
   const {container}=render(<UsageSpendTab settings={{} as never} set={vi.fn()} saving={false}/>);
   // CostSummaryDisplayStyle is a QuotalisSelect (trigger button), not a
@@ -33,4 +35,41 @@ it('renders a structured responsive dashboard rather than loose inline control r
   expect(container.querySelector('.usage-spend__table-frame > .usage-spend-table')).not.toBeNull();
   expect(container.querySelector('.usage-spend__header')).not.toHaveAttribute('style');
   expect(container.querySelector('.usage-spend__filters')).not.toHaveAttribute('style');
+});
+
+it('exports a localized share card under the Quotalune filename', async () => {
+  bridge.getUsageSpendSummary.mockResolvedValue({
+    rows: [],
+    contract: {
+      providerId: 'all', historyDays: 30, knownCostUsd: null,
+      knownZero: false, provenance: 'unknown',
+      priceCoverage: { priced: 0, unpriced: 0, unmetered: 0, estimated: 0 },
+      priceCoverageRatio: null, historyCoverageEstablished: false,
+      tokenMix: { inputTokens: null, outputTokens: null, cacheReadTokens: null, cacheCreationTokens: null, reasoningTokens: null },
+      conversationCount: 0, models: [], projects: [], conversations: [], daily: [], hourlyActivity: [],
+      projectSourceStatus: null, customPricingActive: false, imports: [],
+    },
+  });
+  const fillText = vi.fn();
+  const ctx = {
+    scale: vi.fn(), fillRect: vi.fn(), strokeRect: vi.fn(), fillText,
+    beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), stroke: vi.fn(),
+    measureText: vi.fn().mockReturnValue({ width: 0 }),
+  };
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/png;base64,AA==');
+  let filename = '';
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+    filename = this.download;
+  });
+
+  render(<UsageSpendTab settings={{} as never} set={vi.fn()} saving={false} />);
+  const share = await screen.findByRole('button', { name: 'UsageSpendShare' });
+  await waitFor(() => expect(share).toBeEnabled());
+  fireEvent.click(share);
+
+  expect(fillText).toHaveBeenCalledWith('UsageSpendShareSubtitle', expect.any(Number), expect.any(Number));
+  expect(fillText).toHaveBeenCalledWith('UsageSpendColProvider', expect.any(Number), expect.any(Number));
+  expect(fillText).toHaveBeenCalledWith('UsageSpendEmpty', expect.any(Number), expect.any(Number));
+  expect(filename).toMatch(/^quotalune-usage-spend-\d{4}-\d{2}-\d{2}\.png$/);
 });

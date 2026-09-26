@@ -576,6 +576,7 @@ UsageSpendEyebrow = Quota insights
 UsageSpendLocalData = Local data
 UsageSpendActions = Usage and spend actions
 UsageSpendHistoryPeriod = History period
+UsageSpendShareSubtitle = Quotalune · source-specific readings · no account emails
 UsageSpendModels = Models
 UsageSpendAllTime = All time
 UsageSpendOpenCodexImport = OpenCodex import
