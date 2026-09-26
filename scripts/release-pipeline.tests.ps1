@@ -87,5 +87,8 @@ Assert-True ($builderText -notmatch $legacySwitch) 'legacy upload parameter remo
 Assert-True ($builderText -notmatch $clobberFlag) 'builder has no clobber upload path'
 $publisherText = Get-Content -Raw -LiteralPath (Join-Path $scriptRoot 'publish-github-release.ps1')
 Assert-True ($publisherText -notmatch $clobberFlag) 'publisher has no clobber flag'
+$circleConfig = Get-Content -Raw -LiteralPath (Join-Path (Split-Path -Parent $scriptRoot) '.circleci/config.yml')
+Assert-True ($circleConfig.Contains("`$manifest.repository -ne 'iModhish1/Quotalune'")) 'CircleCI publisher checks the owner repository'
+Assert-True (-not $circleConfig.Contains("`$manifest.repository -ne 'nesszer/Win-CodexBar'")) 'CircleCI publisher does not target upstream'
 
 Write-Host 'Release pipeline focused tests passed.'
