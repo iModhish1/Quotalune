@@ -499,7 +499,13 @@ pub fn connection_capabilities(provider: ProviderId) -> ProviderConnectionCapabi
         display_name: metadata.display_name,
         status,
         methods,
-        cli: cli_dependency(provider),
+        // A tool may exist in the curated registry even when no verified
+        // provider usage source remains. Do not advertise its installation.
+        cli: if status == SupportStatus::Unsupported {
+            None
+        } else {
+            cli_dependency(provider)
+        },
         verification,
         reporting: ReportingCapabilities {
             quota_windows: ReportingEvidence::InspectProviderResponse,
@@ -627,7 +633,13 @@ mod tests {
         let unsupported: Vec<_> = all_connection_capabilities()
             .into_iter()
             .filter(|c| c.status == SupportStatus::Unsupported)
-            .map(|c| c.provider.cli_name())
+            .map(|c| {
+                assert!(
+                    c.cli.is_none(),
+                    "unsupported provider must not advertise CLI setup"
+                );
+                c.provider.cli_name()
+            })
             .collect();
         assert_eq!(
             unsupported,

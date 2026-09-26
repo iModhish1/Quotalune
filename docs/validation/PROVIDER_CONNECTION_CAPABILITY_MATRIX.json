@@ -221,22 +221,7 @@
         "factory": "quotalis_core::core::instantiate_provider",
         "id": "gemini"
       },
-      "cli": {
-        "automatedInstallAvailable": false,
-        "docsUrl": "https://github.com/google-gemini/gemini-cli",
-        "executables": [
-          "gemini"
-        ],
-        "install": {
-          "kind": "npm",
-          "package": "@google/gemini-cli"
-        },
-        "installRequiresAdmin": false,
-        "managedLogin": false,
-        "minVersion": null,
-        "sessionDetection": "authFile",
-        "tool": "Gemini CLI"
-      },
+      "cli": null,
       "dashboardUrl": null,
       "displayName": "Gemini",
       "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",
@@ -517,22 +502,7 @@
         "factory": "quotalis_core::core::instantiate_provider",
         "id": "vertexai"
       },
-      "cli": {
-        "automatedInstallAvailable": false,
-        "docsUrl": "https://cloud.google.com/sdk/docs/install",
-        "executables": [
-          "gcloud"
-        ],
-        "install": {
-          "id": "Google.CloudSDK",
-          "kind": "winget"
-        },
-        "installRequiresAdmin": true,
-        "managedLogin": false,
-        "minVersion": null,
-        "sessionDetection": "authFile",
-        "tool": "Google Cloud CLI"
-      },
+      "cli": null,
       "dashboardUrl": "https://console.cloud.google.com/vertex-ai",
       "displayName": "Vertex AI",
       "fixtureCoverage": "method rendering plus connection-state scenarios; not real authentication",

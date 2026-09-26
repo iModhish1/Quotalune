@@ -8,8 +8,7 @@ use quotalis_core::cli_dependencies::{
     CliDetection, CliSessionState, CliStatus, InstallOutcome, detect, run_install,
 };
 use quotalis_core::connection_capabilities::{
-    ConnectionMethod, InstallPlan, capability_matrix_json, cli_dependency, connection_capabilities,
-    install_plan,
+    ConnectionMethod, InstallPlan, capability_matrix_json, connection_capabilities, install_plan,
 };
 use quotalis_core::connection_state::{ConnectionIssue, ConnectionState, classify_fetch_outcome};
 use quotalis_core::dashboard_data::{MonetaryQuantityKind, classify_monetary_observation};
@@ -247,7 +246,7 @@ impl From<CliDetection> for CliDetectionBridge {
 }
 
 fn fixture_detection(id: ProviderId, scenario: &str) -> Option<CliDetectionBridge> {
-    let dependency = cli_dependency(id)?;
+    let dependency = connection_capabilities(id).cli?;
     let (status, session) = match scenario {
         "cliMissing" => (CliStatus::Missing, CliSessionState::Unknown),
         "cliOld" => (
@@ -291,7 +290,7 @@ pub async fn detect_cli_dependency(
     {
         return Ok(Some(detection));
     }
-    if cli_dependency(id).is_none() {
+    if connection_capabilities(id).cli.is_none() {
         return Ok(None);
     }
     let operation = begin_live_connection(id)?;
@@ -311,7 +310,7 @@ pub async fn detect_cli_dependency(
 #[tauri::command]
 pub fn get_cli_install_plan(provider_id: String) -> Result<Option<InstallPlan>, String> {
     let id = provider(&provider_id)?;
-    Ok(cli_dependency(id).and_then(install_plan))
+    Ok(connection_capabilities(id).cli.and_then(install_plan))
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -356,7 +355,9 @@ pub async fn install_cli_dependency(
     if !confirmed {
         return Err("Installation requires explicit confirmation".into());
     }
-    let dependency = cli_dependency(id).ok_or("This provider has no CLI dependency")?;
+    let dependency = connection_capabilities(id)
+        .cli
+        .ok_or("This provider has no supported CLI connection")?;
     let plan = install_plan(dependency)
         .ok_or("No curated install source; open the official instructions")?;
     if let Some(fixture) = active_fixture(id) {
@@ -1501,5 +1502,17 @@ mod tests {
             "manual-only"
         );
         assert!(get_cli_install_plan("codex".into()).unwrap().is_some());
+        for unsupported in ["gemini", "vertexai"] {
+            assert!(get_cli_install_plan(unsupported.into()).unwrap().is_none());
+            assert!(
+                rt.block_on(detect_cli_dependency(unsupported.into()))
+                    .unwrap()
+                    .is_none()
+            );
+            assert!(
+                rt.block_on(install_cli_dependency(unsupported.into(), true))
+                    .is_err()
+            );
+        }
     }
 }

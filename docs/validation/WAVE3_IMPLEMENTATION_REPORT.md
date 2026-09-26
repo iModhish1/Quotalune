@@ -505,5 +505,12 @@ command, its frontend bridge/type and the host helper that exposed the local
 OAuth file path. This closes a stale credential-presence IPC surface after the
 connection widget was removed; it does not alter stored credentials or the
 already quarantined provider fetch. The general CLI dependency catalogue
-still describes Google's separate Gemini CLI installation, but no Gemini
-quota connection method is offered by Quotalune.
+still describes Google's separate Gemini CLI installation for source-code
+provenance. A follow-up closes the exposed capability/IPC inconsistency:
+unsupported Gemini and Vertex AI now publish `cli: null` in the generated
+matrix, and dependency detection, install-plan lookup and installation
+commands refuse both even when invoked directly. No credential files were
+read or changed. The focused CLI-command test, all 69 frontend registry
+cases, the full serial Rust workspace suite (desktop 586/1 existing ignored,
+core 1941, CLI 1, integration 2), formatting and strict Clippy passed.
+Neither provider is claimed as live-verified.
