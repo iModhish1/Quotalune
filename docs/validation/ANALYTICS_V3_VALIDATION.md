@@ -103,7 +103,7 @@ No Providers redesign or subsequent wave was started.
    - `QUOTALIS_ANALYTICS_V3_DATA_QUALITY.png`
    - `QUOTALIS_ANALYTICS_V3_RTL.png`
    - `QUOTALIS_ANALYTICS_V3_DENSE.png`
-   - `QUOTALIS_ANALYTICS_V3_REAL_DATA.png`
+   - `QUOTALIS_ANALYTICS_V3_REAL_DATA.png` (withdrawn from the public image tree; ignored local audit copy retained)
 
    Additional images cover all four themes, RTL tooltip, dense trend, real coverage and the existing monetary-semantics Demo scenario. Native capture iterations repaired legend overflow, slider spacing, secondary-limit messaging, dense statistics, heatmap label contrast, light-theme compositing and few-provider layout. A fresh independent chart review also exercised real ECharts SVG output; its actionable gap, identity, tooltip, accessibility and lifecycle findings were repaired and checked.
 

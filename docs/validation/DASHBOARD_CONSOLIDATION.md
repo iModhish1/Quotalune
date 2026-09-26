@@ -189,7 +189,7 @@ over its near-zero baseline is not established by these samples.
 
 Durable evidence: `docs/images/dashboard/final/`.
 
-- [Real Dev data](../images/dashboard/final/QUOTALIS_DASHBOARD_FINAL_REAL_DATA.png)
+- The historical real-Dev-data capture was withdrawn from the public image tree during the screenshot privacy audit. Its audit copy is retained under ignored `.local/historical-real-data-2026-09-27/`; the current Quotalune release gallery requires a new, reviewed Dev capture.
 - [Demo, six providers](../images/dashboard/final/QUOTALIS_DASHBOARD_FINAL_DEMO.png)
 - [Maximized](../images/dashboard/final/QUOTALIS_DASHBOARD_FINAL_MAXIMIZED.png)
 - [Narrow](../images/dashboard/final/QUOTALIS_DASHBOARD_FINAL_NARROW.png)

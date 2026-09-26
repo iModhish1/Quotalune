@@ -40,6 +40,15 @@ current-tree copies were withdrawn; local audit copies are under ignored
 `.local/historical-images-post-release/`. The historical handoff now points
 there instead of to the public images directory.
 
+Seven more historical captures explicitly labeled `REAL_DATA` were reviewed
+across Analytics V3/V4, Dashboard phases 3/5/final and Product V2. They show
+the former Quotalis brand; several also show observed provider readings. Three
+Phase 3 `AUTH_REQUIRED` / `NO_COST` captures were byte-for-byte copies of the
+withdrawn real-data captures (SHA-256 verified), so those copies were removed
+too. All ten audit copies are in ignored
+`.local/historical-real-data-2026-09-27/`. This is a current-tree withdrawal,
+not a claim that every historical screenshot or old Git object is cleared.
+
 ## Remaining scope
 
 Continue visual review of every tracked screenshot, including the remaining

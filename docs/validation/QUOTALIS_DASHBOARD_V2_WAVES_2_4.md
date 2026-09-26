@@ -45,7 +45,7 @@ All paths are under `docs/images/product-v2/`:
 - QUOTALIS_V2_DASHBOARD_RTL.png
 - QUOTALIS_V2_DASHBOARD_NARROW.png
 - QUOTALIS_V2_DASHBOARD_MAXIMIZED.png
-- QUOTALIS_V2_REAL_DATA.png
+- QUOTALIS_V2_REAL_DATA.png (withdrawn from the public image tree; ignored local audit copy retained)
 - QUOTALIS_DASHBOARD_V1_VS_V2.png
 
 Local detailed evidence: `.local/wave24-full-tests.log`, `wave24-rust-tests.log`, `wave24-locale-tests.log`, `wave24-clippy.log`, `wave24-tsc.log`, `wave24-build.log`, `wave24-native-final.log`, `wave24-scans.json`, `v2-analytics-benchmark.json` and `.local/proof/product-v2/*.json`. Local logs are not shipped as product assets.
