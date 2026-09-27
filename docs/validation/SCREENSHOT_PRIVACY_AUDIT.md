@@ -105,6 +105,26 @@ release captures. Audit copies are in ignored
 default to ignored `.local/` output. This family-level decision does not claim
 pixel-by-pixel approval or remove the images from older Git history.
 
+The 12-image Claude-continuation archive was also withdrawn as historical
+Quotalis-era proof. Representative full-resolution inspection included the
+local-activity view, which displayed observed token totals. Both historical
+validation notes now distinguish their earlier observations from current
+release evidence. Ignored local copies are under
+`.local/historical-claude-continuation-2026-09-27/`.
+
+The Product Upgrade archive was withdrawn after representative full-resolution
+review found former Quotalis branding and real provider readings. Its nine
+PNGs and 13 JSON companions are retained in ignored
+`.local/historical-product-upgrade-2026-09-27/`. The historical validation
+document now names the earlier states without links to withdrawn public files.
+
+Four historical Shell archives (`shell01`–`shell04`) were withdrawn after
+representative full-resolution inspection found former Quotalis branding,
+actual provider readings, and—in a Shell-04 frame—the native Windows title
+bar. The 60 PNGs and one JSON companion are retained in ignored
+`.local/historical-shell01-04-2026-09-27/`. Historical validation notes now
+distinguish their old state descriptions from current release visual proof.
+
 ## Remaining scope
 
 Continue visual review of every tracked screenshot, including the remaining

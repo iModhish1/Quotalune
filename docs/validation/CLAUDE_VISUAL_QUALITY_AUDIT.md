@@ -1,10 +1,16 @@
 # Claude visual quality audit — 2026-09-10
 
+Historical evidence note (2026-09-27): the Quotalis-era screenshots cited
+below were withdrawn from the current public image tree. Audit copies are
+retained only in ignored
+`.local/historical-claude-continuation-2026-09-27/`. The grading below is
+historical and does not establish current Quotalune visual acceptance.
+
 Wave D §1 (baseline capture + grading, required before any design work).
 Real native screenshots against a freshly rebuilt, `dev-preflight`-
 verified `QuotalisDev.exe`, demo mode on (12 simulated providers,
 `connectedShowcase` scenario) for representative content. Screenshots
-under `docs/images/claude-continuation/`.
+in the local historical audit directory noted above.
 
 **Scope note, stated up front:** this document covers baseline capture
 and honest grading only — the mandatory first step of Wave D. Concept

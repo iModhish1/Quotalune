@@ -141,6 +141,13 @@ background-qa,performance,guards-final,toast-receipts}.json`.
 
 ## Visual artifacts
 
+Historical Shell-04 screenshots were withdrawn from the current public tree
+on 2026-09-27. They show the former Quotalis brand, some real readings and
+OS chrome; audit copies of files that existed in the tree are in ignored
+`.local/historical-shell01-04-2026-09-27/shell04/`. Some `cua-*` filenames
+listed below were already absent before this withdrawal. These are historical
+descriptions, not current Quotalune release evidence.
+
 - `docs/images/shell04/cua-select-final.png` — actual rebuilt Windows select.
 - `docs/images/shell04/providers-{english,arabic}-{1216,800}.png` — route matrix.
 - `docs/images/shell04/atmosphere-01.png` through `atmosphere-04.png` — real-data
