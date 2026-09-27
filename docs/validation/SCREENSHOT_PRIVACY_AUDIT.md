@@ -125,6 +125,13 @@ bar. The 60 PNGs and one JSON companion are retained in ignored
 `.local/historical-shell01-04-2026-09-27/`. Historical validation notes now
 distinguish their old state descriptions from current release visual proof.
 
+The 49-image V8 taskbar gallery was withdrawn as an unreferenced former-era
+design/proof archive. Representative full-resolution inspection of its
+expanded board and an individual theme capture showed illustrative quota
+values and large empty capture margins; neither represents a current
+Quotalune release feature screenshot. Ignored local copies are under
+`.local/historical-v8-gallery-2026-09-27/`.
+
 ## Remaining scope
 
 Continue visual review of every tracked screenshot, including the remaining
