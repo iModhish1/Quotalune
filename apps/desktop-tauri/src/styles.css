@@ -2645,9 +2645,23 @@ body:has(.tray-panel-reveal) {
 
 .codex-accounts-card .credential-card__actions {
   flex-shrink: 0;
-  flex-wrap: nowrap;
-  white-space: nowrap;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: min(100%, 360px);
 }
+
+.codex-accounts-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--qa-hairline-strong);
+}
+
+.codex-accounts-edit label { display: grid; gap: 4px; min-width: 120px; flex: 1 1 150px; }
+.codex-accounts-edit input { width: 100%; min-width: 0; }
 
 .provider-detail-pace__stage {
   font-size: 0.86rem;

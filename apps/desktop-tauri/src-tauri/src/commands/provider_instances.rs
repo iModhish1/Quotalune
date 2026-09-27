@@ -75,6 +75,10 @@ pub(crate) fn build_provider_instances(
     let ambient_account_id = has_ambient_codex_lane
         .then(|| unique_explicit_ambient_account_id(accounts))
         .flatten();
+    let ambient_ordinal = ambient_account_id
+        .and_then(|id| accounts.iter().find(|account| account.id == id))
+        .and_then(|account| account.display_number)
+        .unwrap_or(1);
 
     let mut instances: Vec<ProviderInstanceSnapshot> = provider_cache
         .iter()
@@ -91,7 +95,7 @@ pub(crate) fn build_provider_instances(
                 // lane unattributed rather than attaching a stale reading to
                 // the wrong account.
                 account_id: None,
-                account_ordinal: is_codex.then_some(1),
+                account_ordinal: is_codex.then_some(ambient_ordinal),
                 account_label: None,
                 reset_facts: snapshot.reset_facts.clone(),
                 snapshot: Some(ProviderUsagePresentationSnapshot::new(snapshot, settings)),
@@ -99,18 +103,28 @@ pub(crate) fn build_provider_instances(
         })
         .collect();
 
-    let mut additional_accounts: Vec<&CodexAccount> = accounts
+    let additional_accounts: Vec<&CodexAccount> = accounts
         .iter()
         .filter(|account| Some(account.id) != ambient_account_id)
         .collect();
-    additional_accounts.sort_by(|left, right| {
-        left.created_at
-            .cmp(&right.created_at)
-            .then_with(|| left.id.cmp(&right.id))
-    });
+    // `load_codex_accounts` preserves persisted user order.
+    let mut used_numbers: std::collections::HashSet<u32> = additional_accounts
+        .iter()
+        .filter_map(|account| account.display_number)
+        .collect();
+    used_numbers.insert(ambient_ordinal); // Reserve the ordinary lane's displayed number.
 
-    for (index, account) in additional_accounts.into_iter().enumerate() {
-        let ordinal = u32::try_from(index).unwrap_or(u32::MAX).saturating_add(2);
+    let mut next_number = 2;
+    for account in additional_accounts {
+        let ordinal = account.display_number.unwrap_or_else(|| {
+            while used_numbers.contains(&next_number) {
+                next_number = next_number.saturating_add(1);
+            }
+            let assigned = next_number;
+            used_numbers.insert(assigned);
+            next_number = next_number.saturating_add(1);
+            assigned
+        });
         instances.push(ProviderInstanceSnapshot {
             instance_id: format!("codex:{}", account.id),
             provider_id: "codex".to_string(),
@@ -125,6 +139,42 @@ pub(crate) fn build_provider_instances(
                 .get(&account.id)
                 .and_then(|snapshot| account_usage_presentation(account, snapshot, settings)),
         });
+    }
+
+    // The account store owns Structure order, including the ordinary ambient
+    // lane when its identity is uniquely known. Keep non-Codex provider slots
+    // fixed; Dashboard carousel order is a separate presentation preference.
+    let ranks: HashMap<Uuid, usize> = accounts
+        .iter()
+        .enumerate()
+        .map(|(index, account)| (account.id, index))
+        .collect();
+    let codex_slots: Vec<usize> = instances
+        .iter()
+        .enumerate()
+        .filter_map(|(index, instance)| (instance.provider_id == "codex").then_some(index))
+        .collect();
+    let mut codex_rows: Vec<ProviderInstanceSnapshot> = codex_slots
+        .iter()
+        .map(|&index| instances[index].clone())
+        .collect();
+    codex_rows.sort_by_key(|instance| {
+        if instance.instance_id == "codex" {
+            // An unproven ambient identity stays in its ordinary lane.
+            ambient_account_id
+                .and_then(|id| ranks.get(&id).copied())
+                .unwrap_or(0)
+        } else {
+            instance
+                .account_id
+                .as_deref()
+                .and_then(|id| Uuid::parse_str(id).ok())
+                .and_then(|id| ranks.get(&id).copied())
+                .unwrap_or(usize::MAX)
+        }
+    });
+    for (slot, row) in codex_slots.into_iter().zip(codex_rows) {
+        instances[slot] = row;
     }
 
     instances
@@ -514,7 +564,7 @@ mod tests {
     }
 
     #[test]
-    fn extra_account_identity_and_order_are_stable_by_creation_then_id() {
+    fn extra_account_identity_and_order_follow_persisted_user_order() {
         let later = account(
             "33333333-3333-3333-3333-333333333333",
             3,
@@ -535,16 +585,17 @@ mod tests {
         );
         let instances = build_provider_instances(
             &[provider_snapshot("claude", 10.0)],
-            &[later, same_time_high_id.clone(), same_time_low_id.clone()],
+            &[
+                later.clone(),
+                same_time_high_id.clone(),
+                same_time_low_id.clone(),
+            ],
             &HashMap::new(),
             &Settings::default(),
         );
 
         assert_eq!(instances[0].instance_id, "claude");
-        assert_eq!(
-            instances[1].instance_id,
-            format!("codex:{}", same_time_low_id.id)
-        );
+        assert_eq!(instances[1].instance_id, format!("codex:{}", later.id));
         assert_eq!(instances[1].account_ordinal, Some(2));
         assert_eq!(
             instances[2].instance_id,
@@ -552,6 +603,94 @@ mod tests {
         );
         assert_eq!(instances[2].account_ordinal, Some(3));
         assert_eq!(instances[3].account_ordinal, Some(4));
+        assert_eq!(
+            instances[3].instance_id,
+            format!("codex:{}", same_time_low_id.id)
+        );
+    }
+
+    #[test]
+    fn ambient_codex_lane_follows_the_persisted_account_order_without_attributing_cached_quota() {
+        let managed = account(
+            "22222222-2222-2222-2222-222222222222",
+            2,
+            CodexAccountSource::ManagedByApp,
+            Some("managed"),
+        );
+        let ambient = account(
+            "11111111-1111-1111-1111-111111111111",
+            1,
+            CodexAccountSource::Ambient,
+            Some("ambient"),
+        );
+        let instances = build_provider_instances(
+            &[
+                provider_snapshot("codex", 30.0),
+                provider_snapshot("claude", 10.0),
+            ],
+            &[managed.clone(), ambient],
+            &HashMap::new(),
+            &Settings::default(),
+        );
+        assert_eq!(instances[0].instance_id, format!("codex:{}", managed.id));
+        assert_eq!(instances[1].instance_id, "claude");
+        assert_eq!(instances[2].instance_id, "codex");
+        assert!(instances[2].account_id.is_none());
+    }
+
+    #[test]
+    fn custom_display_number_is_preserved_and_auto_numbers_skip_it() {
+        let mut chosen = account(
+            "22222222-2222-2222-2222-222222222222",
+            2,
+            CodexAccountSource::ManagedByApp,
+            None,
+        );
+        chosen.display_number = Some(2);
+        let ordinary = account(
+            "33333333-3333-3333-3333-333333333333",
+            3,
+            CodexAccountSource::ManagedByApp,
+            None,
+        );
+        let instances = build_provider_instances(
+            &[],
+            &[ordinary, chosen],
+            &HashMap::new(),
+            &Settings::default(),
+        );
+        assert_eq!(instances[0].account_ordinal, Some(3));
+        assert_eq!(instances[1].account_ordinal, Some(2));
+    }
+
+    #[test]
+    fn ambient_account_custom_number_reaches_ordinary_codex_lane() {
+        let mut ambient = account(
+            "11111111-1111-1111-1111-111111111111",
+            1,
+            CodexAccountSource::Ambient,
+            Some("ambient"),
+        );
+        ambient.display_number = Some(4);
+        let managed = account(
+            "22222222-2222-2222-2222-222222222222",
+            2,
+            CodexAccountSource::ManagedByApp,
+            Some("managed"),
+        );
+        let instances = build_provider_instances(
+            &[provider_snapshot("codex", 30.0)],
+            &[ambient, managed.clone()],
+            &HashMap::new(),
+            &Settings::default(),
+        );
+
+        assert_eq!(instances.len(), 2);
+        assert_eq!(instances[0].instance_id, "codex");
+        assert!(instances[0].account_id.is_none());
+        assert_eq!(instances[0].account_ordinal, Some(4));
+        assert_eq!(instances[1].account_id, Some(managed.id.to_string()));
+        assert_eq!(instances[1].account_ordinal, Some(2));
     }
 
     #[test]

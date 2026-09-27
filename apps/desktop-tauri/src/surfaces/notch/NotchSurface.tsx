@@ -65,11 +65,11 @@ export default function NotchSurface(props:FlowSurfaceProps & {form:NotchForm}) 
             const y=!rotated && form==="cradle" && settings.anchor.startsWith("top") ? layout.core.height-node.y : oriented.y;
             return <button key={provider.id} className="notch-provider" data-focused={index===focus} aria-pressed={index===focus}
               aria-label={`${provider.name}: ${formatPercentage(provider.primaryValue)} ${provider.primaryLabel}`} title={`${provider.name} · ${provider.primaryLabel}`}
-              style={{transform:`translate3d(${x-node.size/2}px,${y-node.size/2}px,0)`,"--gauge-size":`${node.size}px`,"--provider-color":providerAccent(provider.id)} as CSSProperties}
+              style={{transform:`translate3d(${x-node.size/2}px,${y-node.size/2}px,0)`,"--gauge-size":`${node.size}px`,"--provider-color":providerAccent(provider.iconId)} as CSSProperties}
               onMouseEnter={()=>{clearHover();if(!interactions.hoverDetails)return;hoverTimer.current=setTimeout(()=>{if(form==="satellite")setPreviewId(provider.id);else onFocusProvider?.(index);if(!layout.detail)onToggleExpanded?.();},180);}}
               onMouseLeave={clearHover}
               onClick={()=>{clearHover();if(form==="satellite")setPreviewId(provider.id);else onFocusProvider?.(index);if(!layout.detail)onToggleExpanded?.();}}>
-              <span className="notch-gauge" key={provider.id}><NotchGauge fraction={provider.arcFraction} size={node.size} color={providerAccent(provider.id)} label={`${provider.name} quota`}/>
+              <span className="notch-gauge" key={provider.id}><NotchGauge fraction={provider.arcFraction} size={node.size} color={providerAccent(provider.iconId)} label={`${provider.name} quota`}/>
                 <QaProviderIcon providerId={provider.iconId==="openai"?"codex":provider.iconId} size={providerGlyphSize(node.size)}/></span>
               <span className="notch-value">{formatPercentage(provider.primaryValue)}</span>
             </button>;
@@ -90,7 +90,7 @@ export default function NotchSurface(props:FlowSurfaceProps & {form:NotchForm}) 
             }}><span/></button>
           {demoMode && showDemoBadge && <span className="notch-demo">DEMO</span>}
         </div>
-        {layout.detail && selected && <NotchDetails provider={selected} color={providerAccent(selected.id)} rect={layout.detail} demo={demoMode && showDemoBadge} pinned={state==="pinned"} onClose={onRequestCompact} onPin={onTogglePinned}/>}
+        {layout.detail && selected && <NotchDetails provider={selected} color={providerAccent(selected.iconId)} rect={layout.detail} demo={demoMode && showDemoBadge} pinned={state==="pinned"} onClose={onRequestCompact} onPin={onTogglePinned}/>}
         {layout.detail && (() => {
           // Wave 1F §17: real measured gap (notchLayout's own +12 between
           // core/detail, see structureConnectorGeometry.ts), routed

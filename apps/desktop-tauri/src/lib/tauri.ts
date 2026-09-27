@@ -739,6 +739,14 @@ export function codexAccountAdd(): Promise<CodexAccount> {
   return invoke<CodexAccount>("codex_account_add");
 }
 
+export function codexAccountUpdateDisplay(id: string, nickname: string | null, displayNumber: number | null): Promise<void> {
+  return invoke<void>("codex_account_update_display", { id, nickname, displayNumber });
+}
+
+export function codexAccountMove(id: string, direction: -1 | 1): Promise<void> {
+  return invoke<void>("codex_account_move", { id, direction });
+}
+
 export function codexAccountRemove(id: string): Promise<void> {
   return invoke<void>("codex_account_remove", { id });
 }

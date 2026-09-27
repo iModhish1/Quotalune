@@ -9,6 +9,8 @@ import type {
 import type { LocaleKey } from "../../../../../i18n/keys";
 import {
   codexAccountAdd,
+  codexAccountMove,
+  codexAccountUpdateDisplay,
   codexAccountFetch,
   codexAccountRemove,
   codexAccountRestartDesktop,
@@ -42,6 +44,9 @@ export function CodexAccountsSection({ t }: Props) {
   const [switchResult, setSwitchResult] = useState<CodexSwitchResult | null>(
     null,
   );
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draftNickname, setDraftNickname] = useState("");
+  const [draftNumber, setDraftNumber] = useState("");
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -131,6 +136,38 @@ export function CodexAccountsSection({ t }: Props) {
     }
   };
 
+  const handleSaveDisplay = async (id: string) => {
+    const parsed = draftNumber.trim() === "" ? null : Number(draftNumber);
+    if (parsed !== null && (!Number.isInteger(parsed) || parsed < 2 || parsed > 999)) {
+      setError(t("CodexAccountsNumberInvalid"));
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await codexAccountUpdateDisplay(id, draftNickname, parsed);
+      setEditingId(null);
+      await load();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleMove = async (id: string, direction: -1 | 1) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await codexAccountMove(id, direction);
+      await load();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleRestartDesktop = async () => {
     if (!switchResult) return;
     setBusy(true);
@@ -200,7 +237,7 @@ export function CodexAccountsSection({ t }: Props) {
       ) : (
         <>
           <ul className="credential-list codex-accounts-list">
-            {accounts.map((account) => {
+            {accounts.map((account, index) => {
               const snapshot = snapshots[account.id];
               return (
                 <li
@@ -215,6 +252,7 @@ export function CodexAccountsSection({ t }: Props) {
                           account.authSubject ??
                           shrink(account.id)}
                       </strong>
+                      {account.displayNumber != null && <span className="credential-card__badge">#{account.displayNumber}</span>}
                       <span className="credential-card__meta">
                         <span className="credential-card__badge credential-card__badge--set">
                           {account.source === "ambient"
@@ -231,6 +269,16 @@ export function CodexAccountsSection({ t }: Props) {
                       </span>
                     </div>
                     <div className="credential-card__actions">
+                      <button type="button" className="credential-btn credential-btn--secondary" disabled={busy}
+                        onClick={() => { setEditingId(account.id); setDraftNickname(account.nickname ?? ""); setDraftNumber(account.displayNumber?.toString() ?? ""); setError(null); }}>
+                        {t("CodexAccountsEditButton")}
+                      </button>
+                      <button type="button" className="credential-btn credential-btn--secondary" disabled={busy || index === 0}
+                        aria-label={`${t("CodexAccountsMoveEarlier")} ${account.nickname ?? account.emailHint ?? shrink(account.id)}`}
+                        onClick={() => void handleMove(account.id, -1)}>{t("CodexAccountsMoveEarlier")}</button>
+                      <button type="button" className="credential-btn credential-btn--secondary" disabled={busy || index === accounts.length - 1}
+                        aria-label={`${t("CodexAccountsMoveLater")} ${account.nickname ?? account.emailHint ?? shrink(account.id)}`}
+                        onClick={() => void handleMove(account.id, 1)}>{t("CodexAccountsMoveLater")}</button>
                       <button
                         type="button"
                         className="credential-btn credential-btn--secondary"
@@ -257,6 +305,18 @@ export function CodexAccountsSection({ t }: Props) {
                       </button>
                     </div>
                   </div>
+                  {editingId === account.id && (
+                    <form className="codex-accounts-edit" onSubmit={(event) => { event.preventDefault(); void handleSaveDisplay(account.id); }}>
+                      <label>{t("CodexAccountsNicknameLabel")}
+                        <input type="text" value={draftNickname} maxLength={80} onChange={(event) => setDraftNickname(event.target.value)} />
+                      </label>
+                      <label>{t("CodexAccountsNumberLabel")}
+                        <input type="number" min={2} max={999} step={1} value={draftNumber} onChange={(event) => setDraftNumber(event.target.value)} />
+                      </label>
+                      <button type="submit" className="credential-btn credential-btn--primary" disabled={busy}>{t("CodexAccountsSaveButton")}</button>
+                      <button type="button" className="credential-btn credential-btn--secondary" onClick={() => setEditingId(null)}>{t("CodexAccountsCancelButton")}</button>
+                    </form>
+                  )}
                 </li>
               );
             })}
