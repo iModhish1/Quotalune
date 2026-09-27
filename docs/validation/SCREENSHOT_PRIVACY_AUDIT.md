@@ -132,6 +132,12 @@ values and large empty capture margins; neither represents a current
 Quotalune release feature screenshot. Ignored local copies are under
 `.local/historical-v8-gallery-2026-09-27/`.
 
+The unreferenced 16-image theme catalog was also withdrawn. A full-resolution
+board and single-theme capture showed very small example surfaces surrounded
+by large empty margins and fixed illustrative usage values. These are useful
+as historical design material, not as current release screenshots. Ignored
+local copies are under `.local/historical-theme-catalog-2026-09-27/`.
+
 ## Remaining scope
 
 Continue visual review of every tracked screenshot, including the remaining
