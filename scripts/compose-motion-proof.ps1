@@ -1,6 +1,6 @@
 param(
     [string]$SourceRoot = "output/playwright/motion",
-    [string]$DestinationRoot = "docs/images/v9/motion"
+    [string]$DestinationRoot = ".local/historical-v9-generated/motion"
 )
 
 $ErrorActionPreference = "Stop"

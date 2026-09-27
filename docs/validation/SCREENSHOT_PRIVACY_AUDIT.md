@@ -96,6 +96,15 @@ that the withdrawn copy was not independent visual proof. This eliminates
 byte-identical duplicates from the current image tree, not visually similar
 copies or the need for current Quotalune captures.
 
+The rest of the V9 image family (60 PNGs and three evidence manifests) was
+withdrawn after representative full-resolution inspection of its theme
+matrix, reference index, and Dashboard audit image. These are former QuotaArc
+concept/proof materials with fixed illustrative values, not current Quotalune
+release captures. Audit copies are in ignored
+`.local/historical-v9-remaining-2026-09-27/`. Two legacy compose scripts now
+default to ignored `.local/` output. This family-level decision does not claim
+pixel-by-pixel approval or remove the images from older Git history.
+
 ## Remaining scope
 
 Continue visual review of every tracked screenshot, including the remaining

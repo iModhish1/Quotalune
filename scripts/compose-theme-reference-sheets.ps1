@@ -1,7 +1,7 @@
 param(
     [string]$ReferenceRoot = ".local/research/theme-catalog/themes",
     [string]$CaptureRoot = "output/playwright/reference",
-    [string]$DestinationRoot = "docs/images/v9/reference"
+    [string]$DestinationRoot = ".local/historical-v9-generated/reference"
 )
 
 $ErrorActionPreference = "Stop"

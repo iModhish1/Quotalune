@@ -4,6 +4,10 @@ Historical note: the V9 native captures referenced below were withdrawn from
 the current public tree on 2026-09-27 because they show the former QuotaArc
 identity and historical readings. Local audit copies are in ignored
 `.local/historical-v9-native-2026-09-27/`; they are not Quotalune release proof.
+The remaining V9 boards, theme matrices, reference comparisons, and V9.1
+captures were also withdrawn to ignored
+`.local/historical-v9-remaining-2026-09-27/`. Paths later in this note are
+historical instructions, not public assets or current acceptance evidence.
 
 Branch `feature/v9-theme-runtime`. All architecture commits are in and green:
 frontend 74 files / 411 tests, `tsc --noEmit` clean, shared suite 1434,
