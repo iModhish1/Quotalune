@@ -120,7 +120,7 @@ pub async fn run(args: ServeArgs) -> anyhow::Result<()> {
     ));
     let listener = TcpListener::bind((config.host.as_str(), config.port)).await?;
     eprintln!(
-        "Quotalis server listening on http://{}:{}",
+        "Quotalune server listening on http://{}:{}",
         config.host, config.port
     );
     if !is_loopback_host(&config.host) {

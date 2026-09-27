@@ -387,8 +387,8 @@ impl CookieExtractor {
         if crate::wsl::is_wsl() {
             Err(CookieError::Dpapi(
                 "DPAPI is not available in WSL. Chromium cookies cannot be automatically \
-                 extracted. Use manual cookies (Settings → Cookies) or CLI-based authentication \
-                 instead. Run CodexBar natively on Windows for automatic cookie extraction."
+                 extracted. Use a provider-supported manual session method or CLI authentication \
+                 instead. Run Quotalune natively on Windows for automatic cookie extraction."
                     .to_string(),
             ))
         } else {

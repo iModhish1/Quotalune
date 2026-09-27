@@ -190,7 +190,7 @@ describe("AboutTab", () => {
     render(<AboutTab settings={{ ...settings, enableAnimations: false }} set={vi.fn()} saving={false} />);
     const cases = [
       ["AboutContactTelegram", "https://t.me/iModhish_1"],
-      ["AboutGitHubProject", "https://github.com/iModhish1/Quotalis"],
+      ["AboutGitHubProject", "https://github.com/iModhish1/Quotalune"],
       ["AboutCreatorProfile", "https://github.com/iModhish1"],
       ["TAWAJUD AI", "https://tawajud.net"],
     ];

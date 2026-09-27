@@ -43,7 +43,7 @@ pub mod exit_codes {
     pub const UNAVAILABLE: i32 = 69;
 }
 
-/// CodexBar - Monitor AI provider usage limits
+/// Quotalune - monitor AI provider usage limits
 ///
 /// CLI for inspecting provider usage and managing local config. The desktop
 /// menubar shell now lives in `apps/desktop-tauri/`; this binary is CLI-only.
