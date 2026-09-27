@@ -70,8 +70,11 @@ Built with `scripts/build-dev-verified.mjs`; no installer or Personal promotion.
 
 Most screenshots are from candidate `18df8ba31889`; the subsequent application
 change only adds the profile/collection form surface and was rebuilt/retested on
-`a42f1ab65e61`. Evidence is in `docs/images/shell02/`, with raw numeric samples and
-capture geometry in `measurements.json`.
+`a42f1ab65e61`. Historical evidence was withdrawn from the public
+`docs/images/shell02/` directory because it shows the former Quotalis brand;
+audit copies and `measurements.json` are in ignored
+`.local/historical-shell01-04-2026-09-27/shell02/`. These captures are not
+current Quotalune release proof.
 
 Native CUA on candidate `18df8ba31889`, PID 4776 / HWND 1313414, changed Aurora to
 Star map through the visible choice card. Settings readback and a native screenshot

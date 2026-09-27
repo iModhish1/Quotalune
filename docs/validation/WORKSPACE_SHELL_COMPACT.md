@@ -91,7 +91,11 @@ Temporary Dev language/presentation preferences were restored and read back; the
 proof instance was closed through its native Quit command. Personal was neither
 launched nor updated by this UI task.
 
-Screenshots in `docs/images/shell01/`:
+Historical screenshots were withdrawn from `docs/images/shell01/` on
+2026-09-27 because they show the former Quotalis brand and are not current
+Quotalune release proof. Audit copies are in ignored
+`.local/historical-shell01-04-2026-09-27/shell01/`. The filenames below
+describe the earlier test states only:
 
 - `FINAL_NATIVE_WINDOW.png`: CUA Windows capture, original logo, compact settings.
 - `FINAL_EN_EXPANDED.png`, `FINAL_EN_COLLAPSED.png`: expanded and full-width editor.

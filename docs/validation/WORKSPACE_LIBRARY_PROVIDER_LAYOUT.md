@@ -68,15 +68,12 @@ The animated transform changed over the sample, while no repeated JavaScript or 
 
 ## Evidence and outcome
 
-- [Providers, Cua native capture](../images/shell03/providers-final-cua.png)
-- [Collapsed navigation](../images/shell03/collapsed-native.png)
-- [Narrow English providers](../images/shell03/providers-english-800.png)
-- [Wide Arabic providers](../images/shell03/providers-arabic-1216.png)
-- [Narrow Arabic providers](../images/shell03/providers-arabic-800.png)
-- [Background library](../images/shell03/background-library.png)
-- [Imported image rendered across the workspace](../images/shell03/imported-background.png)
-- [Custom library before owned-fixture cleanup](../images/shell03/custom-background-library.png)
-- [Standalone About](../images/shell03/about-final.png)
+The nine historical Shell-03 captures in this section were withdrawn from
+the current public image tree on 2026-09-27. They show the former Quotalis
+brand; audit copies are in ignored
+`.local/historical-shell01-04-2026-09-27/shell03/`. Earlier states covered
+Providers, collapsed navigation, English/Arabic narrow layouts, background
+library/import, and standalone About. They are not current release proof.
 
 Local reproduction/evidence logs: `.local/shell03-native-build-final3.log`, `shell03-frontend-final3.log`, `shell03-rust-final2.log`, `shell03-clippy-final.log`, `shell03-layout-final.json`, `shell03-resize.json`, `shell03-library-final.json`, `shell03-brand-final.json`, `shell03-guards-final.json`, `shell03-performance.json`. Native helper scripts are local proof tooling, not production code.
 

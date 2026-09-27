@@ -118,6 +118,13 @@ PNGs and 13 JSON companions are retained in ignored
 `.local/historical-product-upgrade-2026-09-27/`. The historical validation
 document now names the earlier states without links to withdrawn public files.
 
+Four historical Shell archives (`shell01`–`shell04`) were withdrawn after
+representative full-resolution inspection found former Quotalis branding,
+actual provider readings, and—in a Shell-04 frame—the native Windows title
+bar. The 60 PNGs and one JSON companion are retained in ignored
+`.local/historical-shell01-04-2026-09-27/`. Historical validation notes now
+distinguish their old state descriptions from current release visual proof.
+
 ## Remaining scope
 
 Continue visual review of every tracked screenshot, including the remaining
