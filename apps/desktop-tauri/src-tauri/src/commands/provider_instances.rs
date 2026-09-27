@@ -75,6 +75,10 @@ pub(crate) fn build_provider_instances(
     let ambient_account_id = has_ambient_codex_lane
         .then(|| unique_explicit_ambient_account_id(accounts))
         .flatten();
+    let ambient_ordinal = ambient_account_id
+        .and_then(|id| accounts.iter().find(|account| account.id == id))
+        .and_then(|account| account.display_number)
+        .unwrap_or(1);
 
     let mut instances: Vec<ProviderInstanceSnapshot> = provider_cache
         .iter()
@@ -91,7 +95,7 @@ pub(crate) fn build_provider_instances(
                 // lane unattributed rather than attaching a stale reading to
                 // the wrong account.
                 account_id: None,
-                account_ordinal: is_codex.then_some(1),
+                account_ordinal: is_codex.then_some(ambient_ordinal),
                 account_label: None,
                 reset_facts: snapshot.reset_facts.clone(),
                 snapshot: Some(ProviderUsagePresentationSnapshot::new(snapshot, settings)),
@@ -108,7 +112,7 @@ pub(crate) fn build_provider_instances(
         .iter()
         .filter_map(|account| account.display_number)
         .collect();
-    used_numbers.insert(1); // The ordinary Codex lane owns number one.
+    used_numbers.insert(ambient_ordinal); // Reserve the ordinary lane's displayed number.
 
     let mut next_number = 2;
     for account in additional_accounts {
@@ -656,6 +660,36 @@ mod tests {
             &Settings::default(),
         );
         assert_eq!(instances[0].account_ordinal, Some(3));
+        assert_eq!(instances[1].account_ordinal, Some(2));
+    }
+
+    #[test]
+    fn ambient_account_custom_number_reaches_ordinary_codex_lane() {
+        let mut ambient = account(
+            "11111111-1111-1111-1111-111111111111",
+            1,
+            CodexAccountSource::Ambient,
+            Some("ambient"),
+        );
+        ambient.display_number = Some(4);
+        let managed = account(
+            "22222222-2222-2222-2222-222222222222",
+            2,
+            CodexAccountSource::ManagedByApp,
+            Some("managed"),
+        );
+        let instances = build_provider_instances(
+            &[provider_snapshot("codex", 30.0)],
+            &[ambient, managed.clone()],
+            &HashMap::new(),
+            &Settings::default(),
+        );
+
+        assert_eq!(instances.len(), 2);
+        assert_eq!(instances[0].instance_id, "codex");
+        assert!(instances[0].account_id.is_none());
+        assert_eq!(instances[0].account_ordinal, Some(4));
+        assert_eq!(instances[1].account_id, Some(managed.id.to_string()));
         assert_eq!(instances[1].account_ordinal, Some(2));
     }
 

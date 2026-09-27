@@ -20,6 +20,10 @@ native multi-account acceptance.
 
 The backend regression covers a managed account moved before the uniquely
 known ambient account without assigning the cached ambient quota to it. The
+ordinary ambient lane also displays that account's persisted custom number
+when its identity is uniquely known; its cached quota remains unattributed.
+The regression first reproduced the old hard-coded `1` and now checks the
+custom number alongside an automatically numbered managed account. The
 frontend regression checks a legacy Dashboard order with account IDs, then
 reorders the backend account sequence and verifies that only the Structure
 order changes. Structure tests cover 1, 2, 3, 6 and 12 configured Codex
