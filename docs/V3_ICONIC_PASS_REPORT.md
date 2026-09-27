@@ -1,5 +1,10 @@
 # V3 — Iconic Surface Pass report
 
+Historical note (2026-09-27): V1–V6 images were withdrawn from the current
+public tree. Unchanged local audit copies remain under ignored
+`.local/historical-v1-v6-2026-09-27/`. The board paths below document the
+original review, not current Quotalune release imagery.
+
 Date: 2026-09-03 · Personal build untouched (Dev/demo only).
 
 ## What changed (V2 → V3)

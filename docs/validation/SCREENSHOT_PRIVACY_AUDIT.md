@@ -138,6 +138,18 @@ by large empty margins and fixed illustrative usage values. These are useful
 as historical design material, not as current release screenshots. Ignored
 local copies are under `.local/historical-theme-catalog-2026-09-27/`.
 
+The 67-image V1–V6 archive was withdrawn after a contact-sheet inventory and
+full-resolution checks of `v1/taskbar-arc.png`,
+`v2/before-after-taskbar.png`, and `v6/QUOTAARC_V6_REVIEW_BOARD.png`.
+The V1 capture and V2 comparison include the Computer Use overlay; the V6
+board uses the former QuotaArc identity and fixed illustrative values. The
+remaining files were conservatively withdrawn as the same historical
+design/proof family, without claiming individual pixel-level approval. Their
+unchanged audit copies are under ignored
+`.local/historical-v1-v6-2026-09-27/`. Four historical reports now clarify
+that their old image paths are no longer current public links. This removal
+does not erase previously published Git objects.
+
 ## Remaining scope
 
 Continue visual review of every tracked screenshot, including the remaining

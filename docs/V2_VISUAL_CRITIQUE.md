@@ -1,5 +1,10 @@
 # V2_VISUAL_CRITIQUE — brutal pass on the actual renders
 
+Historical image note (2026-09-27): the V1–V6 screenshot archive was withdrawn
+from the current public image tree. Unchanged audit copies are under ignored
+`.local/historical-v1-v6-2026-09-27/`. Image paths below record the original
+review material; they are not current Quotalune release captures.
+
 Date: 2026-09-03 · Inspected: `docs/images/v2/*.png` and
 `QUOTAARC_V2_REVIEW_BOARD.png` at 100–400% zoom. Scores are against a
 finished-premium-product bar, not "better than V1".

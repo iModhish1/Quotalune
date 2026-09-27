@@ -1,5 +1,10 @@
 # VISUAL_QA_REPORT — V2 implementation status
 
+Historical note (2026-09-27): the V1–V6 screenshot archive was withdrawn from
+the current public image tree. Its unchanged audit copies are under ignored
+`.local/historical-v1-v6-2026-09-27/`. The paths below describe the original
+capture set, not available public files or current Quotalune release proof.
+
 Date: 2026-09-03 · Direction: merged (Edge Object geometry + Instrument density +
 selective Glass). Screenshots use controlled synthetic data via the in-app demo stage
 (`?window=demo&surface=X&state=Y`, plain-browser render — no personal data, no desktop clutter).
