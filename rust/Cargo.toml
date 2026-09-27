@@ -5,7 +5,7 @@ edition = "2024"
 authors = ["Mohammed Modhish", "Quotalis Contributors"]
 description = "Windows and WSL system tray app for monitoring AI provider usage limits"
 license = "MIT"
-repository = "https://github.com/iModhish1/Quotalis"
+repository = "https://github.com/iModhish1/Quotalune"
 keywords = ["ai", "usage", "monitoring", "claude", "codex"]
 categories = ["command-line-utilities"]
 
