@@ -894,4 +894,35 @@ mod tests {
             "capability matrix JSON is stale; regenerate with QUOTALIS_WRITE_CAPABILITY_MATRIX=1"
         );
     }
+
+    #[test]
+    fn readable_capability_matrix_statuses_match_generated_registry() {
+        let document =
+            include_str!("../../docs/validation/PROVIDER_CONNECTION_CAPABILITY_MATRIX.md");
+        let generated = capability_matrix_json();
+        let providers = generated["providers"].as_array().unwrap();
+        let mut seen = std::collections::HashSet::new();
+        for line in document.lines().filter(|line| line.starts_with("| `")) {
+            let columns: Vec<_> = line.split('|').map(str::trim).collect();
+            let id = columns[1].split('`').nth(1).expect("provider ID");
+            let provider = providers
+                .iter()
+                .find(|provider| provider["provider"] == id)
+                .unwrap_or_else(|| panic!("unknown provider in readable matrix: {id}"));
+            assert!(
+                seen.insert(id),
+                "duplicate provider in readable matrix: {id}"
+            );
+            assert_eq!(
+                columns[2],
+                provider["status"].as_str().unwrap(),
+                "stale support status in readable matrix for {id}"
+            );
+        }
+        assert_eq!(
+            seen.len(),
+            providers.len(),
+            "readable matrix omits providers"
+        );
+    }
 }
